@@ -5,7 +5,7 @@ import { buildSeedRows, buildTeamSeeds, buildWbsSeeds } from "./seedData.js";
 // Full DB seed (idempotent, skip-if-exists): users + all seedData rows +
 // wbs/team. Same content as POST /api/admin/seed (without force).
 // Run with the production .env loaded: set -a; source .env; set +a
-async function main(): Promise<void> {
+export async function runSeed(): Promise<void> {
   await seedUsers(exec, q);
   const now = new Date().toISOString();
   let inserted = 0;
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
 
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("seed.ts") || entry.endsWith("seed.js")) {
-  main()
+  runSeed()
     .then(() => closeDb().then(() => process.exit(0)))
     .catch((err) => {
       console.error("[seed] failed:", err);
