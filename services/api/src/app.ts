@@ -1,4 +1,4 @@
-﻿import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -47,14 +47,13 @@ const writeLimiter = createRateLimiter(WRITE_LIMIT, WRITE_WINDOW_MS);
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
-// Seeded demo accounts cannot log in in production unless explicitly allowed
+// Seeded demo accounts cannot log in unless explicitly allowed
 // (ALLOW_SEED_LOGIN=true). Minimal guard: match the 4 seed usernames.
 const SEED_USERNAMES = new Set(SEED_ACCOUNTS.map((a) => a.username.toLowerCase()));
 
 function isSeedLoginDisabled(): boolean {
   const raw = (process.env.ALLOW_SEED_LOGIN ?? "").toLowerCase().trim();
-  if (raw === "true" || raw === "1") return false;
-  return (process.env.NODE_ENV ?? "").toLowerCase().trim() === "production";
+  return raw !== "true" && raw !== "1";
 }
 
 function denyRateLimited(reply: FastifyReply, retryAfterSec: number, message: string): unknown {

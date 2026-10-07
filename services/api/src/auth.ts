@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { loadEnv } from "./env.js";
 
 export interface AuthUser {
@@ -106,17 +106,16 @@ export type QueryFn<T = Record<string, unknown>> = (sql: string, params: unknown
 
 interface SeedAccount {
   username: string;
-  password: string;
   name: string;
   role: string;
   email: string;
 }
 
 export const SEED_ACCOUNTS: SeedAccount[] = [
-  { username: "demo@galangan.com", password: "password@123", name: "Client Viewer", role: "viewer", email: "demo@galangan.com" },
-  { username: "dev@alk.id", password: "KucingTerbang", name: "Developer", role: "developer", email: "dev@alk.id" },
-  { username: "direktur@galangan.com", password: "direktur123", name: "Direktur", role: "direktur", email: "direktur@galangan.com" },
-  { username: "manager@galangan.com", password: "manager123", name: "Manager", role: "manager", email: "manager@galangan.com" },
+  { username: "demo@galangan.com", name: "Client Viewer", role: "viewer", email: "demo@galangan.com" },
+  { username: "dev@alk.id", name: "Developer", role: "developer", email: "dev@alk.id" },
+  { username: "direktur@galangan.com", name: "Direktur", role: "direktur", email: "direktur@galangan.com" },
+  { username: "manager@galangan.com", name: "Manager", role: "manager", email: "manager@galangan.com" },
 ];
 
 export async function seedUsers(
@@ -126,6 +125,14 @@ export async function seedUsers(
 ): Promise<void> {
   const query = dbQuery ?? queryImpl;
   for (const account of SEED_ACCOUNTS) {
+    const envKey = `SEED_PASSWORD_${account.role.toUpperCase()}`;
+    const envPass = process.env[envKey]?.trim();
+    let accountPass = envPass;
+    if (!accountPass) {
+      accountPass = randomBytes(12).toString("base64url").slice(0, 16);
+      console.log(`[seed] Password akun ${account.username} (${account.role}): ${accountPass}`);
+    }
+
     let existing: Record<string, unknown>[] = [];
     if (query) {
       try {
@@ -148,8 +155,11 @@ export async function seedUsers(
       if (typeof row.name === "string" && row.name !== account.name) patch.name = account.name;
       if (typeof row.role === "string" && row.role !== account.role) patch.role = account.role;
       if (typeof row.email === "string" && row.email !== account.email) patch.email = account.email;
+      if (envPass) {
+        patch.pass_hash = await hashPassword(envPass);
+      }
       // Backfill legacy NULLs (column is NOT NULL DEFAULT 1 on fresh DBs,
-      // but old rows may carry NULL). Never touch pass_hash here.
+      // but old rows may carry NULL).
       if (row.is_active === null || row.is_active === undefined) patch.is_active = 1;
       if (Object.keys(patch).length > 0) {
         const sets = Object.keys(patch)
@@ -179,7 +189,7 @@ export async function seedUsers(
       }
       continue;
     }
-    const passHash = await hashPassword(account.password);
+    const passHash = await hashPassword(accountPass);
     try {
       await dbInsert(
         "INSERT INTO users (id, username, pass_hash, name, role, email, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)",

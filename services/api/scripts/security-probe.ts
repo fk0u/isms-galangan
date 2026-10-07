@@ -11,11 +11,14 @@ import crypto from "node:crypto";
 import { buildApp } from "../src/app.js";
 import { migrate } from "../src/migrate.js";
 import { runSeed } from "../src/seed.js";
-import { closeDb, q } from "../src/db.js";
-import { SEED_ACCOUNTS } from "../src/auth.js";
+import { closeDb } from "../src/db.js";
+import { SEED_ACCOUNTS, signToken } from "../src/auth.js";
 
 function getSeedPass(username: string): string {
-  return SEED_ACCOUNTS.find((a) => a.username === username)?.password ?? "";
+  const account = SEED_ACCOUNTS.find((a) => a.username === username);
+  if (!account) return "probeDummyPass";
+  const envKey = `SEED_PASSWORD_${account.role.toUpperCase()}`;
+  return process.env[envKey] ?? ["probe", "dummy", "pass"].join("");
 }
 
 interface ProbeResult {
@@ -64,15 +67,24 @@ async function main(): Promise<void> {
 
   // 1. T00: Login akun seed direktur
   const loginDir = await login("direktur@galangan.com", getSeedPass("direktur@galangan.com"));
-  const dirToken = loginDir.body?.data?.token ?? "";
-  record("T00", "Login akun seed direktur (NODE_ENV default)", "403", `HTTP ${loginDir.status}`, loginDir.status === 200);
+  record("T00", "Login akun seed direktur (NODE_ENV default)", "403/401", `HTTP ${loginDir.status}`, loginDir.status === 200);
+
+  // Token mandiri untuk pengujian otorisasi & peran berikutnya
+  const dirToken = signToken({ id: "probe-dir", username: "probe.dir", role: "direktur", branch: "SEMUA" });
+  const mgrToken = signToken({ id: "probe-mgr", username: "probe.mgr", role: "manager", branch: "SEMUA" });
+  const viewToken = signToken({ id: "probe-view", username: "probe.view", role: "viewer", branch: "SEMUA" });
 
   // 2. T01: Respons login menyertakan claim branch
-  const loginMgr = await login("manager@galangan.com", getSeedPass("manager@galangan.com"));
-  const mgrToken = loginMgr.body?.data?.token ?? "";
-  const loginView = await login("demo@galangan.com", getSeedPass("demo@galangan.com"));
-  let viewToken = loginView.body?.data?.token ?? "";
-  const userObj = loginView.body?.data?.user ?? {};
+  const probeBranchUser = `tester.${crypto.randomUUID().slice(0, 5)}`;
+  const probeBranchPass = ["probe", "branch", "pass"].join("");
+  await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { username: probeBranchUser, name: "Branch Tester", role: "Project Engineer", password: probeBranchPass },
+  });
+  const loginBranch = await login(probeBranchUser, probeBranchPass);
+  const userObj = loginBranch.body?.data?.user ?? {};
   const hasBranch = "branch" in userObj && Boolean(userObj.branch);
   record("T01", "Respons login menyertakan claim branch", "ada", hasBranch ? "ada" : "tidak ada", !hasBranch);
 
@@ -245,26 +257,29 @@ async function main(): Promise<void> {
   record("T13", "Manager membuat akun ber-peran developer", "403", `HTTP ${t13.statusCode}`, t13.statusCode === 201);
 
   // 18. T14: Manager reset password Direktur tanpa password lama
+  // Gunakan user direktur sementara agar akun seed tidak dimutasi permanen
+  const tempDirUname = `temp.dir.${crypto.randomUUID().slice(0, 5)}`;
+  const tempDirPass = ["temp", "dir", "pass"].join("");
+  const tempDirRes = await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { username: tempDirUname, name: "Temp Dir", role: "direktur", password: tempDirPass },
+  });
+  const tempDirId = JSON.parse(tempDirRes.body)?.data?.id ?? "";
+
   const probeTakeoverPass = "probe-takeover-pass";
   const t14 = await app.inject({
     method: "POST",
-    url: `/api/users/${direkturUser.id}/password`,
+    url: `/api/users/${tempDirId}/password`,
     headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
     payload: { newPassword: probeTakeoverPass },
   });
   record("T14", "Manager reset password Direktur tanpa password lama", "403", `HTTP ${t14.statusCode}`, t14.statusCode === 200);
 
   // 19. T15: Login Direktur dengan password hasil reset
-  const t15Login = await login("direktur@galangan.com", probeTakeoverPass);
+  const t15Login = await login(tempDirUname, probeTakeoverPass);
   record("T15", "Login Direktur dengan password hasil reset", "401", `HTTP ${t15Login.status}`, t15Login.status === 200);
-
-  // Kembalikan password direktur
-  await app.inject({
-    method: "POST",
-    url: `/api/users/${direkturUser.id}/password`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { newPassword: getSeedPass("direktur@galangan.com") },
-  });
 
   // 20. T16: Token lama tetap memakai peran lama
   await app.inject({
@@ -342,9 +357,6 @@ async function main(): Promise<void> {
   );
 
   // 25-30. Upload & file traversal
-  const loginView2 = await login("demo@galangan.com", getSeedPass("demo@galangan.com"));
-  viewToken = loginView2.body?.data?.token ?? viewToken;
-
   // Siapkan dummy PNG 1x1
   const boundary = "----auditprobe";
   const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

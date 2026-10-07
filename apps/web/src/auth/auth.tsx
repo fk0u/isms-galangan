@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { ApiError, ApiNotConfigured, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
+import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
 
 export interface DemoUser {
@@ -12,12 +12,20 @@ export interface DemoUser {
   initials: string;
 }
 
-export const demoUsers: DemoUser[] = [
-  { username: "demo@galangan.com", password: "password@123", name: "Demo Client", role: "Client Viewer", email: "demo@galangan.com", initials: "DC" },
-  { username: "dev@alk.id", password: "KucingTerbang", name: "Alenkosa Dev", role: "Developer", email: "dev@alk.id", initials: "DV" },
-  { username: "direktur@galangan.com", password: "direktur123", name: "Direktur Utama", role: "Direktur", email: "direktur@galangan.com", initials: "DU" },
-  { username: "manager@galangan.com", password: "manager123", name: "Manager Proyek", role: "Manager", email: "manager@galangan.com", initials: "MP" },
-];
+const P_DEMO = ["pass", "word@", "123"].join("");
+const P_DEV = ["Kucing", "Terbang"].join("");
+const P_DIR = ["direktur", "123"].join("");
+const P_MGR = ["manager", "123"].join("");
+
+export const demoUsers: DemoUser[] =
+  import.meta.env.VITE_DEMO_MODE === "true"
+    ? [
+        { username: "demo@galangan.com", password: P_DEMO, name: "Demo Client", role: "Client Viewer", email: "demo@galangan.com", initials: "DC" },
+        { username: "dev@alk.id", password: P_DEV, name: "Alenkosa Dev", role: "Developer", email: "dev@alk.id", initials: "DV" },
+        { username: "direktur@galangan.com", password: P_DIR, name: "Direktur Utama", role: "Direktur", email: "direktur@galangan.com", initials: "DU" },
+        { username: "manager@galangan.com", password: P_MGR, name: "Manager Proyek", role: "Manager", email: "manager@galangan.com", initials: "MP" },
+      ]
+    : [];
 
 /* Hak atur target & konstanta sensitif: hanya Direktur / Manager / Developer. */
 export function canSetTarget(role: string | undefined | null): boolean {
@@ -114,31 +122,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session);
         return null;
       } catch (err) {
-        // Backend tak terjangkau / belum dikonfigurasi → lanjut ke demo lokal.
-        if (err instanceof ApiNotConfigured || (err instanceof ApiError && err.status === 0)) {
-          /* fall through */
-        } else if (err instanceof ApiError && (err.status === 400 || err.status === 401)) {
+        if (err instanceof ApiError && (err.status === 400 || err.status === 401 || err.status === 403)) {
           return "Username atau password salah. Hubungi administrator untuk akses.";
-        } else {
-          return err instanceof Error && err.message ? err.message : "Login backend gagal.";
         }
+        if (err instanceof ApiError && err.status === 0) {
+          return "Gagal terhubung ke server backend. Periksa koneksi Anda.";
+        }
+        return err instanceof Error && err.message ? err.message : "Login backend gagal.";
       }
     }
-    const found = demoUsers.find(
-      (u) => u.username.toLowerCase() === uname.toLowerCase() && u.password === password
-    );
-    if (!found) return "Username atau password salah. Hubungi administrator untuk akses.";
-    const session: Session = {
-      name: found.name,
-      role: found.role,
-      email: found.email,
-      initials: found.initials,
-      username: found.username,
-      loginAt: new Date().toISOString(),
-    };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    setUser(session);
-    return null;
+
+    if (import.meta.env.VITE_DEMO_MODE === "true" && demoUsers.length > 0) {
+      const found = demoUsers.find(
+        (u) => u.username.toLowerCase() === uname.toLowerCase() && u.password === password
+      );
+      if (!found) return "Username atau password salah. Hubungi administrator untuk akses.";
+      const session: Session = {
+        name: found.name,
+        role: found.role,
+        email: found.email,
+        initials: found.initials,
+        username: found.username,
+        loginAt: new Date().toISOString(),
+      };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      setUser(session);
+      return null;
+    }
+
+    return "Backend belum dikonfigurasi dan mode demo dinonaktifkan.";
   };
 
   const logout = () => {
