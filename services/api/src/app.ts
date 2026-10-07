@@ -138,13 +138,11 @@ export function buildApp(): FastifyInstance {
     requestIdHeader: "x-request-id",
   });
 
-  // CORS allowlist: WEB_ORIGINS (comma-separated) → WEB_ORIGIN (single) → "*" in non-prod.
-  // The request Origin is validated against the list; no credentials (JWT header-based).
-  const allowAll = env.webOrigins.length === 0 && env.nodeEnv !== "production";
-  const allowedOrigins: string[] = allowAll ? ["*"] : env.webOrigins;
+  // CORS allowlist: env.webOrigins (daftar eksplisit, tanpa fallback "*").
+  // Origin request dicocokkan terhadap allowlist; kredensial tidak dipakai (JWT header).
+  const allowedOrigins: string[] = env.webOrigins;
 
   function resolveCorsOrigin(req: { headers: { origin?: unknown } }): string | undefined {
-    if (allowedOrigins.includes("*")) return "*";
     const origin = req.headers.origin;
     if (typeof origin === "string" && allowedOrigins.includes(origin)) return origin;
     return undefined;
@@ -152,6 +150,7 @@ export function buildApp(): FastifyInstance {
 
   app.addHook("onSend", async (req, reply) => {
     reply.header("Vary", "Origin");
+    reply.header("Access-Control-Expose-Headers", "X-Request-Id, Retry-After");
     const origin = resolveCorsOrigin(req);
     if (origin) reply.header("Access-Control-Allow-Origin", origin);
     // Correlation id: echo inbound X-Request-Id (or generated req.id).

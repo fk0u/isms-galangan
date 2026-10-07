@@ -13,8 +13,8 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F1-03 | Vitest untuk logika murni | P1 | F1-verifikasi.md | | todo | |
 | F1-04 | CI GitHub Actions | P0 | F1-verifikasi.md | | selesai | CI dibuat saat inisialisasi repo |
 | F1-05 | Baseline security probe | P0 | F1-verifikasi.md | agent | selesai | PR #3 |
-| F2-01 | Akun seed & demo login | P0 | F2-keamanan.md | agent | jalan | |
-| F2-02 | Konfigurasi default aman | P0 | F2-keamanan.md | | todo | |
+| F2-01 | Akun seed & demo login | P0 | F2-keamanan.md | agent | selesai | PR #6 |
+| F2-02 | Konfigurasi default aman | P0 | F2-keamanan.md | agent | selesai | PR #7 |
 | F2-03 | Hierarki peran di manajemen user | P0 | F2-keamanan.md | | todo | |
 | F2-04 | Token bisa dicabut | P0 | F2-keamanan.md | | todo | |
 | F2-05 | `policy.ts`: enum peran + izin baca/tulis | P0 | F2-keamanan.md | | todo | |
