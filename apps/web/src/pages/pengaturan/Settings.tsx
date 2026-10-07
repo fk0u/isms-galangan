@@ -4,8 +4,7 @@ import { Card, PageHeader, Field, Tabs, toast, NumInput, useBusy } from "../../c
 import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_roles } from "../../i18n/n_roles";
-import { useAuth } from "../../auth/auth";
-import { canWriteSettings } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { apiFetch, isBackendConfigured } from "../../services/http";
 import { fmtJumlah } from "../../utils/format";
 
@@ -59,7 +58,7 @@ export default function Settings() {
   const { user } = useAuth();
   // Tulis settings ditolak BE (403) kecuali direktur/developer - kunci di UI
   // agar toast "disimpan" tidak berbohong.
-  const canWrite = backendMode !== "remote" || canWriteSettings(user?.role);
+  const canWrite = backendMode !== "remote" || hasPermission(user?.permissions, "settings", "w");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [setupToken, setSetupToken] = useState("");
   const [seeding, setSeeding] = useState(false);

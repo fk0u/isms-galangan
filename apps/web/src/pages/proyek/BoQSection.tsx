@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
-import { useAuth, canSetTarget } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { Card, Modal, Field, FormGrid, toast, EmptyState, StatusBadge, Badge, SortTh, toggleSort, sortRows, ConfirmModal,
   NumInput, MoneyInput, AsyncButton, FlowStrip, FileUploadButton,
   useBusy, SearchBox, rowMatches, RowAction,
@@ -190,7 +190,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
   const changeStatus = async (id: string, newStatus: string) => {
     /* Approved & Completed mengubah KPI nilai & progres - wajib peran target.
        Rejected juga butuh izin karena menolak item milik tim lain. */
-    if (newStatus !== "Draft" && newStatus !== "Pending" && !canSetTarget(user?.role)) {
+    if (newStatus !== "Draft" && newStatus !== "Pending" && !hasPermission(user?.permissions, "boq", "w")) {
       toast(S.boqToastRole, "info");
       return;
     }
@@ -207,7 +207,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
 
   const saveRevisi = async () => {
     if (!revisiFor) return;
-    if (REVISI_LOCKED.includes(String(revisiFor.status)) && !canSetTarget(user?.role)) {
+    if (REVISI_LOCKED.includes(String(revisiFor.status)) && !hasPermission(user?.permissions, "boq", "w")) {
       toast(S.boqToastRole, "info");
       return;
     }

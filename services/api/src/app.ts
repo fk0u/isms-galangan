@@ -11,6 +11,7 @@ import { branchOfUser, bumpTokenVersion, comparePassword, requireAuth, SEED_ACCO
 import { getAuditErrorCount, requestIp, writeAudit } from "./audit.js";
 import { exec, q } from "./db.js";
 import { requireManageUsers } from "./rbac.js";
+import { permissionsFor } from "./policy.js";
 import { COLLECTIONS, registerCrud } from "./routes/crud.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerFileRoutes } from "./routes/files.js";
@@ -282,11 +283,24 @@ export function buildApp(): FastifyInstance {
     } catch {
       // tabel sessions belum ada (DB lama) — login tetap jalan
     }
-    return ok({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role, email: user.email, employeeId: typeof user.employee_id === "string" ? user.employee_id : null } });
+    const permissions = permissionsFor(user.role);
+    return ok({
+      token,
+      permissions,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        email: user.email,
+        employeeId: typeof user.employee_id === "string" ? user.employee_id : null,
+      },
+    });
   });
 
   app.get("/api/auth/me", { preHandler: [requireAuth] }, async (req) => {
-    return ok({ user: req.user });
+    const permissions = permissionsFor(req.user?.role);
+    return ok({ user: req.user, permissions });
   });
 
   // Heartbeat sesi (FE: tiap 60 dtk saat JWT ada). Upsert baris user.

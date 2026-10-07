@@ -25,7 +25,7 @@ import { usePdfDoc } from "../../components/usePdfDoc";
 import { DocumentPreviewCell, DocumentPreviewModal, DocumentPreviewPanel, DownloadFileButton, InlineDocPreview, type PreviewDoc } from "../../components/DocumentPreview";
 import { docAttachment, docFileNameOf, docUrlOf } from "../../utils/docAttachment";
 import { findUsages } from "../../utils/usages";
-import { useAuth, canSetTarget } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
 import { n_qc } from "../../i18n/n_qc";
@@ -664,7 +664,7 @@ export default function QCSafety() {
 
   const confirmClose = async () => {
     if (!closingNcr) return;
-    if (closingNcr.severity === "Critical" && !canSetTarget(user?.role)) {
+    if (closingNcr.severity === "Critical" && !hasPermission(user?.permissions, "ncr", "w")) {
       toast(S.tHanyaDir, "info");
       return;
     }
@@ -897,7 +897,7 @@ export default function QCSafety() {
 
   const stepDrawing = async (d: StoreItem, next: string) => {
     try {
-    if (next === "Disetujui" && !canSetTarget(user?.role)) {
+    if (next === "Disetujui" && !hasPermission(user?.permissions, "drawings", "w")) {
       toast(S.tHanyaDir, "info");
       return;
     }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
@@ -20,23 +20,27 @@ const P_MGR = ["manager", "123"].join("");
 export const demoUsers: DemoUser[] =
   import.meta.env.VITE_DEMO_MODE === "true"
     ? [
-        { username: "demo@galangan.com", password: P_DEMO, name: "Demo Client", role: "Client Viewer", email: "demo@galangan.com", initials: "DC" },
-        { username: "dev@alk.id", password: P_DEV, name: "Alenkosa Dev", role: "Developer", email: "dev@alk.id", initials: "DV" },
-        { username: "direktur@galangan.com", password: P_DIR, name: "Direktur Utama", role: "Direktur", email: "direktur@galangan.com", initials: "DU" },
-        { username: "manager@galangan.com", password: P_MGR, name: "Manager Proyek", role: "Manager", email: "manager@galangan.com", initials: "MP" },
+        { username: "demo@galangan.com", password: P_DEMO, name: "Demo Client", role: "viewer", email: "demo@galangan.com", initials: "DC" },
+        { username: "dev@alk.id", password: P_DEV, name: "Alenkosa Dev", role: "developer", email: "dev@alk.id", initials: "DV" },
+        { username: "direktur@galangan.com", password: P_DIR, name: "Direktur Utama", role: "direktur", email: "direktur@galangan.com", initials: "DU" },
+        { username: "manager@galangan.com", password: P_MGR, name: "Manager Proyek", role: "manager", email: "manager@galangan.com", initials: "MP" },
       ]
     : [];
 
-/* Hak atur target & konstanta sensitif: hanya Direktur / Manager / Developer. */
-export function canSetTarget(role: string | undefined | null): boolean {
-  const r = String(role ?? "").toLowerCase();
-  return r.includes("direktur") || r.includes("direksi") || r.includes("manager") || r.includes("developer");
-}
+export type PermissionAction = "r" | "w" | "d";
+export type PermissionsMap = Record<string, PermissionAction[]>;
 
-/* Tulis settings/coa di backend: hanya direktur/developer (BE 403 untuk
-   yang lain - samakan di UI agar toast tidak berbohong). */
-export function canWriteSettings(role: string | undefined | null): boolean {
-  return ["direktur", "developer", "Direktur", "Developer"].includes(String(role ?? ""));
+/**
+ * Pengecekan izin modular berbasis matriks policy server (ADR-0004 & F2-05).
+ */
+export function hasPermission(
+  permissions: PermissionsMap | undefined | null,
+  collection: string,
+  action: PermissionAction = "r",
+): boolean {
+  if (!permissions) return false;
+  const acts = permissions[collection];
+  return Boolean(acts && acts.includes(action));
 }
 
 const SESSION_KEY = "isms.session";
@@ -48,9 +52,10 @@ export interface Session {
   initials: string;
   username: string;
   loginAt: string;
-  /** Cabang akun, dari claim JWT. "SEMUA" = tidak dibatasi.
-   *  Opsional karena sesi lokal (tanpa backend) tidak punya claim ini. */
+  /** Cabang akun, dari claim JWT. "SEMUA" = tidak dibatasi. */
   branch?: string;
+  /** Peta izin koleksi dari /api/auth/me */
+  permissions?: PermissionsMap;
 }
 
 function loadSession(): Session | null {
@@ -62,8 +67,7 @@ function loadSession(): Session | null {
   }
 }
 
-/* Role sesi saat ini (null bila belum login). Perilaku: baca sesi yang sama
-   dengan yang dipakai AuthProvider - tidak mengubah kebiasaan rolecheck. */
+/* Role sesi saat ini (null bila belum login). */
 export function getRole(): string | null {
   return loadSession()?.role ?? null;
 }
@@ -96,11 +100,36 @@ const Ctx = createContext<AuthCtx>({ user: null, login: async () => "Belum siap"
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Session | null>(() => loadSession());
 
+  // Sinkronkan permissions pengguna dari /api/auth/me saat aplikasi dimuat
+  useEffect(() => {
+    if (!isBackendConfigured() || !getJwt()) return;
+    let active = true;
+    void apiFetch<{ user?: BackendLoginUser; permissions?: PermissionsMap }>("/api/auth/me")
+      .then((res) => {
+        if (!active || !res.permissions) return;
+        setUser((prev) => {
+          if (!prev) return prev;
+          const updated: Session = {
+            ...prev,
+            role: res.user?.role ?? prev.role,
+            name: res.user?.name ?? prev.name,
+            permissions: res.permissions,
+          };
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+          return updated;
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const login = async (username: string, password: string): Promise<string | null> => {
     const uname = username.trim();
     if (isBackendConfigured()) {
       try {
-        const res = await apiFetch<{ token: string; user: BackendLoginUser }>(`/api/auth/login`, {
+        const res = await apiFetch<{ token: string; permissions?: PermissionsMap; user: BackendLoginUser }>(`/api/auth/login`, {
           method: "POST",
           body: JSON.stringify({ username: uname, password }),
         });
@@ -108,15 +137,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const bu = res.user ?? {};
         const session: Session = {
           name: bu.name || bu.username || uname,
-          role: bu.role || "Client Viewer",
+          role: bu.role || "viewer",
           email: bu.email || "",
           initials: initialsOf(bu.name || bu.username || uname),
           username: bu.username || uname,
           loginAt: new Date().toISOString(),
-          /* Disimpan di sessionStorage supaya dropdown cabang langsung
-             menyesuaikan tanpa menunggu /api/auth/me. "SEMUA" bila server
-             tidak mengirim claim (server versi lama). */
           branch: String(bu.branch ?? "SEMUA") || "SEMUA",
+          permissions: res.permissions,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         setUser(session);

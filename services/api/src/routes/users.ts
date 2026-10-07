@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { bumpTokenVersion, comparePassword, hashPassword, requireAuth } from "../auth.js";
-import { requireManageUsers, roleRank } from "../rbac.js";
+import { requireManageUsers, roleRank, ROLES } from "../policy.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { exec, q } from "../db.js";
 import { fail, ok } from "../envelope.js";
@@ -59,7 +59,7 @@ async function assertEmployeeExists(employeeId: string): Promise<boolean> {
 const CreateSchema = z.object({
   username: z.string().min(1).max(128),
   name: z.string().min(1).max(128),
-  role: z.string().min(1).max(64),
+  role: z.enum(ROLES),
   email: z.string().max(256).optional().default(""),
     /* 6 karakter terlalu lemah untuk akun yang bisa mengubah jurnal, CoA,
        dan struktur organisasi. Batas atas 72 tetap (bcrypt). */
@@ -70,7 +70,7 @@ const CreateSchema = z.object({
 const PatchSchema = z
   .object({
     name: z.string().min(1).max(128).optional(),
-    role: z.string().min(1).max(64).optional(),
+    role: z.enum(ROLES).optional(),
     email: z.string().max(256).optional(),
     isActive: z.union([z.boolean(), z.literal(0), z.literal(1)]).optional(),
     employeeId: z.string().max(128).nullable().optional(),

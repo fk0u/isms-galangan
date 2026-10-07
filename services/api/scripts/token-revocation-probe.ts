@@ -36,7 +36,7 @@ async function main() {
     method: "POST",
     url: "/api/users",
     headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: testUname, name: "Revocation Tester", role: "Project Engineer", password: testPass },
+    payload: { username: testUname, name: "Revocation Tester", role: "proyek", password: testPass },
   });
   assert("Pembuatan user tes berhasil", createRes.statusCode === 201);
   const testUser = JSON.parse(createRes.body)?.data;

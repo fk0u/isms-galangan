@@ -1,9 +1,9 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
 import { requestActor, requestIp, shallowDiff, writeAudit } from "../audit.js";
-import { requireCollectionWrite, requireSettingsWrite } from "../rbac.js";
+import { requirePermission } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
 import { exec, getDialect, q } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
@@ -235,14 +235,11 @@ function parseOffset(raw: unknown): number {
 export function registerCrud(app: FastifyInstance, table: string): void {
   if (!COLLECTIONS.includes(table)) throw new Error(`Unknown collection: ${table}`);
   const base = `/api/${table}`;
-  // Tulis settings/coa: direktur/developer/admin. Koleksi lain ikut
-  // kebijakan RBAC (rbac.ts); baca tetap requireAuth untuk semua peran.
-  const writeGuards =
-    table === "settings" || table === "coa"
-      ? [requireAuth, requireSettingsWrite()]
-      : [requireAuth, requireCollectionWrite(table)];
+  const readGuards = [requireAuth, requirePermission(table, "r")];
+  const writeGuards = [requireAuth, requirePermission(table, "w")];
+  const deleteGuards = [requireAuth, requirePermission(table, "d")];
 
-  app.get(base, { preHandler: [requireAuth] }, async (req) => {
+  app.get(base, { preHandler: readGuards }, async (req) => {
     const query = (req.query ?? {}) as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];
@@ -299,7 +296,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     });
   });
 
-  app.get(`${base}/:id`, { preHandler: [requireAuth] }, async (req, reply) => {
+  app.get(`${base}/:id`, { preHandler: readGuards }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
@@ -323,32 +320,41 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const branch = parsed.data.branch ?? "";
     const now = new Date().toISOString();
-    const domainError = assertDomain(table, parsed.data.data);
+    // 5. activities: actor diisi dari token; tolak pemalsuan nama aktor
+    const rowData = { ...parsed.data.data };
+    if (table === "activities") {
+      rowData.user = requestActor(req);
+    }
+    const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {
       const fieldError = await checkUniqueField(
-        table, uniq.field, uniq.label, String((parsed.data.data as Record<string, unknown>)[uniq.field] ?? ""), null,
+        table, uniq.field, uniq.label, String((rowData as Record<string, unknown>)[uniq.field] ?? ""), null,
       );
       if (fieldError) return reply.status(409).send(fail(fieldError, "CONFLICT"));
     }
-    const refError = await checkRefs(table, parsed.data.data as Record<string, unknown>);
+    const refError = await checkRefs(table, rowData as Record<string, unknown>);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     await exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
-      id, branch, JSON.stringify(parsed.data.data), now,
+      id, branch, JSON.stringify(rowData), now,
     ]);
     await writeAudit({
       actor: requestActor(req),
       action: "create",
       table,
       rowId: id as string,
-      diff: { branch, data: parsed.data.data },
+      diff: { branch, data: rowData },
       ip: requestIp(req),
     });
-    return reply.status(201).send(ok({ id, branch, data: parsed.data.data, updated_at: now }));
+    return reply.status(201).send(ok({ id, branch, data: rowData, updated_at: now }));
   });
 
   app.patch(`${base}/:id`, { preHandler: writeGuards }, async (req, reply) => {
+    // 5. activities: PATCH ditolak (append-only)
+    if (table === "activities") {
+      return reply.status(403).send(fail("Aktivitas tidak dapat diubah", "FORBIDDEN"));
+    }
     const parsed = PatchSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
@@ -404,7 +410,11 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     return ok({ id, branch, data: merged, updated_at: now });
   });
 
-  app.delete(`${base}/:id`, { preHandler: writeGuards }, async (req, reply) => {
+  app.delete(`${base}/:id`, { preHandler: deleteGuards }, async (req, reply) => {
+    // 5. activities: DELETE ditolak (append-only)
+    if (table === "activities") {
+      return reply.status(403).send(fail("Aktivitas tidak dapat dihapus", "FORBIDDEN"));
+    }
     const { id } = req.params as { id: string };
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
