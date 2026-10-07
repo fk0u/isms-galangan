@@ -19,14 +19,18 @@
     "probe:employee": "vite build --ssr scripts/employee-probe.ts --outDir node_modules/.cache/employee-probe --emptyOutDir --logLevel error && node node_modules/.cache/employee-probe/employee-probe.js",
     "probe:risk": "vite build --ssr scripts/risk-auto-probe.ts --outDir node_modules/.cache/risk-auto-probe --emptyOutDir --logLevel error && node node_modules/.cache/risk-auto-probe/risk-auto-probe.js",
     "probe:p8": "vite build --ssr scripts/p8-probe.ts --outDir node_modules/.cache/p8-probe --emptyOutDir --logLevel error && node node_modules/.cache/p8-probe/p8-probe.js",
-    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run probe:render && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:facility && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8"
+    "lint": "eslint .",
+    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:facility && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "autoprefixer": "^10.5.4",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
+    "typescript-eslint": "^8.71.1",
     "vite": "^8.2.2"
   },
   "dependencies": {

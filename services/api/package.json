@@ -26,7 +26,8 @@
     "probe:page": "tsx scripts/page-probe.ts",
     "probe:security": "tsx --env-file-if-exists=.env scripts/security-probe.ts",
     "probe:tx": "tsx --env-file-if-exists=.env scripts/tx-probe.ts",
-    "check": "tsc --noEmit && npm run probe:pdf && npm run probe:page && npm run probe:tx"
+    "lint": "eslint .",
+    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
@@ -44,7 +45,9 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.7.0",
+    "eslint": "^9.39.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.71.1"
   }
 }
