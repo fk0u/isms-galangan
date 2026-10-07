@@ -1,0 +1,392 @@
+[
+  {
+    "no": "1",
+    "nama": "PT Arung Samudra Lines 1",
+    "saldoAwal": 337000000,
+    "saldoAkhir": 67400000
+  },
+  {
+    "no": "2",
+    "nama": "PT Barito Coal Transport 2",
+    "saldoAwal": 62000000,
+    "saldoAkhir": 49600000
+  },
+  {
+    "no": "3",
+    "nama": "PT Berau Coal Trans 3",
+    "saldoAwal": 448000000,
+    "saldoAkhir": 89600000
+  },
+  {
+    "no": "4",
+    "nama": "PT Mahakam Energi Maritim 4",
+    "saldoAwal": 97000000,
+    "saldoAkhir": 77600000
+  },
+  {
+    "no": "5",
+    "nama": "PT Kutai Bahari Shipping 5",
+    "saldoAwal": 524000000,
+    "saldoAkhir": 419200000
+  },
+  {
+    "no": "6",
+    "nama": "PT Pelayaran Samudra Nusantara 6",
+    "saldoAwal": 609000000,
+    "saldoAkhir": 121800000
+  },
+  {
+    "no": "7",
+    "nama": "PT Borneo Trans Logistik 7",
+    "saldoAwal": 634000000,
+    "saldoAkhir": 126800000
+  },
+  {
+    "no": "8",
+    "nama": "PT Nusantara Lines Maritim 8",
+    "saldoAwal": 386000000,
+    "saldoAkhir": 308800000
+  },
+  {
+    "no": "9",
+    "nama": "PT Samudra Perkasa Abadi 9",
+    "saldoAwal": 733000000,
+    "saldoAkhir": 146600000
+  },
+  {
+    "no": "10",
+    "nama": "PT Berau Coal Trans 10",
+    "saldoAwal": 373000000,
+    "saldoAkhir": 298400000
+  },
+  {
+    "no": "11",
+    "nama": "PT Arung Samudra Lines 11",
+    "saldoAwal": 221000000,
+    "saldoAkhir": 176800000
+  },
+  {
+    "no": "12",
+    "nama": "PT Barito Coal Transport 12",
+    "saldoAwal": 634000000,
+    "saldoAkhir": 507200000
+  },
+  {
+    "no": "13",
+    "nama": "PT Borneo Trans Logistik 13",
+    "saldoAwal": 654000000,
+    "saldoAkhir": 130800000
+  },
+  {
+    "no": "14",
+    "nama": "PT Borneo Trans Logistik 14",
+    "saldoAwal": 226000000,
+    "saldoAkhir": 180800000
+  },
+  {
+    "no": "15",
+    "nama": "PT Mahakam Energi Maritim 15",
+    "saldoAwal": 74000000,
+    "saldoAkhir": 59200000
+  },
+  {
+    "no": "16",
+    "nama": "PT Mega Pratama Shipping 16",
+    "saldoAwal": 549000000,
+    "saldoAkhir": 439200000
+  },
+  {
+    "no": "17",
+    "nama": "PT Pelayaran Samudra Nusantara 17",
+    "saldoAwal": 383000000,
+    "saldoAkhir": 76600000
+  },
+  {
+    "no": "18",
+    "nama": "PT Arung Samudra Lines 18",
+    "saldoAwal": 120000000,
+    "saldoAkhir": 24000000
+  },
+  {
+    "no": "19",
+    "nama": "PT Kutai Bahari Shipping 19",
+    "saldoAwal": 624000000,
+    "saldoAkhir": 499200000
+  },
+  {
+    "no": "20",
+    "nama": "PT Mahakam Energi Maritim 20",
+    "saldoAwal": 149000000,
+    "saldoAkhir": 119200000
+  },
+  {
+    "no": "21",
+    "nama": "PT Samudra Perkasa Abadi 21",
+    "saldoAwal": 639000000,
+    "saldoAkhir": 127800000
+  },
+  {
+    "no": "22",
+    "nama": "PT Pelayaran Kaltim Jaya 22",
+    "saldoAwal": 741000000,
+    "saldoAkhir": 148200000
+  },
+  {
+    "no": "23",
+    "nama": "PT Bintang Laut Transport 23",
+    "saldoAwal": 716000000,
+    "saldoAkhir": 572800000
+  },
+  {
+    "no": "24",
+    "nama": "PT Samudra Perkasa Abadi 24",
+    "saldoAwal": 72000000,
+    "saldoAkhir": 14400000
+  },
+  {
+    "no": "25",
+    "nama": "PT Arung Samudra Lines 25",
+    "saldoAwal": 283000000,
+    "saldoAkhir": 56600000
+  },
+  {
+    "no": "26",
+    "nama": "PT Arung Samudra Lines 26",
+    "saldoAwal": 70000000,
+    "saldoAkhir": 14000000
+  },
+  {
+    "no": "27",
+    "nama": "PT Borneo Trans Logistik 27",
+    "saldoAwal": 635000000,
+    "saldoAkhir": 508000000
+  },
+  {
+    "no": "28",
+    "nama": "PT Nusantara Lines Maritim 28",
+    "saldoAwal": 527000000,
+    "saldoAkhir": 105400000
+  },
+  {
+    "no": "29",
+    "nama": "PT Bintang Laut Transport 29",
+    "saldoAwal": 721000000,
+    "saldoAkhir": 576800000
+  },
+  {
+    "no": "30",
+    "nama": "PT Arung Samudra Lines 30",
+    "saldoAwal": 625000000,
+    "saldoAkhir": 500000000
+  },
+  {
+    "no": "31",
+    "nama": "PT Nusantara Lines Maritim 31",
+    "saldoAwal": 595000000,
+    "saldoAkhir": 476000000
+  },
+  {
+    "no": "32",
+    "nama": "PT Bintang Laut Transport 32",
+    "saldoAwal": 131000000,
+    "saldoAkhir": 26200000
+  },
+  {
+    "no": "33",
+    "nama": "PT Berau Coal Trans 33",
+    "saldoAwal": 459000000,
+    "saldoAkhir": 367200000
+  },
+  {
+    "no": "34",
+    "nama": "PT Kutai Bahari Shipping 34",
+    "saldoAwal": 420000000,
+    "saldoAkhir": 84000000
+  },
+  {
+    "no": "35",
+    "nama": "PT Borneo Trans Logistik 35",
+    "saldoAwal": 491000000,
+    "saldoAkhir": 98200000
+  },
+  {
+    "no": "36",
+    "nama": "PT Mahakam Energi Maritim 36",
+    "saldoAwal": 316000000,
+    "saldoAkhir": 63200000
+  },
+  {
+    "no": "37",
+    "nama": "PT Nusantara Lines Maritim 37",
+    "saldoAwal": 53000000,
+    "saldoAkhir": 42400000
+  },
+  {
+    "no": "38",
+    "nama": "PT Kutai Bahari Shipping 38",
+    "saldoAwal": 757000000,
+    "saldoAkhir": 151400000
+  },
+  {
+    "no": "39",
+    "nama": "PT Samudra Perkasa Abadi 39",
+    "saldoAwal": 233000000,
+    "saldoAkhir": 186400000
+  },
+  {
+    "no": "40",
+    "nama": "PT Samudra Perkasa Abadi 40",
+    "saldoAwal": 416000000,
+    "saldoAkhir": 332800000
+  },
+  {
+    "no": "41",
+    "nama": "PT Samudra Perkasa Abadi 41",
+    "saldoAwal": 511000000,
+    "saldoAkhir": 408800000
+  },
+  {
+    "no": "42",
+    "nama": "PT Arung Samudra Lines 42",
+    "saldoAwal": 575000000,
+    "saldoAkhir": 460000000
+  },
+  {
+    "no": "43",
+    "nama": "PT Berau Coal Trans 43",
+    "saldoAwal": 190000000,
+    "saldoAkhir": 152000000
+  },
+  {
+    "no": "44",
+    "nama": "PT Nusantara Lines Maritim 44",
+    "saldoAwal": 294000000,
+    "saldoAkhir": 58800000
+  },
+  {
+    "no": "45",
+    "nama": "PT Barito Coal Transport 45",
+    "saldoAwal": 739000000,
+    "saldoAkhir": 591200000
+  },
+  {
+    "no": "46",
+    "nama": "PT Pelayaran Samudra Nusantara 46",
+    "saldoAwal": 338000000,
+    "saldoAkhir": 67600000
+  },
+  {
+    "no": "47",
+    "nama": "PT Samudra Perkasa Abadi 47",
+    "saldoAwal": 449000000,
+    "saldoAkhir": 359200000
+  },
+  {
+    "no": "48",
+    "nama": "PT Mahakam Energi Maritim 48",
+    "saldoAwal": 593000000,
+    "saldoAkhir": 474400000
+  },
+  {
+    "no": "49",
+    "nama": "PT Pelayaran Samudra Nusantara 49",
+    "saldoAwal": 479000000,
+    "saldoAkhir": 95800000
+  },
+  {
+    "no": "50",
+    "nama": "PT Arung Samudra Lines 50",
+    "saldoAwal": 148000000,
+    "saldoAkhir": 29600000
+  },
+  {
+    "no": "51",
+    "nama": "PT Pelayaran Samudra Nusantara 51",
+    "saldoAwal": 747000000,
+    "saldoAkhir": 149400000
+  },
+  {
+    "no": "52",
+    "nama": "PT Barito Coal Transport 52",
+    "saldoAwal": 473000000,
+    "saldoAkhir": 378400000
+  },
+  {
+    "no": "53",
+    "nama": "PT Nusantara Lines Maritim 53",
+    "saldoAwal": 82000000,
+    "saldoAkhir": 65600000
+  },
+  {
+    "no": "54",
+    "nama": "PT Mahakam Energi Maritim 54",
+    "saldoAwal": 555000000,
+    "saldoAkhir": 111000000
+  },
+  {
+    "no": "55",
+    "nama": "PT Pelayaran Samudra Nusantara 55",
+    "saldoAwal": 300000000,
+    "saldoAkhir": 240000000
+  },
+  {
+    "no": "56",
+    "nama": "PT Pelayaran Samudra Nusantara 56",
+    "saldoAwal": 695000000,
+    "saldoAkhir": 139000000
+  },
+  {
+    "no": "57",
+    "nama": "PT Berau Coal Trans 57",
+    "saldoAwal": 510000000,
+    "saldoAkhir": 408000000
+  },
+  {
+    "no": "58",
+    "nama": "PT Barito Coal Transport 58",
+    "saldoAwal": 422000000,
+    "saldoAkhir": 337600000
+  },
+  {
+    "no": "59",
+    "nama": "PT Samudra Perkasa Abadi 59",
+    "saldoAwal": 364000000,
+    "saldoAkhir": 291200000
+  },
+  {
+    "no": "60",
+    "nama": "PT Berau Coal Trans 60",
+    "saldoAwal": 289000000,
+    "saldoAkhir": 57800000
+  },
+  {
+    "no": "61",
+    "nama": "PT Samudra Perkasa Abadi 61",
+    "saldoAwal": 482000000,
+    "saldoAkhir": 96400000
+  },
+  {
+    "no": "62",
+    "nama": "PT Berau Coal Trans 62",
+    "saldoAwal": 571000000,
+    "saldoAkhir": 114200000
+  },
+  {
+    "no": "63",
+    "nama": "PT Bintang Laut Transport 63",
+    "saldoAwal": 704000000,
+    "saldoAkhir": 563200000
+  },
+  {
+    "no": "64",
+    "nama": "PT Arung Samudra Lines 64",
+    "saldoAwal": 361000000,
+    "saldoAkhir": 72200000
+  },
+  {
+    "no": "65",
+    "nama": "PT Mega Pratama Shipping 65",
+    "saldoAwal": 336000000,
+    "saldoAkhir": 67200000
+  }
+]

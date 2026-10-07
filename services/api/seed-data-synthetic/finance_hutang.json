@@ -1,0 +1,326 @@
+[
+  {
+    "no": "1",
+    "nama": "UD Sentosa Marine Supply 1",
+    "saldoAwal": 73000000,
+    "saldoAkhir": 73000000
+  },
+  {
+    "no": "2",
+    "nama": "PT Baja Utama Borneo 2",
+    "saldoAwal": 222000000,
+    "saldoAkhir": 66600000
+  },
+  {
+    "no": "3",
+    "nama": "CV Sentosa Marine Supply 3",
+    "saldoAwal": 74000000,
+    "saldoAkhir": 22200000
+  },
+  {
+    "no": "4",
+    "nama": "CV Pilar Energi Borneo 4",
+    "saldoAwal": 128000000,
+    "saldoAkhir": 38400000
+  },
+  {
+    "no": "5",
+    "nama": "UD Tridaya Teknik Marine 5",
+    "saldoAwal": 237000000,
+    "saldoAkhir": 237000000
+  },
+  {
+    "no": "6",
+    "nama": "UD Pilar Energi Borneo 6",
+    "saldoAwal": 249000000,
+    "saldoAkhir": 74700000
+  },
+  {
+    "no": "7",
+    "nama": "UD Baja Utama Borneo 7",
+    "saldoAwal": 151000000,
+    "saldoAkhir": 45300000
+  },
+  {
+    "no": "8",
+    "nama": "UD Pelumas Nusantara Indah 8",
+    "saldoAwal": 164000000,
+    "saldoAkhir": 49200000
+  },
+  {
+    "no": "9",
+    "nama": "PT Samudra Logam Perkasa 9",
+    "saldoAwal": 166000000,
+    "saldoAkhir": 166000000
+  },
+  {
+    "no": "10",
+    "nama": "UD Surya Samudra Perkasa 10",
+    "saldoAwal": 119000000,
+    "saldoAkhir": 35700000
+  },
+  {
+    "no": "11",
+    "nama": "PT Baja Utama Borneo 11",
+    "saldoAwal": 140000000,
+    "saldoAkhir": 42000000
+  },
+  {
+    "no": "12",
+    "nama": "CV Baja Utama Borneo 12",
+    "saldoAwal": 211000000,
+    "saldoAkhir": 211000000
+  },
+  {
+    "no": "13",
+    "nama": "UD Karya Bersama Steel 13",
+    "saldoAwal": 255000000,
+    "saldoAkhir": 76500000
+  },
+  {
+    "no": "14",
+    "nama": "UD Dua Saudara Marine 14",
+    "saldoAwal": 56000000,
+    "saldoAkhir": 16800000
+  },
+  {
+    "no": "15",
+    "nama": "UD Delta Perkasa Teknik 15",
+    "saldoAwal": 130000000,
+    "saldoAkhir": 39000000
+  },
+  {
+    "no": "16",
+    "nama": "CV Kaltim Sumber Makmur 16",
+    "saldoAwal": 273000000,
+    "saldoAkhir": 81900000
+  },
+  {
+    "no": "17",
+    "nama": "PT Cipta Karya Bahari 17",
+    "saldoAwal": 32000000,
+    "saldoAkhir": 9600000
+  },
+  {
+    "no": "18",
+    "nama": "CV Tridaya Teknik Marine 18",
+    "saldoAwal": 134000000,
+    "saldoAkhir": 134000000
+  },
+  {
+    "no": "19",
+    "nama": "UD Kaltim Sumber Makmur 19",
+    "saldoAwal": 140000000,
+    "saldoAkhir": 140000000
+  },
+  {
+    "no": "20",
+    "nama": "CV Cipta Karya Bahari 20",
+    "saldoAwal": 53000000,
+    "saldoAkhir": 15900000
+  },
+  {
+    "no": "21",
+    "nama": "UD Mitra Steel Mandiri 21",
+    "saldoAwal": 44000000,
+    "saldoAkhir": 44000000
+  },
+  {
+    "no": "22",
+    "nama": "UD Baja Utama Borneo 22",
+    "saldoAwal": 256000000,
+    "saldoAkhir": 76800000
+  },
+  {
+    "no": "23",
+    "nama": "UD Multi Teknik Galangan 23",
+    "saldoAwal": 94000000,
+    "saldoAkhir": 28200000
+  },
+  {
+    "no": "24",
+    "nama": "CV Kaltim Sumber Makmur 24",
+    "saldoAwal": 109000000,
+    "saldoAkhir": 109000000
+  },
+  {
+    "no": "25",
+    "nama": "UD Dua Saudara Marine 25",
+    "saldoAwal": 143000000,
+    "saldoAkhir": 42900000
+  },
+  {
+    "no": "26",
+    "nama": "UD Pelumas Nusantara Indah 26",
+    "saldoAwal": 125000000,
+    "saldoAkhir": 37500000
+  },
+  {
+    "no": "27",
+    "nama": "PT Samudra Logam Perkasa 27",
+    "saldoAwal": 28000000,
+    "saldoAkhir": 28000000
+  },
+  {
+    "no": "28",
+    "nama": "PT Indo Baja Lestari 28",
+    "saldoAwal": 227000000,
+    "saldoAkhir": 68100000
+  },
+  {
+    "no": "29",
+    "nama": "CV Mitra Steel Mandiri 29",
+    "saldoAwal": 263000000,
+    "saldoAkhir": 78900000
+  },
+  {
+    "no": "30",
+    "nama": "UD Mitra Steel Mandiri 30",
+    "saldoAwal": 94000000,
+    "saldoAkhir": 28200000
+  },
+  {
+    "no": "31",
+    "nama": "UD Dua Saudara Marine 31",
+    "saldoAwal": 86000000,
+    "saldoAkhir": 25800000
+  },
+  {
+    "no": "32",
+    "nama": "UD Kaltim Sumber Makmur 32",
+    "saldoAwal": 39000000,
+    "saldoAkhir": 11700000
+  },
+  {
+    "no": "33",
+    "nama": "PT Surya Samudra Perkasa 33",
+    "saldoAwal": 15000000,
+    "saldoAkhir": 4500000
+  },
+  {
+    "no": "34",
+    "nama": "PT Dua Saudara Marine 34",
+    "saldoAwal": 201000000,
+    "saldoAkhir": 60300000
+  },
+  {
+    "no": "35",
+    "nama": "PT Pelumas Nusantara Indah 35",
+    "saldoAwal": 159000000,
+    "saldoAkhir": 47700000
+  },
+  {
+    "no": "36",
+    "nama": "CV Pilar Energi Borneo 36",
+    "saldoAwal": 129000000,
+    "saldoAkhir": 38700000
+  },
+  {
+    "no": "37",
+    "nama": "PT Mitra Steel Mandiri 37",
+    "saldoAwal": 290000000,
+    "saldoAkhir": 290000000
+  },
+  {
+    "no": "38",
+    "nama": "PT Karya Bersama Steel 38",
+    "saldoAwal": 251000000,
+    "saldoAkhir": 251000000
+  },
+  {
+    "no": "39",
+    "nama": "CV Cipta Karya Bahari 39",
+    "saldoAwal": 296000000,
+    "saldoAkhir": 88800000
+  },
+  {
+    "no": "40",
+    "nama": "PT Dua Saudara Marine 40",
+    "saldoAwal": 26000000,
+    "saldoAkhir": 7800000
+  },
+  {
+    "no": "41",
+    "nama": "UD Pelumas Nusantara Indah 41",
+    "saldoAwal": 260000000,
+    "saldoAkhir": 78000000
+  },
+  {
+    "no": "42",
+    "nama": "UD Sentosa Marine Supply 42",
+    "saldoAwal": 19000000,
+    "saldoAkhir": 19000000
+  },
+  {
+    "no": "43",
+    "nama": "UD Baja Utama Borneo 43",
+    "saldoAwal": 107000000,
+    "saldoAkhir": 32100000
+  },
+  {
+    "no": "44",
+    "nama": "CV Kaltim Sumber Makmur 44",
+    "saldoAwal": 147000000,
+    "saldoAkhir": 44100000
+  },
+  {
+    "no": "45",
+    "nama": "PT Tridaya Teknik Marine 45",
+    "saldoAwal": 112000000,
+    "saldoAkhir": 33600000
+  },
+  {
+    "no": "46",
+    "nama": "CV Dua Saudara Marine 46",
+    "saldoAwal": 156000000,
+    "saldoAkhir": 156000000
+  },
+  {
+    "no": "47",
+    "nama": "CV Indo Baja Lestari 47",
+    "saldoAwal": 48000000,
+    "saldoAkhir": 48000000
+  },
+  {
+    "no": "48",
+    "nama": "CV Harapan Jaya Logam 48",
+    "saldoAwal": 208000000,
+    "saldoAkhir": 62400000
+  },
+  {
+    "no": "49",
+    "nama": "PT Sentosa Marine Supply 49",
+    "saldoAwal": 145000000,
+    "saldoAkhir": 145000000
+  },
+  {
+    "no": "50",
+    "nama": "PT Delta Perkasa Teknik 50",
+    "saldoAwal": 206000000,
+    "saldoAkhir": 61800000
+  },
+  {
+    "no": "51",
+    "nama": "UD Bina Mahakam Mandiri 51",
+    "saldoAwal": 274000000,
+    "saldoAkhir": 274000000
+  },
+  {
+    "no": "52",
+    "nama": "PT Cipta Karya Bahari 52",
+    "saldoAwal": 232000000,
+    "saldoAkhir": 69600000
+  },
+  {
+    "no": "53",
+    "nama": "PT Mitra Steel Mandiri 53",
+    "saldoAwal": 264000000,
+    "saldoAkhir": 264000000
+  },
+  {
+    "no": "54",
+    "nama": "UD Borneo Maritim Teknik 54",
+    "saldoAwal": 93000000,
+    "saldoAkhir": 93000000
+  }
+]

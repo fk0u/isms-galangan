@@ -1,0 +1,444 @@
+{
+  "banks": [
+    {
+      "nama": "Bank Mandiri 000-0000-101",
+      "debit": 2500000000,
+      "saldo": 3450000000
+    },
+    {
+      "nama": "Bank BCA 000-0000-202",
+      "debit": 1200000000,
+      "saldo": 1850000000
+    },
+    {
+      "nama": "Bank BNI 000-0000-303",
+      "debit": 800000000,
+      "saldo": 950000000
+    },
+    {
+      "nama": "Bank BRI 000-0000-404",
+      "debit": 450000000,
+      "saldo": 600000000
+    }
+  ],
+  "jurnal": [
+    {
+      "tanggal": "2026-08-28",
+      "pihak": "Samudra Logam Perkasa",
+      "dok": "BKM-143",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 104000000,
+      "kredit": 0,
+      "saldo": 104000000
+    },
+    {
+      "tanggal": "2026-08-22",
+      "pihak": "Mitra Steel Mandiri",
+      "dok": "BKM-216",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 84000000,
+      "kredit": 0,
+      "saldo": 84000000
+    },
+    {
+      "tanggal": "2026-08-05",
+      "pihak": "Sentosa Marine Supply",
+      "dok": "BKM-914",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 46000000,
+      "kredit": 46000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-11",
+      "pihak": "Baja Utama Borneo",
+      "dok": "BKM-879",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 74000000,
+      "kredit": 0,
+      "saldo": 74000000
+    },
+    {
+      "tanggal": "2026-08-08",
+      "pihak": "Baja Utama Borneo",
+      "dok": "BKM-651",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 13000000,
+      "kredit": 13000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-23",
+      "pihak": "Dua Saudara Marine",
+      "dok": "BKM-474",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 63000000,
+      "kredit": 63000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-05",
+      "pihak": "Harapan Jaya Logam",
+      "dok": "BKM-532",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 99000000,
+      "kredit": 99000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-19",
+      "pihak": "Pilar Energi Borneo",
+      "dok": "BKM-840",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 45000000,
+      "kredit": 45000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-25",
+      "pihak": "Pilar Energi Borneo",
+      "dok": "BKM-291",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 55000000,
+      "kredit": 55000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-23",
+      "pihak": "Harapan Jaya Logam",
+      "dok": "BKM-164",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 54000000,
+      "kredit": 0,
+      "saldo": 54000000
+    },
+    {
+      "tanggal": "2026-08-16",
+      "pihak": "Pelumas Nusantara Indah",
+      "dok": "BKM-639",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 137000000,
+      "kredit": 0,
+      "saldo": 137000000
+    },
+    {
+      "tanggal": "2026-08-27",
+      "pihak": "Samudra Logam Perkasa",
+      "dok": "BKM-360",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 120000000,
+      "kredit": 120000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-07",
+      "pihak": "Mitra Steel Mandiri",
+      "dok": "BKM-544",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 21000000,
+      "kredit": 0,
+      "saldo": 21000000
+    },
+    {
+      "tanggal": "2026-08-04",
+      "pihak": "Delta Perkasa Teknik",
+      "dok": "BKM-956",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 51000000,
+      "kredit": 0,
+      "saldo": 51000000
+    },
+    {
+      "tanggal": "2026-08-26",
+      "pihak": "Delta Perkasa Teknik",
+      "dok": "BKM-376",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 43000000,
+      "kredit": 0,
+      "saldo": 43000000
+    },
+    {
+      "tanggal": "2026-08-19",
+      "pihak": "Pelumas Nusantara Indah",
+      "dok": "BKM-570",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 44000000,
+      "kredit": 44000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-04",
+      "pihak": "Borneo Maritim Teknik",
+      "dok": "BKM-836",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 107000000,
+      "kredit": 107000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-17",
+      "pihak": "Kaltim Sumber Makmur",
+      "dok": "BKM-704",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 12000000,
+      "kredit": 0,
+      "saldo": 12000000
+    },
+    {
+      "tanggal": "2026-08-13",
+      "pihak": "Kaltim Sumber Makmur",
+      "dok": "BKM-459",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 109000000,
+      "kredit": 0,
+      "saldo": 109000000
+    },
+    {
+      "tanggal": "2026-08-22",
+      "pihak": "Sentosa Marine Supply",
+      "dok": "BKM-504",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 54000000,
+      "kredit": 0,
+      "saldo": 54000000
+    },
+    {
+      "tanggal": "2026-08-12",
+      "pihak": "Borneo Maritim Teknik",
+      "dok": "BKM-681",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 50000000,
+      "kredit": 0,
+      "saldo": 50000000
+    },
+    {
+      "tanggal": "2026-08-24",
+      "pihak": "Multi Teknik Galangan",
+      "dok": "BKM-769",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 136000000,
+      "kredit": 136000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-17",
+      "pihak": "Tridaya Teknik Marine",
+      "dok": "BKM-516",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 38000000,
+      "kredit": 0,
+      "saldo": 38000000
+    },
+    {
+      "tanggal": "2026-08-11",
+      "pihak": "Karya Bersama Steel",
+      "dok": "BKM-779",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 75000000,
+      "kredit": 75000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-14",
+      "pihak": "Sentosa Marine Supply",
+      "dok": "BKM-256",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 71000000,
+      "kredit": 0,
+      "saldo": 71000000
+    },
+    {
+      "tanggal": "2026-08-08",
+      "pihak": "Multi Teknik Galangan",
+      "dok": "BKM-242",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 114000000,
+      "kredit": 0,
+      "saldo": 114000000
+    },
+    {
+      "tanggal": "2026-08-04",
+      "pihak": "Indo Baja Lestari",
+      "dok": "BKM-806",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 121000000,
+      "kredit": 0,
+      "saldo": 121000000
+    },
+    {
+      "tanggal": "2026-08-05",
+      "pihak": "Bina Mahakam Mandiri",
+      "dok": "BKM-206",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 70000000,
+      "kredit": 0,
+      "saldo": 70000000
+    },
+    {
+      "tanggal": "2026-08-10",
+      "pihak": "Cipta Karya Bahari",
+      "dok": "BKM-347",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 66000000,
+      "kredit": 66000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-14",
+      "pihak": "Samudra Logam Perkasa",
+      "dok": "BKM-196",
+      "uraian": "Pembayaran tagihan vendor",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 146000000,
+      "kredit": 146000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-03",
+      "pihak": "Dua Saudara Marine",
+      "dok": "BKM-565",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 108000000,
+      "kredit": 0,
+      "saldo": 108000000
+    },
+    {
+      "tanggal": "2026-08-15",
+      "pihak": "Kaltim Sumber Makmur",
+      "dok": "BKM-669",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 70000000,
+      "kredit": 0,
+      "saldo": 70000000
+    },
+    {
+      "tanggal": "2026-08-15",
+      "pihak": "Borneo Maritim Teknik",
+      "dok": "BKM-616",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 36000000,
+      "kredit": 36000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-25",
+      "pihak": "Borneo Maritim Teknik",
+      "dok": "BKM-220",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 121000000,
+      "kredit": 121000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-14",
+      "pihak": "Dua Saudara Marine",
+      "dok": "BKM-158",
+      "uraian": "Beli sparepart mendesak",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 140000000,
+      "kredit": 140000000,
+      "saldo": 0
+    },
+    {
+      "tanggal": "2026-08-09",
+      "pihak": "Indo Baja Lestari",
+      "dok": "BKM-195",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 98000000,
+      "kredit": 0,
+      "saldo": 98000000
+    },
+    {
+      "tanggal": "2026-08-05",
+      "pihak": "Borneo Maritim Teknik",
+      "dok": "BKM-451",
+      "uraian": "Biaya operasional bengkel",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 132000000,
+      "kredit": 0,
+      "saldo": 132000000
+    },
+    {
+      "tanggal": "2026-08-03",
+      "pihak": "Kaltim Sumber Makmur",
+      "dok": "BKM-107",
+      "uraian": "Penerimaan termin proyek",
+      "akunDb": "1110-Kas Bank",
+      "akunKr": "2110-Hutang Usaha",
+      "debit": 20000000,
+      "kredit": 0,
+      "saldo": 20000000
+    }
+  ]
+}
