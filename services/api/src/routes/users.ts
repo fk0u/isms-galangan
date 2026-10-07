@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { comparePassword, hashPassword, requireAuth } from "../auth.js";
-import { requireManageUsers } from "../rbac.js";
+import { requireManageUsers, roleRank } from "../rbac.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { exec, q } from "../db.js";
 import { fail, ok } from "../envelope.js";
@@ -100,6 +100,18 @@ export function registerUserRoutes(app: FastifyInstance): void {
   app.post("/api/users", { preHandler: manageGuards }, async (req, reply) => {
     const parsed = CreateSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
+    const actorRole = req.user?.role;
+    const actorRank = roleRank(actorRole);
+    const targetRoleRank = roleRank(parsed.data.role);
+
+    // Tolak bila rank(target role) >= rank(actor) kecuali actor developer/direktur (rank >= 90)
+    if (actorRank < 90 && targetRoleRank >= actorRank) {
+      return reply.status(403).send(fail("Tidak memiliki izin membuat pengguna dengan peran setara atau lebih tinggi", "FORBIDDEN"));
+    }
+    if (targetRoleRank > actorRank) {
+      return reply.status(403).send(fail("Tidak dapat membuat pengguna dengan peran melebihi peran sendiri", "FORBIDDEN"));
+    }
+
     const dup = await q(`SELECT id FROM users WHERE username = ?`, [parsed.data.username]);
     if (dup.length > 0) return reply.status(409).send(fail("Username sudah dipakai", "CONFLICT"));
     if (parsed.data.employeeId && !(await assertEmployeeExists(parsed.data.employeeId))) {
@@ -148,6 +160,38 @@ export function registerUserRoutes(app: FastifyInstance): void {
     const rows = await q<UserRow>(`SELECT ${SELECT_COLS} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const current = rows[0] as UserRow;
+
+    const actorRole = req.user?.role;
+    const actorRank = roleRank(actorRole);
+    const isSelf = req.user?.id === current.id;
+    const currentTargetRank = roleRank(current.role);
+
+    // Tolak ubah peran diri sendiri
+    if (isSelf && parsed.data.role !== undefined && parsed.data.role !== current.role) {
+      return reply.status(403).send(fail("Tidak dapat mengubah peran akun sendiri", "FORBIDDEN"));
+    }
+
+    // Bila bukan akun sendiri, periksa hak akses actor terhadap target
+    if (!isSelf) {
+      if (actorRank < 90 && currentTargetRank >= actorRank) {
+        return reply.status(403).send(fail("Tidak memiliki izin mengubah pengguna dengan peran setara atau lebih tinggi", "FORBIDDEN"));
+      }
+      if (currentTargetRank > actorRank) {
+        return reply.status(403).send(fail("Tidak memiliki izin mengubah pengguna dengan peran lebih tinggi", "FORBIDDEN"));
+      }
+    }
+
+    // Bila mengubah peran target, pastikan peran baru tidak melampaui aturan hierarki
+    if (parsed.data.role !== undefined && parsed.data.role !== current.role) {
+      const nextRoleRank = roleRank(parsed.data.role);
+      if (actorRank < 90 && nextRoleRank >= actorRank) {
+        return reply.status(403).send(fail("Tidak memiliki izin memberikan peran setara atau lebih tinggi", "FORBIDDEN"));
+      }
+      if (nextRoleRank > actorRank) {
+        return reply.status(403).send(fail("Tidak dapat memberikan peran melebihi peran sendiri", "FORBIDDEN"));
+      }
+    }
+
     const deactivating = parsed.data.isActive === false || parsed.data.isActive === 0;
     if (deactivating && req.user?.id === current.id) {
       return reply.status(400).send(fail("Tidak dapat menonaktifkan akun sendiri", "VALIDATION_ERROR"));
@@ -207,10 +251,21 @@ export function registerUserRoutes(app: FastifyInstance): void {
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const target = rows[0] as UserRow;
     const self = req.user?.id === target.id;
+    const actorRank = roleRank(req.user?.role);
+    const targetRank = roleRank(target.role);
     const privileged = isPrivileged(req.user?.role);
-    if (!self && !privileged) {
-      return reply.status(403).send(fail("Butuh peran Direktur / Manager / Developer", "FORBIDDEN"));
+
+    if (!self) {
+      if (!privileged) {
+        return reply.status(403).send(fail("Butuh peran Direktur / Manager / Developer", "FORBIDDEN"));
+      }
+      // Reset password user lain: hanya bila rank(actor) > rank(target)
+      if (actorRank <= targetRank) {
+        return reply.status(403).send(fail("Tidak memiliki izin mereset password pengguna dengan peran setara atau lebih tinggi", "FORBIDDEN"));
+      }
+      // TODO(F2-04): panggil bumpTokenVersion(target.id) saat token versioning tersedia
     }
+
     if (self && !privileged) {
       const oldOk =
         typeof parsed.data.oldPassword === "string" &&
@@ -244,6 +299,15 @@ export function registerUserRoutes(app: FastifyInstance): void {
     if (req.user?.id === target.id) {
       return reply.status(400).send(fail("Tidak dapat menonaktifkan akun sendiri", "VALIDATION_ERROR"));
     }
+    const actorRank = roleRank(req.user?.role);
+    const targetRank = roleRank(target.role);
+    if (actorRank < 90 && targetRank >= actorRank) {
+      return reply.status(403).send(fail("Tidak memiliki izin menonaktifkan pengguna dengan peran setara atau lebih tinggi", "FORBIDDEN"));
+    }
+    if (targetRank > actorRank) {
+      return reply.status(403).send(fail("Tidak memiliki izin menonaktifkan pengguna dengan peran lebih tinggi", "FORBIDDEN"));
+    }
+
     await exec("UPDATE users SET is_active = 0 WHERE id = ?", [target.id]);
     await writeAudit({
       actor: requestActor(req),
