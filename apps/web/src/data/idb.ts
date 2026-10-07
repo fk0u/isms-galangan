@@ -126,7 +126,55 @@ export async function idbGetAll(): Promise<Record<string, Row[]> | null> {
   });
 }
 
-/* idbDelete/idbClear sengaja tidak dibuat: belum ada aksi "bersihkan cache" di UI, jadi menambahkannya hanya menambah kode mati. */
+/**
+ * Hapus seluruh data di IndexedDB isms-offline (F2-07: isolasi multi-user tablet).
+ */
+export async function idbClearAll(): Promise<void> {
+  const db = await openDb();
+  if (!db) return;
+  return new Promise<void>((resolve) => {
+    try {
+      const t = db.transaction(STORE, "readwrite");
+      const store = t.objectStore(STORE);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+/** Preferensi UI yang dipertahankan saat cache dibuang (F2-07). */
+const PRESERVED_LS_KEYS = new Set(["isms.locale", "isms.minSide"]);
+
+/**
+ * Hapus seluruh kunci localStorage berawalan isms.* kecuali preferensi UI.
+ */
+export function clearIsmsLocalStorage(): void {
+  try {
+    const kill: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("isms.") && !PRESERVED_LS_KEYS.has(k)) {
+        kill.push(k);
+      }
+    }
+    for (const k of kill) {
+      localStorage.removeItem(k);
+    }
+  } catch {
+    /* abaikan */
+  }
+}
+
+/**
+ * Bersihkan seluruh cache offline (IndexedDB + localStorage) (F2-07).
+ */
+export async function purgeOfflineCache(): Promise<void> {
+  await idbClearAll();
+  clearIsmsLocalStorage();
+}
 
 export function lsPut(col: string, rows: Row[]): boolean {
   try {

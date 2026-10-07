@@ -1,4 +1,4 @@
-﻿import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, type Row } from "./idb";
+import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, purgeOfflineCache, type Row } from "./idb";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { newId as newPrefixedId } from "../services/ids";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/http";
@@ -1620,22 +1620,49 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
     Jwala boot: coba sinkronkan antrean offline, lalu interval berkala.
      Dulu hanya tombol manual di AppShell - antrean bisa mengendap lalu hilang. */
   useEffect(() => {
-    /* Hidrasi cache offline DULU, baru resync dari server. Urutannya penting:
-       server harus menimpa cache yang bersih, sementara koleksi yang dirty
-       (pemegang edit offline) tetap aman karena resync melewatinya. */
-    void hydrateFromOfflineStore((cached) => {
-      setData((prev) => {
-        const next = { ...prev } as unknown as Record<string, unknown>;
-        let changed = false;
-        for (const [col, rows] of Object.entries(cached)) {
-          if (Array.isArray(rows) && rows.length > 0) {
-            next[col] = rows;
-            changed = true;
-          }
+    // F2-07: Periksa apakah cache offline dimiliki oleh pengguna berbeda.
+    // Bila pengguna berbeda, buang cache offline sebelum hidrasi agar data tidak bocor.
+    const checkOwnerAndHydrate = async () => {
+      let currentUserId: string | null = null;
+      try {
+        const raw = sessionStorage.getItem("isms.session");
+        if (raw) {
+          const sess = JSON.parse(raw) as { id?: string; username?: string };
+          currentUserId = sess.id || sess.username || null;
         }
-        return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+      } catch {
+        /* abaikan */
+      }
+
+      const storedOwner = localStorage.getItem("isms.cache.ownerUserId");
+      if (currentUserId && storedOwner && storedOwner !== currentUserId) {
+        await purgeOfflineCache();
+        localStorage.setItem("isms.cache.ownerUserId", currentUserId);
+        setData(sanitizeStore({} as Partial<StoreShape>));
+        await resync();
+        return;
+      }
+      if (currentUserId && !storedOwner) {
+        localStorage.setItem("isms.cache.ownerUserId", currentUserId);
+      }
+
+      await hydrateFromOfflineStore((cached) => {
+        setData((prev) => {
+          const next = { ...prev } as unknown as Record<string, unknown>;
+          let changed = false;
+          for (const [col, rows] of Object.entries(cached)) {
+            if (Array.isArray(rows) && rows.length > 0) {
+              next[col] = rows;
+              changed = true;
+            }
+          }
+          return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+        });
       });
-    }).then(() => resync());
+      await resync();
+    };
+
+    void checkOwnerAndHydrate();
   }, [resync]);
 
   useEffect(() => {

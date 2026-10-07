@@ -78,7 +78,8 @@ export default function AppShell() {
   useEffect(() => {
     const onExpired = () => {
       toast(t.auth.sessionExpired, "info");
-      logout();
+      logout(true);
+      reset();
       navigate("/login");
     };
     window.addEventListener("isms:auth-expired", onExpired);
@@ -274,10 +275,12 @@ export default function AppShell() {
   }, [navGroups, user?.permissions]);
 
   const doLogout = () => {
+    const ok = logout();
+    if (!ok) return;
     if (isBackendConfigured() && getJwt()) {
       void apiFetch("/api/auth/logout", { method: "DELETE" }).catch(() => undefined);
     }
-    logout();
+    reset();
     navigate("/login");
   };
 
