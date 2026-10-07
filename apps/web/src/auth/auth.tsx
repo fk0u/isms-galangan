@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
+import { purgeOfflineCache } from "../data/idb";
 
 export interface DemoUser {
   username: string;
@@ -46,6 +47,7 @@ export function hasPermission(
 const SESSION_KEY = "isms.session";
 
 export interface Session {
+  id?: string;
   name: string;
   role: string;
   email: string;
@@ -92,10 +94,10 @@ interface BackendLoginUser {
 interface AuthCtx {
   user: Session | null;
   login: (username: string, password: string) => Promise<string | null>;
-  logout: () => void;
+  logout: (force?: boolean) => boolean;
 }
 
-const Ctx = createContext<AuthCtx>({ user: null, login: async () => "Belum siap", logout: () => {} });
+const Ctx = createContext<AuthCtx>({ user: null, login: async () => "Belum siap", logout: () => true });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Session | null>(() => loadSession());
@@ -111,8 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!prev) return prev;
           const updated: Session = {
             ...prev,
+            id: res.user?.id ?? prev.id,
             role: res.user?.role ?? prev.role,
             name: res.user?.name ?? prev.name,
+            branch: res.user?.branch ?? prev.branch,
             permissions: res.permissions,
           };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
@@ -135,7 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setJwt(res.token);
         const bu = res.user ?? {};
+        const userId = bu.id || bu.username || uname;
+        try {
+          localStorage.setItem("isms.cache.ownerUserId", userId);
+        } catch {
+          /* abaikan */
+        }
         const session: Session = {
+          id: bu.id,
           name: bu.name || bu.username || uname,
           role: bu.role || "viewer",
           email: bu.email || "",
@@ -180,14 +191,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "Backend belum dikonfigurasi dan mode demo dinonaktifkan.";
   };
 
-  const logout = () => {
+  const logout = (force = false): boolean => {
+    // F2-07: Peringatan bila ada antrean yang belum tersinkronisasi
+    if (!force) {
+      try {
+        const rawDirty = localStorage.getItem("isms.dirty");
+        if (rawDirty) {
+          const parsed = JSON.parse(rawDirty) as { entries?: unknown[] };
+          const entries = Array.isArray(parsed?.entries) ? parsed.entries : [];
+          if (entries.length > 0) {
+            const confirmed = window.confirm(
+              `Masih ada ${entries.length} perubahan yang belum tersinkronisasi ke server. Data ini akan hilang jika Anda keluar sekarang. Lanjutkan keluar?`
+            );
+            if (!confirmed) return false;
+          }
+        }
+      } catch {
+        /* abaikan */
+      }
+    }
+
     clearJwt();
     sessionStorage.removeItem(SESSION_KEY);
     /* Cache tanggal-hapus bersifat per-tab dan tidak tahu batas sesi. Tanpa
        ini user berikutnya yang memakai tab sama bisa membaca tanggal hapus
        milik user sebelumnya. */
     forgetDeleteDates();
+    void purgeOfflineCache();
     setUser(null);
+    return true;
   };
 
   return <Ctx.Provider value={{ user, login, logout }}>{children}</Ctx.Provider>;

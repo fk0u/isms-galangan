@@ -264,11 +264,12 @@ export function buildApp(): FastifyInstance {
     /* Cabang user ikut di-token supaya route PDF bisa menegakkan batas tanpa
        query ulang, dan klien tidak bisa memperbesar haknya sendiri karena
        claim ini sudah ditandatangani. */
+    const branch = await branchOfUser(user);
     const token = signToken({
       id: user.id,
       username: user.username,
       role: user.role,
-      branch: await branchOfUser(user),
+      branch,
       v: user.token_version ?? 0,
     });
     // Sesi realtime: 1 baris aktif per user (last writer wins).
@@ -292,6 +293,7 @@ export function buildApp(): FastifyInstance {
         username: user.username,
         name: user.name,
         role: user.role,
+        branch,
         email: user.email,
         employeeId: typeof user.employee_id === "string" ? user.employee_id : null,
       },
