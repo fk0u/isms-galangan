@@ -6,7 +6,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 |---|---|---|---|---|---|---|
 | F0-01 | Repo git & remote | P0 | F0-setup.md | Kou | selesai | repo publik, commit awal |
 | F0-02 | Generator data sintetis untuk seed bulk | P0 | F0-setup.md | | todo | |
-| F0-03 | `.env` benar-benar dimuat | P0 | F0-setup.md | | todo | |
+| F0-03 | `.env` benar-benar dimuat | P0 | F0-setup.md | agent | selesai | PR #1 |
 | F0-04 | README & quickstart | P1 | F0-setup.md | | todo | |
 | F1-01 | Verifikasi revisi klien item per item | P0 | F1-verifikasi.md | | ditunda | diganti verifikasi per kartu (sprint plan) |
 | F1-02 | ESLint minimal | P1 | F1-verifikasi.md | | todo | |
