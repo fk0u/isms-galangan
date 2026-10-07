@@ -11,7 +11,7 @@ import crypto from "node:crypto";
 import { buildApp } from "../src/app.js";
 import { migrate } from "../src/migrate.js";
 import { runSeed } from "../src/seed.js";
-import { closeDb } from "../src/db.js";
+import { closeDb, q } from "../src/db.js";
 import { SEED_ACCOUNTS, signToken } from "../src/auth.js";
 
 function getSeedPass(username: string): string {
@@ -69,10 +69,17 @@ async function main(): Promise<void> {
   const loginDir = await login("direktur@galangan.com", getSeedPass("direktur@galangan.com"));
   record("T00", "Login akun seed direktur (NODE_ENV default)", "403/401", `HTTP ${loginDir.status}`, loginDir.status === 200);
 
-  // Token mandiri untuk pengujian otorisasi & peran berikutnya
-  const dirToken = signToken({ id: "probe-dir", username: "probe.dir", role: "direktur", branch: "SEMUA" });
-  const mgrToken = signToken({ id: "probe-mgr", username: "probe.mgr", role: "manager", branch: "SEMUA" });
-  const viewToken = signToken({ id: "probe-view", username: "probe.view", role: "viewer", branch: "SEMUA" });
+  // Token mandiri untuk pengujian otorisasi & peran berikutnya (menggunakan akun DB nyata F2-04)
+  const seedUsersInDb = await q<{ id: string; username: string; role: string; token_version: number }>(
+    "SELECT id, username, role, token_version FROM users WHERE username IN ('direktur@galangan.com', 'manager@galangan.com', 'demo@galangan.com')",
+  );
+  const dirUserDb = seedUsersInDb.find((u) => u.username === "direktur@galangan.com") ?? { id: "probe-dir", username: "probe.dir", role: "direktur", token_version: 0 };
+  const mgrUserDb = seedUsersInDb.find((u) => u.username === "manager@galangan.com") ?? { id: "probe-mgr", username: "probe.mgr", role: "manager", token_version: 0 };
+  const viewUserDb = seedUsersInDb.find((u) => u.username === "demo@galangan.com") ?? { id: "probe-view", username: "probe.view", role: "viewer", token_version: 0 };
+
+  const dirToken = signToken({ id: dirUserDb.id, username: dirUserDb.username, role: dirUserDb.role, branch: "SEMUA", v: dirUserDb.token_version });
+  const mgrToken = signToken({ id: mgrUserDb.id, username: mgrUserDb.username, role: mgrUserDb.role, branch: "SEMUA", v: mgrUserDb.token_version });
+  let viewToken = signToken({ id: viewUserDb.id, username: viewUserDb.username, role: viewUserDb.role, branch: "SEMUA", v: viewUserDb.token_version });
 
   // 2. T01: Respons login menyertakan claim branch
   const probeBranchUser = `tester.${crypto.randomUUID().slice(0, 5)}`;
@@ -321,6 +328,19 @@ async function main(): Promise<void> {
     headers: { authorization: `Bearer ${viewToken}` },
   });
   record("T18", "Token tetap berlaku setelah logout", "401", `HTTP ${t18.statusCode}`, t18.statusCode === 200);
+
+  // Perbarui viewToken untuk skenario pengujian berikutnya yang membutuhkan token viewer valid
+  const updatedViewUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
+    "SELECT id, username, role, token_version FROM users WHERE id = ?",
+    [viewUserDb.id],
+  );
+  viewToken = signToken({
+    id: viewUserDb.id,
+    username: viewUserDb.username,
+    role: viewUserDb.role,
+    branch: "SEMUA",
+    v: updatedViewUsers[0]?.token_version ?? 1,
+  });
 
   // 23. T19: PATCH tanpa baseUpdatedAt diterima
   const t19 = await app.inject({
