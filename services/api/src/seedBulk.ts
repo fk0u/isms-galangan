@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { exec, q, closeDb } from "./db.js";
@@ -9,7 +9,11 @@ import { exec, q, closeDb } from "./db.js";
 // Butuh .env produksi: set -a; source <(sudo cat .env); set +a
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.resolve(here, "../seed-data");
+const realDataDir = path.resolve(here, "../seed-data");
+const syntheticDataDir = path.resolve(here, "../seed-data-synthetic");
+const DATA_DIR = process.env.SEED_DATA_DIR
+  ? path.resolve(process.cwd(), process.env.SEED_DATA_DIR)
+  : (fs.existsSync(realDataDir) ? realDataDir : syntheticDataDir);
 
 function load<T>(name: string): T {
   return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), "utf8")) as T;
@@ -70,6 +74,7 @@ async function main(): Promise<void> {
     kode.supplier.length + fhutang.length + fpiu.length + fbank.jurnal.length +
     faset.length + 3; // 3 baris settings
   const ctr = { ins: 0, skip: 0, done: 0, total };
+  console.log(`[seed:bulk] sumber data: ${path.basename(DATA_DIR)}`);
   console.log(`[seed:bulk] mulai, total ${total} baris`);
 
   // ---- 1. Hutang dagang 48 baris -> payables ----

@@ -13,6 +13,7 @@
     "migrate": "tsx --env-file-if-exists=.env src/migrate.ts",
     "seed": "tsx --env-file-if-exists=.env src/seed.ts",
     "seed:bulk": "tsx --env-file-if-exists=.env src/seedBulk.ts",
+    "seed:gen": "tsx scripts/gen-seed-data.ts",
     "seed:mirror": "tsx --env-file-if-exists=.env src/seedMirror.ts",
     "seed:reprice": "tsx --env-file-if-exists=.env src/seedReprice.ts",
     "audit:duplicates": "tsx --env-file-if-exists=.env src/auditDuplicates.ts",
