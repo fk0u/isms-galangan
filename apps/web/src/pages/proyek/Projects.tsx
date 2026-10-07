@@ -1,0 +1,495 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Anchor, Wallet, TrendingUp, Clock, Trash2, Eye } from "lucide-react";
+import {
+  Card,
+  PageHeader,
+  StatusBadge,
+  ProgressBar,
+  Badge,
+  KpiCard,
+  Field,
+  SortTh,
+  toggleSort,
+  sortRows,
+  usePager,
+  ConfirmModal,
+  toast,
+  SearchBox,
+  rowMatches,
+  RowAction,
+} from "../../components/ui";
+import type { SortState } from "../../components/ui";
+import { useStore } from "../../data/store";
+import { useModuleSync } from "../../data/useModuleSync";
+import { findUsages } from "../../utils/usages";
+import type { StoreItem, CollectionKey } from "../../data/store";
+import { useT } from "../../i18n/LanguageContext";
+import { n_prj } from "../../i18n/n_prj";
+import { fmtMiliar, sparkProjects, activeProjectTrend, contractValueTrend, avgProgressTrend } from "../../data";
+import { todayISO, fmtTanggal } from "../../utils/format";
+import { getSetting } from "../../utils/settings";
+import { shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
+import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
+import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
+import { canonPrioritas } from "../../utils/scope";
+import ProjectAddModal from "../../components/ProjectAddModal";
+import { FilterPopover } from "../../components/FilterPopover";
+import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
+import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
+import { rowHighlightClass } from "../../components/rowHighlight";
+
+export const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
+export const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
+
+export function tahapOf(p: StoreItem): string {
+  return TAHAP.includes(p.tahap) ? p.tahap : "Produksi";
+}
+
+// Kontrak wajib terisi sebelum proyek hasil konversi bisa jalan: tahap awal
+// (Inquiry/Quotation/Kontrak) dikunci bila belum ada kontrak untuk quotationId itu.
+export function hasContract(p: StoreItem, contracts: StoreItem[]): boolean {
+  if (!p.quotationId) return true;
+  return contracts.some(
+    (c) => String(c.quotationId ?? "") === String(p.quotationId) || String(c.projectId ?? "") === String(p.id)
+  );
+}
+
+export function isOverdue(p: StoreItem, today: string): boolean {
+  if (!p.end || p.end === "-") return false;
+  if (String(p.status) === "Selesai") return false;
+  if (Number(p.progress || 0) >= 100) return false;
+  return String(p.end) < today;
+}
+
+const filters = ["Semua", "New Build", "Repair", "Retrofit"];
+/* Label tampilan tipe proyek (ID); value backend tetap EN. */
+const TYPE_ID: Record<string, string> = { "New Build": "Bangun Baru", Repair: "Reparasi", Retrofit: "Retrofit / Modifikasi" };
+/* "Dalam Proses" WAJIB ada: itu status default proyek baru
+   (ProjectAddModal), jadi tanpa baris ini filter dari Dashboard menerima
+   ?status=Dalam Proses lalu ditolak `known` di bawah dan reset diam-diam ke
+   "Semua" - pill-nya terlihat berfungsi tapi tidak memfilter apa pun. */
+const statusOptions = ["Semua", "Sedang Berjalan", "Dalam Proses", "Tertunda", "Batal", "Terlambat", "Selesai"];
+const branchOptions = ["Samarinda", "Balikpapan", "Banjarmasin"];
+const prioritasTone: Record<string, "gray" | "blue" | "amber" | "red"> = {
+  Rendah: "gray",
+  Sedang: "blue",
+  Tinggi: "amber",
+};
+
+/* Batch koleksi modul Proyek untuk useModuleSync (pengganti resync penuh). */
+const PRJ_COLS: CollectionKey[] = ["activities", "clients", "employees", "projects", "vessels"];
+
+export default function Projects() {
+  const { locale } = useT();
+  const S = n_prj[locale];
+  const { data, add, update, remove, inBranch, log } = useStore();
+  const modAlert = useModuleAlert("proyek");
+  const flash = useNotifFlash();
+  const deepParams = useDeepLinkParams();
+  const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
+  const navigate = useNavigate();
+  const projects = data.projects;
+  const [filter, setFilter] = useState("Semua");
+  const [statusFilter, setStatusFilter] = useState("Semua");
+  const [tahapFilter, setTahapFilter] = useState("Semua");
+  const [branchFilter, setBranchFilter] = useState("Semua");
+  const [prioritasFilter, setPrioritasFilter] = useState("Semua");
+  const [pmFilter, setPmFilter] = useState("Semua");
+  const [q, setQ] = useState("");
+  /* Default: proyek terbaru paling atas (P9). Versi lama `key: null` dengan
+     `dir: "asc"` membuat daftar urut tak tertentu, dan kolom `createdAt`
+     yang diklik pertama kali menghasilkan ASC = terlama dulu, berlawanan
+     dengan yang diharapkan. Sekarang default-nya DESC di `createdAt`, jadi
+     baris pertama benar-benar proyek terbaru. */
+  const [sort, setSort] = useState<SortState>({ key: "createdAt", dir: "desc" });
+  const [showAdd, setShowAdd] = useState(false);
+  // Hapus proyek via ConfirmModal + daftar pemakai (blokir bila dirujuk PO/invoice/WBS).
+  const [delProject, setDelProject] = useState<StoreItem | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  /* Fetch per-batch modul (pengganti resync penuh). */
+  useModuleSync(PRJ_COLS);
+
+  // Alur dari Dashboard: /proyek?create=1 langsung buka form tambah proyek.
+  useEffect(() => {
+    if (searchParams.get("create") === "1") {
+      setShowAdd(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("create");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Jalur sama untuk /proyek?status=<Status> yang dipakai kartu sebaran
+     status di Dashboard. Sebelumnya hanya `create` yang dibaca, jadi
+     clicking pil statusDiam-diam tidak melakukan apa-apa. */
+  useEffect(() => {
+    const want = searchParams.get("status");
+    if (!want) return;
+    const known = statusOptions.some((s) => s === want);
+    setStatusFilter(known ? want : "Semua");
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Edit tahap HANYA via detail (stepper + modal alasan di ProjectDetail).
+
+  // Terlambat otomatis dari due (P8: bisa di-override manual).
+  useEffect(() => {
+    const today = todayISO();
+    for (const p of projects) {
+      // Override sudah tidak relevan → clear.
+      if (shouldClearOverride(p as Record<string, unknown>, today, isOverdue as (r: Record<string, unknown>, t: string) => boolean)) {
+        void update("projects", p.id, { statusOverride: null }).catch(() => {});
+      }
+      // Auto-logic hanya menulis "Terlambat" kalau tidak ada override aktif.
+      if (shouldAutoSetLate(p as Record<string, unknown>, today, isOverdue as (r: Record<string, unknown>, t: string) => boolean)) {
+        void update("projects", p.id, { status: "Terlambat" }).catch((err) => {
+          log(
+            "gagal menandai proyek terlambat",
+            `${p.id} · ${err instanceof Error ? err.message : String(err)}`,
+            "Proyek",
+          );
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]);
+
+  // D8: risiko otomatis dari WBS dan milestone WO saat page load.
+  // Proyek yang punya WBS tersimpan dicek; milestone yang mendekati jatuh
+  // tempo atau terlambat otomatis menjadi risiko aktif.
+  useEffect(() => {
+    const today = todayISO();
+    const msDays = getSetting(data, "ALERT_MILESTONE_DAYS", 7);
+    for (const p of projects) {
+      const hasWbs = Boolean(data.wbsByProject?.[p.id]);
+      const wos = (data.workOrders ?? []).filter((w) => w.project === p.id);
+      if (!hasWbs && wos.length === 0) continue;
+      const existing = (data.risks ?? []).filter((r) => r.project === p.id);
+      const wbsResult = hasWbs
+        ? generateRisksFromWbs(p.id, data.wbsByProject[p.id], existing, today, msDays)
+        : { add: [], close: [] };
+      const woResult = generateRisksFromWo(p.id, wos, existing, today, msDays);
+      for (const draft of [...wbsResult.add, ...woResult.add]) {
+        void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => {});
+      }
+      for (const id of [...wbsResult.close, ...woResult.close]) {
+        void update("risks", id, { status: "Tertutup" }).catch(() => {});
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects]);
+
+  const pmOptions = [...new Set(projects.map((p) => String(p.manager ?? "")).filter(Boolean))].sort();
+  const resetFilters = () => { setFilter("Semua"); setStatusFilter("Semua"); setTahapFilter("Semua"); setBranchFilter("Semua"); setPrioritasFilter("Semua"); setPmFilter("Semua"); setQ(""); };
+
+  const list = inBranch(projects).filter((p) => {
+    const matchType = filter === "Semua" || p.type === filter;
+    const matchStatus = statusFilter === "Semua" || p.status === statusFilter;
+    const matchTahap = tahapFilter === "Semua" || tahapOf(p) === tahapFilter;
+    const matchBranch = branchFilter === "Semua" || p.branch === branchFilter;
+    const matchPrioritas = prioritasFilter === "Semua" || canonPrioritas(p.prioritas) === prioritasFilter;
+    const matchPm = pmFilter === "Semua" || String(p.manager ?? "") === pmFilter;
+    const matchQ = rowMatches(p as unknown as Record<string, unknown>, q, ["vessel", "id", "client", "manager", "status", "type", "scope"]);
+    return matchType && matchStatus && matchTahap && matchBranch && matchPrioritas && matchPm && matchQ;
+  });
+
+  const totalBudget = list.reduce((s, p) => s + Number(p.budget || 0), 0);
+  const inProgress = list.filter((p) => p.status !== "Selesai").length;
+  const delayed = list.filter((p) => p.status === "Terlambat").length;
+  const avgProgress = list.length ? Math.round(list.reduce((s, p) => s + Number(p.progress || 0), 0) / list.length) : 0;
+  /* Pengurutan tanggal lewat `createdAtOf`/`lastTouchedAt`, bukan field mentah:
+     `updated_at` milik server adalah ISO penuh sementara `createdAt` bisa
+     "YYYY-MM-DD" saja. Dicampur dalam satu kolom, urutan leksikografis
+     mengurutkan "2026-1-5" sebelum "2026-10-2" - jadi keduanya dinormalkan
+     ke sumber yang sudah tervalidasi lebih dulu. Yang tidak ada tanggalnya
+     diberi string kosong supaya mengurut ke akhir, bukan ke awal. */
+  const sorted = useMemo(() => sortRows(list, sort, (p: StoreItem, k) => {
+    if (k === "budget") return Number(p.budget);
+    if (k === "actual") return Number(p.actual);
+    if (k === "progress") return Number(p.progress);
+    if (k === "tahap") return String(tahapOf(p));
+    if (k === "createdAt") return createdAtOf(p) ?? "";
+    if (k === "updatedAt") return lastTouchedAt(p) ?? "";
+    return String((p as StoreItem)[k] ?? "");
+  }), [list, sort]);
+  /* Default 25 baris (P7). Versi lama memakai default `usePager` yaitu 100,
+     jadi tabel proyek memuat empat halaman penuh sebelum sempat menekan "halaman berikutnya". */
+  const pager = usePager(list.length, 25);
+  useEffect(() => {
+    pager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, statusFilter, tahapFilter, branchFilter, prioritasFilter, pmFilter, q]);
+
+  const pickNotifIds = (ids: string[]): void => {
+    if (ids.length === 0) return;
+    const idx = sorted.findIndex((r) => ids.includes(String(r.id)));
+    flashPick(flash, ids, idx, pager.go, pager.size);
+  };
+  const pickNotif = (rowId: string) => pickNotifIds([rowId]);
+  useDeepLinkTarget("", deepParams.highlight, () => {}, pickNotifIds);
+
+  return (
+    <div>
+      <PageHeader
+        title={S.prjTitle}
+        subtitle={S.prjSubtitle}
+        icon={<Anchor className="h-5 w-5" />}
+        actions={
+          <>
+            <button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.prjNew}</button>
+          </>
+        }
+      />
+
+      {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
+
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label={S.prjKpiTotal} value={String(projects.length)} hint={S.prjKpiTotalHint} icon={<Anchor className="h-5 w-5" />} chip="navy" spark={sparkProjects} />
+        <KpiCard label={S.prjKpiActive} value={String(inProgress)} delta={S.prjKpiLate.replace("{n}", String(delayed))} deltaDirection="down" icon={<Clock className="h-5 w-5" />} chip="amber" spark={activeProjectTrend} />
+        <KpiCard label={S.prjKpiContract} value={fmtMiliar(totalBudget)} delta={S.prjKpiContractHint} deltaDirection="up" icon={<Wallet className="h-5 w-5" />} chip="teal" spark={contractValueTrend} />
+        <KpiCard label={S.prjKpiAvg} value={`${avgProgress}%`} delta={S.prjKpiAvgHint} deltaDirection="flat" icon={<TrendingUp className="h-5 w-5" />} chip="violet" spark={avgProgressTrend} />
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <SearchBox
+          value={q}
+          onChange={setQ}
+          placeholder={S.searchProjectPh}
+          ariaLabel={S.searchProjectAria}
+          className="min-w-52 flex-1 sm:max-w-xs"
+        />
+        <FilterPopover
+          activeCount={[
+            filter !== "Semua",
+            tahapFilter !== "Semua",
+            branchFilter !== "Semua",
+            statusFilter !== "Semua",
+            prioritasFilter !== "Semua",
+            pmFilter !== "Semua",
+          ].filter(Boolean).length}
+          initial={{ type: filter, tahap: tahapFilter, branch: branchFilter, status: statusFilter, prioritas: prioritasFilter, pm: pmFilter }}
+          onReset={resetFilters}
+          onApply={(d) => {
+            setFilter(d.type);
+            setTahapFilter(d.tahap);
+            setBranchFilter(d.branch);
+            setStatusFilter(d.status);
+            setPrioritasFilter(d.prioritas);
+            setPmFilter(d.pm);
+          }}
+        >
+          {(draft, setDraft) => (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1">
+                {filters.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setDraft({ ...draft, type: f })}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      draft.type === f ? "bg-navy-700 text-white" : "bg-white border border-steel-200 text-steel-600 hover:bg-steel-100"
+                    }`}
+                  >
+                    {f === "Semua" ? "Semua tipe" : TYPE_ID[f] ?? f}
+                  </button>
+                ))}
+              </div>
+              <Field label={S.prjFieldTahap}>
+                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterTahapAria} value={draft.tahap} onChange={(e) => setDraft({ ...draft, tahap: e.target.value })}>
+                  <option value="Semua">{S.prjAllTahap}</option>
+                  {TAHAP.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label={S.branchLabel}>
+                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterCabangAria} value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })}>
+                  <option value="Semua">{S.prjAllCabang}</option>
+                  {branchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </Field>
+              <Field label={S.statusLabel}>
+                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterStatusAria} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                  <option value="Semua">{S.prjAllStatus}</option>
+                  {statusOptions.filter((s) => s !== "Semua").map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </Field>
+              <Field label={S.prjFieldPrioritas}>
+                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterPrioritasAria} value={draft.prioritas} onChange={(e) => setDraft({ ...draft, prioritas: e.target.value })}>
+                  <option value="Semua">{S.prjAllPrioritas}</option>
+                  {PRIORITAS.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </Field>
+              <Field label={S.prjFieldPm}>
+                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterPmAria} value={draft.pm} onChange={(e) => setDraft({ ...draft, pm: e.target.value })}>
+                  <option value="Semua">{S.prjAllPm}</option>
+                  {pmOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </Field>
+            </div>
+          )}
+        </FilterPopover>
+        <span className="ml-auto text-xs text-steel-400">{S.prjCount.replace("{n}", String(list.length))}</span>
+      </div>
+
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-surface">
+              <tr>
+                {/* Nomor urut (P2). Angka ikutPagination: halaman 2 mulai
+                    dari 26, bukan mengulang dari 1 - kalau tidak, nomor ini
+                    tidak bisa dipakai rujukan ("proyek nomor 7") dan tidak
+                    cocok dengan yang terlihat di layar. */}
+                <th className="th w-10 text-center">{S.colNo}</th>
+                <SortTh label={S.colProject} sortKey="vessel" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colClient} sortKey="client" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colType} sortKey="type" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.prjFieldTahap} sortKey="tahap" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.prjFieldPrioritas} sortKey="prioritas" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.statusLabel} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colBudget} sortKey="budget" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colActual} sortKey="actual" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colPm} sortKey="manager" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+{/* Tanggal rekam (F6). Kolom ini yang bikin tabel bisa
+                    diurutkan menurut umur data - tanpa itu, semua proyek
+                    terlihat sama saja sejak itu dibuat. Kosong = "—", bukan hari ini:
+                    data lama memang tidak punya tanggal buat, dan mengarang
+                    tanggal lebih buruk daripada membiarkan kosong. */}
+                <SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                <th className="th">{S.actionTh}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-steel-100">
+              {pager.slice(sorted).map((p, rowIndex) => {
+                return (
+                  <tr
+                    key={p.id}
+                    id={notifRowId(String(p.id))}
+                    className={`cursor-pointer transition-colors ${rowHighlightClass({ id: String(p.id), flash, notified: notified.has(String(p.id)), base: "hover:bg-surface" })}`}
+                    onClick={() => navigate(`/proyek/${p.id}`)}
+                    onKeyDown={(e) => { if (e.key === "Enter") navigate(`/proyek/${p.id}`); }}
+                    tabIndex={0}
+                    title={S.prjOpenRow.replace("{a}", p.id)}
+                  >
+                    <td className="td text-center font-mono text-xs text-steel-400">
+                      {(pager.page - 1) * pager.size + rowIndex + 1}
+                    </td>
+                    <td className="td">
+                      <span className="block">
+                        <p className="font-semibold text-navy-900">{p.vessel}</p>
+                        <p className="font-mono text-xs text-steel-500">{p.id}</p>
+                      </span>
+                    </td>
+                    <td className="td text-steel-600">{p.client}</td>
+                    <td className="td">
+                      <Badge tone={p.type === "New Build" ? "navy" : p.type === "Repair" ? "cyan" : "violet"}>
+                        {TYPE_ID[String(p.type)] ?? p.type}
+                      </Badge>
+                    </td>
+                    <td className="td">
+                      {/* Edit tahap hanya lewat detail (stepper + modal alasan).
+                          Versi lama menempelkan teks "Edit hanya di detail" dan
+                          link "Kelola di detail" di sini; keduanya hilang dari
+                          layar dan baris tetap bisa diklik untuk masuk detail. */}
+                      <Badge tone="navy">{tahapOf(p)}</Badge>
+                    </td>
+                    <td className="td">
+                      <Badge tone={prioritasTone[canonPrioritas(p.prioritas)] ?? "blue"}>{canonPrioritas(p.prioritas)}</Badge>
+                    </td>
+                    <td className="td"><StatusBadge status={p.status} /></td>
+                    <td className="td">
+                      <div className="flex items-center gap-2">
+                        <ProgressBar value={p.progress} className="w-20" tone={p.status === "Terlambat" ? "red" : "navy"} />
+                        <span className="text-xs font-medium text-steel-600">{p.progress}%</span>
+                      </div>
+                    </td>
+                    <td className="td font-medium text-navy-900">{fmtMiliar(p.budget)}</td>
+                    <td className="td text-steel-600">{fmtMiliar(p.actual)}</td>
+                    <td className="td text-steel-600">{p.manager}</td>
+                    <td className="td text-xs text-steel-600">
+                      {createdAtOf(p) !== null ? fmtTanggal(createdAtOf(p)) : <span className="text-steel-400">-</span>}
+                    </td>
+                    <td className="td text-xs text-steel-600">
+                      {lastTouchedAt(p) !== null ? fmtTanggal(lastTouchedAt(p)) : <span className="text-steel-400">-</span>}
+                    </td>
+                    <td className="td">
+                      <div className="flex items-center gap-1">
+                        {/* Detail pindah ke kolom Aksi (P6). Sebelumnya
+                            "Kelola di detail" menempel di sel Tahap, jauh dari
+                            kolom tempat pengguna mencari aksi, dan menambah
+                            teks pada kolom data yang seharusnya bersih. */}
+                        <RowAction
+                          icon={Eye}
+                          tone="neutral"
+                          label={S.btnDetail}
+                          ariaLabel={`${S.btnDetail} ${p.id}`}
+                          onClick={() => navigate(`/proyek/${p.id}`)}
+                        />
+                        <RowAction
+                          icon={Trash2}
+                          tone="danger"
+                          label={locale === "en" ? "Delete" : "Hapus"}
+                          ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${p.id}`}
+                          onClick={() => setDelProject(p)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {list.length === 0 && <p className="py-8 text-center text-sm text-steel-400">{S.prjEmpty}</p>}
+          {pager.bar}
+        </div>
+      </Card>
+
+
+      <ProjectAddModal
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        S={S}
+        projects={projects}
+        vessels={data.vessels}
+        clients={data.clients}
+        employees={data.employees}
+        add={add}
+      />
+
+      <ConfirmModal
+        open={delProject !== null}
+        title={delProject ? (locale === "en" ? `Delete project ${delProject.id}?` : `Hapus proyek ${delProject.id}?`) : ""}
+        desc={(() => {
+          if (!delProject) return "";
+          const used = findUsages(data, "projects", String(delProject.id));
+          const base = locale === "en"
+            ? `Project ${delProject.id} (${String(delProject.vessel)}) will be permanently deleted.`
+            : `Proyek ${delProject.id} (${String(delProject.vessel)}) akan dihapus permanen.`;
+          return used.length > 0
+            ? (locale === "en" ? `${base} Referenced in: ${used.join(", ")}. Deletion blocked.` : `${base} Dirujuk di: ${used.join(", ")}. Penghapusan diblokir.`)
+            : base;
+        })()}
+        confirmLabel={delProject && findUsages(data, "projects", String(delProject.id)).length > 0
+          ? (locale === "en" ? "Blocked - still in use" : "Diblokir - masih dipakai")
+          : (locale === "en" ? "Delete" : "Hapus")}
+        danger
+        confirmDisabled={delProject ? findUsages(data, "projects", String(delProject.id)).length > 0 : false}
+        onCancel={() => setDelProject(null)}
+        onConfirm={async () => {
+          if (!delProject) return;
+          const usedBy = findUsages(data, "projects", String(delProject.id));
+          if (usedBy.length > 0) { toast(locale === "en" ? `Delete blocked - referenced in: ${usedBy.join(", ")}` : `Hapus diblokir - dirujuk di: ${usedBy.join(", ")}`, "info"); return; }
+          try {
+            await remove("projects", String(delProject.id));
+            toast(locale === "en" ? `Project ${delProject.id} deleted` : `Proyek ${delProject.id} dihapus`);
+          } catch (e) { toast(e instanceof Error ? e.message : (locale === "en" ? "Delete failed" : "Gagal menghapus"), "info"); }
+          setDelProject(null);
+        }}
+      />
+    </div>
+  );
+}

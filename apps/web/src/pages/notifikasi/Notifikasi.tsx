@@ -1,0 +1,398 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { AlertTriangle, Bell, Check, CheckCheck, Download, Info } from "lucide-react";
+import { Badge, Card, EmptyState, Field, KpiCard, PageHeader, Tabs, toast, SearchBox, rowMatches } from "../../components/ui";
+import { notifRowId } from "../../components/AlertBanner";
+import { FilterPopover } from "../../components/FilterPopover";
+import { useStore } from "../../data/store";
+import { useT } from "../../i18n/LanguageContext";
+import { n_misc } from "../../i18n/n_misc";
+import { computeAlerts } from "../../utils/alerts";
+import { dayGroup, loadNotifRead, relMinutes, saveNotifRead, type DayGroup } from "../../utils/notifRead";
+import { exportExcel } from "../../utils/export";
+
+type Tone = "red" | "amber" | "blue" | "navy" | "teal" | "violet" | "gray";
+
+interface NotifItem {
+  id: string;
+  kind: "alert" | "info";
+  tone: Tone;
+  text: string;
+  meta: string;
+  detail: string;
+  module: string;
+  timeLabel: string;
+  minAgo: number;
+  to: string;
+}
+
+const FILTERS = ["Semua", "Perlu Perhatian", "Aktivitas"];
+const SEVERITIES = ["Semua", "Merah", "Kuning", "Biru"] as const;
+const GROUP_ORDER: DayGroup[] = ["Hari ini", "Kemarin", "Lebih lama"];
+
+const MODULE_LINK: Record<string, string> = {
+  Proyek: "/proyek",
+  Monitoring: "/proyek/monitoring",
+  Drydock: "/drydock",
+  Inventori: "/inventori",
+  Equipment: "/equipment",
+  Subkontraktor: "/subkontraktor",
+  QC: "/qc-safety",
+  Safety: "/qc-safety",
+  Procurement: "/procurement",
+  CRM: "/crm",
+  Keuangan: "/keuangan",
+  SDM: "/sdm",
+  Kapal: "/kapal",
+  Dokumen: "/dokumen",
+  Absensi: "/absensi",
+  Payroll: "/payroll",
+  Pajak: "/keuangan",
+  Laporan: "/laporan",
+  Pengaturan: "/pengaturan",
+  Analytics: "/analytics",
+  Audit: "/audit",
+  Notifikasi: "/notifikasi",
+  Auth: "/pengaturan/peran",
+  Service: "/proyek",
+  Sparepart: "/inventori",
+  BoQ: "/proyek",
+};
+
+const VALID_TONES: Tone[] = ["red", "amber", "blue", "navy", "teal", "violet", "gray"];
+
+function normTone(raw: unknown): Tone {
+  const t = String(raw ?? "") === "rose" ? "red" : String(raw ?? "");
+  return (VALID_TONES.includes(t as Tone) ? t : "gray") as Tone;
+}
+
+function sevOf(tone: Tone): "Merah" | "Kuning" | "Biru" {
+  if (tone === "red") return "Merah";
+  if (tone === "amber") return "Kuning";
+  return "Biru";
+}
+
+/* Satu grup hari tampil penuh tanpa scroll internal (scroll di container
+   terluar max-h-[70vh]); markGroup tetap per grup penuh. */
+function NotifGroup({ g, renderRow, markGroup, markGroupRead }: {
+  g: { group: DayGroup; rows: NotifItem[] };
+  renderRow: (i: NotifItem) => ReactNode;
+  markGroup: (ids: string[]) => void;
+  markGroupRead: string;
+}) {
+  const { locale } = useT();
+  const S = n_misc[locale];
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex items-center gap-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-steel-400">{g.group === "Hari ini" ? S.ntDayToday : g.group === "Kemarin" ? S.ntDayYesterday : S.ntDayOlder} ({g.rows.length})</p>
+        <button
+          className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-ocean-600 hover:underline"
+          onClick={() => markGroup(g.rows.map((r) => r.id))}
+        >
+          <Check className="h-3 w-3" /> {markGroupRead}
+        </button>
+      </div>
+      <div className="divide-y divide-steel-50 rounded-xl border border-steel-100">
+        {g.rows.map((i) => renderRow(i))}
+      </div>
+    </div>
+  );
+}
+
+export default function Notifikasi() {
+  const { data } = useStore();
+  const { t, locale } = useT();
+  const S = n_misc[locale];
+  const [filter, setFilter] = useState("Semua");
+  const [sev, setSev] = useState<(typeof SEVERITIES)[number]>("Semua");
+  const [mod, setMod] = useState("Semua");
+  const [q, setQ] = useState("");
+  const [order, setOrder] = useState<"Terbaru" | "Terlama">("Terbaru");
+  const [read, setRead] = useState<Set<string>>(() => loadNotifRead());
+  const [params] = useSearchParams();
+
+  const alerts = useMemo(() => computeAlerts(data), [data]);
+
+  const items: NotifItem[] = useMemo(() => {
+    const fromAlerts: NotifItem[] = alerts.map((al) => ({
+      id: `alert-${al.id}`,
+      kind: "alert",
+      tone: al.tone,
+      text: al.text,
+      meta: S.ntMetaAttention,
+      detail: S.ntSourceDetail.replace("{n}", al.to),
+      module: "Alert",
+      timeLabel: S.ntNow,
+      minAgo: 0,
+      to: al.to,
+    }));
+    const fromActs: NotifItem[] = (data.activities ?? []).slice(0, 30).map((x) => ({
+      id: `act-${String(x.id)}`,
+      kind: "info",
+      tone: normTone(x.tone),
+      text: `${String(x.actor ?? "")} ${String(x.action ?? "")} ${String(x.target ?? "")}`.trim(),
+      meta: `${String(x.module ?? "-")} · ${String(x.time ?? "-")}`,
+      detail: S.ntActorDetail.replace("{a}", String(x.actor ?? "-")).replace("{b}", String(x.action ?? "-")).replace("{c}", String(x.target ?? "-")),
+      module: String(x.module ?? "-"),
+      timeLabel: String(x.time ?? "-"),
+      minAgo: relMinutes(String(x.time ?? "")),
+      to: MODULE_LINK[String(x.module ?? "")] ?? "/dashboard",
+    }));
+    return [...fromAlerts, ...fromActs];
+  }, [alerts, data.activities]);
+
+  const modules = useMemo(
+    () => ["Semua", ...Array.from(new Set(items.map((i) => i.module))).sort()],
+    [items]
+  );
+
+  const persist = (next: Set<string>) => {
+    setRead(next);
+    saveNotifRead(next);
+  };
+
+  const markOne = (id: string) => {
+    if (read.has(id)) return;
+    const next = new Set(read);
+    next.add(id);
+    persist(next);
+  };
+
+  const markAll = () => {
+    persist(new Set(items.map((i) => i.id)));
+    toast(t.notif.markAllRead);
+  };
+
+  const markGroup = (ids: string[]) => {
+    const next = new Set(read);
+    ids.forEach((id) => next.add(id));
+    persist(next);
+    toast(`${ids.length} ${t.notif.markGroupRead ?? t.notif.markAllRead}`);
+  };
+
+  const filtered = useMemo(() => {
+    const rows = items.filter((i) => {
+      if (filter === "Perlu Perhatian" && i.kind !== "alert") return false;
+      if (filter === "Aktivitas" && i.kind !== "info") return false;
+      if (sev !== "Semua" && sevOf(i.tone) !== sev) return false;
+      if (mod !== "Semua" && i.module !== mod) return false;
+      if (!rowMatches({ text: i.text, detail: i.detail, module: i.module }, q, ["text", "detail", "module"])) return false;
+      return true;
+    });
+    const dir = order === "Terbaru" ? 1 : -1;
+    return [...rows].sort((a, b) => (a.minAgo - b.minAgo) * dir);
+  }, [items, filter, sev, mod, q, order]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<DayGroup, NotifItem[]>();
+    for (const i of filtered) {
+      const g = dayGroup(i.minAgo);
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(i);
+    }
+    return GROUP_ORDER.filter((g) => (map.get(g) ?? []).length > 0).map((g) => ({ group: g, rows: map.get(g)! }));
+  }, [filtered]);
+
+  const unread = items.filter((i) => !read.has(i.id)).length;
+  const alertCount = items.filter((i) => i.kind === "alert").length;
+  const infoCount = items.filter((i) => i.kind === "info").length;
+  const hasActiveFilter = filter !== "Semua" || sev !== "Semua" || mod !== "Semua" || q.trim() !== "" || order !== "Terbaru";
+  const resetFilters = () => { setFilter("Semua"); setSev("Semua"); setMod("Semua"); setQ(""); setOrder("Terbaru"); };
+
+  /* Deep-link dari kartu "Perlu Perhatian" di Dashboard: /notifikasi?alert=1
+     membuka tab "Perlu Perhatian" lalu menyorot SEMUA baris alert yang tampil.
+
+     Yang dikirim bukan daftar id. Kartu itu menghitung dari engine
+     utils/moduleAlerts, sedangkan daftar ini memakai utils/alerts - dua skema
+     id yang berbeda dan tidak bisa dipetakan satu-satu. Perintah "tampilkan
+     semua alert" jauh lebih jujur daripada daftar id yang bisa meleset.
+
+     Efeknya dijalankan SATU KALI per URL. `items` dihitung ulang setiap kali
+     store berubah, dan store berubah beberapa kali saat AppShell melakukan
+     resync di tiap pindah rute - tanpa penjaga di bawah, efek ini akan
+     berulang: timer di-reset, jendela highlight terus meluncur, dan filter
+     yang sudah diubah pengguna diam-diam dikembalikan ke "Perlu Perhatian". */
+  const [flashAlertIds, setFlashAlertIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const flashDoneRef = useRef<string>("");
+  useEffect(() => {
+    if (params.get("alert") !== "1") {
+      flashDoneRef.current = "";
+      return;
+    }
+    if (flashDoneRef.current === "alert") return;
+    flashDoneRef.current = "alert";
+    if (filter !== "Perlu Perhatian") setFilter("Perlu Perhatian");
+    const ids = items.filter((i) => i.kind === "alert").map((i) => i.id);
+    if (ids.length === 0) return;
+    const timer = window.setTimeout(() => {
+      setFlashAlertIds(new Set(ids));
+      document.getElementById(notifRowId(ids[0] as string))?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 250);
+    const clear = window.setTimeout(() => setFlashAlertIds(new Set<string>()), 3400);
+    return () => { window.clearTimeout(timer); window.clearTimeout(clear); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, items]);
+
+  const doExport = () => {
+    const head = ["ID", "Jenis", "Isi", "Detail", "Modul", "Waktu", "Tautan", "Status"];
+    const body = filtered.map((i) => [
+      i.id,
+      i.kind === "alert" ? "Perlu Perhatian" : "Aktivitas",
+      i.text,
+      i.detail,
+      i.module,
+      i.timeLabel,
+      i.to,
+      read.has(i.id) ? "Dibaca" : "Belum dibaca",
+    ]);
+    void exportExcel([head, ...body], "daftar-notifikasi", "Notifikasi").then(() =>
+      toast(S.tNotifExported)
+    );
+  };
+
+  return (
+    <div>
+      <PageHeader
+        title={t.notif.title}
+        subtitle={S.ntSubtitle}
+        icon={<Bell className="h-5 w-5" />}
+        actions={
+          <>
+            <button className="btn-secondary text-xs" onClick={markAll}>
+              <CheckCheck className="h-4 w-4" /> {t.notif.markAllRead}
+            </button>
+            <button className="btn-secondary text-xs" onClick={doExport}>
+              <Download className="h-4 w-4" /> {t.common.exportExcel}
+            </button>
+          </>
+        }
+      />
+
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiCard label={t.notif.attention} value={String(alertCount)} hint={S.ntFromThresholds} chip="rose" icon={<AlertTriangle className="h-5 w-5" />} />
+        <KpiCard label={t.notif.activities} value={String(infoCount)} hint={S.ntLast30} chip="navy" icon={<Info className="h-5 w-5" />} />
+        <KpiCard label={S.ntUnreadLabel} value={String(unread)} hint={S.ntStoredPerDevice} chip="amber" icon={<Bell className="h-5 w-5" />} />
+      </div>
+
+      <Card>
+        <div className="space-y-3 px-5 pt-4">
+          <Tabs tabs={FILTERS} active={filter} onChange={setFilter} labels={{ Semua: t.common.all, "Perlu Perhatian": t.notif.attention, Aktivitas: t.notif.activities }} />
+          <div className="flex flex-wrap items-center gap-2 pb-1">
+            <SearchBox
+              value={q}
+              onChange={setQ}
+              placeholder={S.ntSearchPh}
+              ariaLabel={S.ntSearchAria}
+              className="w-56"
+            />
+            <FilterPopover
+              activeCount={[sev !== "Semua", mod !== "Semua", order !== "Terbaru"].filter(Boolean).length}
+              initial={{ severity: sev as string, modul: mod, urutan: order as string }}
+              onReset={resetFilters}
+              onApply={(d) => { setSev(d.severity as (typeof SEVERITIES)[number]); setMod(d.modul); setOrder(d.urutan as "Terbaru" | "Terlama"); }}
+            >
+              {(draft, setDraft) => (
+                <div className="space-y-3">
+                  <Field label={S.ntSeverityLabel}>
+                    <select className="input w-full" aria-label={S.ntSeverityFilterAria} value={draft.severity} onChange={(e) => setDraft({ ...draft, severity: e.target.value })}>
+                      <option value="Semua">{S.ntAllSeverities}</option>
+                      <option value="Merah">{S.ntRedCritical}</option>
+                      <option value="Kuning">{S.ntYellowWarn}</option>
+                      <option value="Biru">{S.ntBlueInfo}</option>
+                    </select>
+                  </Field>
+                  <Field label={S.ntModuleLabel}>
+                    <select className="input w-full" aria-label={S.ntModuleFilterAria} value={draft.modul} onChange={(e) => setDraft({ ...draft, modul: e.target.value })}>
+                      {modules.map((m) => <option key={m} value={m}>{m === "Semua" ? S.ntAllModules : m}</option>)}
+                    </select>
+                  </Field>
+                  <Field label={S.ntOrderLabel}>
+                    <select className="input w-full" aria-label={S.ntOrderAria} value={draft.urutan} onChange={(e) => setDraft({ ...draft, urutan: e.target.value })}>
+                      <option value="Terbaru">{S.ntNewestFirst}</option>
+                      <option value="Terlama">{S.ntOldestFirst}</option>
+                    </select>
+                  </Field>
+                </div>
+              )}
+            </FilterPopover>
+            {hasActiveFilter && (
+              <button className="btn-secondary py-1.5 text-xs" onClick={resetFilters}>{t.common.reset}</button>
+            )}
+            <span className="ml-auto text-xs text-steel-400">{filtered.length} {t.notif.title.toLowerCase()}</span>
+          </div>
+        </div>
+        <div className="px-5 pb-4">
+          {grouped.length === 0 && (
+            <EmptyState
+              icon={<Bell className="h-8 w-8" />}
+              title={t.notif.empty}
+              subtitle={t.notif.emptyHint}
+            />
+          )}
+          <div className="max-h-[70vh] overflow-y-auto scroll-flush-5 pr-5">
+          {grouped.map((g) => (
+            <NotifGroup
+              key={g.group}
+              g={g}
+              markGroup={markGroup}
+              markGroupRead={t.notif.markGroupRead}
+              renderRow={(i) => {
+                const isRead = read.has(i.id);
+                /* Penanda kelompok dari kartu Dashboard. Ditumpuk di atas
+                   status baca, bukan menggantikannya: baris yang sudah dibaca
+                   tetap kelihatan "terbaca", tapi baris alert yang disorot juga
+                   terlihat. */
+                const isFlash = flashAlertIds.has(i.id);
+                return (
+                  <div
+                    key={i.id}
+                    id={notifRowId(i.id)}
+                    className={`flex items-start gap-3 px-3 py-3 ${isRead ? "bg-white opacity-60" : "bg-ocean-50/40"}${isFlash ? " notif-hl notif-flash-all" : ""}`}
+                  >
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white ${
+                        i.tone === "red" ? "bg-gradient-rose" : i.tone === "amber" ? "bg-gradient-amber" : "bg-gradient-hero"
+                      }`}
+                    >
+                      {i.kind === "alert" ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {!isRead && <span className="h-2 w-2 rounded-full bg-rose-500" aria-label={S.ntUnreadDot} />}
+                        <Badge tone={i.kind === "alert" ? i.tone : "navy"}>
+                          {i.kind === "alert" ? S.ntAlertBadge.replace("{n}", i.tone === "red" ? S.ntSevCritical : sevOf(i.tone) === "Kuning" ? S.ntSevWarning : S.ntSevInfo) : S.ntActivityBadge}
+                        </Badge>
+                        <span className="text-[11px] text-steel-400">{i.meta}</span>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-navy-900">{i.text}</p>
+                      <p className="mt-0.5 truncate text-xs text-steel-400" title={i.detail}>{i.detail}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Link
+                        to={i.to}
+                        onClick={() => markOne(i.id)}
+                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-ocean-600 hover:bg-ocean-50"
+                      >
+                        {t.notif.open}
+                      </Link>
+                      {!isRead && (
+                        <button
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-steel-400 hover:bg-steel-100 hover:text-navy-800"
+                          onClick={() => markOne(i.id)}
+                        >
+                          {t.notif.markRead}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          ))}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

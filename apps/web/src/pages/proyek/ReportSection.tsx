@@ -1,0 +1,306 @@
+import { useState, useMemo } from "react";
+import { useStore } from "../../data/store";
+import { useT } from "../../i18n/LanguageContext";
+import { n_prj } from "../../i18n/n_prj";
+import { Card, StatusBadge, Modal, Field, toast, Badge, ProgressBar, KpiCard, EmptyState, useBusy, AsyncButton, rowMatches } from "../../components/ui";
+import { Send, CheckCircle2, XCircle, FileDown, FileText } from "lucide-react";
+import { exportExcelSheets, fmtRupiah, fmtRentang } from "../../utils/export";
+import { pdfServerReady } from "../../services/pdfClient";
+import { usePdfDoc } from "../../components/usePdfDoc";
+import { STATUS_BOQ_ID, fmtTanggal, todayISO } from "../../utils/format";
+import { fmtMiliar } from "../../data";
+
+interface Props {
+  projectId: string;
+}
+
+export default function ReportSection({ projectId }: Props) {
+  const busy = useBusy();
+  const { locale } = useT();
+  const S = n_prj[locale];
+  const { data, update, log, wbsFor } = useStore();
+  const pdfDoc = usePdfDoc();
+  const project = (data.projects ?? []).find((p: any) => p.id === projectId);
+
+  const docs = useMemo(() => ((data.documents ?? []) as any[]).filter((d: any) => d.project === projectId), [data.documents, projectId]);
+  const wbs = useMemo(
+    () => (data.wbsByProject?.[projectId]?.length ? wbsFor(projectId) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [wbsFor, projectId, data.projects, data.wbsByProject],
+  );
+  const boq = useMemo(() => ((data.boq ?? []) as any[]).filter((b: any) => b.projectId === projectId), [data.boq, projectId]);
+  const invoices = useMemo(() => ((data.invoices ?? []) as any[]).filter((i: any) => i.project === projectId), [data.invoices, projectId]);
+  const ncrs = useMemo(() => ((data.ncr ?? []) as any[]).filter((n: any) => n.project === projectId), [data.ncr, projectId]);
+  const wos = useMemo(() => ((data.workOrders ?? []) as any[]).filter((w: any) => w.project === projectId), [data.workOrders, projectId]);
+  const slots = useMemo(() => ((data.dockSlots ?? []) as any[]).filter((s: any) => s.project === projectId), [data.dockSlots, projectId]);
+  const svc = useMemo(() => ((data.services ?? []) as any[]).filter((s: any) => s.projectId === projectId), [data.services, projectId]);
+  const spare = useMemo(() => ((data.spareparts ?? []) as any[]).filter((s: any) => s.projectId === projectId), [data.spareparts, projectId]);
+  const activities = useMemo(
+    () => ((data.activities ?? []) as any[]).filter((a: any) => String(a.target ?? "").includes(projectId)).slice(0, 5),
+    [data.activities, projectId]
+  );
+
+  const totalBoq = useMemo(() => boq.reduce((s, b) => s + Number(b.totalPrice || 0), 0), [boq]);
+  const approvedBoq = useMemo(() => boq.filter((b) => ["Approved", "Completed"].includes(b.status)).reduce((s, b) => s + Number(b.totalPrice || 0), 0), [boq]);
+  const wbsDone = wbs.filter((w) => w.status === "Selesai" || Number(w.progress) >= 100).length;
+  const budgetPct = project?.budget ? Math.round((Number(project.actual || 0) / Number(project.budget)) * 100) : 0;
+  const openNcr = ncrs.filter((n) => n.status !== "Tertutup").length;
+  const critNcr = ncrs.filter((n) => n.status !== "Tertutup" && n.severity === "Critical").length;
+  const unpaidInv = invoices.filter((i) => i.status !== "Lunas").length;
+
+  const [showShare, setShowShare] = useState(false);
+  const [shareForm, setShareForm] = useState({ docId: "", to: "" });
+  const [wbsQ, setWbsQ] = useState("");
+  const [boqQ, setBoqQ] = useState("");
+  const [invQ, setInvQ] = useState("");
+  const [ncrWoQ, setNcrWoQ] = useState("");
+
+  /* Alur persetujuan dokumen.
+     VERSI LAMA membaca d.approvalStatus === "Submitted" - field itu TIDAK PERNAH
+     ditulis di mana pun (dokumen seed & ProjectDetail hanya menulis `status`),
+     sehingga tombol Setujui/Tolak tidak pernah muncul dan submitReport tak pernah
+     terpakai. Sekarang sumber kebenaran = `status` dokumen:
+       Draft -> Diajukan (tombol Ajukan) -> Disetujui / Ditolak. */
+  const DOC_FLOW: Record<string, string[]> = { Draft: ["Diajukan"], Diajukan: ["Disetujui", "Ditolak"] };
+
+  const docApprovalLabel = (status: string): string =>
+    status === "Disetujui" ? S.detApprovalApproved
+      : status === "Ditolak" ? S.detApprovalRejected
+      : status === "Diajukan" ? S.detApprovalPending
+      : S.detApprovalDraft;
+
+  const submitReport = async (docId: string, action: "submit" | "approve" | "reject") => {
+    const target = action === "submit" ? "Diajukan" : action === "approve" ? "Disetujui" : "Ditolak";
+    await update("documents", docId, {
+      status: target,
+      /* Ditulis juga ke field lama agar data lama yang sudah punya approvalStatus
+         tidak bipolar. Sumber kebenaran tetap `status`. */
+      ...(action === "submit" ? { approvalStatus: "Submitted" } : { approvalStatus: action === "approve" ? "Approved" : "Rejected" }),
+      ...(action === "submit" ? {} : { approvedBy: "Anda", approvedAt: todayISO() }),
+    });
+    const verb = action === "submit" ? "mengajukan laporan" : action === "approve" ? "menyetujui laporan" : "menolak laporan";
+    log(verb, `${docId}`, "Dokumen");
+    toast(
+      action === "submit" ? S.detApprovalSubmitted
+        : action === "approve" ? S.repToastApproved
+        : S.repToastRejected,
+    );
+  };
+
+  /* Ringkasan proyek dirakit server dari baris DB-nya sendiri.
+   Versi lama memotret `#report-summary-<id>` dengan html2canvas: angka bisa
+   berbeda dari pembukuan, tabel panjang terpotong, dan grafik jadi gambar.
+   Server juga punya WBS (tabel `wbs_by_project`) yang tidak pernah ikut
+   terpotong. */
+  const handleExportPDF = async () => {
+    if (!pdfServerReady()) {
+      toast(S.saveFail, "info");
+      return;
+    }
+    const done = await pdfDoc.request(
+      { kind: "laporanProyek", id: projectId, locale },
+      `Report-${projectId}`,
+      false,
+    );
+    if (done) toast(S.repToastPdf);
+  };
+
+  const handleExportExcel = () => {
+    const ringkas: unknown[][] = [
+      ["Indikator", "Nilai"],
+      ["Proyek", `${String(project?.vessel ?? projectId)} · ${projectId}`],
+      ["Client / Manager", `${String(project?.client ?? "-")} / ${String(project?.manager ?? "-")}`],
+      ["Periode / Status", `${fmtRentang(project?.start, project?.end)} / ${String(project?.status ?? "-")}`],
+      ["Anggaran", String(project?.budget ?? 0)],
+      ["Realisasi", String(project?.actual ?? 0)],
+      ["% Terpakai", `${budgetPct}%`],
+      ["Progres", `${project?.progress ?? 0}%`],
+      ["WBS selesai", `${wbsDone}/${wbs.length}`],
+      ["Total BoQ", String(totalBoq)],
+      ["BoQ Approved+Completed", String(approvedBoq)],
+      ["NCR terbuka", String(openNcr)],
+      ["Invoice belum lunas", String(unpaidInv)],
+    ];
+    void exportExcelSheets([
+      { name: "Ringkasan", rows: ringkas },
+      { name: "WBS", rows: [["WBS", "Progres"], ...wbs.map((w) => [w.task, `${w.progress}%`])] },
+      { name: "BoQ", rows: [["BoQ", "Qty", "Total", "Status"], ...boq.map((b) => [b.name, String(b.quantity), String(b.totalPrice), b.status])] },
+    ], `Report-${projectId}`);
+    toast(S.repToastExcel);
+  };
+
+  const submitShare = async () => {
+    if (!shareForm.docId || !shareForm.to) { toast(S.detToastPickDoc, "info"); return; }
+    const doc = docs.find((d: any) => d.id === shareForm.docId);
+    await update("documents", shareForm.docId, { sharedWith: [...(doc?.sharedWith ?? []), shareForm.to] });
+    log("berbagi dokumen dengan atasan", `${shareForm.docId} → ${shareForm.to}`, "Dokumen");
+    toast(S.detToastShared.replace("{a}", shareForm.to));
+    setShowShare(false);
+    setShareForm({ docId: "", to: "" });
+  };
+
+  return (
+    <div className="space-y-4">
+      <style>{`@media print { #report-summary-${projectId}, #report-summary-${projectId} .print-expand { overflow: visible !important; max-height: none !important; } #report-summary-${projectId} .overflow-y-auto { overflow: visible !important; max-height: none !important; } .report-card, .doc-card { break-inside: avoid; page-break-inside: avoid; } table, thead, tbody, tr { break-inside: auto; page-break-inside: auto; } } .print-expand .overflow-y-auto { overflow: visible !important; max-height: none !important; }`}</style>
+      <div id={`report-summary-${projectId}`}>
+        <Card className="p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-navy-900"><FileText className="h-4 w-4" /> {S.repTitle.replace("{a}", project?.vessel ?? projectId)}</h3>
+              <p className="text-xs text-steel-500">{projectId} · {project?.type ?? "-"} · {project?.client ?? "-"} · {project?.manager ?? "-"} · {fmtRentang(project?.start, project?.end)}</p>
+            </div>
+            <div className="flex gap-2" data-export-hide>
+              <AsyncButton className="btn-secondary text-xs" onAction={handleExportPDF}><FileText className="h-3.5 w-3.5" /> {S.repPdf}</AsyncButton>
+              <AsyncButton className="btn-secondary text-xs" onAction={handleExportExcel}><FileDown className="h-3.5 w-3.5" /> {S.excelBtn}</AsyncButton>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <KpiCard label={S.repKpiBudget} value={fmtMiliar(Number(project?.actual || 0))} delta={S.repKpiBudgetDelta.replace("{a}", String(budgetPct)).replace("{b}", fmtMiliar(Number(project?.budget || 0)))} deltaDirection={budgetPct > 100 ? "down" : "up"} hint={S.repKpiCostHint} />
+            <KpiCard label={S.progLabel} value={`${project?.progress ?? 0}%`} delta={S.repKpiWbs.replace("{a}", String(wbsDone)).replace("{b}", String(wbs.length))} deltaDirection="flat" hint={S.repKpiWbsHint} />
+            <KpiCard label={S.boqKpiTotal} value={fmtRupiah(totalBoq)} delta={S.repKpiBoqOk.replace("{a}", fmtRupiah(approvedBoq))} deltaDirection="flat" hint={S.repKpiBoqHint.replace("{n}", String(boq.length))} />
+            <KpiCard label={S.repKpiNcr} value={String(openNcr)} delta={S.repKpiInv.replace("{n}", String(unpaidInv))} deltaDirection={openNcr > 0 ? "down" : "flat"} hint={S.repKpiNcrHint.replace("{n}", String(ncrs.length))} />
+          </div>
+        </Card>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-4">
+            <h4 className="mb-2 text-sm font-semibold text-navy-900">{S.repWbsTitle.replace("{a}", String(wbsDone)).replace("{b}", String(wbs.length))}</h4>
+            <input data-export-hide className="input mb-2" value={wbsQ} onChange={(e) => setWbsQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} />
+            {wbs.length === 0 ? (
+              <p className="text-xs text-steel-400">{S.repNoWbs}</p>
+            ) : (
+              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "status", "materialUsed", "completedBy", "completionDate"])).map((w) => (
+                  <div key={w.task}>
+                    <div className="flex justify-between text-xs"><span className="font-medium text-navy-900">{w.task}</span><span className="text-steel-500">{w.progress}%</span></div>
+                    <ProgressBar value={Number(w.progress) || 0} className="mt-1" tone={Number(w.progress) >= 100 ? "green" : "navy"} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+          <Card className="p-4">
+            <h4 className="mb-2 text-sm font-semibold text-navy-900">{S.repBoqTitle.replace("{n}", String(boq.length))}</h4>
+            <input data-export-hide className="input mb-2" value={boqQ} onChange={(e) => setBoqQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} />
+            {boq.length === 0 ? (
+              <p className="text-xs text-steel-400">{S.repNoBoq}</p>
+            ) : (
+              <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                {boq.filter((b) => rowMatches(b, boqQ, ["id", "name", "status", "unit", "spec"])).map((b) => (
+                  <div key={b.id} className="flex items-center justify-between text-sm">
+                    <span className="text-steel-700">{b.name} <span className="text-xs text-steel-400">× {b.quantity} {b.unit}</span></span>
+                    <span className="flex items-center gap-2"><span className="font-mono text-xs">{fmtRupiah(Number(b.totalPrice || 0))}</span><StatusBadge status={b.status} label={STATUS_BOQ_ID[b.status] ?? b.status} /></span>
+                  </div>
+                ))}
+                <p className="pt-1 text-right text-xs font-semibold text-navy-900">{S.repBoqTotal.replace("{a}", fmtRupiah(totalBoq))}</p>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Card className="p-4">
+            <h4 className="mb-2 text-sm font-semibold text-navy-900">{S.repInvTitle.replace("{n}", String(invoices.length))}</h4>
+            <input data-export-hide className="input mb-2" value={invQ} onChange={(e) => setInvQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} />
+            {invoices.length === 0 ? <p className="text-xs text-steel-400">{S.repNoInv}</p> : <div className="max-h-64 overflow-y-auto pr-1">{invoices.filter((i) => rowMatches(i, invQ, ["id", "noInv", "client", "project", "vessel", "status"])).map((i) => (
+              <div key={i.id} className="flex items-center justify-between py-1 text-sm">
+                <span className="font-mono text-navy-900">{i.id}</span>
+                <span className="text-steel-600">{fmtMiliar(Number(i.amount || 0))}</span>
+                <StatusBadge status={i.status} />
+              </div>
+            ))}</div>}
+          </Card>
+          <Card className="p-4">
+            <h4 className="mb-2 text-sm font-semibold text-navy-900">{S.repNcrTitle}</h4>
+            <p className="text-xs text-steel-500">{S.repNcrOpenLbl}<b>{openNcr}</b>{critNcr > 0 ? <> · <b className="text-rose-600">{S.repCritCount.replace("{n}", String(critNcr))}</b></> : null}{S.repWoLbl}<b>{wos.length}</b>{S.repDockLbl}<b>{slots.length}</b></p>
+            <input data-export-hide className="input mb-2 mt-2" value={ncrWoQ} onChange={(e) => setNcrWoQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} />
+            <div className="mt-2 max-h-64 space-y-1 overflow-y-auto pr-1">
+              {ncrs.filter((n) => rowMatches(n, ncrWoQ, ["id", "project", "vessel", "type", "status", "severity", "issue"])).map((n) => (
+                <div key={n.id} className="flex items-center justify-between text-sm"><span className="font-mono text-navy-900">{n.id}</span><StatusBadge status={n.status} /></div>
+              ))}
+              {wos.filter((w) => rowMatches(w, ncrWoQ, ["id", "sub", "project", "scope", "status", "milestones"])).map((w) => (
+                <div key={w.id} className="flex items-center justify-between text-sm"><span className="text-steel-600">{w.id} · {w.sub}</span><Badge tone="blue">{w.progress}%</Badge></div>
+              ))}
+              {(ncrs.length === 0 && wos.length === 0) && <p className="text-xs text-steel-400">{S.repNoNcrWo}</p>}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <h4 className="mb-2 text-sm font-semibold text-navy-900">{S.repSvcTitle}</h4>
+            <p className="text-xs text-steel-500">{S.repSvcCountA}<b>{svc.length}</b>{S.repSvcCountB}<b>{spare.length}</b></p>
+            <div className="mt-2">
+              <p className="text-xs text-steel-500">{S.repSpAkan}{spare.filter((s) => s.status === "Akan").length}{S.repSpSedang}{spare.filter((s) => s.status === "Sedang").length}{S.repSpSelesai}{spare.filter((s) => s.status === "Selesai").length}</p>
+              <p className="mt-1 text-xs text-steel-500">{S.repSvcDone}{svc.filter((s) => s.status === "Done").length}{S.repSvcRun}{svc.filter((s) => s.status === "In Progress").length}{S.repSvcSched}{svc.filter((s) => s.status === "Scheduled").length}</p>
+            </div>
+            <h4 className="mb-1 mt-3 text-xs font-semibold text-steel-500">{S.repActivity}</h4>
+            {activities.length === 0 ? <p className="text-xs text-steel-400">{S.repNoActivity}</p> : activities.map((a) => (
+              <p key={a.id} className="py-0.5 text-xs text-steel-600"><b>{a.actor}</b> {a.action} <span className="font-mono">{a.target}</span></p>
+            ))}
+          </Card>
+        </div>
+      </div>
+
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-navy-900">{S.repApprTitle.replace("{n}", String(docs.length))}</h3>
+          <button className="btn-secondary text-xs" onClick={() => setShowShare(true)}><Send className="h-3.5 w-3.5" /> {S.repShareBtn}</button>
+        </div>
+        {docs.length === 0 ? (
+          <EmptyState icon={<FileText className="h-6 w-6" />} title={S.repEmptyTitle} subtitle={S.repEmptySub} />
+        ) : (
+          <div className="space-y-3">
+            {docs.map((d: any) => (
+              <div key={d.id} className="rounded-xl border border-steel-100 p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold text-navy-900">{d.title}</p>
+                    <p className="text-xs text-steel-500">{d.id} · {d.type} · {d.version} · {d.updated} · {d.owner}</p>
+                  {/* sharedWith sebelumnya ditulis tapi TAK PERNAH dibaca di mana pun -
+                      aksi "Bagikan ke Atasan" jadi tanpa jejak sama sekali. */}
+                  {Array.isArray(d.sharedWith) && d.sharedWith.length > 0 && (
+                    <p className="mt-0.5 text-[11px] text-steel-500">
+                      {locale === "en" ? "Shared with" : "Dibagikan ke"}: {d.sharedWith.map((x: unknown) => String(x)).join(", ")}
+                    </p>
+                  )}
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <StatusBadge status={docApprovalLabel(String(d.status ?? "Draft"))} />
+                  {d.approvedBy && (
+                    <span className="text-[11px] text-steel-500">
+                      {locale === "en" ? "by" : "oleh"} {String(d.approvedBy)}{d.approvedAt ? ` · ${fmtTanggal(String(d.approvedAt))}` : ""}
+                    </span>
+                  )}
+                  {(DOC_FLOW[String(d.status ?? "Draft")] ?? []).map((next) => (
+                    <div key={next} className="flex gap-1">
+                      {next === "Diajukan" ? (
+                        <button className="rounded bg-steel-100 px-2 py-0.5 text-xs font-semibold text-steel-700 hover:bg-steel-200" disabled={busy.isBusy(`doc-${d.id}-${next}`)} onClick={() => void busy.run(`doc-${d.id}-${next}`, () => submitReport(d.id, "submit"))}>{S.detProposeBtn}</button>
+                      ) : next === "Disetujui" ? (
+                        <button className="rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700 hover:bg-green-200" disabled={busy.isBusy(`doc-${d.id}-${next}`)} onClick={() => void busy.run(`doc-${d.id}-${next}`, () => submitReport(d.id, "approve"))}><CheckCircle2 className="h-3 w-3 inline" /> {S.detApproveBtn}</button>
+                      ) : (
+                        <button className="rounded bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700 hover:bg-rose-200" disabled={busy.isBusy(`doc-${d.id}-${next}`)} onClick={() => void busy.run(`doc-${d.id}-${next}`, () => submitReport(d.id, "reject"))}><XCircle className="h-3 w-3 inline" /> {S.detRejectBtn}</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Modal open={showShare} onClose={() => setShowShare(false)} title={S.detShareModal}
+        footer={<><button className="btn-secondary" onClick={() => setShowShare(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={submitShare}>{S.detSendBtn}</AsyncButton></>}>
+        <div className="space-y-3">
+          <Field label={S.detDocField}>
+            <select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
+              <option value="">{S.detPickDocFull}</option>
+              {docs.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
+            </select>
+          </Field>
+          <Field label={S.detShareTo}><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.repShareToPh} /></Field>
+        </div>
+      </Modal>
+    </div>
+  );
+}

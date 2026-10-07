@@ -1,0 +1,180 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { exec, q, closeDb, getDialect } from "./db.js";
+
+function checksumOf(raw: string): string {
+  return crypto.createHash("sha256").update(raw, "utf8").digest("hex");
+}
+
+function isIgnorableMigrationError(sql: string, err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  // ADD COLUMN is not idempotent on its own: SQLite reports
+  // "duplicate column name", MySQL reports "Duplicate column name" (ER 1060).
+  if (/^\s*alter\s+table/i.test(sql) && /duplicate column/i.test(message)) return true;
+  // CREATE INDEX is plain (no IF NOT EXISTS: MySQL syntax has none), so
+  // reruns must tolerate duplicates: SQLite "already exists",
+  // MySQL "Duplicate key name" (ER_DUP_KEYNAME / errno 1061).
+  if (/^\s*create\s+(unique\s+)?index/i.test(sql)) {
+    if (/already exists/i.test(message)) return true;
+    if (/duplicate/i.test(message)) return true;
+    const code = (err as { code?: unknown; errno?: unknown } | null | undefined)?.code;
+    const errno = (err as { code?: unknown; errno?: unknown } | null | undefined)?.errno;
+    if (code === "ER_DUP_KEYNAME" || errno === 1061) return true;
+  }
+  return false;
+}
+
+export async function migrate(): Promise<void> {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const dir = path.resolve(here, "../migrations");
+
+  await exec(
+    "CREATE TABLE IF NOT EXISTS schema_migrations (name VARCHAR(128) PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL)",
+  );
+
+  let applied = new Map<string, string>();
+  try {
+    const rows = await q<{ name: string; checksum: string }>("SELECT name, checksum FROM schema_migrations");
+    applied = new Map(rows.map((r) => [String(r.name), String(r.checksum)]));
+  } catch (err) {
+    console.warn("[migrate] could not read schema_migrations, proceeding without skip:", err);
+  }
+
+  const dialect = getDialect();
+  const beginSql = dialect === "mysql" ? "START TRANSACTION" : "BEGIN";
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+  for (const file of files) {
+    const raw = fs.readFileSync(path.join(dir, file), "utf8");
+    const checksum = checksumOf(raw);
+    const recorded = applied.get(file);
+    if (recorded !== undefined) {
+      if (recorded !== checksum) {
+        console.warn(
+          `[migrate] checksum mismatch for ${file} (recorded ${recorded.slice(0, 12)} vs current ${checksum.slice(0, 12)}); file changed since applied — skipping re-apply`,
+        );
+      } else {
+        console.log(`[migrate] skip ${file} (already applied)`);
+      }
+      continue;
+    }
+    await exec(beginSql);
+    try {
+      // Split sadar-string: ";" di dalam literal '...' / "..." bukan
+      // pemisah statement (R8: splitter naif pecah pada DEFAULT ';').
+      const statements: string[] = [];
+      let cur = "";
+      let quote: string | null = null;
+      for (let i = 0; i < raw.length; i += 1) {
+        const c = raw[i];
+        if (quote) {
+          cur += c;
+          if (c === quote && raw[i - 1] !== "\\") quote = null;
+        } else if (c === "'" || c === '"') {
+          quote = c;
+          cur += c;
+        } else if (c === ";") {
+          statements.push(cur);
+          cur = "";
+        } else {
+          cur += c;
+        }
+      }
+      if (cur.trim()) statements.push(cur);
+      for (const chunk of statements) {
+        const sql = chunk.trim();
+        if (!sql) continue;
+        // Lewati potongan yang hanya komentar SQL (tanpa statement) —
+        // better-sqlite3 menolak prepare() tanpa statement (ER no-statements).
+        const code = sql
+          .split("\n")
+          .filter((line) => !line.trimStart().startsWith("--"))
+          .join("\n")
+          .trim();
+        if (!code) continue;
+        try {
+          await exec(sql);
+        } catch (err) {
+          if (isIgnorableMigrationError(sql, err)) continue;
+          throw err;
+        }
+      }
+      await exec("INSERT INTO schema_migrations (name, checksum, applied_at) VALUES (?, ?, ?)", [
+        file,
+        checksum,
+        new Date().toISOString(),
+      ]);
+      await exec("COMMIT");
+      console.log(`[migrate] applied ${file}`);
+    } catch (err) {
+      try {
+        await exec("ROLLBACK");
+      } catch {
+        // ignore rollback failure (e.g. MySQL DDL implicit commit)
+      }
+      throw err;
+    }
+  }
+  await ensureWideJsonColumns();
+  console.log("[migrate] done");
+}
+
+/**
+ * Kolom yang menyimpan JSON besar -> MEDIUMTEXT di MySQL.
+ *
+ * Kenapa perlu: MySQL `TEXT` batasnya 64 KB, sementara SQLite tidak punya
+ * batas panjang sama sekali. Skema yang sama jadi sedikit lebih lega di
+ * SQLite dan bisa gagal di MySQL tanpa terlihat.
+ *
+ * Yang terdampak nyata bukan hypothetis:
+ *   - `pdfDocs.model` = JSON hasil factory. Laporan analitik 12 bulan +
+ *     profit per tipe + per cabang + Pareto + fishbone easily melewati 64 KB.
+ *   - `audit_log.diff` = jejak render/reprint yang ikut menyimpan ringkasan.
+ *   - `documents.data` = payload transmittal/bukti.
+ *
+ * Dan kegagalannya SENGAJA tersembunyi: saveRenderModel() menangkap error
+ * tulis lalu hanya memberi tahu lewat console.warn, supaya snapshot yang
+ * gagal tidak membatalkan cetakan. Di MySQL itu artinya "cetak ulang" mati
+ * tanpa jejak di UI - penyebabnya cuma baris warning di log server.
+ *
+ * Idempoten: lebar kolom dibaca dari information_schema lebih dulu, jadi
+ * migrasi kedua tidak melakukan ALTER yang sama.
+ */
+const WIDE_JSON_COLUMNS: [string, string][] = [
+  ["pdfDocs", "model"],
+  ["audit_log", "diff"],
+  ["documents", "data"],
+];
+
+async function ensureWideJsonColumns(): Promise<void> {
+  if (getDialect() !== "mysql") {
+    /* SQLite: TEXT sudah menyimpan string sepanjang mungkin. Tidak ada yang
+       perlu diubah - dan ALTER COLUMN tidak ada artinya di SQLite. */
+    return;
+  }
+  const rows = await q<{ TABLE_NAME: string; COLUMN_NAME: string; COLUMN_TYPE: string }>(
+    "SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()",
+  );
+  const wide = new Set(
+    rows.filter((r) => /mediumtext|longtext/i.test(String(r.COLUMN_TYPE ?? ""))).map((r) => `${r.TABLE_NAME}.${r.COLUMN_NAME}`),
+  );
+  for (const [table, column] of WIDE_JSON_COLUMNS) {
+    if (wide.has(`${table}.${column}`)) {
+      console.log(`[migrate] ${table}.${column} sudah MEDIUMTEXT`);
+      continue;
+    }
+    await exec(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` MEDIUMTEXT`);
+    console.log(`[migrate] ${table}.${column} -> MEDIUMTEXT`);
+  }
+}
+
+const entry = process.argv[1] ?? "";
+if (entry.endsWith("migrate.ts") || entry.endsWith("migrate.js")) {
+  migrate()
+    .then(() => closeDb().then(() => process.exit(0)))
+    .catch((err) => {
+      console.error("[migrate] failed:", err);
+      process.exit(1);
+    });
+}

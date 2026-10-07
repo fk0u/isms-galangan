@@ -1,0 +1,3 @@
+upstream: https://github.com/Ichsanul21/galangan
+commit: 805e636 (2026-10-07)
+copied: 2026-10-07, tanpa riwayat git

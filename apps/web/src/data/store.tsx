@@ -1,0 +1,2053 @@
+﻿import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, type Row } from "./idb";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { newId as newPrefixedId } from "../services/ids";
+import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/http";
+import { remoteRepository } from "../services/repositories";
+import { stampCreated, stampDerivedCreatedAt, stampUpdated } from "../utils/timestamps";
+import { loadedLaborRatePerDay } from "../utils/rates";
+import {
+  projects as seedProjects,
+  vessels as seedVessels,
+  drydocks as seedDrydocks,
+  dockSlots as seedDockSlots,
+  inventory as seedInventory,
+  equipment as seedEquipment,
+  subcontractors as seedSubcontractors,
+  employees as seedEmployees,
+  ncrList as seedNcr,
+  incidents as seedIncidents,
+  purchaseOrders as seedPO,
+  quotations as seedQuotations,
+  clients as seedClients,
+  inventoryMovement as seedMovements,
+  surveyTimeline as seedSurveys,
+  activities as seedActivities,
+  services as seedServices,
+  spareparts as seedSpareparts,
+  seedBoq as seedBoq,
+} from "./index";
+import { COA_EXCEL, ASET_EXCEL } from "./financeExcel";
+import {
+  seedWorkOrders, seedTermins, seedVendors, seedRequisitions, seedInspections,
+  seedBookings, seedPayables, seedInvoices, seedDocuments, seedBranches,
+  seedInvoicesHistory, seedBookingsHistory, seedInspectionsHistory, seedJournals,
+  seedAttendance, seedPayroll, seedTaxPeriods, seedRfqs, seedChangeOrders,
+  seedRisks, seedLeaves, seedTrainings, seedTimesheets, seedDrawings,
+  seedToolbox, seedCalibrations, seedCommunications, seedContracts, seedBast,
+  seedTrials, seedRequests, seedClientPos,
+  seedWarehouses, seedMaintenances, seedLetters,
+} from "./seeds";
+
+/* ============ TIPE ============ */
+
+export interface StoreItem {
+  id: string;
+  [key: string]: any;
+}
+
+export interface WbsPhoto {
+  url: string;
+  note: string;
+  date: string;
+}
+
+export interface WbsItem {
+  task: string;
+  start: string;
+  end: string;
+  progress: number;
+  weight: number;
+  actualHours?: number;
+  materialUsed?: string;
+  completedBy?: string;
+  completionDate?: string;
+  status?: "Sedang" | "Selesai";
+  station?: string;
+  photoNote?: string;
+  photoUrl?: string;
+  /** D3: array foto per WBS task. `photoUrl`/`photoNote` tetap ada
+      untuk backward compatibility dengan data lama. */
+  photos?: WbsPhoto[];
+  dft?: number;
+}
+
+export interface StoreShape {
+  projects: StoreItem[];
+  vessels: StoreItem[];
+  drydocks: StoreItem[];
+  dockSlots: StoreItem[];
+  inventory: StoreItem[];
+  movements: StoreItem[];
+  equipment: StoreItem[];
+  bookings: StoreItem[];
+  subcontractors: StoreItem[];
+  workOrders: StoreItem[];
+  termins: StoreItem[];
+  employees: StoreItem[];
+  invoices: StoreItem[];
+  payables: StoreItem[];
+  ncr: StoreItem[];
+  incidents: StoreItem[];
+  inspections: StoreItem[];
+  purchaseOrders: StoreItem[];
+  requisitions: StoreItem[];
+  vendors: StoreItem[];
+  quotations: StoreItem[];
+  clients: StoreItem[];
+  documents: StoreItem[];
+  surveys: StoreItem[];
+  activities: StoreItem[];
+  services: StoreItem[];
+  spareparts: StoreItem[];
+  boq: StoreItem[];
+  branches: StoreItem[];
+  attendance: StoreItem[];
+  payroll: StoreItem[];
+  taxPeriods: StoreItem[];
+  rfqs: StoreItem[];
+  changeOrders: StoreItem[];
+  risks: StoreItem[];
+  leaves: StoreItem[];
+  trainings: StoreItem[];
+  timesheets: StoreItem[];
+  drawings: StoreItem[];
+  toolbox: StoreItem[];
+  warranties: StoreItem[];
+  calibrations: StoreItem[];
+  communications: StoreItem[];
+  contracts: StoreItem[];
+  bast: StoreItem[];
+  trials: StoreItem[];
+  requests: StoreItem[];
+  clientPos: StoreItem[];
+  walks: StoreItem[];
+  auditPlans: StoreItem[];
+  /* Koleksi batch terakhir (migrations/006_batch_akhir.sql). Semula hanya
+     hidup di memori FE: kapasitas gudang di JSON settings, siklus servis di
+     field equipment.*, arsip surat di localStorage draft. */
+  warehouses: StoreItem[];
+  maintenances: StoreItem[];
+  letters: StoreItem[];
+  settings: StoreItem[];
+  coa: StoreItem[];
+  journals: StoreItem[];
+  assets: StoreItem[];
+  wbsByProject: Record<string, WbsItem[]>;
+  teamByProject: Record<string, string[]>;
+}
+
+
+/* Seed dari docs/RawData/DataPencatatanFinance.xlsx - sheet Akun (98 akun). */
+const seedCoa: StoreItem[] = COA_EXCEL.map((c) => ({
+  id: `COA-${c.kode}`,
+  kode: c.kode,
+  nama: c.nama,
+  dk: c.dk,
+  nrlr: c.nrlr,
+}));
+
+/* Seed dari sheet JU - jurnal penyesuaian per periode (sudah posted, berimbang).
+   Voucher month-end diturunkan dari tgl (JUM-0630/0731/0831) - sama dengan backend. */
+
+/* Seed dari sheet Aset - ringkasan fiskal 2025 per golongan, metode garis lurus (GL). */
+const seedAssets: StoreItem[] = ASET_EXCEL.map((a, i) => ({
+  id: `AST-EX-0${i + 1}`,
+  nama: a.gol,
+  kelompok: a.gol === "Bangunan" ? "BP" : a.gol.includes("Inventaris") ? "1" : "2",
+  bulan: "-",
+  tahun: "2025",
+  nilai: a.perolehan,
+  sisaAwal: a.sisaAwal,
+  susutTahun: a.susut,
+  metode: "GL",
+}));
+
+/* Konstanta bisnis terpusat - semua rumus baca dari sini via utils/settings.
+   Ubah lewat halaman Pengaturan; kalibrasi saat dokumen client datang. */
+const seedSettings: StoreItem[] = [
+  { id: "SET-PPN", key: "PPN_RATE", value: 12, label: "PPN Keluaran/Masukan hutang-belanja (%)", group: "Pajak" },
+  { id: "SET-PPNINV", key: "PPN_INVOICE_RATE", value: 12, label: "PPN invoice jasa+material, DPP=TOTAL×11/12 (%)", group: "Pajak" },
+  { id: "SET-PPHJASA", key: "PPH_JASA_RATE", value: 2, label: "PPh invoice (% dari jasa)", group: "Pajak" },
+  { id: "SET-PPHSUB", key: "PPH_SUBKON_DEFAULT", value: 0.5, label: "PPh subkontraktor default (0.5/2)", group: "Pajak" },
+  { id: "SET-PPH23", key: "PPH23_RATE", value: 2, label: "PPh 23 jasa (%)", group: "Pajak" },
+  { id: "SET-PPH21-1", key: "PPH21_T1_RATE", value: 5, label: "PPh21 lapis 1 (%)", group: "Payroll" },
+  { id: "SET-PPH21-1B", key: "PPH21_T1_MAX", value: 60000000, label: "PPh21 batas lapis 1 (Rp/thn)", group: "Payroll" },
+  { id: "SET-PPH21-2", key: "PPH21_T2_RATE", value: 15, label: "PPh21 lapis 2 (%)", group: "Payroll" },
+  { id: "SET-PPH21-2B", key: "PPH21_T2_MAX", value: 250000000, label: "PPh21 batas lapis 2 (Rp/thn)", group: "Payroll" },
+  { id: "SET-PPH21-3", key: "PPH21_T3_RATE", value: 25, label: "PPh21 lapis 3 (%)", group: "Payroll" },
+  { id: "SET-PPH21-3B", key: "PPH21_T3_MAX", value: 500000000, label: "PPh21 batas lapis 3 (Rp/thn)", group: "Payroll" },
+  { id: "SET-PPH21-4", key: "PPH21_T4_RATE", value: 30, label: "PPh21 lapis 4 (%)", group: "Payroll" },
+  { id: "SET-PTKP0", key: "PTKP_TK0", value: 54000000, label: "PTKP TK/0 (Rp/thn)", group: "Payroll" },
+  { id: "SET-PTKP1", key: "PTKP_K0", value: 58500000, label: "PTKP K/0 (Rp/thn)", group: "Payroll" },
+  { id: "SET-PTKPT", key: "PTKP_TANGGUNGAN", value: 4500000, label: "PTKP per tanggungan (Rp/thn, maks 3)", group: "Payroll" },
+  { id: "SET-BPJSK", key: "BPJS_KES_KAR", value: 1, label: "BPJS Kes karyawan (%)", group: "Payroll" },
+  { id: "SET-BPJSP", key: "BPJS_KES_PER", value: 4, label: "BPJS Kes perusahaan (%)", group: "Payroll" },
+  { id: "SET-BPJSTK", key: "BPJS_TK_KAR", value: 2, label: "BPJS TK karyawan JHT (%)", group: "Payroll" },
+  { id: "SET-OT", key: "OVERTIME_DIV", value: 173, label: "Pembagi tarif lembur", group: "Payroll" },
+  { id: "SET-POKECIL", key: "PO_KECIL_LIMIT", value: 50000000, label: "Batas PO Kecil (Rp)", group: "Procurement" },
+  /* Kapasitas per gudang. Tanpa baris ini tabel "Gudang & Kapasitas" di
+     Pengaturan kosong dan progress bar kapasitas di Inventori tidak pernah
+     muncul - fiturnya mati_total meski pembacanya sudah siap. Nilai JSONObject
+     {namaGudang: kapasitas}; Inventory menjumlahkan stock per gudang lalu
+     membandingkan dengan angka ini (satuan dicampur, jadi ini pembatas
+     perkiraan, bukan hitungan volume riil). */
+  { id: "SET-WHCAP", key: "WAREHOUSE_CAP", value: '{"Gudang Baja A":8000,"Gudang B":2000,"Gudang Listrik":1800,"Gudang Pipa":60,"Gudang Rig":40,"Gudang Mesin":30,"Gudang Santi":40}', label: "Kapasitas gudang (JSON {gudang: kapasitas})", group: "Gudang" },
+  { id: "SET-APPINV", key: "APPROVE_INVOICE", value: 5000000, label: "Ambang Director invoice (Rp)", group: "Approval" },
+  { id: "SET-APPTERM", key: "APPROVE_TERMIN", value: 2000000, label: "Ambang Director termin (Rp)", group: "Approval" },
+  { id: "SET-APPPO", key: "APPROVE_PO", value: 1000000, label: "Ambang Director PO (Rp)", group: "Approval" },
+  { id: "SET-ALBUD", key: "ALERT_BUDGET_PCT", value: 80, label: "Alert serapan budget (%)", group: "Alert" },
+  { id: "SET-ALOVR", key: "ALERT_OVERRUN_PCT", value: 10, label: "Alert overrun di atas (%)", group: "Alert" },
+  { id: "SET-ALCERT", key: "ALERT_CERT_DAYS", value: 90, label: "Alert sertifikat H- (hari)", group: "Alert" },
+  /* Tarif mastery yang tadinya hanya fallback hardcode di dalam komponen.
+     Dipindah ke settings supaya (a) bisa diubah dari Pengaturan tanpa
+     menyentuh kode, dan (b) nilainya sama persis di FE dan BE - sebelumnya
+     Settings menampilkan fallback yang berbeda dari yang dipakai modul. */
+  { id: "SET-EQLAB", key: "EQUIP_LABOR_RATE_PER_DAY", value: loadedLaborRatePerDay("welder"), label: "Tarif tenaga servis / hari (Rp)", group: "Equipment" },
+  { id: "SET-TARIFKWH", key: "TARIF_LISTRIK_KWH", value: 1650, label: "Tarif listrik (Rp/kWh)", group: "Equipment" },
+  { id: "SET-TARIFAIR", key: "TARIF_AIR_M3", value: 15000, label: "Tarif air (Rp/m3)", group: "Equipment" },
+  { id: "SET-ALCERT60", key: "ALERT_CERT_60", value: 60, label: "Alert sertifikat warning H- (hari)", group: "Alert" },
+  { id: "SET-ALCERT30", key: "ALERT_CERT_30", value: 30, label: "Alert sertifikat critical H- (hari)", group: "Alert" },
+  { id: "SET-ALMS", key: "ALERT_MILESTONE_DAYS", value: 7, label: "Alert milestone H- (hari)", group: "Alert" },
+  { id: "SET-ALCP", key: "ALERT_CP_DAYS", value: 3, label: "Alert critical-path delay > (hari)", group: "Alert" },
+  { id: "SET-CUTI", key: "CUTI_JATAH", value: 12, label: "Jatah cuti tahunan (hari)", group: "HR" },
+  { id: "SET-WHATIF-G", key: "WHATIF_GROWTH", value: 0, label: "What-if pertumbuhan pasar (%)", group: "Analytics" },
+  { id: "SET-WHATIF-C", key: "WHATIF_COST", value: 0, label: "What-if biaya, menekan margin (%)", group: "Analytics" },
+  { id: "SET-WHATIF-P", key: "WHATIF_PROG", value: 0, label: "What-if progres, menggeser forecast (%)", group: "Analytics" },
+  { id: "SET-3D-PROJ", key: "SHOW_3D_PROJECT", value: 0, label: "Tampilkan 3D Viewer di modul Proyek (0/1)", group: "Modul" },
+  { id: "SET-3D-VES", key: "SHOW_3D_VESSEL", value: 0, label: "Tampilkan 3D Viewer di modul Kapal (0/1)", group: "Modul" },
+];
+
+export const wbsTemplate: WbsItem[] = [
+  // Migrasi E3/E4: template New Build dipecah (Outfitting per sistem + Painting per tahap)
+  // + Commissioning. Total bobot tetap 100. WBS proyek lama (seed/wbsByProject)
+  // TIDAK dimigrasi - hanya template untuk proyek baru.
+  { task: "Desain & Persetujuan Class", start: "2026-01", end: "2026-03", progress: 100, weight: 8 },
+  { task: "Pengadaan Material", start: "2026-02", end: "2026-05", progress: 85, weight: 10 },
+  { task: "Fabrikasi Baja", start: "2026-03", end: "2026-07", progress: 70, weight: 12 },
+  { task: "Hull Assembly", start: "2026-05", end: "2026-08", progress: 45, weight: 12 },
+  { task: "Outfitting - Machinery", start: "2026-07", end: "2026-09", progress: 20, weight: 8 },
+  { task: "Outfitting - Piping", start: "2026-07", end: "2026-09", progress: 20, weight: 7 },
+  { task: "Outfitting - Electrical", start: "2026-07", end: "2026-09", progress: 20, weight: 7 },
+  { task: "Outfitting - Nav & Comm", start: "2026-07", end: "2026-09", progress: 20, weight: 5 },
+  { task: "Outfitting - Accommodation", start: "2026-07", end: "2026-09", progress: 20, weight: 5 },
+  { task: "Painting - Surface Prep", start: "2026-08", end: "2026-09", progress: 5, weight: 5 },
+  { task: "Painting - Priming", start: "2026-08", end: "2026-09", progress: 5, weight: 4 },
+  { task: "Painting - Topcoat", start: "2026-08", end: "2026-09", progress: 5, weight: 4 },
+  { task: "Painting - Final Inspection", start: "2026-08", end: "2026-09", progress: 5, weight: 3 },
+  { task: "Commissioning", start: "2026-09", end: "2026-09", progress: 0, weight: 6 },
+  { task: "Sea Trial & Delivery", start: "2026-09", end: "2026-09", progress: 0, weight: 4 },
+];
+
+const seedTeamByProject: Record<string, string[]> = {
+  "NB-2025-012": ["EMP-002", "EMP-004", "EMP-006"],
+  "NB-2025-014": ["EMP-003", "EMP-005"],
+  "RP-2026-003": ["EMP-004", "EMP-006"],
+  "RP-2026-005": ["EMP-005"],
+  "RF-2026-001": ["EMP-002", "EMP-006"],
+};
+
+function clone<T>(v: T): T {
+  return JSON.parse(JSON.stringify(v)) as T;
+}
+
+function buildSeeds(): StoreShape {
+    const shape: StoreShape = {
+    projects: clone(seedProjects) as StoreItem[],
+    vessels: clone(seedVessels) as StoreItem[],
+    drydocks: clone(seedDrydocks) as StoreItem[],
+    dockSlots: clone(seedDockSlots) as StoreItem[],
+    inventory: clone(seedInventory) as StoreItem[],
+    movements: clone(seedMovements) as StoreItem[],
+    equipment: clone(seedEquipment) as StoreItem[],
+    bookings: [...clone(seedBookings), ...clone(seedBookingsHistory)],
+    subcontractors: clone(seedSubcontractors) as StoreItem[],
+    workOrders: clone(seedWorkOrders),
+    termins: clone(seedTermins),
+    employees: clone(seedEmployees) as StoreItem[],
+    invoices: [...clone(seedInvoices), ...clone(seedInvoicesHistory)] as StoreItem[],
+    payables: clone(seedPayables),
+    ncr: clone(seedNcr) as StoreItem[],
+    incidents: clone(seedIncidents) as StoreItem[],
+    inspections: [...clone(seedInspections), ...clone(seedInspectionsHistory)],
+    purchaseOrders: clone(seedPO) as StoreItem[],
+    requisitions: clone(seedRequisitions),
+    vendors: clone(seedVendors),
+    quotations: clone(seedQuotations) as StoreItem[],
+    clients: clone(seedClients) as StoreItem[],
+    documents: clone(seedDocuments),
+     surveys: clone(seedSurveys) as StoreItem[],
+     activities: clone(seedActivities) as StoreItem[],
+     services: clone(seedServices) as StoreItem[],
+     spareparts: clone(seedSpareparts) as StoreItem[],
+     boq: clone(seedBoq) as StoreItem[],
+     branches: clone(seedBranches),
+     attendance: clone(seedAttendance),
+     payroll: clone(seedPayroll),
+     taxPeriods: clone(seedTaxPeriods),
+     rfqs: clone(seedRfqs),
+     changeOrders: clone(seedChangeOrders),
+     risks: clone(seedRisks),
+     leaves: clone(seedLeaves),
+     trainings: clone(seedTrainings),
+     timesheets: clone(seedTimesheets),
+     drawings: clone(seedDrawings),
+     toolbox: clone(seedToolbox),
+     warranties: [],
+     calibrations: clone(seedCalibrations),
+       communications: clone(seedCommunications),
+        contracts: clone(seedContracts),
+        bast: clone(seedBast),
+        trials: clone(seedTrials),
+        requests: clone(seedRequests),
+        clientPos: clone(seedClientPos),
+        walks: [],
+        auditPlans: [],
+        warehouses: clone(seedWarehouses),
+        maintenances: clone(seedMaintenances),
+        letters: clone(seedLetters),
+        settings: clone(seedSettings),
+      coa: clone(seedCoa),
+      journals: clone(seedJournals),
+      assets: clone(seedAssets),
+wbsByProject: {},
+     teamByProject: clone(seedTeamByProject),
+   };
+   /* Stempel tanggal buat untuk SEED diturunkan dari field tanggal milik rekam
+      itu sendiri (lihat `deriveCreatedAt`). Rekam tanpa kandidat sengaja
+      dibiarkan tanpa `createdAt` supaya tabel menampilkan "—" daripada tanggal
+      karangan. One pass di akhir, bukan per koleksi, supaya koleksi baru tidak
+      lupa dipanggil. */
+   stampDerivedCreatedAt(shape as unknown as Record<string, unknown[]>);
+   return shape;
+}
+
+/* ============ CONTEXT ============ */
+
+const STORE_KEY = "isms.store.v4";
+const LEGACY_KEYS = ["isms.store.v3", "isms.store.v2", "isms.store.v1"];
+const BRANCH_KEY = "isms.branch";
+/* Sinkronisasi offline yang diperkeras: dirty set + tombstone delete dipersist
+   agar selamat dari reload.
+   PENTING: tidak ada TTL. Dulu entri yang "diam" > 7 hari dihapus, sehingga
+   resync menimpa edit offline secara permanen. Dirty set hanya berisi nama
+   koleksi (maks 54) jadi tidak perlu kedaluwarsa sama sekali. */
+const DIRTY_KEY = "isms.dirty";
+const TOMBSTONES_KEY = "isms.tombstones";
+/* Cap tombstone PER KOLEKSI (bukan global) supaya satu koleksi besar tidak
+   membuang seluruh koleksi lain. */
+const TOMBSTONE_CAP_PER_COL = 500;
+/* Cap konsisten untuk log aktivitas (dulu 30 di tulis vs 100 di resync ->
+   resync mengisi 100 lalu add pertama memotong balik jadi 30). */
+const ACTIVITIES_CAP = 100;
+
+function loadDirtyPersisted(): string[] {
+  try {
+    const raw = localStorage.getItem(DIRTY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as { entries?: unknown };
+    if (!parsed || typeof parsed !== "object") return [];
+    const entries = Array.isArray(parsed.entries) ? parsed.entries : [];
+    return entries.filter((e): e is string => typeof e === "string");
+  } catch {
+    return [];
+  }
+}
+
+function saveDirtyPersisted(cols: string[]): void {
+  try {
+    localStorage.setItem(DIRTY_KEY, JSON.stringify({ savedAt: Date.now(), entries: cols }));
+  } catch {
+    notifyStorageFull("Antrean sinkronisasi gagal disimpan (penyimpanan penuh)");
+  }
+}
+
+function loadTombstonesPersisted(): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  try {
+    const raw = localStorage.getItem(TOMBSTONES_KEY);
+    if (!raw) return map;
+    const parsed = JSON.parse(raw) as { entries?: unknown };
+    if (!parsed || typeof parsed !== "object") return map;
+    const rec = (parsed.entries ?? {}) as Record<string, unknown>;
+    for (const [col, ids] of Object.entries(rec)) {
+      if (!Array.isArray(ids)) continue;
+      /* Cap per koleksi: ambil N terakhir (paling baru), bukan N pertama. */
+      const valid = ids.filter((id): id is string => typeof id === "string");
+      if (valid.length === 0) continue;
+      map.set(col, new Set(valid.slice(-TOMBSTONE_CAP_PER_COL)));
+    }
+  } catch {
+    /* abaikan - mulai kosong */
+  }
+  return map;
+}
+
+function saveTombstonesPersisted(map: Map<string, Set<string>>): void {
+  try {
+    const entries: Record<string, string[]> = {};
+    for (const [col, set] of map) {
+      const ids = [...set];
+      if (ids.length > 0) entries[col] = ids.slice(-TOMBSTONE_CAP_PER_COL);
+    }
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify({ savedAt: Date.now(), entries }));
+  } catch {
+    notifyStorageFull("Antrean hapus offline gagal disimpan (penyimpanan penuh)");
+  }
+}
+
+/* saveBackup (isms.backup.<col>) DIHAPUS.
+   Komentarnya mengklaim "dipakai pemulihan manual bila BE menimpa", tapi
+   dicek ulang: tidak ada satu pun pembaca isms.backup.* di seluruh src.
+   Jadi fungsi ini cuma menulis salinan penuh setiap koleksi ke localStorage
+   - membakar kuota (yang justru penyebab toast "penyimpanan penuh") demi
+   kemampuan pemulihan yang tidak pernah dipakai. Persistensi offline yang
+   sebenarnya sekarang handled hydrateFromOfflineStore/persistCollections
+   lewat IndexedDB. */
+const PREFIX: Record<string, string> = {
+  projects: "PRJ",
+  vessels: "V",
+  drydocks: "DD",
+  dockSlots: "DS",
+  inventory: "STK",
+  movements: "M",
+  equipment: "EQ",
+  bookings: "BK",
+  subcontractors: "SUB",
+  workOrders: "WO",
+  termins: "TRM",
+  employees: "EMP",
+  invoices: "INV",
+  payables: "AP",
+  ncr: "NCR",
+  incidents: "INC",
+  inspections: "INS",
+  purchaseOrders: "PO",
+  requisitions: "PR",
+  vendors: "VND",
+  quotations: "QT",
+  clients: "C",
+  documents: "DOC",
+   surveys: "S",
+   activities: "A",
+   services: "SRV",
+   spareparts: "SP",
+   boq: "BQ",
+   branches: "BR",
+   attendance: "ABS",
+   payroll: "PAY",
+   taxPeriods: "TAX",
+   rfqs: "RFQ",
+   changeOrders: "CO",
+   risks: "RSK",
+   leaves: "CUT",
+   trainings: "TRN",
+   timesheets: "TS",
+   drawings: "DRW",
+   toolbox: "TBM",
+   warranties: "WRT",
+   calibrations: "CAL",
+    communications: "COM",
+      contracts: "KTR",
+      bast: "BAST",
+  trials: "STL",
+  requests: "REQ",
+  clientPos: "CPO",
+  walks: "SW",
+  auditPlans: "AUD",
+  warehouses: "GDG",
+  maintenances: "MTE",
+  letters: "SRT",
+    settings: "SET",
+    coa: "COA",
+    journals: "JU",
+    assets: "AST",
+ };
+
+const ARRAY_KEYS: (keyof StoreShape)[] = [
+  "projects", "vessels", "drydocks", "dockSlots", "inventory", "movements",
+  "equipment", "bookings", "subcontractors", "workOrders", "termins",
+  "employees", "invoices", "payables", "ncr", "incidents", "inspections",
+  "purchaseOrders", "requisitions", "vendors", "quotations", "clients",
+  "documents", "surveys", "activities", "services", "spareparts", "boq",
+  "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
+  "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
+  "warranties",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets",
+];
+
+function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
+  const seeds = buildSeeds();
+  const merged = { ...seeds, ...parsed } as StoreShape;
+  for (const k of ARRAY_KEYS) {
+    const rec = merged as unknown as Record<string, unknown>;
+    if (!Array.isArray(rec[k as string])) {
+      rec[k as string] = seeds[k];
+    }
+  }
+  if (!merged.wbsByProject || typeof merged.wbsByProject !== "object") merged.wbsByProject = {};
+  if (!merged.teamByProject || typeof merged.teamByProject !== "object") merged.teamByProject = seeds.teamByProject;
+  return merged;
+}
+
+function loadStore(): StoreShape {
+  // Persistensi localStorage (migrasi dari sessionStorage: kunci sama, baca sesi lama sekali).
+  // CATATAN: kunci ini sudah TIDAK ditulis lagi (lihat persistEffect di bawah) -
+  // movements saja ~6 MB sedangkan kuota localStorage 5 MB, jadi tulisannya
+  // selalu gagal. Dibaca sekali untuk migrasi, lalu dihapus biar kuota bebas.
+  const read = (storage: Storage, key: string): Partial<StoreShape> | null => {
+    try {
+      const raw = storage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<StoreShape>;
+        if (parsed && Array.isArray(parsed.projects)) return parsed;
+      }
+    } catch {
+      /* abaikan, coba key berikutnya */
+    }
+    return null;
+  };
+  const candidates = [STORE_KEY, ...LEGACY_KEYS];
+  for (const key of candidates) {
+    const parsed = read(localStorage, key);
+    if (parsed) return sanitizeStore(parsed);
+  }
+  for (const key of candidates) {
+    const parsed = read(sessionStorage, key);
+    if (parsed) return sanitizeStore(parsed);
+  }
+  return buildSeeds();
+}
+
+export type CollectionKey = Exclude<keyof StoreShape, "wbsByProject" | "teamByProject">;
+
+export type BackendMode = "local" | "remote";
+
+interface StoreCtx {
+  data: StoreShape;
+  backendMode: BackendMode;
+  backendError: string | null;
+  pendingSync: string[];
+  pushPending: () => Promise<void>;
+  add: (col: CollectionKey, item: Omit<StoreItem, "id"> & { id?: string }, activity?: { action: string; target?: string; module: string }) => Promise<StoreItem>;
+  update: (col: CollectionKey, id: string, patch: Record<string, any>) => Promise<void>;
+  remove: (col: CollectionKey, id: string) => Promise<void>;
+  log: (action: string, target: string, module: string) => void;
+  reset: () => void;
+  resync: () => Promise<void>;
+  /** Tarik batch koleksi tertentu saja (pola per modul/tab - useModuleSync). */
+  resyncCollections: (cols: CollectionKey[]) => Promise<CollectionKey[]>;
+  wbsFor: (projectId: string) => WbsItem[];
+  setWbs: (projectId: string, wbs: WbsItem[]) => Promise<void>;
+  teamFor: (projectId: string) => string[];
+  setTeam: (projectId: string, ids: string[]) => Promise<void>;
+  branch: string;
+  setBranch: (b: string) => void;
+  inBranch: (rows: StoreItem[]) => StoreItem[];
+}
+
+const Ctx = createContext<StoreCtx | null>(null);
+
+function newId(col: CollectionKey): string {
+  const p = PREFIX[col] ?? "X";
+  return newPrefixedId(p);
+}
+
+/* Koleksi global-by-design: jangan disuntik branch fallback di add(). */
+const SKIP_BRANCH_COLLECTIONS: ReadonlySet<string> = new Set(["settings", "coa", "branches"]);
+
+const ACTOR_TONE: Record<string, "navy" | "teal" | "rose" | "violet" | "amber"> = {
+  Proyek: "violet",
+  Keuangan: "amber",
+  QC: "teal",
+  Safety: "rose",
+  Procurement: "navy",
+  CRM: "navy",
+  Drydock: "teal",
+  Equipment: "amber",
+  Inventori: "navy",
+  SDM: "violet",
+  Kapal: "teal",
+  Dokumen: "navy",
+   Subkontraktor: "amber",
+   Service: "teal",
+   Sparepart: "amber",
+   BoQ: "navy",
+   Absensi: "violet",
+   Payroll: "amber",
+   Pajak: "navy",
+   Laporan: "teal",
+   Monitoring: "violet",
+ };
+
+/* Toast tanpa mengimpor ui (hindari sirkular): <Toaster/> di ui.tsx mendengarkan event ini. */
+function notifyBackendFallback(): void {
+  try {
+    window.dispatchEvent(
+      new CustomEvent("isms:toast", { detail: { message: "Backend tak terjangkau - mode lokal", tone: "info" } }),
+    );
+  } catch {
+    /* abaikan */
+  }
+}
+
+/* Toast generik dari store. Sumber bahasa dibaca langsung dari localStorage
+   agar store tidak perlu mengimpor LanguageContext (menghindari lingkaran
+   impor dengan komponen yang memakai store). */
+function notifyStore(message: string): void {
+  try {
+    window.dispatchEvent(
+      new CustomEvent("isms:toast", { detail: { message, tone: "info" } }),
+    );
+  } catch {
+    /* abaikan */
+  }
+}
+
+function storeLocale(): "id" | "en" {
+  try {
+    return localStorage.getItem("isms.locale") === "en" ? "en" : "id";
+  } catch {
+    return "id";
+  }
+}
+
+/* Toast alasan penolakan backend (mis. 403 "Butuh peran Direktur") - tiap kejadian. */
+function notifyForbidden(reason: string): void {
+  try {
+    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message: reason, tone: "info" } }));
+  } catch {
+    /* abaikan */
+  }
+}
+
+/* Toast konflik tulis (409 STALE/REFERENCED/VALIDATION): data server menang. */
+function notifyConflict(message: string): void {
+  try {
+    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message, tone: "info" } }));
+  } catch {
+    /* abaikan */
+  }
+}
+
+/* Toast penyimpanan penuh. Dulu diam-diam (try/catch kosong) - padahal justru
+   saat kuota localStorage habis-lah data lokal hilang tanpa jejak. */
+let storageFullToasted = false;
+const storageFullKeys = new Set<string>();
+function notifyStorageFull(message: string): void {
+  /* Dedup per kunci: resync jalan di setiap buka halaman, jadi tanpa dedup
+     user dibanjiri toast yang sama berulang. Flag lama hanya ditulis tapi
+     tidak pernah dibaca - itu bug. */
+  const key = message.slice(0, 60);
+  if (storageFullKeys.has(key) && storageFullToasted) return;
+  storageFullKeys.add(key);
+  try {
+    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message, tone: "info" } }));
+    storageFullToasted = true;
+  } catch {
+    /* abaikan */
+  }
+}
+
+/* Tulis koleksi ke IndexedDB; bila tidak tersedia, jatuh ke localStorage
+   dengan batas baris. Integritas > kelengkapan: lebih baik menyimpan 400
+   baris terakhir daripada diam-diam menyimpan nol. */
+async function persistCollections(src: Record<string, unknown>, cols: string[]): Promise<void> {
+  const useIdb = await idbAvailable();
+  let gagal = 0;
+  for (const col of cols) {
+    const rows = src[col];
+    if (!Array.isArray(rows)) continue;
+    const ok = useIdb ? await idbPut(col, rows as Row[]) : lsPut(col, rows as Row[]);
+    if (!ok) gagal += 1;
+  }
+  if (gagal > 0) {
+    notifyStorageFull(
+      `Penyimpanan browser gagal menyimpan ${gagal} koleksi - data offline bisa hilang saat reload`,
+    );
+  }
+}
+
+/* Koleksi yang dipersistensi. wbsByProject/teamByProject bukan array (object)
+   jadi ditangani terpisah. */
+const OFFLINE_COLLECTIONS: string[] = [
+  "projects", "vessels", "drydocks", "dockSlots", "inventory", "movements",
+  "equipment", "bookings", "subcontractors", "workOrders", "termins",
+  "employees", "invoices", "payables", "ncr", "incidents", "inspections",
+  "purchaseOrders", "requisitions", "vendors", "quotations", "clients",
+  "documents", "surveys", "activities", "services", "spareparts", "boq",
+  "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
+  "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
+  "warranties", "calibrations", "communications", "contracts", "bast",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets",
+];
+
+/* Hidrasi cache offline dari IndexedDB saat boot. Berjalan sebelum resync
+   supaya server menimpa cache yang bersih, sementara koleksi dirty (yang
+   menyimpan edit offline) tetap aman karena resync melewatinya. */
+async function hydrateFromOfflineStore(apply: (rows: Record<string, Row[]>) => void): Promise<void> {
+  const all = await idbGetAll();
+  if (all && Object.keys(all).length > 0) {
+    apply(all);
+    return;
+  }
+  // Fallback: localStorage (dipakai hanya bila IndexedDB tidak tersedia)
+  const partial: Record<string, Row[]> = {};
+  for (const col of OFFLINE_COLLECTIONS) {
+    const rows = lsGet(col);
+    if (rows && rows.length > 0) partial[col] = rows;
+  }
+  if (Object.keys(partial).length > 0) apply(partial);
+}
+
+/* Remote dipakai bila backend dikonfigurasi DAN ada JWT - seluruh CRUD BE wajib
+   auth. Tanpa JWT (belum login) operasi berjalan lokal senyap, tanpa semburan 401. */
+function remoteActive(): boolean {
+  return isBackendConfigured() && getJwt() !== null;
+}
+
+/**
+ * String JSON -> nilai, untuk `baseData` compare-and-swap wbs/team.
+ * String rusak (cache lama, storage penuh) menghasilkan null, yang berarti
+ * "tidak ada base" - server lalu menerima penimpaan. Itu pilihan yang aman:
+ * lebih baik satu penimpaan buta daripada push yang macet karena base rusak.
+ */
+function parseMaybeJson(raw: string | undefined): unknown {
+  if (raw === undefined || raw === "") return undefined;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+/* Koleksi yang isinya KODE, bukan data operasional: kalau server membalas
+   kosong, itu hampir pasti tabelnya belum dibuat atau belum diisi - bukan
+   "sudah tidak ada lagi". Menerima yang kosong berarti menghapus seluruh
+   konstanta bisnis (tarif pajak, ambang alert, batas PO, asumsi what-if), dan
+   setiap modul lalu diam-diam jatuh ke nilai default. `settings` satu-satunya
+   koleksi seperti ini, dan Analytics adalah modul yang menariknya lewat
+   useModuleSync(AN_COLS) - jadi bug ini muncul tepat saat Analytics dibuka.
+   Module scope, bukan di dalam provider: Set baru dialokasikan tiap render
+   kalau ditaruh di sana. */
+const NEVER_EMPTY_COLLECTIONS: ReadonlySet<string> = new Set(["settings"]);
+
+/**
+ * Terima hasil tarik server hanya kalau tidak merusak data lokal.
+ *
+ * BUG "DATA HILANG" yang ditutup: versi lama melakukan `{...prev, ...pulled}`
+ * tanpa syarat apa pun. Jadi satu respons kosong dari server langsung
+ * MENGHAPUS seluruh koleksi lokal. Untuk `settings` artinya semua tarif dan
+ * ambang hilang; untuk jurnal dan movements artinya laporan keuangan dan stok
+ * habis - dan tidak ada satu pun toast yang menyuruh pengguna tahu.
+ *
+ * Respons kosong tetap diterima untuk koleksi operasional, karena memang bisa
+ * sah menjadi kosong di server (semua proyek dihapus, dan lain-lain). Yang
+ * ditolak hanya koleksi kode.
+ *
+ * Nilai balik `false` berarti hasil tarik diabaikan dan koleksi lokal tetap
+ * dipakai. Sengaja TIDAK dilaporkan sebagai kegagalan sinkronisasi: server
+ * menjawab normal, hanya jawabannya tidak boleh dipakai, jadi badge "offline"
+ * di topbar akan menyala permanen untuk kondisi yang deterministik.
+ */
+function acceptPull(key: CollectionKey, rows: StoreItem[]): boolean {
+  const empty = !Array.isArray(rows) || rows.length === 0;
+  if (!empty) return true;
+  return !NEVER_EMPTY_COLLECTIONS.has(key);
+}
+
+/**
+ * Gabung hasil tarikan dengan state lokal TANPA kehilangan baris lokal yang
+ * dibuat setelah request berangkat.
+ *
+ * Akar masalah "POST sukses lalu beberapa detik kemudian data hilang":
+ * tarikan berangkat pada t0, pengguna menyimpan pada t1, respons tiba pada t2.
+ * Snapshot t0 tidak mengenal perubahan t1, jadi `{...prev, ...pulled}` —
+ * yang dipakai versi lama — MENGHAPUS baris itu. Tidak ada error, tidak ada
+ * toast, tidak ada badge pending: koleksi pun tidak pernah ditandai dirty
+ * karena POST-nya sukses, jadi pencemaran tidak dikenali.
+ *
+ * Aturan gabung:
+ *   - id yang dikenal server  → versi server yang menang (server otoritatif)
+ *   - id hanya ada di lokal   → dipertahankan (ditulis setelah snapshot)
+ *   - urutan baris lokal     → dipertahankan (tidak ada lompatan urutan di UI)
+ *
+ * Panggil hanya untuk koleksi yang epoch-nya berubah saat request berjalan.
+ * Koleksi yang epoch-nya tidak berubah boleh replace: tidak ada yang bisa hilang.
+ */
+export function applyPulled<T extends { id: string }>(local: T[] | undefined, incoming: T[]): T[] {
+  const base = local ?? [];
+  if (base.length === 0) return incoming;
+  const byId = new Map<string, T>();
+  for (const r of base) byId.set(String(r.id), r);
+  for (const r of incoming) byId.set(String(r.id), r);
+  return Array.from(byId.values());
+}
+
+/**
+ * Koleksi mana yang tidak boleh di-replace apa adanya.
+ *
+ * True bila ada mutasi lokal selama request berjalan (epoch berubah) atau
+ * koleksi menjadi dirty di tengah jalan (tulis offline belum terkirim).
+ */
+function pullNeedsMerge(key: CollectionKey, epochAtStart: number, writeEpoch: Map<string, number>, dirty: Set<string>): boolean {
+  if (dirty.has(key as string)) return true;
+  return (writeEpoch.get(key as string) ?? 0) !== epochAtStart;
+}
+
+/* Contract version: cocok dengan services/api GET /api/version.
+   Minor-tolerant - sinkronisasi diblokir bila MAJOR berbeda atau web minor
+   di bawah minWeb server. */
+const EXPECTED_API_MAJOR = 0;
+const EXPECTED_API_MINOR = 2;
+
+function majorOf(v: unknown): number | null {
+  if (typeof v !== "string") return null;
+  const m = v.trim().split(".")[0];
+  if (m === undefined || m === "") return null;
+  const n = Number.parseInt(m, 10);
+  return Number.isInteger(n) ? n : null;
+}
+
+function minorOf(v: unknown): number | null {
+  if (typeof v !== "string") return null;
+  const parts = v.trim().split(".");
+  if (parts.length < 2 || parts[1] === undefined || parts[1] === "") return null;
+  const n = Number.parseInt(parts[1], 10);
+  return Number.isInteger(n) ? n : null;
+}
+
+function notifyVersionBlocked(serverApi: string): void {
+  try {
+    window.dispatchEvent(
+      new CustomEvent("isms:toast", {
+        detail: {
+          message: `Versi backend tak kompatibel (server ${serverApi}) - sinkronisasi dibatalkan. Perbarui aplikasi.`,
+          tone: "info",
+        },
+      }),
+    );
+  } catch {
+    /* abaikan */
+  }
+}
+
+/* Fetch /api/version sebelum sync; false = major mismatch → skip sync.
+   Gagal fetch (offline/backend lama tanpa endpoint) → true agar fallback
+   normal tetap berjalan. */
+async function isApiCompatible(): Promise<boolean> {
+  try {
+    const ver = await apiFetch<{ api: string; minWeb: string }>("/api/version");
+    const serverMajor = majorOf(ver?.api);
+    if (serverMajor === null) return true;
+    if (serverMajor !== EXPECTED_API_MAJOR) {
+      notifyVersionBlocked(String(ver.api));
+      return false;
+    }
+    // Kontrak minWeb: web minor harus >= minWeb minor (FE 0.2.x vs min 0.2.0).
+    const minMinor = minorOf(ver?.minWeb);
+    if (minMinor !== null && EXPECTED_API_MINOR < minMinor) {
+      notifyVersionBlocked(`${String(ver.api)} (butuh web ≥ ${String(ver.minWeb)})`);
+      return false;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [data, setData] = useState<StoreShape>(() => loadStore());
+  /* `backendMode` berarti "backend ada DAN tokennya masih hidup", bukan hanya
+     "backend terkonfigurasi". Versi lama memakai `useState(() => isBackendConfigured())`
+     yang beku: JWT tinggal di sessionStorage, yang bisa hilang TANPA remount -
+     tab yang di-restore browser, eviction di Android/iOS, atau logout di tab
+     lain. Waktu itu `remoteActive()` sudah false (tulis jatuh ke lokal) tapi
+     badge topbar tetap hijau "terhubung ke server", dan antrean offline tidak
+     pernah didorong karena tidak ada yang tahu harus mendorong.
+     Itu persis gejala "tulisan berhasil tapi tidak muncul di perangkat lain".
+     Sekarang dihitung ulang dari token yang benar-benar ada, dan disegarkan
+     saat tab regain focus / storage berubah / tab jadi terlihat. */
+  const [remoteLive, setRemoteLive] = useState<boolean>(() => isBackendConfigured() && getJwt() !== null);
+  const backendMode: BackendMode = remoteLive ? "remote" : "local";
+  const [backendError, setBackendError] = useState<string | null>(null);
+  /* Sesi bisa hilang atau kembali tanpa remount: login di tab lain, logout,
+     token kedaluwarsa lalu di-refresh. Backend tidak memberi tahu, jadi kita
+     yangVIDE|mListen ke sinyal yang menandai saatnya menilai ulang.
+     `storage` tidak menyala di tab yang mengubahnya sendiri - itu sebabnya
+     `focus` dan `visibilitychange` ikut dipasang, karena keduanya menyala
+     setiap kali pengguna kembali ke tab, dan itu justru kasus yang dilaporkan. */
+  useEffect(() => {
+    const recheck = (): void => {
+      setRemoteLive(isBackendConfigured() && getJwt() !== null);
+    };
+    window.addEventListener("focus", recheck);
+    window.addEventListener("storage", recheck);
+    document.addEventListener("visibilitychange", recheck);
+    return () => {
+      window.removeEventListener("focus", recheck);
+      window.removeEventListener("storage", recheck);
+      document.removeEventListener("visibilitychange", recheck);
+    };
+  }, []);
+  /* Alasan fallback yang terakhir di-toast. Menyimpan STRING (bukan boolean)
+   supaya notifikasi yang sama tidak diulang setiap penulisan, tapi alasan
+   BERBEDA tetap sampai ke pengguna. Versi boolean sebelumnya membuat
+   kegagalan kedua yang berbeda jenisnyatidak sama sekali. */
+  const fallbackToasted = useRef<string>("");
+  /* Anti-clobber: koleksi yang diubah lokal saat fallback tidak boleh ditimpa resync.
+     Dipersist ke localStorage (isms.dirty) agar selamat dari reload; TTL 7 hari. */
+  const dirtyRef = useRef<Set<string>>(new Set<string>(loadDirtyPersisted()));
+  /* Generasi per koleksi: naik setiap markDirty. Dipakai pushPending untuk
+     KNOW bahwa flag dirty masih milik perubahan yang sudah dikirim, bukan
+     milik edit yang terjadi SAAH push berjalan. Tanpa ini, edit kedua pada
+     koleksi yang sama ikut terhapus => lost update. */
+  const dirtyGenRef = useRef<Map<string, number>>(new Map());
+  /* Epoch tulis per koleksi: naik pada SETIAP mutasi lokal yang berhasil -
+     baik yang lolos ke server maupun yang jatuh ke fallback offline.
+     Berbeda dari dirtyGenRef (yang hanya naik saat markDirty), epoch ini
+     mencakup juga tulis yang SUDAH sukses di-POST.
+     Dipakai resync/resyncCollections untuk menentukan apakah sebuah tarikan
+     masih boleh menimpa: kalau epoch berubah selama request berjalan, snapshot
+     yang sedang tiba dibuat SEBELUM perubahan itu, sehingga replace menghapus
+     baris yang baru saja berhasil disimpan. */
+  const writeEpochRef = useRef<Map<string, number>>(new Map());
+  const bumpEpoch = useCallback((col: string) => {
+    writeEpochRef.current.set(col, (writeEpochRef.current.get(col) ?? 0) + 1);
+  }, []);
+  const [pendingSync, setPendingSync] = useState<string[]>(() => [...dirtyRef.current]);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  /* Re-entrancy guard pushPending: tanpa ini tombol "Sinkronkan" + interval
+     bisa menjalankan dua push bersamaan dan saling menghapus flag. */
+  const pushingRef = useRef(false);
+  /* Posisi jendela baris per koleksi untuk pushPending (lihat pushPending). */
+  const pushCursorRef = useRef<Map<string, number>>(new Map());
+  /* Baris racun: jumlah percobaan push per `koleksi:id`. Setelah
+     PUSH_MAX_ATTEMPTS kali, baris menyerah dan tidak dicoba lagi. Tanpa ini
+     satu baris yang selalu ditolak membekukan seluruh koleksi (cursor tidak
+     pernah maju) dan request yang sama diulang tiap 45 detik selamanya.
+     `pushGiveUpRef` menyimpan yang sudah menyerah supaya tidak dihitung lagi
+     dan tidak ikut menahan penanda dirty. */
+  const pushAttemptsRef = useRef<Map<string, number>>(new Map());
+  const pushGiveUpRef = useRef<Set<string>>(new Set());
+  /* Isi terakhir yang dibaca dari server untuk wbs/team per proyek.
+     Endpoint ini tidak punya concurrency token (tabelnya hanya project_id +
+     data), jadi klien harus ingat "apa yang masih ada di server" dan
+     mengirimkannya sebagai `baseData`. Tanpa ini, dua perangkat yang
+     sama-sama menyimpan WBS akan saling menimpa diam-diam - yang kalah
+     hilang tanpa error apa pun. Diisi saat pull, diperbarui setelah push
+     sukses supaya base berikutnya adalah versi server yang baru. */
+  const wbsBaseRef = useRef<Map<string, string>>(new Map());
+  const teamBaseRef = useRef<Map<string, string>>(new Map());
+  /* Rotasi koleksi: indeks koleksi mana yang dilayani duluan pada run ini.
+     Dipakai supaya budget yang habis tidak selalu jatuh ke koleksi yang sama
+     dan tidak menyebabkan koleksi lain kelaparan. */
+  const pushColCursorRef = useRef<number>(0);
+  /* Trigger yang datang saat push sedang berjalan tidak boleh dibuang.
+     Versi lama `if (pushingRef.current) return` membuat edit yang masuk
+     di tengah push hilang tanpa jejak sampai run 45 detik berikutnya - dan
+     kalau tidak ada interval (mis. tab tidak pernah regain focus), tidak
+     pernah terkirim sama sekali. */
+  const pushAgainRef = useRef<boolean>(false);
+  /* Menunjuk fungsi push yang sedang didefinisikan, supaya blok `finally`
+     bisa menjadwalkan run lanjutan tanpa memanggil useCallback-nya sendiri. */
+  const pushPendingRef = useRef<(() => Promise<void>) | null>(null);
+
+  const markDirty = useCallback((col: string) => {
+    if (!isBackendConfigured()) return;
+    dirtyGenRef.current.set(col, (dirtyGenRef.current.get(col) ?? 0) + 1);
+    if (!dirtyRef.current.has(col)) {
+      dirtyRef.current.add(col);
+      setPendingSync([...dirtyRef.current]);
+    }
+    saveDirtyPersisted([...dirtyRef.current]);
+  }, []);
+
+  /* Bersihkan flag HANYA bila generasi tidak berubah sejak snapshot push.
+     Versi lama menerima Set<nama koleksi> yang isinya sudah dirty saat push
+     dimulai, sehingga check "!sentSnapshot.has(col)" selalu SALAH untuk
+     koleksi yang sedang dikirim dan edit kedua ikut terhapus. */
+  const clearDirty = useCallback((col: string, sentGen?: number) => {
+    if (sentGen !== undefined && (dirtyGenRef.current.get(col) ?? 0) !== sentGen) {
+      return;
+    }
+    if (dirtyRef.current.delete(col)) {
+      setPendingSync([...dirtyRef.current]);
+      saveDirtyPersisted([...dirtyRef.current]);
+    }
+  }, []);
+  /* Tombstone delete: col → Set<id> yang dihapus lokal saat fallback.
+     Dipakai pushPending untuk memancarkan DELETE sebelum POST/PATCH.
+     Dipersist ke localStorage (isms.tombstones), cap per koleksi (tanpa TTL). */
+  const tombstonesRef = useRef<Map<string, Set<string>>>(loadTombstonesPersisted());
+  const clearTombstones = useCallback((col: string, sentSnapshot?: Set<string>) => {
+    const set = tombstonesRef.current.get(col);
+    /* Hapus hanya id yang benar-benar terkirim; id baru yang masuk saat push
+       berjalan harus tetap tersimpan agar DELETE-nya tidak hilang. */
+    if (set) {
+      if (sentSnapshot) {
+        for (const id of [...set]) if (sentSnapshot.has(id)) set.delete(id);
+      } else {
+        set.clear();
+      }
+      if (set.size === 0) tombstonesRef.current.delete(col);
+    }
+    saveTombstonesPersisted(tombstonesRef.current);
+  }, []);
+  const [branch, setBranchState] = useState<string>(() => {
+    // Cabang global di localStorage (migrasi dari sessionStorage, kunci sama).
+    try {
+      return localStorage.getItem(BRANCH_KEY) ?? sessionStorage.getItem(BRANCH_KEY) ?? "SEMUA";
+    } catch {
+      return "SEMUA";
+    }
+  });
+  const branchRef = useRef(branch);
+  branchRef.current = branch;
+
+  const setBranch = (b: string) => {
+    setBranchState(b);
+    try {
+      localStorage.setItem(BRANCH_KEY, b);
+    } catch {
+      /* abaikan */
+    }
+  };
+
+  /* useCallback WAJIB: nilai `inBranch` masuk ke dep array memo konteks
+     (lihat baris deps di bawah). Kalau dibuat inline tiap render, identitasnya
+     selalu berubah sehingga memo tidak pernah hit dan seluruh komponen
+     useStore() ikut re-render di setiap render StoreProvider. */
+  const inBranch = useCallback(
+    (rows: StoreItem[]): StoreItem[] =>
+      branch === "SEMUA" ? rows : rows.filter((r) => !r.branch || r.branch === branch),
+    [branch],
+  );
+
+  /* Persistensi cache offline ke IndexedDB, bukan localStorage.
+     Alasannya terukur: movements produksi 18.937 baris (~6,02 MB JSON) dan
+     kuota localStorage hanya 5 MB - jadi satu koleksi saja tidak muat dan
+     SELURUH cache store tak pernah berhasil ditulis (error-nya ditelan
+     diam-diam). Akibatnya edit offline hilang saat reload, padahal antrean
+     dirty hanya menyimpan NAMA koleksi, bukan isi baris - jadi isinya benar
+     - benar satu-satunya tempat aman.
+     Ditulis per koleksi yang berubah saja (bandingkan identitas referensi),
+     dengan debounce supaya tidak menulis 6 MB tiap ketikan. */
+  const prevDataRef = useRef<StoreShape | null>(null);
+  useEffect(() => {
+    const prev = prevDataRef.current;
+    prevDataRef.current = data;
+    if (prev === null) return; // boot, bukan perubahan
+    const cur = data as unknown as Record<string, unknown>;
+    const old = prev as unknown as Record<string, unknown>;
+    const changed: string[] = [];
+    for (const k of Object.keys(cur)) {
+      if (cur[k] !== old[k]) changed.push(k);
+    }
+    if (changed.length === 0) return;
+    const t = window.setTimeout(() => {
+      void persistCollections(cur, changed);
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [data]);
+
+  /* Buang kunci store lama dari localStorage sekaliXE saja: tidak ditulis
+     lagi, dan sebaliknya memakan kuota yang dibutuhkan antrean dirty,
+     tombstone, dan preferensi UI. */
+  const legacyClearedRef = useRef(false);
+  useEffect(() => {
+    if (legacyClearedRef.current) return;
+    legacyClearedRef.current = true;
+    let freed = 0;
+    for (const k of [STORE_KEY, ...LEGACY_KEYS]) {
+      try {
+        if (localStorage.getItem(k) !== null) freed += 1;
+        localStorage.removeItem(k);
+        sessionStorage.removeItem(k);
+      } catch {
+        /* abaikan */
+      }
+    }
+    if (freed > 0) lsClearAll();
+  }, []);
+
+  /* Tarik ulang semua koleksi + WBS/team dari backend (dipakai saat boot dan
+     tepat setelah login berhasil, karena JWT baru tersedia saat itu).
+     Koleksi kotor (dirty) dilewati agar perubahan lokal tidak tertimpa.
+     Koleksi bersih di-backup dulu (isms.backup.<col>, last 1); activities
+     di-merge (union by id, lokal dulu + server-only, cap 100) bukan replace. */
+  const resync = useCallback(async (): Promise<void> => {
+    if (!remoteActive()) return;
+    if (!(await isApiCompatible())) return;
+    const dirty = dirtyRef.current;
+    const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
+    /* Lihat resyncCollections: epoch saat berangkat menentukan apakah hasil
+       tarikan boleh menimpa apa adanya. */
+    const epochAtStart: Record<string, number> = {};
+    await Promise.all(
+      ARRAY_KEYS.map(async (key) => {
+        if (key === "wbsByProject" || key === "teamByProject") return;
+        epochAtStart[key as string] = writeEpochRef.current.get(key as string) ?? 0;
+        if (dirty.has(key as string)) return;
+        try {
+          const rows = await remoteRepository(key).list();
+          /* Hasil yang mengosongkan koleksi kode ditolak (lihat acceptPull). */
+          if (acceptPull(key, rows)) pulled[key] = rows;
+        } catch {
+          /* Koleksi ini tetap memakai cache lokal. Kegagalan sengaja tidak
+             diynylagakan ke UI di sini: resync penuh dipanggil saat boot, dan
+             badge "offline" yang menyala karena satu koleksi gagal akan
+             menuduh jaringan padahal yang bermasalah hanya satu endpoint. */
+        }
+      }),
+    );
+    const serverActivities = (pulled as Partial<Record<string, StoreItem[]>>).activities;
+    if (serverActivities !== undefined) delete (pulled as Partial<Record<string, StoreItem[]>>).activities;
+    /* Tidak ada lagi saveBackup di sini: cache offline yang benar sekarang
+       ditulis ke IndexedDB oleh persistCollections setiap kali data berubah,
+       jadi tidak perlu menyalin ulang sebelum resync - dan tidak ada lagi
+       salinan penuh yang menghabiskan kuota localStorage. */
+    setData((prev) => {
+      const next = { ...prev, ...pulled };
+      for (const key of ARRAY_KEYS) {
+        if (key === "wbsByProject" || key === "teamByProject") continue;
+        const incoming = pulled[key as CollectionKey];
+        if (incoming === undefined) continue;
+        if (!pullNeedsMerge(key as CollectionKey, epochAtStart[key as string] ?? 0, writeEpochRef.current, dirtyRef.current)) {
+          continue;
+        }
+        (next as unknown as Record<string, unknown>)[key as string] = applyPulled(
+          (prev as unknown as Record<string, unknown>)[key as string] as StoreItem[] | undefined,
+          incoming,
+        );
+      }
+      if (serverActivities !== undefined) {
+        const local = prev.activities ?? [];
+        next.activities = applyPulled(local, serverActivities).slice(0, ACTIVITIES_CAP);
+      }
+      /* Buang wbs/team yatim: proyek dihapus di server tidak boleh meninggalkan
+         cache selamanya (versi lama hanya menambah, tidak pernah menghapus). */
+      const liveProjects = new Set(((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => String(p.id)));
+      if (liveProjects.size > 0 && pulled.projects !== undefined) {
+        const wbsNext: Record<string, WbsItem[]> = {};
+        for (const [pid, rows] of Object.entries(prev.wbsByProject ?? {})) {
+          if (liveProjects.has(pid) || dirty.has(`wbs:${pid}`) || dirty.has("wbsByProject")) wbsNext[pid] = rows;
+        }
+        next.wbsByProject = wbsNext;
+        const teamNext: Record<string, string[]> = {};
+        for (const [pid, ids] of Object.entries(prev.teamByProject ?? {})) {
+          if (liveProjects.has(pid) || dirty.has(`team:${pid}`) || dirty.has("teamByProject")) teamNext[pid] = ids;
+        }
+        next.teamByProject = teamNext;
+      }
+      return next;
+    });
+    const projectIds = ((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => p.id);
+    const wbsDirty = dirty.has("wbsByProject");
+    const teamDirty = dirty.has("teamByProject");
+    await Promise.all(
+      projectIds.map(async (projectId) => {
+        if (dirty.has(`wbs:${projectId}`) || wbsDirty) return;
+        try {
+          const wbs = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(
+            `/api/projects/${encodeURIComponent(projectId)}/wbs`,
+          );
+          /* WBS/team dikembalikan lewat endpoint per-proyek, bukan lewat
+     resyncCollections, jadi acceptPull() tidak menjangkau keduanya. Polanya
+     yang sama tetap perlu: `Array.isArray([])` bernilai true, jadi proyek yang
+     WBS-nya belum pernah dimigrasikan akan MENGHAPUS WBS dan tim yang
+     tersimpan di cache tanpa jejak apa pun. Respons kosong diperlakukan sebagai
+     "tidak ada data", bukan "hapus semua". */
+          if (Array.isArray(wbs.wbs) && wbs.wbs.length > 0) {
+            const rows = wbs.wbs;
+            /* Catat isi server sebagai base untuk compare-and-swap saat push. */
+            wbsBaseRef.current.set(projectId, JSON.stringify(rows));
+            setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: rows } }));
+          }
+        } catch {
+          /* cache lokal/template tetap dipakai */
+        }
+        if (dirty.has(`team:${projectId}`) || teamDirty) return;
+        try {
+          const team = await apiFetch<{ projectId: string; memberIds: string[] }>(
+            `/api/projects/${encodeURIComponent(projectId)}/team`,
+          );
+          if (Array.isArray(team.memberIds) && team.memberIds.length > 0) {
+            const ids = team.memberIds;
+            teamBaseRef.current.set(projectId, JSON.stringify(ids));
+            setData((prev) => ({ ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } }));
+          }
+        } catch {
+          /* cache lokal tetap dipakai */
+        }
+      }),
+    );
+}, []);
+
+  /* Pola standar fetch per-batch saat pindah modul/tab (lihat useModuleSync):
+   hanya koleksi yang dibutuhkan modul aktif yang ditarik, paralel - data
+   selalu segar tanpa memuat ulang 50+ koleksi seperti resync() penuh.
+   Koleksi dirty tetap dilewati agar edit offline tidak tertimpa, hasil tarik
+   yang merusak data lokal ditolak lewat acceptPull(), dan activities di-merge
+   (bukan replace) seperti pada resync. */
+  const resyncCollections = useCallback(async (cols: CollectionKey[]): Promise<CollectionKey[]> => {
+    if (!remoteActive()) return [];
+    if (cols.length === 0) return [];
+    if (!(await isApiCompatible())) return [];
+    const dirty = dirtyRef.current;
+    const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
+    /* Epoch tiap koleksi SAAT request berangkat. Hasil tarikan yang tiba
+       setelah epoch naik tidak boleh menimpa apa adanya - lihat applyPulled. */
+    const epochAtStart: Record<string, number> = {};
+    /* Koleksi yang gagal dicatat, bukan ditelan diam-diam. Tanpa ini halaman
+       menampilkan cache lokal seolah-olah itu data server terkini. */
+    const failed: CollectionKey[] = [];
+    await Promise.all(
+      cols.map(async (key) => {
+        epochAtStart[key as string] = writeEpochRef.current.get(key as string) ?? 0;
+        if (dirty.has(key as string)) return;
+        try {
+          const rows = await remoteRepository(key).list();
+          if (!acceptPull(key, rows)) {
+            /* Server membalas kosong untuk koleksi kode: pertahankan yang lokal.
+               Sengaja TIDAK masuk daftar `failed` - "ditolak demi keamanan
+               data" bukan "server tak terjangkau", dan mencampur keduanya
+               membuat badge "offline" di topbar nyala permanen untuk kondisi
+               yang sebenarnya deterministik dan normal. */
+            return;
+          }
+          pulled[key] = rows;
+        } catch {
+          /* koleksi ini tetap memakai cache lokal */
+          failed.push(key);
+        }
+      }),
+    );
+    const serverActivities = pulled.activities;
+    if (serverActivities !== undefined) delete pulled.activities;
+    setData((prev) => {
+      const next = { ...prev, ...pulled };
+      /* Koleksi yang berubah saat request berjalan: server tetap jadi acuan
+         untuk id yang dia kenal, tapi baris lokal yang belum ada di snapshot
+         tidak boleh hilang. */
+      for (const key of cols) {
+        const incoming = pulled[key];
+        if (incoming === undefined) continue;
+        if (!pullNeedsMerge(key, epochAtStart[key as string] ?? 0, writeEpochRef.current, dirtyRef.current)) continue;
+        next[key] = applyPulled(prev[key] as StoreItem[] | undefined, incoming);
+      }
+      if (serverActivities !== undefined) {
+        const local = prev.activities ?? [];
+        next.activities = applyPulled(local, serverActivities).slice(0, ACTIVITIES_CAP);
+      }
+      return next;
+    });
+    return failed;
+  }, []);
+
+  /* Dorong perubahan lokal yang tertunda ke backend: DELETE tombstone dulu,
+     lalu tiap baris coba POST, bila 409 (sudah ada) coba PATCH.
+     Bersihkan tombstones+dirty per koleksi bila sukses.
+
+     Dua pengaman data-loss:
+     1) Batas BARIS_PER_RUN. Dulu seluruh koleksi di-POST; koleksi >300 baris
+        kena rate-limit 300/menit, retry menumpuk, koleksi tidak pernah keluar
+        dari dirty. Sekarang dipotong dan sisanya dilanjutkan run berikutnya.
+     2) Snapshot tombstone per run: id yang masuk SETELAH run dimulai tidak
+        ikut dihapus, jadi DELETE baru tidak hilang. */
+const PUSH_ROWS_PER_RUN = 200;
+/* Budget request tulis untuk SELURUH run, bukan per koleksi. WRITE_LIMIT di
+   server adalah 300 per menit; 250 memberi ruang untuk request lain dan retry
+   tanpa memicu 429. */
+const PUSH_BUDGET_PER_RUN = 250;
+/* Batas percobaan untuk satu baris yang selalu ditolak. Setelah ini baris
+   menyerah supaya tidak menguras rate limit dan tidak menahan koleksi lain. */
+const PUSH_MAX_ATTEMPTS = 5;
+
+  /* "auth" = sesi hilang (401) atau hak akses ditolak (403). Berbeda dari
+       "fail": ini bukan masalah baris itu, tapi SELURUH push tidak akan
+       pernah berhasil sampai pengguna login ulang. Versi lama memperlakukannya
+       sama dengan "fail", jadi satu baris beracun mengulang tiap 45 detik
+       selamanya, menyimpan flag dirty, dan tidak pernah memberi tahu
+       pengguna apa yang harus diperbaiki. */
+type PushOutcome = "ok" | "stale" | "fail" | "auth";
+
+  const pushPending = useCallback(async (): Promise<void> => {
+    if (!remoteActive()) return;
+    if (!(await isApiCompatible())) return;
+    if (pushingRef.current) {
+      /* Ada yang memicu saat push masih jalan. Jangan di-drop: tandai saja,
+         nanti run berikutnya menyusul begitu push yang sedang selesai. Tanpa
+         ini, edit yang masuk di tengah push hilang tanpa jejak - dan kalau
+         tidak ada interval (tab tidak pernah regain focus) tidak pernah
+         terkirim sama sekali. */
+      pushAgainRef.current = true;
+      return;
+    }
+    pushingRef.current = true;
+    const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+    const cols = [...dirtyRef.current];
+    try {
+    /* Generasi dirty per koleksi di-SAAT push dimulai. clearDirty hanya
+       membersihkan bila generasi masih sama, jadi edit yang masuk saat loop
+       push berjalan tetap tersimpan untuk push berikutnya. */
+    const sentGen = new Map<string, number>();
+    for (const col of cols) sentGen.set(col, dirtyGenRef.current.get(col) ?? 0);
+    /* Budget GLOBAL per run, bukan per koleksi.
+     *
+     * Versi lama memberi kuota 200 baris ke SETIAP koleksi. Dengan 53
+     * koleksi dirty itu 10.800 request tulis dalam satu run, sedangkan
+     * WRITE_LIMIT hanya 300 per menit - jadi server menolak sisanya dengan
+     * 429, retry menumpuk, dan collections tetap dirty. Tidak ada yang pernah
+     * keluar dari antrean.
+     *
+     * Sekarang satu run memakai paling banyak PUSH_BUDGET_PER_RUN request di
+     * seluruh koleksi. Koleksi diputar lewat `pushColCursorRef` supaya yang
+     * tidak kebagian giliran run ini dilayani duluan di run berikutnya -
+     * tidak ada koleksi yang kelaparan. */
+    let budget = PUSH_BUDGET_PER_RUN;
+    /* Koleksi boleh dilompati kalau budget habis: `continue`, bukan `break`,
+       supaya DELETE tombstone dan wbs/team tetap sempat jalan. */
+    for (let ci = 0; ci < cols.length; ci += 1) {
+      const col = cols[(pushColCursorRef.current + ci) % cols.length] as string;
+      try {
+        if (budget <= 0) break;
+        if (col === "wbsByProject" || col.startsWith("wbs:")) {
+          const entries = Object.entries(dataRef.current.wbsByProject ?? {});
+          const targets =
+            col === "wbsByProject"
+              ? entries
+              : entries.filter(([pid]) => col === `wbs:${pid}`);
+          for (const [projectId, wbs] of targets) {
+            await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/wbs`, {
+              method: "PUT",
+              body: JSON.stringify({ wbs, baseData: parseMaybeJson(wbsBaseRef.current.get(projectId)) }),
+            });
+            /* Base jadi versi server yang baru saja kita tulis. */
+            wbsBaseRef.current.set(projectId, JSON.stringify(wbs));
+          }
+          clearDirty(col, sentGen.get(col));
+          setBackendError(null);
+          continue;
+        }
+        if (col === "teamByProject" || col.startsWith("team:")) {
+          const entries = Object.entries(dataRef.current.teamByProject ?? {});
+          const targets =
+            col === "teamByProject"
+              ? entries
+              : entries.filter(([pid]) => col === `team:${pid}`);
+          for (const [projectId, memberIds] of targets) {
+            await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/team`, {
+              method: "PUT",
+              body: JSON.stringify({ memberIds, baseData: parseMaybeJson(teamBaseRef.current.get(projectId)) }),
+            });
+            teamBaseRef.current.set(projectId, JSON.stringify(memberIds));
+          }
+          clearDirty(col, sentGen.get(col));
+          setBackendError(null);
+          continue;
+        }
+        let ok = true;
+        /* DELETEs dulu agar hapus lokal terpropagasi sebelum upsert survivor.
+           Snapshot id di awal run: id yang masuk setelah ini TIDAK ikut
+           dihapus (memakai set terpisah), agar DELETE baru tidak hilang. */
+        const tombstones = tombstonesRef.current.get(col);
+        const sentTombstones = new Set<string>();
+        if (tombstones && tombstones.size > 0) {
+          for (const id of [...tombstones]) {
+            try {
+              await remoteRepository(col).remove(id);
+            } catch (err) {
+              /* 404 = sudah hilang di BE -> anggap sukses; selain itu gagal. */
+              if (err instanceof ApiError && err.status === 404) {
+                tombstones.delete(id);
+                sentTombstones.add(id);
+                continue;
+              }
+              // 409 REFERENCED = server menang (masih dipakai) - lepas
+              // tombstone agar tidak retry selamanya; baris akan kembali
+              // saat resync berikutnya setelah koleksi bersih.
+              if (err instanceof ApiError && err.status === 409) {
+                notifyConflict(err.message);
+                tombstones.delete(id);
+                sentTombstones.add(id);
+                continue;
+              }
+              ok = false;
+              break;
+            }
+            tombstones.delete(id);
+            sentTombstones.add(id);
+          }
+          saveTombstonesPersisted(tombstonesRef.current);
+          /* Tombstone yang gagal TIDAK boleh menghentikan sisa tombstone
+             (atau sisa baris) koleksi ini. Versi lama `break` lalu
+             `continue`, jadi satu DELETE yang ditolak membekukan seluruh
+             koleksi untuk selamanya - termasuk baris yang tidak ada
+             hubungannya dengan DELETE itu. Continue saja: tombstone yang
+             gagal tetap ada di store dan akan dicoba lagi run berikutnya. */
+          if (!ok) {
+            notifyConflict("Sebagian data yang dihapus belum terkonfirmasi server. Perubahan tetap tersimpan di perangkat ini dan akan dicoba lagi.");
+          }
+        }
+        const allRows = ((dataRef.current as unknown as Record<string, StoreItem[]>)[col] ?? []) as StoreItem[];
+        /* Batasi baris per run. Koleksi besar (>300 baris) akan kena rate-limit
+           300/menit; versi lama mengirim SELURUH koleksi lalu retry menumpuk
+           sehingga koleksi tidak pernah keluar dari dirty.
+           Jendela BERJALAN lewat cursor per koleksi: versi lama selalu
+           slice(0, N) sehingga baris setelah N tidak pernah terkirim sama sekali
+           dan koleksi tersebut macet permanen. Cursor dilepas setelah satu
+           putaran penuh, lalu koleksi boleh dibersihkan. */
+        const start = pushCursorRef.current.get(col) ?? 0;
+        const rows = allRows.slice(start, start + PUSH_ROWS_PER_RUN);
+        const truncated = start + rows.length < allRows.length;
+        /* Budget dipotong per request nyata, bukan per baris yang dicoba:
+           satu baris bisa memakan dua request (create gagal 409 lalu patch),
+           dan itu harus ikut terhitung. */
+        const bolehKirim = Math.min(rows.length, budget);
+        if (bolehKirim <= 0) continue;
+        budget -= bolehKirim;
+        /* Baris yang gagal keras pada run ini. Versi lama memakai `break` pada
+           kegagalan pertama, jadi:
+             1) sisa baris tidak pernah terkirim,
+             2) flag dirty collection TIDAK pernah dibersihkan (karena `ok`
+                false) → semua tarikan berikutnya untuk koleksi itu DILEWATI →
+                perangkat selamanya menampilkan data basi tanpa tandanya,
+             3) culprit-nya satu baris yang selalu ditolak (mis. field wajib
+                hilang) membekukan koleksi seutuhnya.
+           Sekarang: continue + laporkan. Koleksi hanya dibersihkan bila
+           semua baris pada jendela ini benar-benar berhasil. */
+        const failedRows: string[] = [];
+        for (const row of rows.slice(0, bolehKirim)) {
+          const attemptCreate = async (retried: boolean, staleBase?: string): Promise<PushOutcome> => {
+            try {
+              await remoteRepository(col).create(row);
+              return "ok";
+            } catch (err) {
+              if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return "auth";
+              if (err instanceof ApiError && err.status === 409) {
+                try {
+                  // Kirim baseUpdatedAt agar STALE terdeteksi, bukan timpa buta.
+                  // staleBase dipakai saat percobaan ulang: `updated_at` yang
+                  // tersimpan di baris lokal bisa jadi basi (baris itu dibuat
+                  // berjam-jam lalu perangkat lama offline). Tanpa base yang
+                  // benar, push offline PASTI ditolak 409 STALE dan edit
+                  // pengguna hilang permanen.
+                  const base = staleBase ?? (typeof row.updated_at === "string" ? row.updated_at : undefined);
+                  await remoteRepository(col).patch(
+                    row.id,
+                    (base ? { ...row, baseUpdatedAt: base } : row) as Record<string, unknown>,
+                  );
+                  return "ok";
+                } catch (perr) {
+                  if (perr instanceof ApiError && (perr.status === 401 || perr.status === 403)) return "auth";
+                  if (perr instanceof ApiError && perr.status === 409 && perr.code === "STALE") return "stale";
+                  if (perr instanceof ApiError && perr.status === 429 && !retried) {
+                    const waitMs = Math.min(Math.max(perr.retryAfterSec ?? 5, 1), 30) * 1000;
+                    setBackendError(`Terlalu banyak permintaan - jeda ${Math.round(waitMs / 1000)} dtk lalu coba lagi`);
+                    await sleep(waitMs);
+                    return attemptCreate(true, staleBase);
+                  }
+                  return "fail";
+                }
+              }
+              // 429: hormati Retry-After sekali, lalu coba ulang sekali.
+              if (err instanceof ApiError && err.status === 429 && !retried) {
+                const waitMs = Math.min(Math.max(err.retryAfterSec ?? 5, 1), 30) * 1000;
+                setBackendError(`Terlalu banyak permintaan - jeda ${Math.round(waitMs / 1000)} dtk lalu coba lagi`);
+                await sleep(waitMs);
+                return attemptCreate(true, staleBase);
+              }
+              return "fail";
+            }
+          };
+          let res = await attemptCreate(false);
+          if (res === "auth") {
+            /* Sesi habis atau hak akses ditolak: hentikan SEGERA seluruh push.
+               Koleksi lain tidak akan berhasil juga, dan mencoba semua hanya
+               memperpanjang keadaan yang sama. Antrean sengaja dibiarkan dirty
+               supaya tidak ada yang hilang; yang perlu dilakukan pengguna hanya
+               login ulang, lalu `focus` memicu push lagi. */
+            setRemoteLive(false);
+            setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
+            if (fallbackToasted.current !== "401") {
+              fallbackToasted.current = "401";
+              notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+            }
+            return;
+          }
+          if (res === "stale") {
+            /* Konflik versi: ambil updated_at server lalu PATCH sekali lagi
+               dengan base yang benar. Baris lokal TIDAK ditimpa - isinya
+               perubahan pengguna dan itu yang harus tersimpan. */
+            let freshBase: string | undefined;
+            try {
+              const server = await apiFetch<{ id: string; updated_at: string }>(
+                `/api/${col}/${encodeURIComponent(row.id)}`,
+              );
+              freshBase = typeof server.updated_at === "string" ? server.updated_at : undefined;
+              /* Samakan base lokal supaya run berikutnya tidak menabrak STALE lagi. */
+              if (freshBase) {
+                setData((prev) => ({
+                  ...prev,
+                  [col]: (((prev as unknown as Record<string, StoreItem[]>)[col] ?? []) as StoreItem[]).map((r) =>
+                    r.id === row.id ? { ...r, updated_at: freshBase } : r,
+                  ),
+                }));
+                bumpEpoch(col as string);
+              }
+            } catch {
+              /* Tidak bisa ambil versi server - coba tanpa base (blind merge)
+                 lebih baik daripada membuang edit pengguna. */
+              freshBase = undefined;
+            }
+            res = freshBase ? await attemptCreate(false, freshBase) : await attemptCreate(false);
+          }
+          if (res === "auth") {
+            /* Percobaan ulang dengan base server juga ditolak karena sesi/role.
+               Perlakukan sama dengan kasus pertama: stop, jangan ulang. */
+            setRemoteLive(false);
+            setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
+            if (fallbackToasted.current !== "401") {
+              fallbackToasted.current = "401";
+              notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+            }
+            return;
+          }
+          if (res === "stale") {
+            /* Masih konflik setelah memakai base server: row lain perangkat
+               berubah bersamaan. Simpan sebagai pending, jangan dihapus. */
+            notifyConflict(
+              `"${String(row.title ?? row.id)}" sudah diubah pengguna lain saat offline. Perubahan Anda menunggu - buka lagi data tersebut dan ulangi.`,
+            );
+            failedRows.push(String(row.id));
+            continue;
+          }
+          if (res !== "ok") {
+            failedRows.push(String(row.id));
+          }
+        }
+        if (failedRows.length > 0) {
+          /* Baris racun tidak boleh membekukan koleksi.
+           *
+           * Perlakuan lama: `ok = false` membuat cursor tidak maju dan
+           * `clearDirty` tidak dipanggil. Satu baris yang selalu ditolak
+           * (mis. field wajib hilang) membuat semua baris setelah jendela itu
+           * tidak pernah terkirim, dan pengulangan itu berjalan tiap 45 detik
+           * selamanya tanpa ada yang memberitahukan pengguna.
+           *
+           * Sekarang: cursor selalu maju melewati jendela. Baris yang gagal
+           * dihitung percobaannya; setelah `PUSH_MAX_ATTEMPTS` kali ia
+           * menyerah dan diberi tahu sekali per baris. Better satu baris
+           * gagal dengan pesan jelas daripada satu baris membekukan koleksi. */
+          for (const id of failedRows) {
+            const key = `${col}:${id}`;
+            const n = (pushAttemptsRef.current.get(key) ?? 0) + 1;
+            pushAttemptsRef.current.set(key, n);
+            if (n >= PUSH_MAX_ATTEMPTS) pushGiveUpRef.current.add(key);
+          }
+          for (const id of failedRows) {
+            const key = `${col}:${id}`;
+            if (!pushGiveUpRef.current.has(key)) continue;
+            /* Beri tahu sekali per baris, bukan setiap 45 detik. */
+            if (fallbackToasted.current === key) continue;
+            fallbackToasted.current = key;
+            notifyConflict(
+              `"${id}" tidak bisa disimpan ke server setelah ${PUSH_MAX_ATTEMPTS} percobaan. Datanya tetap ada di perangkat ini, tapi tidak akan terkirim sampai diperbaiki.`,
+            );
+          }
+          notifyConflict(
+            `${failedRows.length} data belum tersimpan ke server (kemungkinan validasi). Data Anda tetap ada di perangkat ini dan akan dicoba lagi.`,
+          );
+        }
+        /* Cursor SELALU maju melewati jendela ini, baik berhasil maupun gagal.
+           Koleksi yang terpotong tetap dirty supaya sisa baris dikirim pada run
+           berikutnya; kalau jendela terakhir sudah lewat, cursor dilepas.
+           Ini yang menutup livelock: versi lama hanya maju bila SEMUA baris
+           di jendela sukses, jadi satu baris racun membekukan seluruh koleksi
+           dan indeks setelah jendela itu tidak pernah terkirim. */
+        if (truncated) {
+          pushCursorRef.current.set(col, start + rows.length);
+          markDirty(col);
+        } else {
+          pushCursorRef.current.delete(col);
+          const gagalBelumMenyerah = failedRows.some((id) => !pushGiveUpRef.current.has(`${col}:${id}`));
+          if (gagalBelumMenyerah) markDirty(col);
+          else clearDirty(col, sentGen.get(col));
+          if (failedRows.length === 0) {
+            clearTombstones(col, sentTombstones);
+            setBackendError(null);
+          }
+        }
+      } catch (err) {
+        /* Koleksi ini tetap dirty - coba lagi nanti. Kecuali sesi habis:
+           itu bukan masalah koleksi, jadi hentikan seluruh push daripada
+           mengulang request yang pasti ditolak. Antrean tetap utuh. */
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setRemoteLive(false);
+          setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
+          if (fallbackToasted.current !== "401") {
+            fallbackToasted.current = "401";
+            notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+          }
+          return;
+        }
+      }
+    }
+    } finally {
+      pushingRef.current = false;
+      /* Koleksi berikutnya dilayani mulai dari tempat berhenti, supaya yang
+         tidak kebagian budget run ini dapat giliran pertama di run berikutnya. */
+      pushColCursorRef.current = (pushColCursorRef.current + 1) % Math.max(1, cols.length);
+      /* Ada trigger yang tertahan selama push ini berjalan: jalankan lagi
+         setelah jeda pendek supaya tidak menabrak rate limit, dan pastikan
+         penandanya dibersihkan lebih dulu supaya tidak berputar terus. */
+      if (pushAgainRef.current) {
+        pushAgainRef.current = false;
+        /* Jalankan ulang lewat ref, bukan memanggil pushPending langsung:
+           pemanggilan di dalam definition useCallback akan kena TDZ. Ref diisi
+           tepat setelah useCallback selesai dibuat. */
+        window.setTimeout(() => {
+          void pushPendingRef.current?.();
+        }, 1500);
+      }
+    }
+  }, [clearDirty, clearTombstones]);
+  pushPendingRef.current = pushPending;
+
+  /* Boot backend-first: bila backend dikonfigurasi dan sudah login (JWT),
+     tarik semua koleksi dari BE; tiap koleksi yang gagal → biarkan seed lokal.
+    Jwala boot: coba sinkronkan antrean offline, lalu interval berkala.
+     Dulu hanya tombol manual di AppShell - antrean bisa mengendap lalu hilang. */
+  useEffect(() => {
+    /* Hidrasi cache offline DULU, baru resync dari server. Urutannya penting:
+       server harus menimpa cache yang bersih, sementara koleksi yang dirty
+       (pemegang edit offline) tetap aman karena resync melewatinya. */
+    void hydrateFromOfflineStore((cached) => {
+      setData((prev) => {
+        const next = { ...prev } as unknown as Record<string, unknown>;
+        let changed = false;
+        for (const [col, rows] of Object.entries(cached)) {
+          if (Array.isArray(rows) && rows.length > 0) {
+            next[col] = rows;
+            changed = true;
+          }
+        }
+        return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+      });
+    }).then(() => resync());
+  }, [resync]);
+
+  useEffect(() => {
+    /* Guard mode TIDAK lagi menghentikan pemasangan listener. Dulu
+       `if (backendMode !== "remote") return;` di baris pertama berarti: sesi
+       dibuka saat token sudah hilang -> listener tidak pernah terpasang, dan
+       karena `backendMode` beku, efek ini juga tidak pernah jalan lagi.
+       Login di tengah sesi tidak memulai apa pun - persis gejala "harus
+       login ulang" yang dilaporkan.
+       Sekarang listener selalu terpasang; `fireAndForget` sendiri yang menolak
+       saat mode bukan remote, jadi tidak ada request sia-sia dan tidak ada
+       keadaan "menunggu listener yang tidak pernah datang". */
+    /* BUG "HARUS LOGIN ULANG": versi lama memulai efek ini dengan
+       `if (dirtyRef.current.size === 0) return`. Effect hanya jalan SEKALI
+       per mount (deps stabil), jadi pada sesi yang dimulai dengan antrean
+       bersih - kondisi normal setelah sync terakhir - listener `online` dan
+       interval 45 dtk TIDAK PERNAH didaftarkan. Tulisan offline berikutnya
+       hanya jadi baris di IndexedDB + badge amber; tidak ada yang mendorongnya
+       ketika jaringan kembali. Satu-satunya jalan keluar adalah reload/re-login
+       persis seperti yang dilaporkan pengguna.
+       Sekarang: listener selalu terpasang. Pengecekan "ada yang perlu
+       didorong" tetap dilakukan di dalam interval dan sebelum boot push, jadi
+       tidak ada biaya sia-sia. */
+    const fireAndForget = () => {
+      if (backendMode !== "remote") return;
+      if (dirtyRef.current.size === 0) return;
+      void pushPending().catch((err: unknown) => {
+        console.warn("[store] pushPending gagal, akan dicoba lagi", err);
+      });
+    };
+    /* Jangan tumbles bootstrap: tunggu agar resync awal selesai dulu. */
+    const boot = window.setTimeout(fireAndForget, 2500);
+    const onOnline = () => fireAndForget();
+    window.addEventListener("online", onOnline);
+    const timer = window.setInterval(() => {
+      if (dirtyRef.current.size === 0) return;
+      if (document.hidden) return;
+      fireAndForget();
+    }, 45000);
+    /* Fokus kembali ke tab = sinyal kuat bahwa perangkat ini mungkin baru
+       online lagi. Tanpa ini, tulisan yang gagal karena tablet kehilangan
+       sinyal baru menunggu 45 detik penuh. */
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fireAndForget();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(boot);
+      window.clearInterval(timer);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [backendMode, pushPending]);
+
+  const api = useMemo<StoreCtx>(() => {
+    const buildActivity = (action: string, target: string, module: string): StoreItem => ({
+      id: newId("activities"),
+      actor: "Anda",
+      action,
+      target,
+      module,
+      time: "baru saja",
+      tone: ACTOR_TONE[module] ?? "navy",
+    });
+
+    const pushEntry = (prev: StoreShape, entry: StoreItem): StoreItem[] =>
+      [entry, ...prev.activities].slice(0, ACTIVITIES_CAP);
+
+    /* Gagal remote → fallback lokal + tandai error + toast sekali per sesi.
+       Khusus 403 (mis. butuh peran Direktur): JANGAN tulis lokal / tandai dirty,
+       cukup toast alasan dari backend. Kembalikan true bila 403. */
+    /* Klasifikasi error backend.
+       - "recoverable" (false): error jaringan/401/429 → ezi ditulis lokal, nanti disinkron.
+       - "permanent" (true): 403/400/409/422 → TIDAK BOLEH ditulis lokal, dan pemanggil
+         harus diberi tahu (throw) supaya tidak menampilkan "sukses" palsu.
+       Notifikasi memakai alasan sebagai kunci, bukan boolean, supaya pesan
+       yang sama tidak diulang tapi alasan berbeda tetap terlihat. */
+    const degrade = (err: unknown): boolean => {
+      if (err instanceof ApiError && err.status === 403) {
+        const reason = err.message || "Akses ditolak - butuh peran yang sesuai";
+        setBackendError(reason);
+        notifyForbidden(reason);
+        return true;
+      }
+      /* 400/409/422 = validasi/konstrain/referensi: permanen. Menulis lokal hanya
+         akan menghasilkan data rusak yang memblokir sinkronisasi selamanya. */
+      if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 422)) {
+        setBackendError(err.message || "Data ditolak server");
+        notifyConflict(err.message || "Data ditolak server");
+        return true;
+      }
+      if (err instanceof ApiError && err.status === 401) {
+        setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
+        /* 401 = token hilang atau expired. Mode ikut turun ke "local" supaya badge
+           tidak tetap hijau dan pushPending tahu tidak ada yang bisa
+           diteruskan. Antrean tetap aman di IndexedDB. */
+        setRemoteLive(false);
+        if (fallbackToasted.current !== "401") {
+          fallbackToasted.current = "401";
+          notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+        }
+        return false;
+      }
+      if (err instanceof ApiError && err.status === 429) {
+        const wait = err.retryAfterSec ? ` (coba lagi ${err.retryAfterSec} dtk)` : "";
+        setBackendError(`Terlalu banyak permintaan${wait} - perubahan ditahan`);
+        if (fallbackToasted.current !== "429") {
+          fallbackToasted.current = "429";
+          notifyStore(`Terlalu banyak permintaan${wait}. Perubahan ditahan untuk sinkronisasi.`);
+        }
+        return false;
+      }
+      setBackendError(err instanceof Error && err.message ? err.message : "Backend tak terjangkau - mode lokal");
+      if (fallbackToasted.current !== "network") {
+        fallbackToasted.current = "network";
+        notifyBackendFallback();
+      }
+      return false;
+    };
+
+    return {
+      data,
+      backendMode,
+      backendError,
+      pendingSync,
+      pushPending,
+      add: async (col, item, activity) => {
+        const full: StoreItem = { ...item, id: item.id || newId(col) };
+        stampCreated(full);
+        /* Branch fallback terpusat: baris baru tanpa branch mewarisi cabang global.
+           "SEMUA" = semua cabang → biarkan kosong (terlihat di semua filter).
+           Koleksi global-by-design (settings/coa/branches) disentuh tidak. */
+        if (!SKIP_BRANCH_COLLECTIONS.has(col as string)) {
+          const cur = full.branch;
+          if (cur === undefined || cur === null || String(cur).trim() === "") {
+            const g = branchRef.current ?? branch;
+            if (g && g !== "SEMUA") full.branch = g;
+          }
+        }
+        if (remoteActive()) {
+          try {
+            const saved = await remoteRepository(col).create(full);
+            const finalItem = saved && saved.id ? saved : full;
+            const entry = activity
+              ? buildActivity(activity.action, activity.target ?? finalItem.id, activity.module)
+              : null;
+            setData((prev) => ({
+              ...prev,
+              [col]: [finalItem, ...((prev[col] as StoreItem[] | undefined) ?? [])],
+              activities: entry ? pushEntry(prev, entry) : prev.activities,
+            }));
+            bumpEpoch(col as string);
+            if (entry) {
+              /* Mirror aktivitas best-effort tanpa rekursi (langsung HTTP, bukan add()).
+                 Gagal → tandai dirty agar pushPending/resync tidak menghilangkannya. */
+              remoteRepository("activities").create(entry).catch(() => markDirty("activities"));
+            }
+            setBackendError(null);
+            return finalItem;
+          } catch (err) {
+            // 400/409/422 ber-code (VALIDATION/CONFLICT/REFERENCED/UNPROCESSABLE):
+            // jangan tulis lokal - lempar agar caller toast gagal, bukan sukses.
+            // (400 validasi masuk sini agar data invalid tak tersimpan lokal.)
+            if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 422)) {
+              notifyConflict(err.message);
+              throw err;
+            }
+            if (degrade(err)) throw err;
+          }
+        }
+        markDirty(col as string);
+        const fallbackEntry = activity
+          ? buildActivity(activity.action, activity.target ?? full.id, activity.module)
+          : null;
+        if (fallbackEntry) markDirty("activities");
+        setData((prev) => ({
+          ...prev,
+          [col]: [full, ...((prev[col] as StoreItem[] | undefined) ?? [])],
+          activities: fallbackEntry ? pushEntry(prev, fallbackEntry) : prev.activities,
+        }));
+        bumpEpoch(col as string);
+        return full;
+      },
+      update: async (col, id, patch) => {
+        /* Di-stamp SEBELUM cabang remote/offline dan sekali saja: kalau di dalam
+           percobaan ulang STALE, updatedAt harus tetap menunjuk waktu aksi
+           pengguna, bukan waktu percobaan kedua. */
+        stampUpdated(patch);
+        if (remoteActive()) {
+          /* Satu percobaan ulang untuk konflik versi.
+             STALE berarti `baseUpdatedAt` yang kita kirim bukan `updated_at`
+             server terbaru. Penyebabnya di perangkat ini hampir selalu
+             snapshot lokal yang basi - jadi mencoba sekali lagi dengan base
+             yang benar memperbaiki banyak kasus tanpa campur tangan pengguna. */
+          let attempt = 0;
+          let lastStale: ApiError | null = null;
+          while (attempt < 2) {
+            attempt += 1;
+            try {
+              /* Optimistic concurrency: kirim updated_at terakhir sebagai
+                 baseUpdatedAt; BE 409 STALE bila sudah diubah pengguna lain. */
+              const current = ((dataRef.current as unknown as Record<string, StoreItem[]>)[col as string] ?? []).find(
+                (r) => r.id === id,
+              );
+              const base = current?.updated_at;
+              const body = typeof base === "string" && base !== "" ? { ...patch, baseUpdatedAt: base } : patch;
+              const saved = await remoteRepository(col).patch(id, body);
+              setData((prev) => ({
+                ...prev,
+                [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) => (r.id === id ? saved : r)),
+              }));
+              bumpEpoch(col as string);
+              setBackendError(null);
+              return;
+            } catch (err) {
+              /* STALE: server menang - muat versi server lalu coba ulang dengan
+                 base yang sudah benar.
+                 BUG YANG DITUTUP: versi lama melompat ke `return` di sini,
+                 sehingga update() RESOLVE NORMAL. Pemanggil (mis.
+                 Equipment.tsx advanceMaintStatus) lalu menampilkan toast
+                 "Maintenance dimulai" padahal status TIDAK berubah - persis
+                 gejala "perubahan status gagal di perangkat saya tapi berhasil
+                 di device lain". Sekarang percobaan kedua memakai versi server,
+                 dan kalau tetap konflik error dilempar supaya toast gagal. */
+              if (err instanceof ApiError && err.status === 409 && err.code === "STALE") {
+                lastStale = err;
+                const server = (err.data ?? {}) as {
+                  data?: Record<string, unknown>;
+                  branch?: string;
+                  updated_at?: string;
+                };
+                setData((prev) => ({
+                  ...prev,
+                  [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) =>
+                    r.id === id
+                      ? {
+                          ...r,
+                          ...(typeof server.data === "object" && server.data !== null ? server.data : {}),
+                          ...(typeof server.branch === "string" ? { branch: server.branch } : {}),
+                          ...(typeof server.updated_at === "string" ? { updated_at: server.updated_at } : {}),
+                        }
+                      : r,
+                  ),
+                }));
+                bumpEpoch(col as string);
+                continue;
+              }
+              // REFERENCED/VALIDATION/UNPROCESSABLE (+400 validasi): tampilkan
+              // alasan BE apa adanya + lempar agar caller toast gagal.
+              if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 422)) {
+                notifyConflict(err.message);
+                throw err;
+              }
+              /* 403 = permanen (hak akses). Lempar juga: tanpa ini update() diam-diam
+                 kembali tanpa menulis, sementara caller menampilkan "sukses". */
+              if (degrade(err)) throw err;
+              /* Jaringan/timeout: jatuh ke jalur offline di bawah. */
+              break;
+            }
+          }
+          if (lastStale) {
+            notifyConflict(
+              "Data sudah diubah pengguna lain. Perubahan Anda tidak disimpan - buka ulang data lalu ulangi.",
+            );
+            throw lastStale;
+          }
+        }
+        markDirty(col as string);
+        setData((prev) => ({
+          ...prev,
+          [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        }));
+        bumpEpoch(col as string);
+      },
+      remove: async (col, id) => {
+        if (remoteActive()) {
+          try {
+            await remoteRepository(col).remove(id);
+            setData((prev) => ({
+              ...prev,
+              [col]: ((prev[col] as StoreItem[] | undefined) ?? []).filter((r) => r.id !== id),
+            }));
+            bumpEpoch(col as string);
+            setBackendError(null);
+            return;
+          } catch (err) {
+            // REFERENCED (masih dipakai modul lain) + 400/422: tampilkan +
+            // lempar, jangan hapus lokal.
+            if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 422)) {
+              notifyConflict(err.message);
+              throw err;
+            }
+            /* 403 = permanen. Lempar agar caller tidak menampilkan "hapus berhasil". */
+            if (degrade(err)) throw err;
+          }
+        }
+        /* Fallback lokal: catat tombstone agar DELETE terpropagasi via pushPending. */
+        const set = tombstonesRef.current.get(col as string) ?? new Set<string>();
+        set.add(id);
+        tombstonesRef.current.set(col as string, set);
+        saveTombstonesPersisted(tombstonesRef.current);
+        markDirty(col as string);
+        setData((prev) => ({
+          ...prev,
+          [col]: ((prev[col] as StoreItem[] | undefined) ?? []).filter((r) => r.id !== id),
+        }));
+      },
+      log: (action, target, module) => {
+        const entry = buildActivity(action, target, module);
+        setData((prev) => ({ ...prev, activities: [entry, ...prev.activities].slice(0, ACTIVITIES_CAP) }));
+        if (remoteActive()) {
+          // Best-effort mirror tanpa await - langsung via HTTP (bukan add())
+          // agar tidak terjadi rekursi; gagal → tandai dirty agar tidak ter-wipe resync.
+          remoteRepository("activities").create(entry).catch(() => markDirty("activities"));
+        } else {
+          /* Offline/fallback: tandai dirty agar resync melewati koleksi activities. */
+          markDirty("activities");
+        }
+      },
+      reset: () => {
+        /* Reset ke seed HANYA aman kalau tidak ada antrean offline. Tanpa
+           guard ini, klik saat pendingSync != [] berakibat: setData
+           mengganti isi dengan seed, tapi dirty set + tombstone masih hidup,
+           jadi pushPending 45 detik kemudian POST seed menimpa data asli
+           server dan memutar ulang tombstone sebagai DELETE. */
+        const en = storeLocale() === "en";
+        if (dirtyRef.current.size > 0) {
+          notifyStore(
+            en
+              ? `${dirtyRef.current.size} collection(s) still have unsynced edits. Sync them before resetting to demo data.`
+              : `${dirtyRef.current.size} koleksi masih punya perubahan belum tersinkron. Sinkronkan dulu sebelum reset ke data demo.`,
+          );
+          return;
+        }
+        if (remoteActive()) {
+          notifyStore(
+            en
+              ? "Reset only clears local data. Server rows are untouched - reload to pull them back."
+              : "Reset hanya membersihkan data lokal. Data server tidak tersentuh - muat ulang untuk menariknya kembali.",
+          );
+        }
+        setData(buildSeeds());
+      },
+      resync,
+      resyncCollections,
+      wbsFor: (projectId) => data.wbsByProject[projectId] ?? clone(wbsTemplate),
+      setWbs: async (projectId, wbs) => {
+        const prevWbs = dataRef.current.wbsByProject[projectId];
+        setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: wbs } }));
+        if (remoteActive()) {
+          try {
+            await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/wbs`, {
+              method: "PUT",
+              body: JSON.stringify({ wbs }),
+            });
+            setBackendError(null);
+            return;
+          } catch (err) {
+            if (degrade(err)) {
+              // 403: kembalikan optimistik, jangan tandai dirty.
+              setData((prev) => {
+                const next = { ...prev.wbsByProject };
+                if (prevWbs === undefined) delete next[projectId];
+                else next[projectId] = prevWbs;
+                return { ...prev, wbsByProject: next };
+              });
+              return;
+            }
+          }
+        }
+        markDirty("wbsByProject");
+        markDirty(`wbs:${projectId}`);
+      },
+      teamFor: (projectId) => data.teamByProject[projectId] ?? [],
+      setTeam: async (projectId, ids) => {
+        const prevTeam = dataRef.current.teamByProject[projectId];
+        setData((prev) => ({ ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } }));
+        if (remoteActive()) {
+          try {
+            await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/team`, {
+              method: "PUT",
+              body: JSON.stringify({ memberIds: ids }),
+            });
+            setBackendError(null);
+            return;
+          } catch (err) {
+            if (degrade(err)) {
+              // 403: kembalikan optimistik, jangan tandai dirty.
+              setData((prev) => {
+                const next = { ...prev.teamByProject };
+                if (prevTeam === undefined) delete next[projectId];
+                else next[projectId] = prevTeam;
+                return { ...prev, teamByProject: next };
+              });
+              return;
+            }
+          }
+        }
+        markDirty("teamByProject");
+        markDirty(`team:${projectId}`);
+      },
+      branch,
+      setBranch,
+      inBranch,
+    };
+  }, [data, branch, inBranch, backendMode, backendError, resync, resyncCollections, pendingSync, pushPending, markDirty]);
+
+  return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
+}
+
+export function useStore(): StoreCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useStore harus dipakai di dalam <StoreProvider>");
+  return ctx;
+}

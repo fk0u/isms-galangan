@@ -1,0 +1,8 @@
+node_modules/
+dist/
+data/
+.env
+*.db
+# Backup DB (npm run backup) berisi seluruh data produksi. Tidak pernah
+# boleh masuk repo - bukan karena ukuran, tapi karena isinya.
+backups/

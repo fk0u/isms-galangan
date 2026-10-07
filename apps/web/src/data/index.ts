@@ -1,0 +1,1002 @@
+// ===== Mock data ISMS Galangan =====
+// Data realistis untuk 13 modul; angka dalam Rupiah (IDR).
+
+import { fuelPricePerLiter } from "../utils/rates";
+
+export type ProjectStatus =
+  | "Sedang Berjalan"
+  | "Dalam Proses"
+  | "Selesai"
+  | "Terlambat"
+  | "Tertunda";
+
+export interface DesignStage {
+  name: string;
+  status: "Belum" | "Diajukan" | "Disetujui";
+  society: string;
+  date: string;
+  doc: string;
+}
+
+export interface Project {
+  id: string;
+  vessel: string;
+  type: "New Build" | "Repair" | "Retrofit";
+  client: string;
+  status: ProjectStatus;
+  branch: string;
+  start: string;
+  end: string;
+  progress: number;
+  budget: number;
+  actual: number;
+  manager: string;
+  scope: string[];
+  designStages?: DesignStage[];
+}
+
+export const clients = [
+  { id: "C-001", name: "PT Samudra Jaya Perkasa", fleet: 12, rating: 92, since: 2015 },
+  { id: "C-002", name: "PT Pelayaran Nusantara Abadi", fleet: 8, rating: 88, since: 2018 },
+  { id: "C-003", name: "PT Karya Bahari Sejahtera", fleet: 15, rating: 95, since: 2012 },
+  { id: "C-004", name: "PT Laut Timur Mandiri", fleet: 6, rating: 78, since: 2019 },
+  { id: "C-005", name: "PT Mitra Samudra Raya", fleet: 10, rating: 85, since: 2016 },
+  // RawData CONTOH INVOICE.xlsx - customer pada 4 pola invoice SB.
+  { id: "C-SB-001", name: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", fleet: 6, rating: 90, since: 2024 },
+  { id: "C-SB-002", name: "PT PELAYARAN ROYLEA MARINE LINE", fleet: 9, rating: 87, since: 2023 },
+  { id: "C-SB-003", name: "PT ALVI CIPTA SENTOSA", fleet: 4, rating: 89, since: 2024 },
+];
+
+export const projects: Project[] = [
+  {
+    id: "NB-2025-012",
+    vessel: "TB Samudra Jaya 07",
+    type: "New Build",
+    client: "PT Samudra Jaya Perkasa",
+    status: "Sedang Berjalan",
+    branch: "Samarinda",
+    start: "2025-11-10",
+    end: "2026-09-30",
+    progress: 62,
+    budget: 48000000000,
+    actual: 29600000000,
+    manager: "Ir. Hendra Wijaya",
+    scope: ["Desain", "Fabrikasi Baja", "Hull Assembly", "Mesin & Kelistrikan", "Pengecatan", "Sea Trial"],
+    designStages: [
+      { name: "Basic Design", status: "Disetujui", society: "BKI", date: "2025-12-10", doc: "BD-012 Rev C" },
+      { name: "Detail Design", status: "Disetujui", society: "BKI", date: "2026-02-18", doc: "DD-012 Rev B" },
+      { name: "Class Approval", status: "Disetujui", society: "BKI", date: "2026-03-25", doc: "BKI-APPR-012/26" },
+      { name: "Production Drawing", status: "Diajukan", society: "BKI", date: "2026-04-02", doc: "PD-012 Rev A" },
+    ],
+  },
+  {
+    id: "NB-2025-014",
+    vessel: "TB Nusantara 22",
+    type: "New Build",
+    client: "PT Pelayaran Nusantara Abadi",
+    status: "Sedang Berjalan",
+    branch: "Samarinda",
+    start: "2026-01-15",
+    end: "2026-12-20",
+    progress: 41,
+    budget: 46500000000,
+    actual: 19800000000,
+    manager: "Budi Santoso",
+    scope: ["Desain", "Fabrikasi Baja", "Hull Assembly", "Mesin & Kelistrikan"],
+  },
+  {
+    id: "RP-2026-003",
+    vessel: "TB Karya Bahari 12",
+    type: "Repair",
+    client: "PT Karya Bahari Sejahtera",
+    status: "Dalam Proses",
+    branch: "Samarinda",
+    start: "2026-07-01",
+    end: "2026-08-05",
+    progress: 78,
+    budget: 4200000000,
+    actual: 3310000000,
+    manager: "Rudi Hartono",
+    scope: ["Survey Docking", "Pengecatan Lambung", "Perbaikan Poros", "Sea Valve", "Propeller"],
+  },
+  {
+    id: "RP-2026-005",
+    vessel: "TB Samudra Jaya 04",
+    type: "Repair",
+    client: "PT Samudra Jaya Perkasa",
+    status: "Terlambat",
+    branch: "Samarinda",
+    start: "2026-06-20",
+    end: "2026-07-25",
+    progress: 55,
+    budget: 3800000000,
+    actual: 2400000000,
+    manager: "Agus Setiawan",
+    scope: ["Overhaul Mesin", "Kelistrikan", "Pengecatan"],
+  },
+  {
+    id: "RF-2026-001",
+    vessel: "TB Karya Bahari 15",
+    type: "Retrofit",
+    client: "PT Karya Bahari Sejahtera",
+    status: "Sedang Berjalan",
+    branch: "Samarinda",
+    start: "2026-05-01",
+    end: "2026-08-30",
+    progress: 84,
+    budget: 9800000000,
+    actual: 8420000000,
+    manager: "Ir. Hendra Wijaya",
+    scope: ["Sistem Navigasi", "Mesin AUX", "Sistem Pendingin", "Kelistrikan"],
+  },
+  {
+    id: "NB-2026-001",
+    vessel: "TB Laut Timur 01",
+    type: "New Build",
+    client: "PT Laut Timur Mandiri",
+    status: "Tertunda",
+    branch: "Samarinda",
+    start: "2026-02-01",
+    end: "2027-01-15",
+    progress: 23,
+    budget: 45000000000,
+    actual: 10800000000,
+    manager: "Budi Santoso",
+    scope: ["Desain", "Fabrikasi Baja"],
+  },
+  {
+    id: "RP-2026-002",
+    vessel: "TB Mitra Raya 09",
+    type: "Repair",
+    client: "PT Mitra Samudra Raya",
+    status: "Selesai",
+    branch: "Samarinda",
+    start: "2026-06-01",
+    end: "2026-06-28",
+    progress: 100,
+    budget: 3600000000,
+    actual: 3490000000,
+    manager: "Rudi Hartono",
+    scope: ["Docking", "Pengecatan", "Rudder"],
+  },
+  // RawData Invoice/CONTOH INVOICE.xlsx - rantai QT-SB-001 â†’ KTR-SB-001 â†’ invoice SB.
+  {
+    id: "RP-2026-006",
+    vessel: "BG RMN 3324",
+    type: "Repair",
+    client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+    status: "Dalam Proses",
+    branch: "Samarinda",
+    start: "2026-08-01",
+    end: "2026-09-15",
+    progress: 90,
+    budget: 2000000000,
+    actual: 1650000000,
+    manager: "Rudi Hartono",
+    scope: ["Docking", "Outfitting Deck", "Painting"],
+  },
+  {
+    id: "RP-2026-007",
+    vessel: "AWB SEA HAVEN 2",
+    type: "Repair",
+    client: "PT PELAYARAN ROYLEA MARINE LINE",
+    status: "Dalam Proses",
+    branch: "Samarinda",
+    start: "2026-06-15",
+    end: "2026-08-15",
+    progress: 95,
+    budget: 3400000000,
+    actual: 3100000000,
+    manager: "Budi Santoso",
+    scope: ["Docking", "Repair", "DP-1 â†’ Pelunasan V2"],
+  },
+  {
+    id: "RP-2026-008",
+    vessel: "BG MHKL 35",
+    type: "Repair",
+    client: "PT ALVI CIPTA SENTOSA",
+    status: "Selesai",
+    branch: "Samarinda",
+    start: "2026-04-10",
+    end: "2026-05-08",
+    progress: 100,
+    budget: 900000000,
+    actual: 724019458,
+    manager: "Rudi Hartono",
+    scope: ["Docking", "Repair (SKDT)"],
+  },
+];
+
+export const vessels = [
+  {
+    id: "V-001",
+    name: "TB Samudra Jaya 07",
+    imo: "IMO 9912345",
+    type: "Tugboat ASD 2x1600 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2026,
+    owner: "PT Samudra Jaya Perkasa",
+    loa: 31.5,
+    beam: 9.8,
+    draft: 4.2,
+    bollard: 45,
+    status: "Dalam Pembangunan",
+    certificates: [
+      { name: "Certificate of Class", issued: "2026-09", expires: "2031-09", tone: "green" },
+      { name: "BWTS Compliance", issued: "2026-09", expires: "2029-09", tone: "green" },
+      { name: "Radio License", issued: "2026-09", expires: "2027-09", tone: "amber" },
+    ],
+    history: [
+      { date: "2025-11-10", event: "Keel laying & kontrak", type: "Kontrak" },
+      { date: "2026-03-15", event: "Hull assembly selesai", type: "Produksi" },
+      { date: "2026-09-30", event: "Sea trial terjadwal", type: "Uji" },
+    ],
+  },
+  {
+    id: "V-002",
+    name: "TB Karya Bahari 12",
+    imo: "IMO 9811123",
+    type: "Tugboat ASD 2x1200 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2019,
+    owner: "PT Karya Bahari Sejahtera",
+    loa: 29.4,
+    beam: 9.2,
+    draft: 4.0,
+    bollard: 38,
+    status: "Dalam Docking",
+    certificates: [
+      { name: "Certificate of Class", issued: "2023-08", expires: "2026-08", tone: "red" },
+      { name: "SOPEP", issued: "2024-02", expires: "2027-02", tone: "amber" },
+    ],
+    history: [
+      { date: "2019-06-01", event: "Delivered", type: "Delivery" },
+      { date: "2023-08-15", event: "Special survey", type: "Survey" },
+      { date: "2026-07-01", event: "Drydocking & repair", type: "Docking" },
+    ],
+  },
+  {
+    id: "V-003",
+    name: "TB Nusantara 22",
+    imo: "IMO 9923456",
+    type: "Tugboat ASD 2x1800 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2026,
+    owner: "PT Pelayaran Nusantara Abadi",
+    loa: 32.0,
+    beam: 10.1,
+    draft: 4.4,
+    bollard: 52,
+    status: "Dalam Pembangunan",
+    certificates: [],
+    history: [
+      { date: "2026-01-15", event: "Kontrak & desain", type: "Kontrak" },
+      { date: "2026-06-20", event: "Keel laying", type: "Produksi" },
+    ],
+  },
+  // RawData Invoice/CONTOH INVOICE.xlsx - kapal pada 4 pola invoice SB.
+  {
+    id: "V-SB-001",
+    name: "BG RMN 3324",
+    imo: "-",
+    type: "Barge 28.5x8x3.8M",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2018,
+    owner: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+    loa: 28.5,
+    beam: 8.0,
+    draft: 3.8,
+    bollard: 0,
+    status: "Dalam Docking",
+    certificates: [],
+    history: [
+      { date: "2026-08-01", event: "Docking & repair di SB", type: "Docking" },
+    ],
+  },
+  {
+    id: "V-SB-002",
+    name: "AWB SEA HAVEN 2",
+    imo: "-",
+    type: "AWB",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2020,
+    owner: "PT PELAYARAN ROYLEA MARINE LINE",
+    loa: 30.0,
+    beam: 9.0,
+    draft: 4.0,
+    bollard: 0,
+    status: "Dalam Docking",
+    certificates: [],
+    history: [
+      { date: "2026-06-15", event: "Docking & repair di SB (DP-1)", type: "Docking" },
+    ],
+  },
+  {
+    id: "V-SB-003",
+    name: "BG MHKL 35",
+    imo: "-",
+    type: "Barge",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2019,
+    owner: "PT ALVI CIPTA SENTOSA",
+    loa: 27.0,
+    beam: 8.0,
+    draft: 3.5,
+    bollard: 0,
+    status: "Dalam Operasi",
+    certificates: [],
+    history: [
+      { date: "2026-05-08", event: "Pelunasan SKDT", type: "Delivery" },
+    ],
+  },
+  // Kapal yang dirujuk proyek/survei/jasa (sebelumnya yatim).
+  {
+    id: "V-004",
+    name: "TB Samudra Jaya 04",
+    imo: "IMO 9934567",
+    type: "Tugboat ASD 2x1400 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2021,
+    owner: "PT Samudra Jaya Perkasa",
+    loa: 30.2,
+    beam: 9.5,
+    draft: 4.1,
+    bollard: 42,
+    status: "Dalam Docking",
+    certificates: [],
+    history: [
+      { date: "2026-06-20", event: "Masuk program repair RP-2026-005", type: "Docking" },
+    ],
+  },
+  {
+    id: "V-005",
+    name: "TB Karya Bahari 15",
+    imo: "IMO 9945678",
+    type: "Tugboat ASD 2x1500 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2022,
+    owner: "PT Karya Bahari Sejahtera",
+    loa: 30.8,
+    beam: 9.6,
+    draft: 4.2,
+    bollard: 44,
+    status: "Dalam Operasi",
+    certificates: [],
+    history: [
+      { date: "2026-05-01", event: "Mulai retrofit RF-2026-001", type: "Kontrak" },
+    ],
+  },
+  {
+    id: "V-006",
+    name: "TB Laut Timur 01",
+    imo: "IMO 9956789",
+    type: "Tugboat ASD 2x1600 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2026,
+    owner: "PT Laut Timur Mandiri",
+    loa: 31.0,
+    beam: 9.8,
+    draft: 4.2,
+    bollard: 46,
+    status: "Dalam Pembangunan",
+    certificates: [],
+    history: [
+      { date: "2026-02-01", event: "Keel laying NB-2026-001", type: "Produksi" },
+    ],
+  },
+  {
+    id: "V-007",
+    name: "TB Mitra Raya 09",
+    imo: "IMO 9967890",
+    type: "Tugboat ASD 2x1300 HP",
+    class: "BKI",
+    flag: "Indonesia",
+    built: 2020,
+    owner: "PT Mitra Samudra Raya",
+    loa: 29.8,
+    beam: 9.4,
+    draft: 4.0,
+    bollard: 40,
+    status: "Dalam Operasi",
+    certificates: [],
+    history: [
+      { date: "2026-06-28", event: "Serah terima RP-2026-002", type: "Delivery" },
+    ],
+  },
+];
+
+/* Fasilitas dock. `lengthM`/`widthM`/`depthM` adalah angka yang dipakai peta
+   fasilitas; `capacity` tetap dipertahankan untuk tampilan karena sudah
+   dibaca di banyak tempat.
+
+   Peta TIDAK mengurai `capacity` sebagai sumber dimensinya._capacity itu
+   teks bebas ("80m / bearer", "New build assembly") dan facilityMap sengaja
+   menolak facilities yang panjangnya tidak terbaca - lebih baik tidak
+   menampilkan daripada menampilkan skala yang salah. */
+export const drydocks = [
+  { id: "DD-1", name: "Drydock 1 - Panjang 120m", capacity: "120m / 12m / 6m draft", status: "Terpakai", kind: "graving", lengthM: 120, widthM: 12, depthM: 6 },
+  { id: "DD-2", name: "Drydock 2 - Panjang 90m", capacity: "90m / 10m / 5m draft", status: "Terpakai", kind: "graving", lengthM: 90, widthM: 10, depthM: 5 },
+  { id: "SL-1", name: "Slipway 1", capacity: "80m / bearer", status: "Tersedia", kind: "slipway", lengthM: 80, widthM: 10, depthM: null },
+  { id: "BH-1", name: "Berth 1", capacity: "New build assembly", status: "Terpakai", kind: "berth", lengthM: 150, widthM: 30, depthM: 8 },
+];
+
+/* Slot jadwal docking: id, dockId, project, vessel, from, to (day indexes
+   relative), color.
+   ratePerDay/powerKwh/waterM3 TIDAK boleh kosong: tagihan drydock =
+   (durasi x tarif harian) + listrik + air. Tanpa ketiganya seluruh tagihan
+   drydock di sistem bernilai Rp 0 - bukan karena gratis, karena belum diisi.
+   Tarif memakai skala nyata Indonesia: drydock 120m berskala besar jauh lebih
+   mahal dari slipway, dan slipway lebih mahal dari berth per meter persegi. */
+export const dockSlots = [
+  { id: "S1", dockId: "DD-1", project: "RP-2026-003", vessel: "TB Karya Bahari 12", from: 1, to: 35, color: "bg-ocean-500", ratePerDay: 28000000, powerKwh: 3200, waterM3: 6 },
+  { id: "S2", dockId: "DD-2", project: "RP-2026-005", vessel: "TB Samudra Jaya 04", from: 1, to: 22, color: "bg-amber-500", ratePerDay: 20000000, powerKwh: 2200, waterM3: 4 },
+  { id: "S3", dockId: "DD-1", project: "NB-2026-001", vessel: "TB Laut Timur 01", from: 44, to: 62, color: "bg-steel-400", ratePerDay: 28000000, powerKwh: 2000, waterM3: 4 },
+  { id: "S4", dockId: "BH-1", project: "NB-2025-012", vessel: "TB Samudra Jaya 07", from: 1, to: 90, color: "bg-navy-700", ratePerDay: 9500000, powerKwh: 3600, waterM3: 8 },
+  { id: "S5", dockId: "SL-1", project: "NB-2025-014", vessel: "TB Nusantara 22", from: 10, to: 90, color: "bg-ocean-500", ratePerDay: 12000000, powerKwh: 2400, waterM3: 5 },
+  // RawData 000-DOCK SPACE: BG RMN 3324 (28.5x8x3.8M), ref 000/DS-SB/SMD/VIII/2026.
+  { id: "DS-SB-001", dockId: "DD-1", project: "RP-2026-006", vessel: "BG RMN 3324", from: 40, to: 55, color: "bg-teal-500", dsRef: "000/DS-SB/SMD/VIII/2026", status: "Terjadwal", ratePerDay: 28000000, powerKwh: 2500, waterM3: 5 },
+];
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  sku: string;
+  warehouse: string;
+  stock: number;
+  minStock: number;
+  unit: string;
+  cost: number;
+  location: string;
+}
+
+export const inventory: InventoryItem[] = [
+  { id: "INV-001", name: "Pelat Baja AH36 12mm", category: "Baja", sku: "AH36-12", warehouse: "Gudang Baja A", stock: 5200, minStock: 2000, unit: "kg", cost: 14500, location: "A1-01" },
+  { id: "INV-002", name: "Mesin Bantu (Aux Engine)", category: "Mesin", sku: "AUX-MAK", warehouse: "Gudang Mesin", stock: 3, minStock: 2, unit: "unit", cost: 850000000, location: "M-02" },
+  { id: "INV-003", name: "Cat Epoxy Primer", category: "Cat", sku: "EPO-PRIM", warehouse: "Gudang B", stock: 44, minStock: 20, unit: "liter", cost: 95000, location: "B2-11" },
+  { id: "INV-004", name: "Pipa Schedule 40 6 inch", category: "Pipa", sku: "PIP-S40-6", warehouse: "Gudang Pipa", stock: 18, minStock: 30, unit: "batang", cost: 780000, location: "P-04" },
+  { id: "INV-005", name: "Anoda Zink", category: "Perlindungan", sku: "ZN-ANODE", warehouse: "Gudang B", stock: 8, minStock: 12, unit: "pcs", cost: 210000, location: "B3-07" },
+  { id: "INV-006", name: "Kabel Listrik Marine 4x50", category: "Listrik", sku: "KBL-4X50", warehouse: "Gudang Listrik", stock: 1200, minStock: 800, unit: "meter", cost: 185000, location: "L-01" },
+  { id: "INV-007", name: "Baut Marine M20", category: "Fastener", sku: "BLT-M20", warehouse: "Gudang B", stock: 1500, minStock: 2000, unit: "pcs", cost: 4500, location: "B1-05" },
+  { id: "INV-008", name: "Winch Wire Rope", category: "Rigging", sku: "WIRE-ROPE", warehouse: "Gudang Rig", stock: 6, minStock: 4, unit: "roll", cost: 3200000, location: "R-02" },
+  // RawData REPORT WAREHOUSE 2024 (sheet KODE + STOCK ALL).
+  { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Santi", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
+  { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Santi", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },
+  { id: "INV-SB-003", name: "PLAT 8MM 5x20", category: "Baja", sku: "EO0000LAT15", warehouse: "Gudang Santi", stock: 6, minStock: 4, unit: "LBR", cost: 6500000, location: "S-03" },
+];
+
+/* `fuelPrice` = harga solar per liter.
+   Angkanya sekarang referring ke utils/rates.ts (Bio Solar Industri B40,
+   Wilayah 2 Kalimantan, Rp 18.950/L periode September 2026), bukan lagi
+   angka tebakan 11.500-13.500 yang tidak bisa ditunjuk ke sumber apa pun.
+
+   Semua unit memakai harga yang sama karena semuanya beli BBM di satu lokasi
+   yang sama. Sebaiknya angka yang berbeda adalah tampilan, bukan data.
+
+   Catatan: 4 unit pernah bernilai 0 karena probe lama hanya mengecek
+   `fuelPrice === undefined` - 0 lolos. */
+const BBM_DERNIER = fuelPricePerLiter();
+
+export const equipment = [
+  { id: "EQ-001", name: "Gantry Crane 50T", category: "Pengangkat", code: "CRN-50", branch: "Samarinda", status: "Tersedia", util: 68, nextService: "2026-09-15", lastHours: 12450, model: "DEMAG 50T", rate: 1200000, fuelPrice: BBM_DERNIER, acquisitionCost: 950000000, usefulLife: 20,
+    serviceNotes: [
+      { at: "2026-07-14 09:20", by: "Bapak Hadi", text: "Tali hoist sudah mulai terlihat seratnya sendiri di Drum kanan. Kalau dipakai untuk beban berat, tali selalu keluar dari sheave atas.", fileUrl: "" },
+      { at: "2026-09-08 14:05", by: "Bapak Hadi", text: "Sheave sudah diganti. Uji beban 12 ton bersih, tidak ada getasan. Rem masih memakai komponen yang lama.", fileUrl: "" },
+    ] },
+  { id: "EQ-002", name: "Mobile Crane 100T", category: "Pengangkat", code: "MCR-100", branch: "Samarinda", status: "Terpakai", util: 82, nextService: "2026-08-05", lastHours: 18320, model: "Liebherr MK100", rate: 2500000, fuelPrice: BBM_DERNIER, acquisitionCost: 1650000000, usefulLife: 15,
+    serviceNotes: [
+      { at: "2026-06-19 10:30", by: "Sari Dewi", text: "Outrigger paling belakang harus dismoor dulu sebelum slew. Kalau tidak, landnya berbunyi dan unit tidak boleh dipakai di atas 60 ton.", fileUrl: "" },
+    ] },
+  { id: "EQ-003", name: "Mesin Las MIG", category: "Pengelasan", code: "WLD-MIG-12", branch: "Samarinda", status: "Terpakai", util: 74, nextService: "2026-08-20", lastHours: 2500, model: "Fronius TPS 400i", rate: 250000, fuelPrice: BBM_DERNIER, acquisitionCost: 62000000, usefulLife: 10,
+    serviceNotes: [
+      { at: "2026-05-11 08:45", by: "Andi", text: "Kawat 1,2 mm cocok untuk pipa. Jangan memakai kawat lebih tebal di bagian yang menipis, karena retaknya muncul di sambungan las.", fileUrl: "" },
+      { at: "2026-08-02 13:15", by: "Andi", text: "Nozzle-tip sudah aus dan sudah diganti. Posisi gas flow setter jangan diubah, karena hasil las keluar millih.", fileUrl: "" },
+    ] },
+  { id: "EQ-004", name: "Mesin Las SMAW", category: "Pengelasan", code: "WLD-SMAW-05", branch: "Samarinda", status: "Maintenance", util: 45, nextService: "2026-07-30", lastHours: 4100, model: "Miller XMT", rate: 220000, fuelPrice: BBM_DERNIER, acquisitionCost: 45000000, usefulLife: 10,
+    serviceNotes: [
+      { at: "2026-07-29 16:40", by: "Andi", text: "Kabel massa terkelupas di sambungan stick. Sudah dilaporkan ke bagian listrik tetapi belum diganti, jadi jangan dipakai dulu.", fileUrl: "" },
+    ] },
+  { id: "EQ-005", name: "Air Compressor", category: "Tenaga", code: "AIR-COMP-2", branch: "Samarinda", status: "Tersedia", util: 58, nextService: "2026-09-01", lastHours: 8900, model: "Atlas Copco", rate: 150000, fuelPrice: BBM_DERNIER, acquisitionCost: 180000000, usefulLife: 12,
+    serviceNotes: [
+      { at: "2026-04-22 11:10", by: "Bapak Hadi", text: "Drain air setiap selesai shift. Kalau dilewatkan, head cepat berkarat dan kompresor trips sendiri.", fileUrl: "" },
+    ] },
+  { id: "EQ-006", name: "Forklift 10T", category: "Transportasi", code: "FLT-10", branch: "Samarinda", status: "Terpakai", util: 71, nextService: "2026-08-12", lastHours: 7200, model: "Toyota 10FD", rate: 350000, fuelPrice: BBM_DERNIER, acquisitionCost: 620000000, usefulLife: 12,
+    serviceNotes: [] },
+  { id: "EQ-007", name: "Blast Machine", category: "Pengecatan", code: "BLST-01", branch: "Samarinda", status: "Tersedia", util: 63, nextService: "2026-09-10", lastHours: 3200, model: "Blastrac", rate: 400000, fuelPrice: BBM_DERNIER, acquisitionCost: 95000000, usefulLife: 8,
+    serviceNotes: [
+      { at: "2026-06-30 15:25", by: "Sari Dewi", text: "Nozzle brass sudah diganti dua kali bulan ini karena abrasive yang dipakai lebih kasar dari spesifikasi lama.", fileUrl: "" },
+    ] },
+  { id: "EQ-008", name: "Generator Set 500kVA", category: "Tenaga", code: "GEN-500", branch: "Samarinda", status: "Tersedia", util: 52, nextService: "2026-10-01", lastHours: 15600, model: "Caterpillar", rate: 900000, fuelPrice: BBM_DERNIER, acquisitionCost: 1150000000, usefulLife: 15,
+    serviceNotes: [
+      { at: "2026-08-25 07:50", by: "Bapak Hadi", text: "Filter udara kabin sudah dibersihkan. Suara tidak knuckle lagi saat beban naik.", fileUrl: "" },
+    ] },
+];
+
+export const subcontractors = [
+  { id: "SUB-001", name: "PT Baja Utama Steel", services: "Fabrikasi & Blasting", rating: 90, active: 4, contract: 15000000000, status: "Aktif", k3: "A+" },
+  { id: "SUB-002", name: "CV Pengecatan Marine", services: "Pengecatan / Coating", rating: 84, active: 2, contract: 6200000000, status: "Aktif", k3: "A" },
+  { id: "SUB-003", name: "PT Mesinindo Perkasa", services: "Overhaul Mesin", rating: 88, active: 3, contract: 9800000000, status: "Aktif", k3: "A" },
+  { id: "SUB-004", name: "PT Kelistrikan Bahari", services: "Elektrikal & Panel", rating: 76, active: 1, contract: 3400000000, status: "Kualifikasi", k3: "B+" },
+  { id: "SUB-005", name: "CV Scaffold Aman", services: "Perancah & Staging", rating: 92, active: 2, contract: 1800000000, status: "Aktif", k3: "A+" },
+  // RawData INVOICE SUBKONTRAKTOR (Pak Yusuf, BG RMN 3324, PPh 0,5%).
+  { id: "SUB-SB-001", name: "Pak Yusuf", services: "Outfitting Deck (Borongan)", rating: 85, active: 1, contract: 300000, status: "Aktif", k3: "B" },
+];
+
+export const employees = [
+  { id: "EMP-001", username: "6474010101000001", name: "Andi Darman", role: "Direktur", dept: "Direksi", branch: "Samarinda", status: "Aktif", join: "2012-03-01", certs: [] },
+  { id: "EMP-002", username: "6474010101000002", name: "Ir. Hendra Wijaya", role: "Project Manager", dept: "Proyek", branch: "Samarinda", status: "Aktif", join: "2015-07-12", certs: ["PMP", "Welding Inspector"] },
+  { id: "EMP-003", username: "6474010101000003", name: "Budi Santoso", role: "Project Manager", dept: "Proyek", branch: "Samarinda", status: "Aktif", join: "2016-02-20", certs: ["PMP"] },
+  { id: "EMP-004", username: "6474010101000004", name: "Rudi Hartono", role: "Superintendent", dept: "Produksi", branch: "Samarinda", status: "Aktif", join: "2014-09-01", certs: ["Marine Surveyor"] },
+  { id: "EMP-005", username: "6474010101000005", name: "Agus Setiawan", role: "Foreman", dept: "Produksi", branch: "Samarinda", status: "Aktif", join: "2018-05-14", certs: [] },
+  { id: "EMP-006", username: "6474010101000006", name: "Sari Wulandari", role: "QC Engineer", dept: "Quality", branch: "Samarinda", status: "Aktif", join: "2017-11-03", certs: ["NDT Level II", "CWI"] },
+  { id: "EMP-007", username: "6474010101000007", name: "Dewi Lestari", role: "Finance Manager", dept: "Finance", branch: "Samarinda", status: "Aktif", join: "2013-08-25", certs: ["Brevet A/B"] },
+  { id: "EMP-008", username: "6474010101000008", name: "Fajar Nugroho", role: "Procurement", dept: "Procurement", branch: "Samarinda", status: "Aktif", join: "2019-01-10", certs: [] },
+];
+
+/* ====== SERVICE RECORD ====== */
+
+export interface ServiceRecord {
+    id: string;
+    projectId: string;
+    vesselId?: string;
+    date: string;
+    type: "Overhaul" | "Inspection" | "Repair" | "Drydock" | "Survey";
+    description: string;
+    status: "Done" | "In Progress" | "Scheduled";
+    technician: string;
+    cost: number;
+    /** D12: referensi opsional ke item BoQ project ini. */
+    boqRef?: string;
+  }
+
+export const services: ServiceRecord[] = [
+  { id: "SRV-001", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-01", type: "Drydock", description: "Inspection & repair kickoff", status: "Done", technician: "Rudi Hartono", cost: 150000000 },
+  { id: "SRV-002", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-15", type: "Repair", description: "Overhaul main engine", status: "In Progress", technician: "Agus Setiawan", cost: 480000000 },
+  { id: "SRV-003", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-22", type: "Inspection", description: "Coating thickness check", status: "Scheduled", technician: "Sari Wulandari", cost: 75000000 },
+  { id: "SRV-004", projectId: "NB-2025-012", vesselId: "V-001", date: "2026-06-10", type: "Survey", description: "Pre-construction survey", status: "Done", technician: "Budi Santoso", cost: 50000000 },
+  { id: "SRV-005", projectId: "RP-2026-005", vesselId: "V-004", date: "2026-07-25", type: "Overhaul", description: "Bearing replacement", status: "In Progress", technician: "Fajar Nugroho", cost: 320000000 },
+];
+
+/* ====== SPAREPART ====== */
+
+export interface Sparepart {
+  id: string;
+  name: string;
+  partNumber: string;
+  category: string;
+  projectId: string;
+  vesselId?: string;
+  status: "Akan" | "Sedang" | "Selesai";
+  requestDate: string;
+  repairDate?: string;
+  technician?: string;
+  cost: number;
+  notes: string;
+}
+
+export const spareparts: Sparepart[] = [
+  { id: "SP-001", name: "Bearing Hub ASW-22", partNumber: "ASW-22-01", category: "Mechanical", projectId: "RP-2026-003", vesselId: "V-002", status: "Akan", requestDate: "2026-08-20", cost: 18500000, notes: "Order untuk overhaul engine" },
+  { id: "SP-002", name: "Seal Kit Hydraulic", partNumber: "HK-450", category: "Hydraulic", projectId: "RP-2026-003", vesselId: "V-002", status: "Sedang", requestDate: "2026-08-10", repairDate: "2026-08-15", technician: "Rudi Hartono", cost: 9200000, notes: "Sedang dipasang di cylinder" },
+  { id: "SP-003", name: "Gasket Head Cylinder", partNumber: "GH-120", category: "Mechanical", projectId: "RP-2026-003", vesselId: "V-002", status: "Selesai", requestDate: "2026-07-20", repairDate: "2026-07-28", technician: "Agus Setiawan", cost: 4500000, notes: "Terpasang, test run OK" },
+  { id: "SP-004", name: "Insulasi Thermal Blanket", partNumber: "ITB-300", category: "Insulation", projectId: "NB-2025-012", vesselId: "V-001", status: "Akan", requestDate: "2026-09-01", cost: 22000000, notes: "Daftar untuk pembangunan baru" },
+  { id: "SP-005", name: "Paint Primer Epoxy 5L", partNumber: "EPO-PRIM-5", category: "Paint", projectId: "RP-2026-005", vesselId: "V-004", status: "Sedang", requestDate: "2026-07-25", repairDate: "2026-07-26", technician: "Fajar Nugroho", cost: 475000, notes: "Sedang diapply di section 3" },
+  { id: "SP-006", name: "Wire Rope 12mm", partNumber: "WR-12-050", category: "Rigging", projectId: "NB-2025-014", vesselId: "V-003", status: "Selesai", requestDate: "2026-06-15", repairDate: "2026-06-20", technician: "Sari Wulandari", cost: 8500000, notes: "Terpasang di cargo system" },
+];
+
+export interface Invoice {
+  id: string;
+  client: string;
+  project: string;
+  amount: number;
+  due: string;
+  status: "Lunas" | "Belum Dibayar" | "Terlambat" | "Draft";
+  paymentTerm: string;
+}
+
+// Seed invoice dihapus - sumber kebenaran adalah saldo awal Piutang Excel
+// (seedInvoices di store.tsx, dari sheet Piutang Agustus 2026).
+
+export const ncrList = [
+  { id: "NCR-2026-031", project: "NB-2025-012", vessel: "TB Samudra Jaya 07", type: "Pengelasan", status: "Terbuka", severity: "Major", raised: "2026-07-18", issue: "Porosity pada seam weld section 4" },
+  { id: "NCR-2026-032", project: "RP-2026-003", vessel: "TB Karya Bahari 12", type: "Pengecatan", status: "Dalam Perbaikan", severity: "Minor", raised: "2026-07-22", issue: "Ketebalan cat lambung di bawah spec" },
+  { id: "NCR-2026-033", project: "RF-2026-001", vessel: "TB Karya Bahari 15", type: "Kelistrikan", status: "Tertutup", severity: "Major", raised: "2026-07-05", issue: "Kabel grounding kurang kencang" },
+  { id: "NCR-2026-034", project: "RP-2026-005", vessel: "TB Samudra Jaya 04", type: "Mesin", status: "Terbuka", severity: "Critical", raised: "2026-07-25", issue: "Overhaul bearing tidak sesuai toleransi" },
+];
+
+export const incidents = [
+  { id: "INC-2026-009", type: "Near Miss", date: "2026-07-20", location: "Area Fabrikasi", desc: "Mata rantai sling hampir putus saat lifting", severity: "Rendah" },
+  { id: "INC-2026-010", type: "First Aid", date: "2026-07-24", location: "Dock 1", desc: "Pekerja terluka ringan pada tangan saat grinder", severity: "Sedang" },
+];
+
+// Purchase orders
+export const purchaseOrders = [
+  { id: "PO-2026-114", item: "Pelat Baja AH36", vendor: "PT Bahana Baja", req: "PR-2026-203", amount: 4120000000, status: "Dalam Pengiriman", date: "2026-07-15" },
+  { id: "PO-2026-115", item: "Aux Engine MAK", vendor: "PT Indo Diesel", req: "PR-2026-201", amount: 1700000000, status: "Diterima", date: "2026-07-05" },
+  { id: "PO-2026-116", item: "Cat Epoxy", vendor: "PT Jotun Indonesia", req: "PR-2026-207", amount: 480000000, status: "Menunggu Persetujuan", date: "2026-07-28" },
+  { id: "PO-2026-117", item: "Wire Rope", vendor: "PT Steel Rig", req: "PR-2026-209", amount: 210000000, status: "Dikirim", date: "2026-07-30" },
+  // RawData FORMAT PO MATERIAL: 06/PO-SB/SMD/I/2024, WF 250/150/200,
+  // subtotal 25.055.000 + PPN 11% = 27.811.050 (include).
+  { id: "PO-SB-2024-006", item: "Besi WF (250/150/200)", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2024-006", amount: 27811050, qty: 23, unit: "btg", status: "Diterima", date: "2024-01-26", docNo: "06/PO-SB/SMD/I/2024", vessel: "U/STOCK", includePpn: true, tujuan: "stok", receivedQty: 23, lines: [{ name: "Besi WF 250", qty: 10, unit: "btg", price: 1150000 }, { name: "Besi WF 150", qty: 8, unit: "btg", price: 850000 }, { name: "Besi WF 200", qty: 5, unit: "btg", price: 1351000 }] },
+  // RawData CONTOH HUTANG - PO yang menjadi hutang AP-SB (docNo = po di hutang).
+  { id: "PO-SB-2026-004", item: "PLAT 14MM", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-004", amount: 36341622, qty: 2, unit: "lbr", status: "Diterima", date: "2026-01-07", docNo: "04/PO-SB/SMD/I/2026", vessel: "U/TK. RMN 3317", includePpn: true, tujuan: "kapal", receivedQty: 2 },
+  { id: "PO-SB-2026-012", item: "SIKU PRESS + ROUNDBAR", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-012", amount: 409492875, qty: 130, unit: "btg", status: "Diterima", date: "2026-01-29", docNo: "12/PO-SB/SMD/I/2026", vessel: "U/BG. KBT 26", includePpn: true, tujuan: "kapal", receivedQty: 130 },
+  { id: "PO-SB-2026-036", item: "PLAT 12MM/8MM", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-036", amount: 982905000, qty: 75, unit: "lbr", status: "Diterima", date: "2026-04-15", docNo: "36/PO-SB/SMD/IV/2026", vessel: "U/TK. ARTHA SARANA XI", includePpn: true, tujuan: "kapal", receivedQty: 75 },
+];
+
+export const quotations = [
+  { id: "QT-2026-052", client: "PT Samudra Jaya Perkasa", vessel: "TB Baru RJ-03", type: "New Build", value: 48500000000, stage: "Negosiasi", date: "2026-07-20" },
+  { id: "QT-2026-053", client: "PT Laut Timur Mandiri", vessel: "TB LT-06", type: "New Build", value: 45200000000, stage: "Penawaran", date: "2026-07-18" },
+  { id: "QT-2026-054", client: "PT Mitra Samudra Raya", vessel: "Repair MR-02", type: "Repair", value: 3100000000, stage: "Menang", date: "2026-07-12" },
+  { id: "QT-2026-055", client: "PT Pelayaran Nusantara Abadi", vessel: "TB PN-05 Retrofit", type: "Retrofit", value: 8200000000, stage: "Lead", date: "2026-07-25" },
+  // RawData: penawaran BG RMN 3324 â†’ menang â†’ KTR-SB-001 â†’ RP-2026-006.
+  { id: "QT-SB-001", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", vessel: "BG RMN 3324", type: "Repair", value: 1671211310, stage: "Menang", date: "2026-07-28", requestId: "REQ-SB-002" },
+];
+
+
+export { fmtRupiah, fmtMiliar, fmtJumlah, fmtPersen, fmtTanggal, fmtBulan, fmtRentang, todayISO, monthISO, SATUAN, STATUS_BOQ_ID, STATUS_SVC_ID } from "../utils/format";
+
+/* ====== EXTENDED 12-MONTH SERIES ====== */
+
+export const revenueSeries = [
+  { month: "Sep", revenue: 4.6, cost: 3.7, projects: 6 },
+  { month: "Okt", revenue: 5.0, cost: 3.9, projects: 7 },
+  { month: "Nov", revenue: 5.6, cost: 4.2, projects: 6 },
+  { month: "Des", revenue: 6.3, cost: 4.8, projects: 8 },
+  { month: "Jan", revenue: 5.2, cost: 4.0, projects: 7 },
+  { month: "Feb", revenue: 6.1, cost: 4.5, projects: 8 },
+  { month: "Mar", revenue: 4.8, cost: 3.6, projects: 6 },
+  { month: "Apr", revenue: 7.4, cost: 5.4, projects: 9 },
+  { month: "Mei", revenue: 6.9, cost: 5.1, projects: 8 },
+  { month: "Jun", revenue: 8.2, cost: 6.0, projects: 10 },
+  { month: "Jul", revenue: 9.1, cost: 6.6, projects: 10 },
+  { month: "Ags", revenue: 9.8, cost: 7.0, projects: 11 },
+];
+
+export const marginSeries = [
+  { month: "Sep", margin: 19.6 },
+  { month: "Okt", margin: 22.0 },
+  { month: "Nov", margin: 25.0 },
+  { month: "Des", margin: 23.8 },
+  { month: "Jan", margin: 23.1 },
+  { month: "Feb", margin: 26.2 },
+  { month: "Mar", margin: 25.0 },
+  { month: "Apr", margin: 27.0 },
+  { month: "Mei", margin: 26.1 },
+  { month: "Jun", margin: 26.8 },
+  { month: "Jul", margin: 27.5 },
+  { month: "Ags", margin: 28.6 },
+];
+
+export const cashflowSeries = [
+  { month: "Sep", masuk: 4.4, keluar: 4.8 },
+  { month: "Okt", masuk: 5.2, keluar: 4.4 },
+  { month: "Nov", masuk: 5.9, keluar: 5.0 },
+  { month: "Des", masuk: 6.6, keluar: 5.9 },
+  { month: "Jan", masuk: 5.4, keluar: 5.9 },
+  { month: "Feb", masuk: 6.8, keluar: 6.1 },
+  { month: "Mar", masuk: 5.0, keluar: 5.7 },
+  { month: "Apr", masuk: 7.7, keluar: 6.8 },
+  { month: "Mei", masuk: 7.1, keluar: 7.4 },
+  { month: "Jun", masuk: 8.6, keluar: 7.8 },
+  { month: "Jul", masuk: 9.4, keluar: 8.3 },
+  { month: "Ags", masuk: 10.1, keluar: 8.6 },
+];
+
+export const utilSeries = [
+  { month: "Sep", drydock: 72, equipment: 61 },
+  { month: "Okt", drydock: 76, equipment: 63 },
+  { month: "Nov", drydock: 70, equipment: 60 },
+  { month: "Des", drydock: 78, equipment: 66 },
+  { month: "Jan", drydock: 82, equipment: 68 },
+  { month: "Feb", drydock: 80, equipment: 70 },
+  { month: "Mar", drydock: 75, equipment: 64 },
+  { month: "Apr", drydock: 84, equipment: 72 },
+  { month: "Mei", drydock: 86, equipment: 71 },
+  { month: "Jun", drydock: 88, equipment: 75 },
+  { month: "Jul", drydock: 90, equipment: 78 },
+  { month: "Ags", drydock: 92, equipment: 81 },
+];
+
+
+
+
+/* ====== KPI spark data ====== */
+
+export const sparkRevenue = revenueSeries.map((d) => ({ name: d.month, v: d.revenue }));
+export const sparkMargin = marginSeries.map((d) => ({ name: d.month, v: d.margin }));
+export const sparkProjects = revenueSeries.map((d) => ({ name: d.month, v: d.projects }));
+export const sparkUtil = utilSeries.map((d) => ({ name: d.month, v: d.equipment }));
+
+/* ====== ACTIVITY FEED ====== */
+
+export interface Activity {
+  id: string;
+  actor: string;
+  action: string;
+  target: string;
+  module: string;
+  time: string;
+  tone: "navy" | "teal" | "rose" | "violet" | "amber";
+}
+
+export const activities: Activity[] = [
+  { id: "A1", actor: "Sari Wulandari", action: "menutup NCR", target: "NCR-2026-033", module: "QC", time: "2 menit lalu", tone: "teal" },
+  { id: "A2", actor: "Fajar Nugroho", action: "mengajukan PO", target: "PO-2026-117", module: "Procurement", time: "18 menit lalu", tone: "navy" },
+  { id: "A3", actor: "Budi Santoso", action: "mengupdate progres", target: "NB-2025-014 â†’ 41%", module: "Proyek", time: "42 menit lalu", tone: "violet" },
+  { id: "A4", actor: "Agus Setiawan", action: "mencatat incident", target: "INC-2026-010", module: "Safety", time: "1 jam lalu", tone: "rose" },
+  { id: "A5", actor: "Dewi Lestari", action: "mengimpor saldo awal", target: "Piutang Excel Agu-2026 (37 customer)", module: "Keuangan", time: "2 jam lalu", tone: "amber" },
+  { id: "A6", actor: "Rudi Hartono", action: "mengalokasikan dock", target: "DD-1 untuk RP-2026-003", module: "Drydock", time: "3 jam lalu", tone: "teal" },
+  { id: "A7", actor: "Hendra Wijaya", action: "membuat quotation", target: "QT-2026-052", module: "CRM", time: "5 jam lalu", tone: "navy" },
+  { id: "A8", actor: "System", action: "otomatis mengingatkan servis", target: "EQ-002 Mobile Crane", module: "Equipment", time: "6 jam lalu", tone: "amber" },
+];
+
+/* ====== SMART INSIGHTS ====== */
+
+export const insights = [
+  {
+    id: "I1",
+    tone: "navy" as const,
+    title: "Utilisasi Drydock 92%",
+    desc: "Hampir penuh. 3 slot kompetitif untuk minggu depan - pertimbangkan prioritas proyek dan subkontraktor ekstra.",
+  },
+  {
+    id: "I2",
+    tone: "rose" as const,
+    title: "37 Saldo Awal Belum Dibayar",
+    desc: "Total Rp 14,6 M dari sheet Piutang Excel Agustus 2026. Seluruhnya jatuh tempo 2026-08-31 - perlu penagihan bertingkat.",
+  },
+  {
+    id: "I3",
+    tone: "teal" as const,
+    title: "Margin Naik ke 28,6%",
+    desc: "Tren positif 6 bulan. Kontrol biaya fabrikasi dan efisiensi overtime berperan besar terhadap margin.",
+  },
+  {
+    id: "I4",
+    tone: "violet" as const,
+    title: "Stok Pipa Menipis",
+    desc: "Pipa Schedule 40 6\" di bawah minimum. Disarankan reorder sebelum proyek RP-2026-008 dimulai.",
+  },
+];
+
+/* ====== ATTENDANCE / SDM EXTENSIONS ====== */
+
+
+export const attendanceSeries = [
+  { month: "Sep", tingkat: 96.2 },
+  { month: "Okt", tingkat: 95.8 },
+  { month: "Nov", tingkat: 96.6 },
+  { month: "Des", tingkat: 94.9 },
+  { month: "Jan", tingkat: 95.5 },
+  { month: "Feb", tingkat: 96.8 },
+  { month: "Mar", tingkat: 96.1 },
+  { month: "Apr", tingkat: 97.0 },
+  { month: "Mei", tingkat: 96.4 },
+  { month: "Jun", tingkat: 97.2 },
+  { month: "Jul", tingkat: 96.9 },
+  { month: "Ags", tingkat: 97.4 },
+];
+
+export const employeeTrend = [
+  { month: "Sep", count: 238 },
+  { month: "Okt", count: 245 },
+  { month: "Nov", count: 249 },
+  { month: "Des", count: 244 },
+  { month: "Jan", count: 248 },
+  { month: "Feb", count: 252 },
+  { month: "Mar", count: 250 },
+  { month: "Apr", count: 256 },
+  { month: "Mei", count: 260 },
+  { month: "Jun", count: 264 },
+  { month: "Jul", count: 268 },
+  { month: "Ags", count: 272 },
+];
+
+/* ====== EQUIPMENT HEATMAP (jam per hari, sumbu hari x hari) ====== */
+
+
+export const equipmentHours = [
+  { month: "Sep", jam: 18200 },
+  { month: "Okt", jam: 19400 },
+  { month: "Nov", jam: 18100 },
+  { month: "Des", jam: 20100 },
+  { month: "Jan", jam: 17800 },
+  { month: "Feb", jam: 21300 },
+  { month: "Mar", jam: 19200 },
+  { month: "Apr", jam: 22100 },
+  { month: "Mei", jam: 20800 },
+  { month: "Jun", jam: 23400 },
+  { month: "Jul", jam: 24500 },
+  { month: "Ags", jam: 25200 },
+];
+
+/* ====== INVENTORY MOVEMENT ====== */
+
+export const inventoryMovement = [
+  { id: "M-0901", item: "Pelat Baja AH36 12mm", type: "Pengeluaran", qty: 420, by: "NB-2025-012", date: "2026-08-01", tone: "out" },
+  { id: "M-0902", item: "Cat Epoxy Primer", type: "Penerimaan", qty: 60, by: "PO-2026-116", date: "2026-08-01", tone: "in" },
+  { id: "M-0903", item: "Baut Marine M20", type: "Pengeluaran", qty: 850, by: "RP-2026-003", date: "2026-07-31", tone: "out" },
+  { id: "M-0904", item: "Kabel Listrik Marine 4x50", type: "Pengeluaran", qty: 540, by: "RF-2026-001", date: "2026-07-30", tone: "out" },
+  { id: "M-0905", item: "Winch Wire Rope", type: "Penerimaan", qty: 3, by: "PO-2026-117", date: "2026-07-29", tone: "in" },
+  { id: "M-0906", item: "Anoda Zink", type: "Pengeluaran", qty: 14, by: "RP-2026-005", date: "2026-07-29", tone: "out" },
+  { id: "M-0907", item: "Mesin Bantu (Aux Engine)", type: "Penerimaan", qty: 1, by: "PO-2026-115", date: "2026-07-28", tone: "in" },
+  // RawData REPORT WAREHOUSE 2024 (sheet IN/OUT JAN-DES).
+  { id: "M-SB-IN-001", item: "PLAT 8MM 5x20", itemId: "INV-SB-003", type: "Penerimaan", qty: 6, by: "UD TIGA BERLIAN", date: "2024-01-02", tone: "in", supplier: "UD TIGA BERLIAN", purpose: "TB SYUKUR 75", pic: "SANTI" },
+  { id: "M-SB-OUT-001", item: "HEMPALIN ENAMEL GREEN 40640 @5LTR", itemId: "INV-SB-002", type: "Pengeluaran", qty: 2, by: "TB SYUKUR 72", date: "2024-01-02", tone: "out", purpose: "TB SYUKUR 72", pic: "ABK" },
+];
+
+export const stockTrend = [
+  { month: "Sep", nilai: 148 },
+  { month: "Okt", nilai: 152 },
+  { month: "Nov", nilai: 146 },
+  { month: "Des", nilai: 161 },
+  { month: "Jan", nilai: 155 },
+  { month: "Feb", nilai: 169 },
+  { month: "Mar", nilai: 162 },
+  { month: "Apr", nilai: 174 },
+  { month: "Mei", nilai: 168 },
+  { month: "Jun", nilai: 180 },
+  { month: "Jul", nilai: 176 },
+  { month: "Ags", nilai: 185 },
+];
+
+/* ====== DRYDOCK LOAD ====== */
+
+export const drydockLoad = [
+  { dock: "Drydock 1", kapasitas: 92 },
+  { dock: "Drydock 2", kapasitas: 78 },
+  { dock: "Slipway 1", kapasitas: 64 },
+  { dock: "Berth 1", kapasitas: 88 },
+];
+
+/* ====== SUBCONTRACTOR EVALUATION ====== */
+
+
+/* ====== QC ITP / NCR STATS ====== */
+
+
+export const inspectionTrend = [
+  { month: "Sep", inspeksi: 142, lulus: 138 },
+  { month: "Okt", inspeksi: 150, lulus: 145 },
+  { month: "Nov", inspeksi: 146, lulus: 142 },
+  { month: "Des", inspeksi: 158, lulus: 152 },
+  { month: "Jan", inspeksi: 151, lulus: 147 },
+  { month: "Feb", inspeksi: 165, lulus: 160 },
+  { month: "Mar", inspeksi: 154, lulus: 150 },
+  { month: "Apr", inspeksi: 172, lulus: 166 },
+  { month: "Mei", inspeksi: 168, lulus: 163 },
+  { month: "Jun", inspeksi: 180, lulus: 175 },
+  { month: "Jul", inspeksi: 185, lulus: 179 },
+  { month: "Ags", inspeksi: 190, lulus: 184 },
+];
+
+/* ====== PROCUREMENT ====== */
+
+export const spendByCategory = [
+  { name: "Baja", value: 38, color: "#0b3a63" },
+  { name: "Mesin", value: 26, color: "#2e9ad4" },
+  { name: "Cat & Coating", value: 14, color: "#f59e0b" },
+  { name: "Listrik", value: 12, color: "#8b5cf6" },
+  { name: "Lainnya", value: 10, color: "#22c55e" },
+];
+
+export const procurementTrend = [
+  { month: "Sep", pengadaan: 28, pengeluaran: 9.8 },
+  { month: "Okt", pengadaan: 30, pengeluaran: 10.4 },
+  { month: "Nov", pengadaan: 26, pengeluaran: 8.9 },
+  { month: "Des", pengadaan: 33, pengeluaran: 11.5 },
+  { month: "Jan", pengadaan: 29, pengeluaran: 10.1 },
+  { month: "Feb", pengadaan: 34, pengeluaran: 12.0 },
+  { month: "Mar", pengadaan: 28, pengeluaran: 9.6 },
+  { month: "Apr", pengadaan: 36, pengeluaran: 12.8 },
+  { month: "Mei", pengadaan: 33, pengeluaran: 11.7 },
+  { month: "Jun", pengadaan: 38, pengeluaran: 13.4 },
+  { month: "Jul", pengadaan: 37, pengeluaran: 13.1 },
+  { month: "Ags", pengadaan: 40, pengeluaran: 14.2 },
+];
+
+/* ====== CRM FUNNEL ====== */
+
+
+
+/* ====== PAYABLES / AGING ====== */
+
+
+/* ====== P&L ====== */
+
+
+/* ====== VESSEL ADD-ONS ====== */
+
+export const surveyTimeline = [
+  { id: "S-01", vessel: "TB Karya Bahari 12", type: "Special Survey", status: "Terjadwal", date: "2026-08-25", classSurveyor: "BKI", linkedTrial: "TRIAL-001" },
+  { id: "S-02", vessel: "TB Samudra Jaya 04", type: "Annual Survey", status: "Dalam Proses", date: "2026-08-10", classSurveyor: "BKI" },
+  { id: "S-03", vessel: "TB Mitra Raya 09", type: "Docking Survey", status: "Selesai", date: "2026-07-30", classSurveyor: "BKI" },
+];
+
+
+export interface BoQItem {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+  category: string;
+  /* "Rejected" WAJIB ada di tipe: UI menulis & membacanya (STATUS_FLOW, filter,
+     badge). Sebelumnya tidak ada sehingga BoQSection harus cast paksa dan
+     TypeScript thinks perbandingan "Rejected" tidak mungkin terjadi. */
+  status: "Draft" | "Pending" | "Approved" | "Rejected" | "Completed";
+  requestedBy?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export const boqByProject: Record<string, BoQItem[]> = {
+  "RP-2026-003": [
+    { id: "BQ-001", projectId: "RP-2026-003", name: "Overhaul Main Engine", description: "Overhaul & replacement main engine bearing", quantity: 1, unit: "set", unitPrice: 480000000, totalPrice: 480000000, category: "Mechanical", status: "Pending", requestedBy: "Rudi Hartono" },
+    { id: "BQ-002", projectId: "RP-2026-003", name: "Coating Lambung", description: "Epoxy coating hull exterior", quantity: 120, unit: "mÂ²", unitPrice: 850000, totalPrice: 102000000, category: "Paint", status: "Approved", requestedBy: "Sari Wulandari", approvedBy: "Andi Darman", approvedAt: "2026-07-20" },
+    { id: "BQ-003", projectId: "RP-2026-003", name: "Inspection Docking", description: "Survey & inspection during drydock", quantity: 1, unit: "service", unitPrice: 150000000, totalPrice: 150000000, category: "Survey", status: "Completed", requestedBy: "Rudi Hartono", approvedBy: "Budi Santoso", approvedAt: "2026-07-05" },
+  ],
+  "NB-2025-012": [
+    { id: "BQ-004", projectId: "NB-2025-012", name: "Fabrikasi Baja Section 4-7", description: "Steel fabrication for hull section", quantity: 45, unit: "ton", unitPrice: 12000000, totalPrice: 540000000, category: "Fabrikasi", status: "Approved", requestedBy: "Hendra Wijaya", approvedBy: "Andi Darman", approvedAt: "2025-11-01" },
+    { id: "BQ-005", projectId: "NB-2025-012", name: "Mesin & Kelistrikan", description: "Aux engine & electrical installation", quantity: 1, unit: "package", unitPrice: 850000000, totalPrice: 850000000, category: "Mechanical", status: "Pending", requestedBy: "Budi Santoso" },
+  ],
+  "RP-2026-005": [
+    { id: "BQ-006", projectId: "RP-2026-005", name: "Bearing Overhaul", description: "Replace bearing on main propulsion", quantity: 4, unit: "pcs", unitPrice: 80000000, totalPrice: 320000000, category: "Mechanical", status: "Pending", requestedBy: "Fajar Nugroho" },
+  ],
+};
+
+export const seedBoq: BoQItem[] = [
+  ...(boqByProject["RP-2026-003"] ?? []),
+  ...(boqByProject["NB-2025-012"] ?? []),
+  ...(boqByProject["RP-2026-005"] ?? []),
+];
+
+/* ====== Deret tren per modul - 1 deret per kartu KPI (12 titik, Sep-Ags) ====== */
+
+const M12 = ["Sep", "Okt", "Nov", "Des", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags"];
+const mk = (vs: number[]) => M12.map((name, i) => ({ name, v: vs[i] ?? vs[vs.length - 1] }));
+
+export const activeProjectTrend = mk([6, 7, 6, 8, 7, 8, 6, 9, 8, 10, 10, 11]);
+export const contractValueTrend = mk([98, 104, 101, 112, 108, 115, 110, 121, 118, 126, 131, 138]);
+export const avgProgressTrend = mk([38, 40, 41, 43, 44, 47, 49, 52, 55, 58, 61, 63]);
+export const itemTrend = mk([142, 145, 148, 152, 155, 159, 162, 166, 170, 174, 178, 182]);
+export const lowStockTrend = mk([9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3]);
+export const warehouseTrend = mk([4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8]);
+export const stockValueTrend = stockTrend.map((d) => ({ name: d.month, v: d.nilai }));
+export const subActiveTrend = mk([9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15]);
+export const subContractTrend = mk([18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
+export const woTrend = mk([3, 4, 3, 5, 4, 5, 6, 5, 6, 7, 6, 7]);
+export const ratingTrend = mk([82, 83, 83, 84, 84, 85, 85, 86, 86, 87, 87, 88]);
+export const equipTotalTrend = mk([22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28]);
+export const maintTrend = mk([4, 3, 4, 3, 3, 2, 3, 2, 2, 2, 1, 2]);
+export const serviceDueTrend = mk([5, 4, 5, 4, 3, 4, 3, 3, 2, 3, 2, 2]);
+export const certExpireTrend = mk([12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 7]);
+export const certifiedTrend = mk([74, 75, 75, 76, 77, 78, 78, 79, 80, 81, 81, 82]);
+export const ncrTrend = mk([7, 6, 7, 6, 5, 5, 4, 4, 4, 3, 3, 3]);
+export const incidentTrend = mk([4, 3, 4, 3, 3, 2, 3, 2, 2, 2, 1, 2]);
+export const hseTrend = mk([86, 87, 87, 88, 88, 89, 89, 90, 90, 91, 91, 92]);
+export const dockUtilTrend = utilSeries.map((d) => ({ name: d.month, v: d.drydock }));
+export const slotTrend = mk([3, 3, 4, 4, 4, 5, 4, 5, 5, 6, 5, 5]);
+export const fleetTrend = mk([18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24]);
+export const dockingTrend = mk([2, 2, 3, 2, 3, 3, 2, 3, 3, 4, 3, 3]);
+export const buildTrend = mk([4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8]);
+export const certTrend = mk([6, 5, 6, 5, 5, 4, 4, 4, 3, 3, 3, 2]);
+export const clientTrend = mk([28, 29, 30, 31, 31, 32, 33, 33, 34, 35, 35, 36]);
+export const pipelineTrend = mk([42, 45, 44, 48, 47, 51, 49, 53, 55, 58, 60, 61]);
+export const winRateTrend = mk([58, 60, 59, 62, 61, 63, 64, 65, 64, 66, 67, 68]);
+export const wonTrend = mk([28, 30, 29, 33, 32, 36, 34, 38, 40, 43, 46, 49]);
+export const activeEmployeeTrend = mk([232, 238, 242, 238, 242, 246, 244, 250, 254, 258, 262, 266]);
+
+

@@ -1,0 +1,14 @@
+{
+  "name": "isms-galangan",
+  "private": true,
+  "description": "Integrated Shipyard Management System — monorepo (apps/web, services/api)",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "setup": "npm ci --prefix services/api && npm ci --prefix apps/web && node -e \"const fs=require('fs');for(const d of ['services/api','apps/web']){const e=d+'/.env',x=d+'/.env.example';if(!fs.existsSync(e)&&fs.existsSync(x)){fs.copyFileSync(x,e);console.log('created '+e)}}\"",
+    "check": "npm run check --prefix apps/web && npm run check --prefix services/api",
+    "check:web": "npm run check --prefix apps/web",
+    "check:api": "npm run check --prefix services/api",
+    "dev:api": "npm run dev --prefix services/api",
+    "dev:web": "npm run dev --prefix apps/web"
+  }
+}

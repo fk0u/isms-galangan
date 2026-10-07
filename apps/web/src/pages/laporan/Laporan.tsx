@@ -1,0 +1,797 @@
+import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { Link } from "react-router-dom";
+import { useDraftState } from "../../utils/draft";
+import { FileText } from "lucide-react";
+import { Card, CardHeader, PageHeader, StatusBadge, Badge, KpiCard, EmptyState, ProgressBar, Donut, toast, AsyncButton, rowMatches } from "../../components/ui";
+import { useStore } from "../../data/store";
+import type { StoreItem, CollectionKey } from "../../data/store";
+import { useModuleSync, useProjectWbsSync } from "../../data/useModuleSync";
+import { fmtTanggal, fmtRupiah, fmtMiliar, fmtJumlah, fmtBulan, todayISO } from "../../utils/format";
+import { SB_KOP } from "../../utils/sb";
+import { getSetting } from "../../utils/settings";
+import { equipmentCostSummary } from "../../utils/projectCost";
+import { useT } from "../../i18n/LanguageContext";
+import { n_misc } from "../../i18n/n_misc";
+import { exportExcelSheets } from "../../utils/export";
+import { pdfServerReady } from "../../services/pdfClient";
+import { usePdfDoc } from "../../components/usePdfDoc";
+
+type Mode = "Mingguan" | "Bulanan" | "Per Proyek";
+
+const num = (v: unknown): number => Number(v) || 0;
+const inRange = (d: string, a: string, b: string): boolean => d >= a && d <= b;
+
+/* Gap data tampil jujur "—": JANGAN angka palsu (cth 0%/Rp 0) saat sumber kosong. */
+const dashIf = (has: boolean, text: string): string => (has ? text : "—");
+
+/* Fallback jujur saat modul sumber kosong: sebut modul + link isi data. */
+function EmptyModul({ modul, to, label }: { modul: string; to: string; label: string }) {
+  return (
+    <p className="text-xs text-steel-400">
+      Belum ada data di modul {modul} — isi dulu di{" "}
+      <Link to={to} className="font-semibold text-ocean-600 hover:underline">{label}</Link>
+    </p>
+  );
+}
+
+/* Modul yang dicek arsip laporan — tampil di header arsip agar jujur. */
+const MODUL_DICEK: { modul: string; to: string; label: string }[] = [
+  { modul: "Proyek", to: "/proyek", label: "Proyek" },
+  { modul: "Inventori", to: "/inventori", label: "Inventori" },
+  { modul: "QC & Safety", to: "/qc-safety", label: "QC & Safety" },
+  { modul: "Keuangan", to: "/keuangan", label: "Keuangan" },
+  { modul: "Procurement", to: "/procurement", label: "Procurement" },
+  { modul: "SDM & Payroll", to: "/sdm", label: "SDM" },
+];
+
+/* Hindari section cetak terpotong / blank di tengah halaman PDF. */
+const printAvoid: CSSProperties = { breakInside: "avoid", pageBreakInside: "avoid" };
+
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function mondayOf(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  return toISODate(d);
+}
+
+function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return toISODate(d);
+}
+
+function shiftMonth(ym: string, delta: number): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym);
+  if (!m) return ym;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+interface ReportTpl { name: string; mode: Mode; weekStart: string; month: string; projectId: string }
+interface ReportArc { name: string; at: string; mode: Mode; info: string }
+
+function loadTpls(): ReportTpl[] {
+  try {
+    const raw = localStorage.getItem("isms.reportTpl");
+    const arr = raw ? JSON.parse(raw) as ReportTpl[] : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function loadArc(): ReportArc[] {
+  try {
+    const raw = localStorage.getItem("isms.reportArc");
+    const arr = raw ? JSON.parse(raw) as ReportArc[] : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+/* Batch koleksi modul Laporan untuk useModuleSync (pengganti resync penuh).
+   `equipment`, `bookings`, `maintenances`, `payables` ditambahkan supaya
+   kartu biaya equipment per proyek benar-benar terisi di mode remote. */
+const LAP_COLS: CollectionKey[] = ["activities", "attendance", "boq", "branches", "equipment", "bookings", "maintenances", "incidents", "invoices", "ncr", "payables", "payroll", "projects", "purchaseOrders", "taxPeriods"];
+
+export default function Laporan() {
+
+  const { data, branch, inBranch, wbsFor, log } = useStore();
+  const pdfDoc = usePdfDoc();
+  /* Fetch per-batch modul (pengganti resync penuh). */
+  useModuleSync(LAP_COLS);
+  const { locale } = useT();
+  const S = n_misc[locale];
+  const [mode, setMode] = useState<Mode>("Mingguan");
+  const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
+  const [month, setMonth] = useState(() => todayISO().slice(0, 7));
+  const [projectId, setProjectId] = useState("");
+  const [tplName, setTplName] = useState("");
+  const [tpls, setTpls] = useState<ReportTpl[]>(() => loadTpls());
+  const [sigName, setSigName] = useDraftState("isms.draft.laporan.sigName", "");
+  const [sigRole, setSigRole] = useDraftState("isms.draft.laporan.sigRole", "");
+  const [sigDate, setSigDate] = useDraftState("isms.draft.laporan.sigDate", todayISO());
+  const [arc, setArc] = useState<ReportArc[]>(() => loadArc());
+  // Filter cabang lokal untuk seksi PO/absensi/insiden/payroll (Semua + daftar cabang).
+  const [brF, setBrF] = useState("SEMUA");
+  const [weekProjQ, setWeekProjQ] = useState("");
+  const [weekFindQ, setWeekFindQ] = useState("");
+  const [projNcrQ, setProjNcrQ] = useState("");
+  const branchCities = useMemo(() => (data.branches ?? []).map((b) => String(b.city ?? b.name ?? b.id)), [data.branches]);
+  const matchBr = (r: StoreItem): boolean =>
+    brF === "SEMUA" || !r.branch || String(r.branch) === brF;
+
+  const projectById: Record<string, boolean> = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    for (const p of inBranch(data.projects ?? [])) m[String(p.id)] = true;
+    return m;
+  }, [data.projects, branch]);
+
+  const matchProject = (pid: string): boolean => {
+    if (branch === "SEMUA") return true;
+    if (!pid) return true;
+    return !!projectById[pid];
+  };
+
+  const week0 = mondayOf(weekStart || todayISO());
+  const week1 = addDays(week0, 6);
+
+  const weekly = useMemo(() => {
+    const projects = inBranch(data.projects ?? []).filter((p) => p.status !== "Selesai");
+    const avgProgress = projects.length > 0 ? projects.reduce((s, p) => s + num(p.progress), 0) / projects.length : 0;
+    const invTerbit = (data.invoices ?? []).filter((i) => inRange(String(i.due ?? ""), week0, week1) && matchProject(String(i.project ?? "")));
+    const invLunas = (data.invoices ?? []).filter((i) => i.status === "Lunas" && inRange(String(i.paidAt ?? i.due ?? ""), week0, week1) && matchProject(String(i.project ?? "")));
+    const po = (data.purchaseOrders ?? []).filter((p) => inRange(String(p.date ?? ""), week0, week1) && matchBr(p));
+    const apLunas = (data.payables ?? []).filter((a) => a.st === "Lunas" && inRange(String(a.paidAt ?? a.due ?? ""), week0, week1));
+    const payPaid = (data.payroll ?? []).filter((p) => p.status === "Dibayar" && inRange(String(p.paidAt ?? ""), week0, week1) && matchBr(p));
+    const ncr = (data.ncr ?? []).filter((n) => inRange(String(n.raised ?? ""), week0, week1) && matchProject(String(n.project ?? "")));
+    const att = (data.attendance ?? []).filter((a) => inRange(String(a.date ?? ""), week0, week1) && matchBr(a));
+    const hadir = att.filter((a) => a.status === "Hadir").length;
+    const hadirPct = att.length > 0 ? (hadir / att.length) * 100 : 0;
+    const incidents = (data.incidents ?? []).filter((x) => inRange(String(x.date ?? ""), week0, week1) && matchBr(x));
+    return {
+      projects, avgProgress,
+      invTerbit, invTerbitVal: invTerbit.reduce((s, i) => s + num(i.amount), 0),
+      invLunas, invLunasVal: invLunas.reduce((s, i) => s + num(i.amount), 0),
+      po, poVal: po.reduce((s, p) => s + num(p.amount), 0),
+      apLunas, apLunasVal: apLunas.reduce((s, a) => s + num(a.amt), 0),
+      payPaid, payrollPaidVal: payPaid.reduce((s, p) => s + (num(p.net) || num(p.basic) + num(p.allowances) + num(p.overtimePay) - num(p.deductions)), 0),
+      ncr, att, hadir, hadirPct, incidents,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, week0, week1, branch, brF]);
+
+  const monthly = useMemo(() => {
+    const inv = (data.invoices ?? []).filter((i) => String(i.due ?? "").slice(0, 7) === month && matchProject(String(i.project ?? "")));
+    const invLunas = (data.invoices ?? []).filter((i) => i.status === "Lunas" && String(i.paidAt ?? i.due ?? "").slice(0, 7) === month && matchProject(String(i.project ?? "")));
+    const apLunas = (data.payables ?? []).filter((a) => a.st === "Lunas" && String(a.paidAt ?? a.due ?? "").slice(0, 7) === month);
+    const payRows = (data.payroll ?? []).filter((p) => p.status === "Dibayar" && String(p.period ?? "") === month && matchBr(p));
+    const revenue = invLunas.reduce((s, i) => s + num(i.amount), 0);
+    const apCost = apLunas.reduce((s, a) => s + num(a.amt), 0);
+    const payrollTotal = payRows.reduce((s, p) => s + (num(p.net) || num(p.basic) + num(p.allowances) + num(p.overtimePay) - num(p.deductions)), 0);
+    const cost = apCost + payrollTotal;
+    const laba = revenue - cost;
+    const ppnRate = getSetting(data, "PPN_RATE", 12) / 100;
+    const pphRate = getSetting(data, "PPH23_RATE", 2) / 100;
+    /* PPN keluaran: pakai ppnAmt yang tersimpan di invoice, bukan dihitung
+       ulang dari total. Rumus invoice sudah PPN = 12% x (total x 11/12),
+       jadi nilainya efektif 11% dari total. Menghitung total x 12% lewat
+       hidup membuat PPN keluaran ~9% lebih besar dari yang tercatat di
+       faktur. Fallback kept untuk invoice lawas tanpa ppnAmt. */
+    const ppnTersimpan = invLunas.reduce((s, i) => s + num(i.ppnAmt), 0);
+    const ppnKeluar = ppnTersimpan > 0 ? Math.round(ppnTersimpan) : Math.round(revenue * ppnRate);
+    const ppnKeluarEstimasi = ppnTersimpan <= 0;
+    /* PPN masukan tidak bisa dihitung akurat: payable tidak menyimpan
+       rincian PPN, hanya nilai nett dan PPh. Angka ini tetap estimasi. */
+    const ppnMasuk = Math.round(apLunas.reduce((s, a) => s + num(a.amt), 0) * ppnRate);
+    const pph23 = Math.round(apLunas.reduce((s, a) => s + num(a.amt), 0) * pphRate);
+    const pph21 = payRows.reduce((s, p) => s + num(p.pph21), 0);
+    const taxRow = (data.taxPeriods ?? []).find((t) => String(t.period) === month);
+    return { inv, invLunas, revenue, apLunas, payRows, payrollTotal, cost, laba, ppnKeluar, ppnMasuk, pph23, pph21, taxRow, ppnRate, ppnKeluarEstimasi, ppnMasukEstimasi: true };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, month, branch, brF]);
+
+  const projectsVisible = useMemo(() => inBranch(data.projects ?? []), [data.projects, branch]);
+  const activeProjectId = projectId || projectsVisible[0]?.id || "";
+  const project = projectsVisible.find((p) => p.id === activeProjectId);
+  /* WBS: `wbsByProject` bukan koleksi array sehingga TIDAK bisa ikut
+     useModuleSync (lihat utils/useModuleSync.ts useProjectWbsSync).
+     Sebelum hook ini, kartu "WBS Teratas" + sheet Excel-nya hanya membaca
+     cache lokal - di mode remote selalu basi atau kosong untuk proyek yang
+     belum pernah dibuka halaman detail. */
+  const { syncing: wbsSyncing, byProject: wbsById } = useProjectWbsSync(
+    activeProjectId !== "" ? [activeProjectId] : [],
+  );
+  const wbsTop = project
+    ? (wbsById[project.id] ?? wbsFor(project.id)).slice(0, 5)
+    : [];
+  const boqRows = (data.boq ?? []).filter((b) => String(b.projectId ?? b.project ?? "") === activeProjectId);
+  const boqTotal = boqRows.reduce((s, b) => s + (num(b.totalPrice) || num(b.quantity) * num(b.unitPrice)), 0);
+  const projInvoices = (data.invoices ?? []).filter((i) => String(i.project) === activeProjectId);
+  const projInvTotal = projInvoices.reduce((s, i) => s + num(i.amount), 0);
+  const projNcr = (data.ncr ?? []).filter((n) => String(n.project) === activeProjectId);
+  /* Biaya equipment proyek ini (sewa alokasi + material maintenance).
+     Sumber angka sama dengan ProjectDetail & modul Equipment. */
+  const equipCost = equipmentCostSummary(
+    activeProjectId,
+    inBranch(data.bookings ?? []),
+    inBranch(data.maintenances ?? []),
+    data.equipment ?? [],
+  );
+  const projActivities = (data.activities ?? []).filter((a) => String(a.target ?? "").includes(activeProjectId)).slice(0, 5);
+
+  const prevMonth = shiftMonth(month, -1);
+  const monthlyPrev = useMemo(() => {
+    const invLunas = (data.invoices ?? []).filter((i) => i.status === "Lunas" && String(i.paidAt ?? i.due ?? "").slice(0, 7) === prevMonth && matchProject(String(i.project ?? "")));
+    const apLunas = (data.payables ?? []).filter((a) => a.st === "Lunas" && String(a.paidAt ?? a.due ?? "").slice(0, 7) === prevMonth);
+    const payRows = (data.payroll ?? []).filter((p) => p.status === "Dibayar" && String(p.period ?? "") === prevMonth && matchBr(p));
+    const revenue = invLunas.reduce((s, i) => s + num(i.amount), 0);
+    const cost = apLunas.reduce((s, a) => s + num(a.amt), 0) + payRows.reduce((s, p) => s + (num(p.net) || num(p.basic) + num(p.allowances) + num(p.overtimePay) - num(p.deductions)), 0);
+    return { revenue, cost, laba: revenue - cost };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, prevMonth, branch, brF]);
+
+  const weekPrev0 = addDays(week0, -7);
+  const weekPrev1 = addDays(week0, -1);
+  const weeklyPrev = useMemo(() => {
+    const invLunas = (data.invoices ?? []).filter((i) => i.status === "Lunas" && inRange(String(i.paidAt ?? i.due ?? ""), weekPrev0, weekPrev1) && matchProject(String(i.project ?? "")));
+    const apLunas = (data.payables ?? []).filter((a) => a.st === "Lunas" && inRange(String(a.paidAt ?? a.due ?? ""), weekPrev0, weekPrev1));
+    const payPaid = (data.payroll ?? []).filter((p) => p.status === "Dibayar" && inRange(String(p.paidAt ?? ""), weekPrev0, weekPrev1) && matchBr(p));
+    const revenue = invLunas.reduce((s, i) => s + num(i.amount), 0);
+    const cost = apLunas.reduce((s, a) => s + num(a.amt), 0) + payPaid.reduce((s, p) => s + (num(p.net) || num(p.basic) + num(p.allowances) + num(p.overtimePay) - num(p.deductions)), 0);
+    return { revenue, cost, laba: revenue - cost };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, weekPrev0, weekPrev1, branch, brF]);
+  const weeklyRev = weekly.invLunasVal;
+  const weeklyCost = weekly.apLunasVal + weekly.payrollPaidVal;
+  const weeklyLaba = weeklyRev - weeklyCost;
+
+  const sigRows = (): unknown[][] => (
+    sigName.trim() ? [[""], ["Disahkan oleh", `${sigName.trim()} · ${sigRole.trim() || "-"} · ${fmtTanggal(sigDate)}`]] : []
+  );
+
+  const pushArc = (name: string, info: string, m: Mode) => {
+    const entry: ReportArc = { name, at: todayISO(), mode: m, info };
+    const next = [entry, ...arc].slice(0, 10);
+    setArc(next);
+    try { localStorage.setItem("isms.reportArc", JSON.stringify(next)); } catch { /* abaikan */ }
+    log(`mengekspor laporan ${name}`, info, "Laporan");
+  };
+
+  const saveTpl = () => {
+    if (!tplName.trim()) { toast(S.tTemplateNameRequired, "info"); return; }
+    const tpl: ReportTpl = { name: tplName.trim(), mode, weekStart: week0, month, projectId: activeProjectId };
+    const next = [tpl, ...tpls.filter((t) => t.name !== tpl.name)].slice(0, 20);
+    setTpls(next);
+    try { localStorage.setItem("isms.reportTpl", JSON.stringify(next)); } catch { /* abaikan */ }
+    log("menyimpan template laporan", `${tpl.name} · ${tpl.mode}`, "Laporan");
+    toast(S.tTemplateSaved.replace("{n}", tpl.name));
+    setTplName("");
+  };
+
+  const applyTpl = (t: ReportTpl) => {
+    setMode(t.mode);
+    setWeekStart(t.weekStart);
+    setMonth(t.month);
+    setProjectId(t.projectId);
+    log("menerapkan template laporan", `${t.name} · ${t.mode}`, "Laporan");
+    toast(S.tTemplateUsed.replace("{n}", t.name));
+  };
+
+  const delTpl = (name: string) => {
+    const next = tpls.filter((t) => t.name !== name);
+    setTpls(next);
+    try { localStorage.setItem("isms.reportTpl", JSON.stringify(next)); } catch { /* abaikan */ }
+    log("menghapus template laporan", name, "Laporan");
+    toast(S.tTemplateDeleted.replace("{n}", name), "info");
+  };
+
+  const exportWeek = async () => {
+    const ringkas: unknown[][] = [
+      ["Indikator", "Nilai"],
+      ["Periode", `${fmtTanggal(week0)} - ${fmtTanggal(week1)}`],
+      ["Proyek aktif", fmtJumlah(weekly.projects.length)],
+      ["Rata-rata progres (%)", Math.round(weekly.avgProgress)],
+      ["Invoice terbit", `${fmtJumlah(weekly.invTerbit.length)} · ${fmtRupiah(weekly.invTerbitVal)}`],
+      ["Invoice lunas", `${fmtJumlah(weekly.invLunas.length)} · ${fmtRupiah(weekly.invLunasVal)}`],
+      ["PO terbit", `${fmtJumlah(weekly.po.length)} · ${fmtRupiah(weekly.poVal)}`],
+      ["NCR baru", fmtJumlah(weekly.ncr.length)],
+      ["Kehadiran", `${fmtJumlah(weekly.hadir)}/${fmtJumlah(weekly.att.length)} (${Math.round(weekly.hadirPct)}%)`],
+      ["Insiden", fmtJumlah(weekly.incidents.length)],
+      ["Pembanding minggu lalu (lunas / AP Lunas+payroll / laba)", `${fmtRupiah(weeklyPrev.revenue)} / ${fmtRupiah(weeklyPrev.cost)} / ${fmtRupiah(weeklyPrev.laba)}`],
+      ...sigRows(),
+    ];
+    /* Gabung terbit+lunas tanpa dobel baris untuk sheet rincian. */
+    const invMap = new Map<string, StoreItem>();
+    [...weekly.invTerbit, ...weekly.invLunas].forEach((i) => { invMap.set(String(i.id), i); });
+    await exportExcelSheets([
+      { name: "Ringkasan", rows: ringkas },
+      { name: "Proyek", rows: [["ID", "Kapal", "Klien", "Progres %"], ...weekly.projects.map((p) => [p.id, p.vessel, p.client, Math.round(num(p.progress))])] },
+      { name: "Invoice", rows: [["ID", "Proyek", "Jumlah (Rp)", "Status", "Jatuh tempo"], ...[...invMap.values()].map((i) => [i.id, i.project, num(i.amount), i.status, i.due])] },
+      { name: "PO", rows: [["ID", "Item", "Vendor", "Jumlah (Rp)", "Tanggal"], ...weekly.po.map((p) => [p.id, p.item, p.vendor, num(p.amount), p.date])] },
+      { name: "NCR", rows: [["ID", "Proyek", "Status", "Tanggal"], ...weekly.ncr.map((n) => [n.id, n.project, n.status, n.raised])] },
+      { name: "Insiden", rows: [["ID", "Deskripsi", "Tanggal"], ...weekly.incidents.map((x) => [x.id, String(x.desc ?? x.type ?? ""), x.date])] },
+    ], `Laporan-Mingguan-${week0}`);
+    pushArc(`Laporan-Mingguan-${week0}`, `${fmtTanggal(week0)} - ${fmtTanggal(week1)}`, "Mingguan");
+    toast(S.tExcelWeekDownloaded);
+  };
+
+  const exportMonth = async () => {
+    const ringkas: unknown[][] = [
+      ["Indikator", "Nilai"],
+      ["Periode", month],
+      ["Invoice terbit", `${fmtJumlah(monthly.inv.length)}`],
+      ["Pendapatan (Lunas)", monthly.revenue],
+      ["Biaya (AP + payroll)", monthly.cost],
+      ["Laba", monthly.laba],
+      ["Payroll total", monthly.payrollTotal],
+      /* Label tidak lagi hardcode "11%": invoice memakai 12% x DPP dengan
+         DPP = total x 11/12 (efektif 11%), dan setting PPN_RATE bisa diubah -
+         label lama jadi berbohong begitu rate diganti. */
+      [`PPN Keluaran${monthly.ppnKeluarEstimasi ? ` (estimasi ${Math.round(monthly.ppnRate * 100)}%)` : " (dari faktur)"}`, monthly.ppnKeluar],
+      [`PPN Masukan (estimasi ${Math.round(monthly.ppnRate * 100)}%)`, monthly.ppnMasuk],
+      ["PPh 23 2%", monthly.pph23],
+      ["PPh 21", monthly.pph21],
+      ["Bulan lalu (revenue / cost / laba)", `${fmtRupiah(monthlyPrev.revenue)} / ${fmtRupiah(monthlyPrev.cost)} / ${fmtRupiah(monthlyPrev.laba)}`],
+      ...sigRows(),
+    ];
+    const netPay = (p: StoreItem): number => num(p.net) || num(p.basic) + num(p.allowances) + num(p.overtimePay) - num(p.deductions);
+    await exportExcelSheets([
+      { name: "Ringkasan", rows: ringkas },
+      { name: "Invoice", rows: [["ID", "Proyek", "Jumlah (Rp)", "Status", "Jatuh tempo"], ...monthly.inv.map((i) => [i.id, i.project, num(i.amount), i.status, i.due])] },
+      { name: "Invoice Lunas", rows: [["ID", "Proyek", "Jumlah (Rp)", "Dibayar"], ...monthly.invLunas.map((i) => [i.id, i.project, num(i.amount), i.paidAt ?? i.due])] },
+      { name: "AP Lunas", rows: [["ID", "Jumlah (Rp)", "Dibayar"], ...monthly.apLunas.map((a) => [a.id, num(a.amt), a.paidAt ?? a.due])] },
+      { name: "Payroll", rows: [["ID", "Periode", "Bersih (Rp)", "Status"], ...monthly.payRows.map((p) => [p.id, p.period, netPay(p), p.status])] },
+    ], `Laporan-Bulanan-${month}`);
+    pushArc(`Laporan-Bulanan-${month}`, month, "Bulanan");
+    toast(S.tExcelMonthDownloaded);
+  };
+
+  const exportProject = async () => {
+    if (!project) { toast(S.tPickProjectFirst, "info"); return; }
+    const ringkas: unknown[][] = [
+      ["Indikator", "Nilai"],
+      ["Proyek", `${project.id} · ${String(project.vessel ?? "")}`],
+      ["Budget", num(project.budget)],
+      ["Aktual", num(project.actual)],
+      ["Progres", `${num(project.progress)}%`],
+      ["BoQ total", boqTotal],
+      ["Invoice", `${fmtJumlah(projInvoices.length)} · ${fmtRupiah(projInvTotal)}`],
+      ["NCR", fmtJumlah(projNcr.length)],
+      ...sigRows(),
+    ];
+    await exportExcelSheets([
+      { name: "Ringkasan", rows: ringkas },
+      { name: "WBS Teratas", rows: [["Tugas", "Progres %"], ...wbsTop.map((w) => [w.task, num(w.progress)])] },
+      { name: "BoQ", rows: [["ID", "Item", "Qty", "Satuan", "Harga Satuan (Rp)", "Total (Rp)", "Status"], ...boqRows.map((b) => [b.id, b.name, num(b.quantity), b.unit, num(b.unitPrice), num(b.totalPrice) || num(b.quantity) * num(b.unitPrice), b.status])] },
+      { name: "Invoice", rows: [["ID", "Jumlah (Rp)", "Status", "Jatuh tempo"], ...projInvoices.map((i) => [i.id, num(i.amount), i.status, i.due])] },
+      { name: "NCR", rows: [["ID", "Tingkat", "Status", "Tanggal"], ...projNcr.map((n) => [n.id, n.severity ?? n.type, n.status, n.raised])] },
+    ], `Laporan-${project.id}`);
+    pushArc(`Laporan-${project.id}`, String(project.vessel ?? ""), "Per Proyek");
+    toast(S.tExcelProjectDownloaded);
+  };
+
+  const pdfName = mode === "Mingguan" ? `Laporan-Mingguan-${week0}` : mode === "Bulanan" ? `Laporan-Bulanan-${month}` : `Laporan-${activeProjectId}`;
+  /* Laporan kas (mingguan/bulanan) dan laporan proyek dirakit server dari baris
+     DB-nya sendiri. Versi lama memotret `#laporan-konten` dengan html2canvas,
+     sehingga angka di PDF bisa berbeda dari pembukuan dan grafiknya jadi gambar.
+     Filter yang dikirim hanya memilih periode/proyek - angkanya dihitung server,
+     jadi laporan yang diarsipkan tidak bisa berbeda dari pembukuan. */
+  const exportPDFLogged = async () => {
+    if (!pdfServerReady()) {
+      toast("Ekspor PDF gagal", "info");
+      return;
+    }
+    const isProject = mode === "Per Proyek";
+    if (isProject && !activeProjectId) {
+      toast("Ekspor PDF gagal", "info");
+      return;
+    }
+    const done = await pdfDoc.request(
+      {
+        kind: isProject ? "laporanProyek" : "laporan",
+        id: isProject ? activeProjectId : undefined,
+        locale,
+        branch,
+        filters: {
+          mode,
+          period: mode === "Bulanan" ? month : week0,
+          projectId: activeProjectId,
+          signatureName: sigName.trim(),
+          signatureRole: sigRole.trim(),
+          signatureDate: sigDate,
+        },
+      },
+      pdfName,
+      false,
+    );
+    if (!done) return;
+    pushArc(pdfName, isProject ? String(project?.vessel ?? "") : mode === "Bulanan" ? month : `${fmtTanggal(week0)} - ${fmtTanggal(week1)}`, mode);
+    toast(S.tPdfArchived);
+  };
+
+  return (
+    <div>
+      <PageHeader
+        title={S.lapTitle}
+        subtitle={S.lapSubtitle}
+        icon={<FileText className="h-5 w-5" />}
+        actions={
+          mode === "Mingguan"
+            ? <><AsyncButton className="btn-secondary" onAction={async () => exportWeek()}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
+            : mode === "Bulanan"
+              ? <><AsyncButton className="btn-secondary" onAction={async () => exportMonth()}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
+              : <><AsyncButton className="btn-secondary" onAction={async () => exportProject()}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
+        }
+      />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-xl bg-steel-100 p-1">
+          {(["Mingguan", "Bulanan", "Per Proyek"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${mode === m ? "bg-white text-navy-900 shadow-soft" : "text-steel-500"}`}
+            >
+              {m === "Mingguan" ? S.modeWeekly : m === "Bulanan" ? S.modeMonthly : S.modePerProject}
+            </button>
+          ))}
+        </div>
+        {mode === "Mingguan" && (
+          <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
+            {S.weekStartsMonday}
+            <input type="date" className="input w-auto" value={week0} onChange={(e) => setWeekStart(e.target.value)} />
+          </label>
+        )}
+        <label className="flex items-center gap-2 text-sm text-steel-600">
+          {S.branchLabel}
+          <select className="input w-auto" value={brF} onChange={(e) => setBrF(e.target.value)} aria-label={S.branchFilterAria}>
+            <option value="SEMUA">{S.allLabel}</option>
+            {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        {mode === "Bulanan" && (
+          <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
+            {S.monthLabel}
+            <input type="month" className="input w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </label>
+        )}
+        {mode === "Per Proyek" && (
+          <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
+            {S.projectLabel}
+            <select className="input w-auto" value={activeProjectId} onChange={(e) => setProjectId(e.target.value)}>
+              {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {String(p.vessel ?? "")}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4">
+          <CardHeader title={S.savedTemplates} subtitle={S.saveModeParams} />
+          <div className="flex flex-wrap gap-2 px-5 pb-2">
+            <input className="input w-48" placeholder={S.templateNamePh} value={tplName} onChange={(e) => setTplName(e.target.value)} />
+            <button className="btn-secondary text-xs" onClick={saveTpl}>{S.saveTemplateBtn}</button>
+          </div>
+          <div className="space-y-1.5 px-5 pb-5 text-sm">
+            {tpls.map((t) => (
+              <div key={t.name} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2">
+                <span className="font-semibold text-navy-900">{t.name}</span>
+                <Badge tone="gray">{t.mode}</Badge>
+                <span className="ml-auto flex gap-1.5">
+                  <button className="btn-secondary px-2 py-1 text-xs" onClick={() => applyTpl(t)}>{S.useBtn}</button>
+                  <button className="btn-secondary px-2 py-1 text-xs" onClick={() => delTpl(t.name)}>{S.deleteBtn}</button>
+                </span>
+              </div>
+            ))}
+            {tpls.length === 0 && <p className="text-xs text-steel-400">{S.noTemplates}</p>}
+          </div>
+        </Card>
+        <Card className="p-4">
+          <CardHeader title={S.signTitle} subtitle={S.signSub} />
+          <div className="grid grid-cols-1 gap-2 px-5 pb-5 sm:grid-cols-3">
+            <label className="text-xs text-steel-600">{S.nameLabel}<input className="input mt-1" value={sigName} onChange={(e) => setSigName(e.target.value)} placeholder={S.sigNamePh} /></label>
+            <label className="text-xs text-steel-600">{S.positionLabel}<input className="input mt-1" value={sigRole} onChange={(e) => setSigRole(e.target.value)} placeholder={S.sigRolePh} /></label>
+            <label className="text-xs text-steel-600">{S.dateLabel}<input type="date" className="input mt-1" value={sigDate} onChange={(e) => setSigDate(e.target.value)} /></label>
+          </div>
+        </Card>
+      </div>
+
+      <div id="laporan-konten">
+        <div style={{ textAlign: "center", borderBottom: "3px solid #0B3A63", paddingBottom: 12, marginBottom: 16, breakInside: "avoid", pageBreakInside: "avoid" }}>
+          <p style={{ fontWeight: 800, fontSize: 18, color: "#0B3A63", margin: 0 }}>{SB_KOP.name}</p>
+          <p style={{ fontSize: 11, color: "#33475B", margin: 0 }}>{SB_KOP.line1}</p>
+          <p style={{ fontSize: 10, color: "#52697C", margin: 0 }}>{SB_KOP.hq} · {SB_KOP.addr1}</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#0B3A63", marginTop: 8 }}>{pdfName}</p>
+        </div>
+        {mode === "Mingguan" && (
+          <div className="space-y-4">
+            <p className="text-sm text-steel-500">{S.weekRangeProjects.replace("{a}", fmtTanggal(week0)).replace("{b}", fmtTanggal(week1)).replace("{n}", fmtJumlah(weekly.projects.length))}</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" style={printAvoid}>
+              <KpiCard label={S.kpiActiveProject} value={dashIf(weekly.projects.length > 0, fmtJumlah(weekly.projects.length))} hint={dashIf(weekly.projects.length > 0, S.avgProgressHint.replace("{n}", String(Math.round(weekly.avgProgress))))} chip="navy" />
+              <KpiCard label={S.kpiInvoiceIssuedPaid} value={dashIf(weekly.invTerbit.length + weekly.invLunas.length > 0, `${fmtJumlah(weekly.invTerbit.length)} / ${fmtJumlah(weekly.invLunas.length)}`)} hint={dashIf(weekly.invTerbit.length + weekly.invLunas.length > 0, fmtRupiah(weekly.invLunasVal))} chip="teal" />
+              <KpiCard label={S.kpiPoIssued} value={dashIf(weekly.po.length > 0, fmtJumlah(weekly.po.length))} hint={dashIf(weekly.po.length > 0, fmtRupiah(weekly.poVal))} chip="amber" />
+              <KpiCard label={S.kpiAttendance} value={dashIf(weekly.att.length > 0, `${Math.round(weekly.hadirPct)}%`)} hint={dashIf(weekly.att.length > 0, S.attendanceHint.replace("{a}", fmtJumlah(weekly.hadir)).replace("{b}", fmtJumlah(weekly.att.length)))} chip="violet" />
+            </div>
+            <div style={printAvoid}>
+            <Card className="p-4">
+              <CardHeader title={S.compareLastWeek} subtitle={`${fmtTanggal(weekPrev0)} → ${fmtTanggal(weekPrev1)}`} />
+              <div className="grid grid-cols-1 gap-2 px-5 pb-5 text-sm sm:grid-cols-3">
+                <div className="flex justify-between"><span className="text-steel-500">{S.paidDelta}</span><span className="font-semibold">{dashIf(weeklyRev > 0 || weeklyPrev.revenue > 0, fmtRupiah(weeklyRev - weeklyPrev.revenue))}</span></div>
+                <div className="flex justify-between"><span className="text-steel-500">{S.poDelta}</span><span className="font-semibold">{dashIf(weeklyCost > 0 || weeklyPrev.cost > 0, fmtRupiah(weeklyCost - weeklyPrev.cost))}</span></div>
+                <div className="flex justify-between"><span className="text-steel-500">{S.profitDelta}</span><span className="font-semibold">{dashIf(weeklyLaba !== 0 || weeklyPrev.laba !== 0, fmtRupiah(weeklyLaba - weeklyPrev.laba))}</span></div>
+              </div>
+              <p className="px-5 pb-5 text-[11px] text-steel-400">Kas: Lunas − (AP Lunas + Payroll Dibayar)</p>
+            </Card>
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div style={printAvoid}>
+              <Card className="p-4">
+                <CardHeader title={S.projectProgress} subtitle={S.activeThisWeek} />
+                <div className="px-5 pb-2"><input className="input" value={weekProjQ} onChange={(e) => setWeekProjQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} /></div>
+                <div className="max-h-64 space-y-3 overflow-y-auto scroll-flush px-5 pb-5 pr-4">
+                  {weekly.projects.filter((p) => rowMatches(p, weekProjQ, ["id", "vessel", "client", "status", "type", "manager"])).map((p) => (
+                    <div key={p.id}>
+                      <div className="flex justify-between text-xs"><span className="font-mono font-semibold text-navy-900">{p.id}</span><span className="text-steel-500">{num(p.progress)}%</span></div>
+                      <ProgressBar value={num(p.progress)} className="mt-1" />
+                    </div>
+                  ))}
+                  {weekly.projects.length === 0 && (
+                    <div className="space-y-2">
+                      <EmptyState title={S.emptyActiveProjects} />
+                      <EmptyModul modul="Proyek" to="/proyek" label="Proyek" />
+                    </div>
+                  )}
+                </div>
+              </Card>
+              </div>
+              <div style={printAvoid}>
+              <Card className="p-4">
+                <CardHeader title={S.ncrPlusIncident} subtitle={S.ncrIncidentCount.replace("{a}", fmtJumlah(weekly.ncr.length)).replace("{b}", fmtJumlah(weekly.incidents.length))} />
+                <div className="px-5 pb-2"><input className="input" value={weekFindQ} onChange={(e) => setWeekFindQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} /></div>
+                <div className="max-h-64 space-y-2 overflow-y-auto scroll-flush-5 px-5 pb-5 pr-4 text-xs">
+                  {weekly.ncr.filter((n) => rowMatches(n, weekFindQ, ["id", "project", "vessel", "type", "status", "severity", "issue"])).map((n) => (
+                    <div key={n.id} className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-navy-900">{n.id}</span>
+                      <StatusBadge status={String(n.status)} />
+                      <span className="ml-auto text-steel-500">{fmtTanggal(String(n.raised ?? ""))}</span>
+                    </div>
+                  ))}
+                  {weekly.incidents.filter((x) => rowMatches(x, weekFindQ, ["id", "project", "vessel", "type", "status", "severity", "desc"])).map((x) => (
+                    <div key={x.id} className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-navy-900">{x.id}</span>
+                      <span className="truncate text-steel-600">{String(x.desc ?? x.type ?? "")}</span>
+                      <span className="ml-auto text-steel-500">{fmtTanggal(String(x.date ?? ""))}</span>
+                    </div>
+                  ))}
+                  {weekly.ncr.length === 0 && weekly.incidents.length === 0 && (
+                    <div className="space-y-2">
+                      <p className="text-steel-400">{S.noFindingsWeek}</p>
+                      <EmptyModul modul="QC & Safety" to="/qc-safety" label="QC & Safety" />
+                    </div>
+                  )}
+                </div>
+              </Card>
+              </div>
+              <div style={printAvoid}>
+              <Card className="p-4">
+                <CardHeader title={S.compositionTitle} subtitle={S.issuedVsPaidVsPo} />
+                <div className="flex items-center gap-4 px-5 pb-5">
+                  <Donut
+                    /* Irisan bersifat SALING LEBAR: invoice yang sudah
+                       terbit DAN lunas akan terhitung dua kali kalau
+                       potongannya begini, sehingga total di tengah lebih
+                       besar dari jumlah dokumen sebenarnya (ekspor Excel di
+                       baris ~284 memang sudah dedupe lewat invMap - donutnya
+                       tidak). Segmen "Belum Lunas" = terbit - lunas. */
+                    data={(() => {
+                      const sudahLunas = new Set(weekly.invLunas.map((i) => String(i.id)));
+                      const belumLunas = weekly.invTerbit.filter((i) => !sudahLunas.has(String(i.id)));
+                      return [
+                        { name: S.segPaid, value: weekly.invLunas.length },
+                        { name: locale === "en" ? "Unpaid" : "Belum Lunas", value: belumLunas.length },
+                        { name: S.segPo, value: weekly.po.length },
+                      ];
+                    })()}
+                    size={130}
+                    thickness={18}
+                    centerValue={fmtJumlah(weekly.invTerbit.length + weekly.po.length)}
+                    centerLabel={S.donutDocs}
+                  />
+                  <div className="text-xs text-steel-600">
+                    <p>{S.segLineIssued.replace("{a}", fmtJumlah(weekly.invTerbit.length)).replace("{b}", fmtMiliar(weekly.invTerbitVal))}</p>
+                    <p>{S.segLinePaid.replace("{a}", fmtJumlah(weekly.invLunas.length)).replace("{b}", fmtMiliar(weekly.invLunasVal))}</p>
+                    <p>{S.segLinePo.replace("{a}", fmtJumlah(weekly.po.length)).replace("{b}", fmtMiliar(weekly.poVal))}</p>
+                  </div>
+                </div>
+              </Card>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mode === "Bulanan" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" style={printAvoid}>
+              <KpiCard label={S.revenueMonth.replace("{n}", fmtBulan(`${month}-01`))} value={dashIf(monthly.invLunas.length > 0, fmtMiliar(monthly.revenue))} hint={S.invoicePaidCount.replace("{n}", fmtJumlah(monthly.invLunas.length))} chip="teal" />
+              <KpiCard label={S.costApPayroll} value={dashIf(monthly.apLunas.length + monthly.payRows.length > 0, fmtMiliar(monthly.cost))} hint={dashIf(monthly.payRows.length > 0, S.payrollAmount.replace("{n}", fmtMiliar(monthly.payrollTotal)))} chip="navy" />
+              <KpiCard label={S.netProfit} value={dashIf(monthly.invLunas.length + monthly.apLunas.length + monthly.payRows.length > 0, fmtMiliar(monthly.laba))} hint={monthly.invLunas.length + monthly.apLunas.length + monthly.payRows.length > 0 ? (monthly.laba >= 0 ? S.surplusLabel : S.deficitLabel) : "—"} chip="violet" />
+              <KpiCard label={S.pph21Label} value={dashIf(monthly.payRows.length > 0, fmtRupiah(monthly.pph21))} hint={monthly.taxRow ? S.periodStatus.replace("{n}", String(monthly.taxRow.status)) : S.noPeriod} chip="amber" />
+            </div>
+            <div style={printAvoid}>
+            <Card className="p-4">
+              <CardHeader title={S.compareLastMonth.replace("{n}", fmtBulan(`${prevMonth}-01`))} subtitle={S.deltaRevCostProfit} />
+              <div className="grid grid-cols-1 gap-2 px-5 pb-5 text-sm sm:grid-cols-3">
+                <div className="flex justify-between"><span className="text-steel-500">{S.revDeltaVsMonth}</span><span className="font-semibold">{dashIf(monthly.revenue > 0 || monthlyPrev.revenue > 0, fmtRupiah(monthly.revenue - monthlyPrev.revenue))}</span></div>
+                <div className="flex justify-between"><span className="text-steel-500">{S.costDeltaVsMonth}</span><span className="font-semibold">{dashIf(monthly.cost > 0 || monthlyPrev.cost > 0, fmtRupiah(monthly.cost - monthlyPrev.cost))}</span></div>
+                <div className="flex justify-between"><span className="text-steel-500">{S.profitDelta}</span><span className="font-semibold">{dashIf(monthly.laba !== 0 || monthlyPrev.laba !== 0, fmtRupiah(monthly.laba - monthlyPrev.laba))}</span></div>
+              </div>
+            </Card>
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" style={printAvoid}>
+              <Card className="p-4">
+                <CardHeader title={S.pnlBrief} subtitle={S.pnlSub} />
+                <div className="space-y-1.5 px-5 pb-5 text-sm">
+                  <div className="flex justify-between"><span className="text-steel-500">{S.revenueLabel}</span><span className="font-semibold">{dashIf(monthly.invLunas.length > 0, fmtRupiah(monthly.revenue))}</span></div>
+                  <div className="flex justify-between"><span className="text-steel-500">{S.costLabel}</span><span className="font-semibold">{dashIf(monthly.apLunas.length + monthly.payRows.length > 0, fmtRupiah(monthly.cost))}</span></div>
+                  <div className="flex justify-between border-t border-steel-100 pt-2"><span className="text-steel-500">{S.profitLabel}</span><span className="font-bold text-navy-900">{dashIf(monthly.invLunas.length + monthly.apLunas.length + monthly.payRows.length > 0, fmtRupiah(monthly.laba))}</span></div>
+                  <p className="pt-1 text-[11px] text-steel-400">Kas: Lunas − (AP Lunas + Payroll Dibayar)</p>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <CardHeader title={S.taxThisMonth} subtitle={S.taxSub} />
+                <div className="space-y-1.5 px-5 pb-5 text-sm">
+                  <div className="flex justify-between"><span className="text-steel-500">{S.ppnOut}{monthly.ppnKeluarEstimasi ? ` (estimasi ${Math.round(monthly.ppnRate * 100)}%)` : ""}</span><span className="font-semibold">{dashIf(monthly.invLunas.length > 0, fmtRupiah(monthly.ppnKeluar))}</span></div>
+                  {/* Payable tidak menyimpan rincian PPN, jadi PPN masukan
+                      selalu estimasi gross-up dan tidak boleh ditampilkan
+                      seolah-olah angka final pelaporan. */}
+                  <div className="flex justify-between"><span className="text-steel-500">{S.ppnIn} (estimasi {Math.round(monthly.ppnRate * 100)}%)</span><span className="font-semibold">{dashIf(monthly.apLunas.length > 0, fmtRupiah(monthly.ppnMasuk))}</span></div>
+                  <div className="flex justify-between"><span className="text-steel-500">{S.pph23Label}</span><span className="font-semibold">{dashIf(monthly.apLunas.length > 0, fmtRupiah(monthly.pph23))}</span></div>
+                  <div className="flex justify-between"><span className="text-steel-500">{S.pph21Label}</span><span className="font-semibold">{dashIf(monthly.payRows.length > 0, fmtRupiah(monthly.pph21))}</span></div>
+                  {monthly.taxRow && <p className="text-xs text-steel-400">{S.taxPeriodDetail.replace("{a}", String(monthly.taxRow.period)).replace("{b}", String(monthly.taxRow.status)).replace("{c}", fmtTanggal(String(monthly.taxRow.reportedAt ?? "")))}</p>}
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {mode === "Per Proyek" && (
+          !project ? (
+            <div className="space-y-2">
+              <EmptyState title={S.emptyProjects} subtitle={S.pickOtherBranch} />
+              <EmptyModul modul="Proyek" to="/proyek" label="Proyek" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" style={printAvoid}>
+                <KpiCard label={S.budgetVsActual} value={dashIf(num(project.budget) + num(project.actual) > 0, fmtMiliar(num(project.actual)))} hint={dashIf(num(project.budget) > 0, S.fromAmount.replace("{n}", fmtMiliar(num(project.budget))))} chip="navy" />
+                <KpiCard label={S.progressLabel} value={dashIf(!!project, `${num(project.progress)}%`)} hint={dashIf(!!project.status, String(project.status ?? ""))} chip="teal" />
+                <KpiCard label={S.boqTotal} value={dashIf(boqRows.length > 0, fmtMiliar(boqTotal))} hint={S.itemCountSuffix.replace("{n}", fmtJumlah(boqRows.length))} chip="violet" />
+                <KpiCard label={S.invoiceLabel} value={dashIf(projInvoices.length > 0, fmtMiliar(projInvTotal))} hint={S.invoiceCount.replace("{n}", fmtJumlah(projInvoices.length))} chip="amber" />
+                {/* Biaya equipment yang dibebankan ke proyek ini. Angka yang sama
+                    dipakai ProjectDetail & tab Biaya modul Equipment
+                    (utils/projectCost.ts) - sebelumnya tidak muncul sama sekali
+                    di laporan, jadi HPP terlihat lebih murah dari kenyataan. */}
+                <KpiCard
+                  label={locale === "en" ? "Equipment cost (HPP)" : "Biaya Equipment (HPP)"}
+                  value={dashIf(equipCost.totalRealized > 0, fmtMiliar(equipCost.totalRealized))}
+                  hint={equipCost.totalRealized === 0
+                    ? (locale === "en" ? "No equipment cost booked" : "Belum ada biaya equipment")
+                    : (locale === "en"
+                      ? `${fmtRupiah(equipCost.rental)} rental + ${fmtRupiah(equipCost.maintenanceRealized)} maintenance`
+                      : `${fmtRupiah(equipCost.rental)} sewa + ${fmtRupiah(equipCost.maintenanceRealized)} maintenance`)}
+                  chip="rose"
+                />
+              </div>
+              {(boqRows.length === 0 || projInvoices.length === 0) && (
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                  {boqRows.length === 0 && <EmptyModul modul="Inventori (BoQ)" to="/inventori" label="Inventori" />}
+                  {projInvoices.length === 0 && <EmptyModul modul="Keuangan (Invoice)" to="/keuangan" label="Keuangan" />}
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div style={printAvoid}>
+                <Card className="p-4">
+                  <CardHeader title={S.wbsTop} subtitle={S.top5Jobs} />
+                  <div className="space-y-2 px-5 pb-5 text-xs">
+                    {wbsSyncing && (
+                      <p className="text-[11px] text-steel-400">
+                        {locale === "en" ? "Loading WBS from server..." : "Memuat WBS dari server..."}
+                      </p>
+                    )}
+                    {wbsTop.map((w, i) => (
+                      <div key={i}>
+                        <div className="flex justify-between"><span className="truncate font-medium text-navy-900" title={w.task}>{w.task}</span><span className="text-steel-500">{w.progress}%</span></div>
+                        <ProgressBar value={num(w.progress)} className="mt-1" />
+                      </div>
+                    ))}
+                    {wbsTop.length === 0 && (
+                      <div className="space-y-2">
+                        <p className="text-steel-400">{S.noWbs}</p>
+                        <EmptyModul modul="Proyek (WBS)" to="/proyek" label="Proyek" />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+                </div>
+                <div style={printAvoid}>
+                <Card className="p-4">
+                  <CardHeader title={S.projectNcr} subtitle={S.findingsCount.replace("{n}", fmtJumlah(projNcr.length))} />
+                  <div className="px-5 pb-2"><input className="input" value={projNcrQ} onChange={(e) => setProjNcrQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} /></div>
+                  <div className="max-h-64 space-y-2 overflow-y-auto scroll-flush px-5 pb-5 pr-4 text-xs">
+                    {projNcr.filter((n) => rowMatches(n, projNcrQ, ["id", "project", "vessel", "type", "status", "severity", "issue"])).map((n) => {
+                      const sev = String(n.severity ?? n.type ?? "");
+                      return (
+                      <div key={n.id} className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-navy-900">{n.id}</span>
+                        <Badge tone={sev === "Critical" ? "red" : sev === "Major" ? "amber" : "blue"}>{sev}</Badge>
+                        <StatusBadge status={String(n.status)} />
+                      </div>
+                      );
+                    })}
+                    {projNcr.length === 0 && (
+                      <div className="space-y-2">
+                        <p className="text-steel-400">{S.nihilNcr}</p>
+                        <EmptyModul modul="QC & Safety (NCR)" to="/qc-safety" label="QC & Safety" />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+                </div>
+                <div style={printAvoid}>
+                <Card className="p-4">
+                  <CardHeader title={S.lastActivities} subtitle={S.fromActivityFeed} />
+                  <div className="space-y-2 px-5 pb-5 text-xs text-steel-600">
+                    {projActivities.map((a) => (
+                      <p key={a.id}><strong className="text-navy-900">{String(a.actor)}</strong> {String(a.action)} <span className="font-mono">{String(a.target)}</span></p>
+                    ))}
+                    {projActivities.length === 0 && (
+                      <div className="space-y-2">
+                        <p className="text-steel-400">{S.noRelatedActivity}</p>
+                        <EmptyModul modul="Proyek (Aktivitas)" to="/proyek" label="Proyek" />
+                      </div>
+                    )}
+                  </div>
+                </Card>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+        <div className="mt-4 rounded-xl border border-steel-100 bg-surface p-4 text-sm" style={printAvoid}>
+          <p className="font-semibold text-navy-900">{S.endorsement}</p>
+          {sigName.trim() ? (
+            <p className="mt-1 text-steel-600">{S.endorsedBy.replace("{a}", sigName.trim()).replace("{b}", sigRole.trim() ? S.endorsedRoleSuffix.replace("{n}", sigRole.trim()) : "").replace("{c}", fmtTanggal(sigDate))}</p>
+          ) : (
+            <p className="mt-1 text-xs text-steel-400">{S.fillSignHint}</p>
+          )}
+        </div>
+      </div>
+
+      <Card className="mt-4 p-4">
+        <CardHeader title={S.archiveSent} subtitle={S.archiveSub} />
+        <div className="flex flex-wrap gap-1.5 px-5 pb-3 text-[11px]">
+          {MODUL_DICEK.map((m) => (
+            <Link key={m.modul} to={m.to} className="rounded-full bg-steel-100 px-2.5 py-1 font-semibold text-steel-600 hover:text-navy-800 hover:underline">
+              {m.label}
+            </Link>
+          ))}
+        </div>
+        <div className="space-y-1.5 px-5 pb-5 text-sm">
+          {arc.map((a, i) => (
+            <div key={`${a.name}-${i}`} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2">
+              <span className="font-mono font-semibold text-navy-900">{a.name}</span>
+              <Badge tone="gray">{a.mode}</Badge>
+              <span className="truncate text-xs text-steel-500">{a.info}</span>
+              <span className="ml-auto text-xs text-steel-500">{fmtTanggal(a.at)}</span>
+            </div>
+          ))}
+          {arc.length === 0 && <p className="text-xs text-steel-400">{S.noArchivedReports}</p>}
+        </div>
+      </Card>
+    </div>
+  );
+}

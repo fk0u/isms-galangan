@@ -1,0 +1,246 @@
+/* Tailwind v4: satu import, bukan tiga directive @tailwind. `source()`declare
+   where class is detected - v4 auto-detects source, tidak memakai array
+   `content` di config. `reference` menunjuk file config JS yang sudah ada
+   supaya palet navy/steel/ocean dan shadow kustom tidak hilang. */
+@import "tailwindcss" source(none);
+@source "../index.html";
+@source "./**/*.{ts,tsx}";
+@config "../tailwind.config.js";
+
+@custom-variant notif-flash-all (&.notif-flash-all);
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    @apply bg-surface text-steel-700;
+    font-family: "Inter", system-ui, sans-serif;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  input, textarea, select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  h1, h2, h3, h4 {
+    @apply text-navy-900 font-semibold;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-steel-300 rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  /* Sembunyikan scrollbar bawaan (isi & thumb) tapi tetap bisa di-scroll.
+     Dipakai Monitoring: kanban punya scrollbar kustom atas/bawah yang
+     saling bergantian, sehingga scrollbar native container kolom jadi
+     baris ketiga yang tidak perlu. */
+  .hide-native-bar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .hide-native-bar::-webkit-scrollbar {
+    display: none;
+    width: none;
+    height: none;
+  }
+}
+
+/* `.btn` didefinisikan sebagai @utility, bukan kelas biasa di @layer
+   components, karena di v4 `@apply` tidak bisa mengambil kelas kustom dari
+   stylesheet yang sama - hanya utility yang didaftarkan lewat @utility.
+   Empat varian di bawah semuanya @apply btn, jadi tanpa ini build gagal
+   dengan "Cannot apply unknown utility class `btn`".
+   Nilai gaya-nya tidak berubah sama sekali dari versi v3. */
+@utility btn {
+  @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-xl font-medium text-sm
+         transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl border border-steel-200 shadow-soft;
+  }
+  .btn-primary {
+    @apply btn bg-navy-700 text-white shadow-soft hover:bg-navy-800 hover:-translate-y-0.5 hover:shadow-lift focus:ring-ocean-400;
+  }
+  .btn-primary-gradient {
+    @apply btn text-white bg-gradient-hero hover:shadow-glow hover:-translate-y-0.5 focus:ring-ocean-400;
+  }
+  .btn-secondary {
+    @apply btn bg-white border border-steel-300 text-steel-700 hover:bg-steel-100 hover:border-steel-400 focus:ring-steel-300;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-300;
+  }
+  .input {
+    @apply w-full px-3 py-2 rounded-xl border border-steel-300 bg-white text-sm
+           focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400;
+  }
+  .label {
+    @apply block text-xs font-medium text-steel-600 mb-1;
+  }
+  .th {
+    @apply px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-steel-500;
+  }
+  .td {
+    @apply px-3 py-3 text-sm text-steel-700 align-middle;
+  }
+  .tab-active {
+    @apply border-b-2 border-navy-700 text-navy-800 font-semibold;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/60;
+  }
+  .gradient-hero {
+    @apply bg-gradient-hero text-white;
+  }
+  .text-gradient-navy {
+    background: linear-gradient(135deg, #0b3a63, #2e9ad4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .shimmer-line {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    background-size: 200% 100%;
+  }
+}
+
+@layer utilities {
+  .shadow-soft { box-shadow: 0 1px 2px rgba(11,58,99,0.05), 0 8px 24px -8px rgba(11,58,99,0.12); }
+  .shadow-lift { box-shadow: 0 4px 8px rgba(11,58,99,0.06), 0 20px 40px -16px rgba(11,58,99,0.25); }
+  .card-hover { @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lift; }
+
+  /* Scrollbar menempel tepat di ujung kanan card: container scroll direntangkan
+     melewati padding kanan card induk, sementara jarak isi ke scrollbar tetap
+     dijaga padding kanan container sendiri (pr-*). Pakai bersama overflow-y-auto.
+     .scroll-flush   → card induk ber-padding 1rem  (p-4 / px-4)
+     .scroll-flush-5 → card induk ber-padding 1.25rem (px-5)
+
+     `width: auto` itu WAJIB, bukan kosmetik. Untuk block box, margin-right
+     negatif hanya menambah lebar kalau width-nya auto (lebar = lebar induk -
+     margin-kiri - margin-kanan). Begitu ada `w-full` (width: 100%), lebar
+     terkunci dan margin negatif TIDAK menggeser kotak sedikit pun - scrollbar
+     tetap duduk di dalam padding card. Bug ini diam-diam: container tetap
+     ter-scroll, hanya posisinya yang salah, jadi tidak ada error yang muncul.
+     Jangan pakai `w-full` bersamaan. */
+  .scroll-flush { width: auto; margin-right: -1rem; }
+  .scroll-flush-5 { width: auto; margin-right: -1.25rem; }
+
+  /* Watermark versi cetak (ikut tercetak ke PDF) */
+  .isms-wm-print { display: none; }
+
+  /* Penanda baris notifikasi, PERMANEN dan sengaja tipis.
+     Versi lama memakai fill kuning penuh (rgba(255,251,235)) di seluruh lebar
+     baris. Kalau ada belasan baris notifikasi dalam satu tabel, yellow fill
+     sebesar itu bukan lagi penanda - ia berubah menjadi warna latar tabel,
+     sehingga baris yang SEBENARNYA perlu perhatian gagal menonjol di antara
+     baris lain yang sama kuningnya.
+     Sekarang penandanya = garis aksen 3px di tepi kiri + arsir sangat tipis. */
+  /* Hindari chart recharts terpotong / blank saat cetak PDF (html2canvas pagebreak). */
+  .recharts-wrapper { break-inside: avoid; page-break-after: auto; page-break-before: auto; }
+  .notif-hl {
+    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.85);
+    background-color: rgba(255, 251, 235, 0.35);
+  }
+  /* Baris tabel: <tr> tidak menerima background di semua browser, jadi aksen
+     pindah ke sel pertama. */
+  tr.notif-hl > td:first-child { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.85); }
+  tr.notif-hl > td { background-color: rgba(255, 251, 235, 0.35); }
+  /* Kedip sesaat baris notifikasi yang diklik dari banner (pengganti
+     highlight permanen). Hormati prefers-reduced-motion. */
+  @keyframes notif-flash {
+    0%, 100% { outline-color: rgba(245, 158, 11, 0); background-color: transparent; }
+    30%, 60% { outline-color: rgba(245, 158, 11, 0.85); background-color: rgba(255, 251, 235, 0.9); }
+  }
+  .notif-flash {
+    outline: 2px solid rgba(245, 158, 11, 0.85);
+    outline-offset: -2px;
+    border-radius: 0.5rem;
+    animation: notif-flash 0.8s ease-in-out 3;
+  }
+
+  /* Highlight SESUDAH baris yang/sdkART disebut di kartu Dashboard.
+     Berbeda dari .notif-flash (satu baris, kedip 3x lalu hilang), yang ini
+     menandai KELOMPOK baris: accent bar di tepi kiri + denyut lebih lama, jadi
+     pengguna bisa langsung melihat "semua baris ini yang concerned", bukan
+     cuma satu. Selalu dipasangkan dengan .notif-hl supaya baris notifikasi
+     warning yang sudah ada tetap ditandai - kelas ini tidak pernah menghapus
+     highlight lain, hanya menambah. */
+  @keyframes notif-flash-all {
+    0%, 100% { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0); background-color: rgba(255, 251, 235, 0); }
+    25%, 75% { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.95); background-color: rgba(255, 251, 235, 0.85); }
+  }
+  .notif-flash-all {
+    position: relative;
+    animation: notif-flash-all 1.1s ease-in-out 2;
+    scroll-margin-block: 6rem;
+  }
+  /* <tr> tidak menerima inset box-shadow di semua browser; pakai outline
+     vertikal sebagai pengganti yang aman untuk elemen tabel. */
+  tr.notif-flash-all { box-shadow: none; outline: 2px solid rgba(245, 158, 11, 0.55); outline-offset: -2px; animation: none; }
+  tr.notif-flash-all > td { background-color: rgba(255, 251, 235, 0.85); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notif-flash,
+    .notif-flash-all,
+    tr.notif-flash-all {
+      animation: none;
+      background-color: rgba(255, 251, 235, 0.9);
+    }
+    tr.notif-flash-all { background-color: transparent; }
+    tr.notif-flash-all > td { background-color: rgba(255, 251, 235, 0.9); }
+  }
+}
+
+  /* Divider antar baris form detail/view (<dl>): baca cepat, tidak polos.
+     Pakai: <dl className="dl-div text-sm">, anak langsung = baris. */
+  .dl-div > div {
+    border-bottom: 1px solid #d7e1ea;
+    padding-bottom: 0.625rem;
+    margin-bottom: 0.625rem;
+  }
+  .dl-div > div:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+@media print {
+  .isms-wm-print {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    flex-wrap: wrap;
+    align-content: space-around;
+    justify-content: space-around;
+    pointer-events: none;
+  }
+  .isms-wm-print-cell {
+    transform: rotate(-24deg);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: rgba(11, 58, 99, 0.14);
+    white-space: nowrap;
+    margin: 48px;
+  }
+}
+
+/* Animasi watermark bergerak kiri ke kanan (seamless per 1 tile = 1300px) */
+@keyframes isms-wm-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 1300px 0;
+  }
+}

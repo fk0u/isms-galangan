@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: apps/web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm, cache-dependency-path: apps/web/package-lock.json }
+      - run: npm ci
+      - run: npm run check
+
+  api:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: services/api } }
+    env:
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      SQLITE_PATH: ./data/ci.db
+      UPLOADS_DIR: ./data/uploads
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: npm, cache-dependency-path: services/api/package-lock.json }
+      - run: npm ci
+      - run: npm run build
+      - run: npm run migrate
+      - run: npm run seed
+      - run: npm run check

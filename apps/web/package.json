@@ -1,0 +1,45 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "probe:render": "vite build --ssr scripts/ssr-probe.tsx --outDir node_modules/.cache/ssr-probe --emptyOutDir --logLevel error && node node_modules/.cache/ssr-probe/ssr-probe.js",
+    "probe:price": "vite build --ssr scripts/price-probe.ts --outDir node_modules/.cache/price-probe --emptyOutDir --logLevel error && node node_modules/.cache/price-probe/price-probe.js",
+    "probe:foundation": "vite build --ssr scripts/foundation-probe.ts --outDir node_modules/.cache/foundation-probe --emptyOutDir --logLevel error && node node_modules/.cache/foundation-probe/foundation-probe.js",
+    "probe:alert": "vite build --ssr scripts/alert-probe.ts --outDir node_modules/.cache/alert-probe --emptyOutDir --logLevel error && node node_modules/.cache/alert-probe/alert-probe.js",
+    "probe:wo": "vite build --ssr scripts/wo-probe.ts --outDir node_modules/.cache/wo-probe --emptyOutDir --logLevel error && node node_modules/.cache/wo-probe/wo-probe.js",
+    "probe:table": "vite build --ssr scripts/table-probe.ts --outDir node_modules/.cache/table-probe --emptyOutDir --logLevel error && node node_modules/.cache/table-probe/table-probe.js",
+    "probe:facility": "vite build --ssr scripts/facility-probe.ts --outDir node_modules/.cache/facility-probe --emptyOutDir --logLevel error && node node_modules/.cache/facility-probe/facility-probe.js",
+    "probe:push": "vite build --ssr scripts/push-probe.ts --outDir node_modules/.cache/push-probe --emptyOutDir --logLevel error && node node_modules/.cache/push-probe/push-probe.js",
+    "probe:time": "vite build --ssr scripts/time-probe.ts --outDir node_modules/.cache/time-probe --emptyOutDir --logLevel error && node node_modules/.cache/time-probe/time-probe.js",
+    "probe:employee": "vite build --ssr scripts/employee-probe.ts --outDir node_modules/.cache/employee-probe --emptyOutDir --logLevel error && node node_modules/.cache/employee-probe/employee-probe.js",
+    "probe:risk": "vite build --ssr scripts/risk-auto-probe.ts --outDir node_modules/.cache/risk-auto-probe --emptyOutDir --logLevel error && node node_modules/.cache/risk-auto-probe/risk-auto-probe.js",
+    "probe:p8": "vite build --ssr scripts/p8-probe.ts --outDir node_modules/.cache/p8-probe --emptyOutDir --logLevel error && node node_modules/.cache/p8-probe/p8-probe.js",
+    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run probe:render && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:facility && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "@google/model-viewer": "^4.3.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "framer-motion": "^13.1.1",
+    "lucide-react": "^1.37.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3",
+    "recharts": "^3.10.1",
+    "write-excel-file": "^4.1.1"
+  }
+}
