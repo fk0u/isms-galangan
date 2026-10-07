@@ -12,6 +12,7 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-07 21:55 WITA | F2-03 | selesai | PR #8 | hierarki ROLE_RANK, cegah eskalasi peran & takeover, probe T12-T15 OK
 2026-10-07 22:10 WITA | F2-04 | selesai | PR #9 | migrasi 008 token_version, pencabutan token di logout/patch/delete/password, probe T16-T18 OK
 2026-10-07 22:40 WITA | F2-05 | selesai | PR #10 | policy.ts matriks izin r/w/d, proteksi GET CRUD, permissions di auth/me & login, skrip migrasi peran
+2026-10-07 22:50 WITA | F2-06 | selesai | PR #11 | migrasi 013 backfill Samarinda, paksa default branch di create, proteksi patch branch di crud.ts, probe:branch 9/9 PASS, T06 OK
 
 
 
