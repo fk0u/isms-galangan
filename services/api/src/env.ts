@@ -46,6 +46,20 @@ export function loadEnv(): Env {
   if (!jwtSecret || jwtSecret.trim() === "") {
     throw new Error("JWT_SECRET is required (set it in the environment, no dev fallback).");
   }
+  if (jwtSecret.length < 32) {
+    throw new Error(`JWT_SECRET must be at least 32 characters long (got ${jwtSecret.length}).`);
+  }
+  const FORBIDDEN_JWT_SECRETS = new Set([
+    "change-me-to-a-long-random-string",
+    "change-me-to-a-long-random-string-here",
+    "your-secret-here",
+    "your-jwt-secret-here",
+    "12345678901234567890123456789012",
+    "abcdefghijklmnopqrstuvwxyz123456",
+  ]);
+  if (FORBIDDEN_JWT_SECRETS.has(jwtSecret.toLowerCase().trim())) {
+    throw new Error('JWT_SECRET cannot use default example value from .env.example ("change-me-to-a-long-random-string").');
+  }
 
   const portRaw = process.env.PORT ?? "3000";
   const port = Number.parseInt(portRaw, 10);
@@ -54,12 +68,13 @@ export function loadEnv(): Env {
   }
 
   // SETUP_TOKEN guards POST /api/admin/seed (fail-closed when missing).
-  // Warn at boot so weak/missing tokens are noticed; the route still 403s.
-  const setupToken = process.env.SETUP_TOKEN;
-  if (!setupToken || setupToken.trim() === "") {
+  // When specified, it must be at least 32 characters long.
+  const setupToken = process.env.SETUP_TOKEN?.trim();
+  if (setupToken && setupToken.length < 32) {
+    throw new Error(`SETUP_TOKEN must be at least 32 characters long when specified (got ${setupToken.length}).`);
+  }
+  if (!setupToken) {
     console.warn("[env] SETUP_TOKEN is missing — /api/admin/seed stays fail-closed (403).");
-  } else if (setupToken.length < 32) {
-    console.warn("[env] SETUP_TOKEN is shorter than 32 chars — use a long random value in production.");
   }
 
   const trustRaw = (process.env.TRUST_PROXY ?? "").toLowerCase().trim();
@@ -95,16 +110,29 @@ export function loadEnv(): Env {
   }
   const nodeEnv = nodeEnvRaw;
 
-  const origins = parseOrigins();
+  let origins = parseOrigins();
+  const hostRaw = (process.env.HOST ?? "localhost").trim().toLowerCase();
+  const isLocalhostHost = hostRaw === "localhost" || hostRaw === "127.0.0.1" || hostRaw === "::1";
+
+  if (origins.length === 0) {
+    if ((nodeEnv === "development" || nodeEnv === "test") && isLocalhostHost) {
+      origins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+    } else {
+      throw new Error('WEB_ORIGINS is required (e.g. "https://app.galangan.com" or "http://localhost:5173"). Wildcard "*" is forbidden.');
+    }
+  }
+
   for (const o of origins) {
-    if (o === "*") continue;
+    if (o === "*") {
+      throw new Error('WEB_ORIGINS must not contain wildcard "*": specify explicit origin URLs.');
+    }
     try {
       const u = new URL(o);
       if (u.protocol !== "http:" && u.protocol !== "https:") {
-        throw new Error(`WEB_ORIGINS entries must be http(s) URLs or "*": invalid "${o}".`);
+        throw new Error(`WEB_ORIGINS entries must be valid http(s) URLs: invalid "${o}".`);
       }
     } catch {
-      throw new Error(`WEB_ORIGINS entries must be valid http(s) URLs or "*": invalid "${o}".`);
+      throw new Error(`WEB_ORIGINS entries must be valid http(s) URLs: invalid "${o}".`);
     }
   }
 
