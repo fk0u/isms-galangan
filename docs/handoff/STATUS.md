@@ -94,7 +94,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | | todo | |
 | F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
 | F4-01 | Concurrency atomik | P0 | F4-integritas.md | | todo | |
-| F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | jalan | |
+| F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | selesai | PR #4 |
 | F4-03 | Realtime perubahan data | P1 | F4-integritas.md | | todo | |
 | F4-04 | Relasi baru di `refs.ts` | P0 | F4-integritas.md | | todo | |
 | F4-05 | File upload terkontrol | P1 | F4-integritas.md | | todo | |
