@@ -30,3 +30,7 @@ services/api/seed-data/
 # Laporan audit berisi rincian celah yang belum ditambal - jangan dipublikasi.
 docs/audit/
 .impeccable/
+# Prompt & konfigurasi AI agent - milik owner, tidak dipublikasi.
+.agent/
+.agents/
+ai-prompts/

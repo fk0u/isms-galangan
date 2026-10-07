@@ -32,15 +32,17 @@ docs/
 | [baseline.md](planning/baseline.md) | Kondisi awal kode & analisis commit upstream terakhir |
 | [roadmap.md](planning/roadmap.md) | 6 fase, estimasi, kriteria selesai |
 | [decisions.md](planning/decisions.md) | Log keputusan produk (Q1–Q16, semua terjawab) |
+| [sprint-3-hari.md](planning/sprint-3-hari.md) | **Sprint 3 hari**: 58 task P0 di 4 jalur paralel, checkpoint, register risiko |
 
 ## Process
 | Dokumen | Isi |
 |---|---|
 | [workflow.md](process/workflow.md) | Peran tim, branch, review, konvensi |
+| [operating-system.md](process/operating-system.md) | Accountability chart persona agent, kepemilikan file, scorecard, cadence, IDS, gerbang kualitas |
 
 ## Handoff
 [handoff/README.md](handoff/README.md) — cara memakai kartu task, template prompt Antigravity, urutan fase.
-[handoff/STATUS.md](handoff/STATUS.md) — papan status 101 task.
+[handoff/STATUS.md](handoff/STATUS.md) — papan status 106 task.
 
 ## Tidak di repo (lokal saja)
 - `docs/audit/` — laporan audit keamanan (berisi rincian celah yang belum ditambal).

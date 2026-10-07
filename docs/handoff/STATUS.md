@@ -8,10 +8,10 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F0-02 | Generator data sintetis untuk seed bulk | P0 | F0-setup.md | | todo | |
 | F0-03 | `.env` benar-benar dimuat | P0 | F0-setup.md | | todo | |
 | F0-04 | README & quickstart | P1 | F0-setup.md | | todo | |
-| F1-01 | Verifikasi revisi klien item per item | P0 | F1-verifikasi.md | | todo | |
+| F1-01 | Verifikasi revisi klien item per item | P0 | F1-verifikasi.md | | ditunda | diganti verifikasi per kartu (sprint plan) |
 | F1-02 | ESLint minimal | P1 | F1-verifikasi.md | | todo | |
 | F1-03 | Vitest untuk logika murni | P1 | F1-verifikasi.md | | todo | |
-| F1-04 | CI GitHub Actions | P0 | F1-verifikasi.md | | todo | |
+| F1-04 | CI GitHub Actions | P0 | F1-verifikasi.md | | selesai | CI dibuat saat inisialisasi repo |
 | F1-05 | Baseline security probe | P0 | F1-verifikasi.md | | todo | |
 | F2-01 | Akun seed & demo login | P0 | F2-keamanan.md | | todo | |
 | F2-02 | Konfigurasi default aman | P0 | F2-keamanan.md | | todo | |
@@ -105,3 +105,8 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F5-03 | Data demo yang bercerita | P0 | F5-demo.md | | todo | |
 | F5-04 | Skenario demo per modul | P0 | F5-demo.md | | todo | |
 | F5-05 | Audit ulang | P0 | F5-demo.md | | todo | |
+| F6-01 | Deteksi kode mati dengan knip | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-02 | Hapus file, export, dan dependensi tak terpakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |

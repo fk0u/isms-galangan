@@ -23,6 +23,9 @@ Dokumen di folder ini ditulis untuk **dieksekusi oleh AI agent (Antigravity) ata
 | [F3-M-lainnya.md](F3-M-lainnya.md) | 3 | Kapal, analitik, dashboard, keuangan | F3-A |
 | [F4-integritas.md](F4-integritas.md) | 4 | Concurrency, realtime, relasi, kinerja | F2 |
 | [F5-demo.md](F5-demo.md) | 5 | Docker, runbook, skenario demo, audit ulang | semua |
+| [F6-cleanup.md](F6-cleanup.md) | 6 | Dead code, lint, i18n mati, pecah file | fitur sprint merged |
+
+**Jadwal eksekusi aktual:** [`../planning/sprint-3-hari.md`](../planning/sprint-3-hari.md). Peran & kepemilikan file: [`../process/operating-system.md`](../process/operating-system.md).
 
 Fase 2 (backend/keamanan) dan Fase 3 (frontend/fitur) **boleh paralel** oleh dua orang. Task F3 yang ditandai `bergantung F2-xx` menunggu task tersebut.
 

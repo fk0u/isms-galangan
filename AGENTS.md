@@ -11,7 +11,8 @@ Monorepo:
 ## Baca dulu (urutan)
 1. `CONTEXT.md` — domain galangan, peran, alur bisnis, glosarium.
 2. `DESIGN.md` — token, komponen, pola halaman. UI baru wajib mengikuti ini.
-3. Kartu task yang diberikan (`docs/handoff/<fase>.md`).
+3. `docs/process/operating-system.md` — peranmu (persona), file yang boleh kamu ubah, gerbang kualitas.
+4. Kartu task yang diberikan (`docs/handoff/<fase>.md`) dan jadwal di `docs/planning/sprint-3-hari.md`.
 
 ## Sumber kebenaran
 1. Task yang sedang dikerjakan: `docs/handoff/<fase>.md` → kartu task dengan ID (mis. `F3-B-04`).
