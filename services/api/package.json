@@ -25,7 +25,8 @@
     "probe:pdf-db": "tsx --env-file-if-exists=.env scripts/pdf-db-probe.ts",
     "probe:page": "tsx scripts/page-probe.ts",
     "probe:security": "tsx --env-file-if-exists=.env scripts/security-probe.ts",
-    "check": "tsc --noEmit && npm run probe:pdf && npm run probe:page"
+    "probe:tx": "tsx --env-file-if-exists=.env scripts/tx-probe.ts",
+    "check": "tsc --noEmit && npm run probe:pdf && npm run probe:page && npm run probe:tx"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
