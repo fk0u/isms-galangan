@@ -24,6 +24,7 @@
     "probe:pdf": "tsx --env-file-if-exists=.env scripts/pdf-probe.ts",
     "probe:pdf-db": "tsx --env-file-if-exists=.env scripts/pdf-db-probe.ts",
     "probe:page": "tsx scripts/page-probe.ts",
+    "probe:security": "tsx --env-file-if-exists=.env scripts/security-probe.ts",
     "check": "tsc --noEmit && npm run probe:pdf && npm run probe:page"
   },
   "dependencies": {
