@@ -3,11 +3,14 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
 import { requestActor, requestIp, shallowDiff, writeAudit } from "../audit.js";
-import { requirePermission } from "../policy.js";
+import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
 import { exec, getDialect, q } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
+
+// Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
+export const DEFAULT_BRANCH = "Samarinda";
 
 // ID prefix per collection — disalin dari apps/web/src/data/store.tsx PREFIX
 // (wajib sama; newId dipakai dua sisi). inventory=STK agar tak tabrakan
@@ -318,7 +321,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       }
       if (!id) return reply.status(500).send(fail("Could not generate unique id", "INTERNAL_ERROR"));
     }
-    const branch = parsed.data.branch ?? "";
+    // ADR-0003 Jalur A: Satu cabang aktif (Samarinda). Server memaksa branch = DEFAULT_BRANCH
+    // pada create kecuali akun privileged (direktur/developer) secara spesifik menentukan cabang lain.
+    const userRole = normalizeRole(req.user?.role);
+    const isPrivileged = userRole === "direktur" || userRole === "developer";
+    const requestedBranch = parsed.data.branch?.trim();
+    const branch = isPrivileged && requestedBranch ? requestedBranch : DEFAULT_BRANCH;
     const now = new Date().toISOString();
     // 5. activities: actor diisi dari token; tolak pemalsuan nama aktor
     const rowData = { ...parsed.data.data };
@@ -376,7 +384,16 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       }
     })();
     const merged = parsed.data.data ? { ...oldData, ...parsed.data.data } : oldData;
-    const branch = parsed.data.branch ?? current.branch;
+    // ADR-0003 Jalur A: PATCH tidak boleh mengubah branch kecuali direktur/developer
+    const requestedBranch = parsed.data.branch !== undefined ? parsed.data.branch.trim() : undefined;
+    if (requestedBranch !== undefined && requestedBranch !== current.branch) {
+      const userRole = normalizeRole(req.user?.role);
+      const isPrivileged = userRole === "direktur" || userRole === "developer";
+      if (!isPrivileged) {
+        return reply.status(403).send(fail("Hanya direktur atau developer yang dapat mengubah cabang", "FORBIDDEN"));
+      }
+    }
+    const branch = requestedBranch !== undefined ? (requestedBranch || DEFAULT_BRANCH) : current.branch;
     const now = new Date().toISOString();
     /* PATCH juga wajib menjaga field kunci. checkRefs() sengaja MENGLEWATI
        nilai kosong/null (kolom opsional boleh kosong), jadi tanpa baris ini
