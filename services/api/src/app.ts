@@ -7,7 +7,7 @@ import { z } from "zod";
 import { loadEnv } from "./env.js";
 import { fail, ok, registerErrorHandler } from "./envelope.js";
 import { createRateLimiter, getClientIp, getWriteRateKey } from "./rateLimit.js";
-import { comparePassword, requireAuth, SEED_ACCOUNTS, signToken } from "./auth.js";
+import { branchOfUser, bumpTokenVersion, comparePassword, requireAuth, SEED_ACCOUNTS, signToken } from "./auth.js";
 import { getAuditErrorCount, requestIp, writeAudit } from "./audit.js";
 import { exec, q } from "./db.js";
 import { requireManageUsers } from "./rbac.js";
@@ -35,6 +35,7 @@ interface UserRow {
   email: string;
   is_active: number | null;
   employee_id?: string | null;
+  token_version?: number | null;
 }
 
 const LOGIN_LIMIT = 20;
@@ -76,34 +77,7 @@ function getApiVersion(): string {
   return "0.2.0";
 }
 
-/**
- * Cabang sebuah akun: employees.branch lewat users.employee_id.
- *
- * Sengaja TIDAK menambah kolom `branch` ke tabel users. Kolom itu tidak ada,
- * dan menambahkannya berarti setiap akun lama mendapat nilai kosong yang
- * maknanya ambigu - dan harus ada dua sumber kebenaran untuk hal yang sama.
- * Dengan diambil dari karyawan, satu sumber kebenaran yang sudah dipakai di
- * seluruh aplikasi.
- *
- * "SEMUA" bila akun tidak tertaut ke karyawan atau cabangnya kosong, jadi
- * akun demo/developer tidak kehilangan akses apa pun. Mekanisme ini menambah
- * batas, tidak pernah mengambil hak yang sudah ada - penting karena langsung
- * berlaku saat server start.
- */
-async function branchOfUser(user: { employee_id?: string | null }): Promise<string> {
-  const empId = String(user.employee_id ?? "").trim();
-  if (empId === "") return "SEMUA";
-  try {
-    const rows = await q<{ branch: string }>("SELECT branch FROM employees WHERE id = ?", [empId]);
-    const b = String(rows[0]?.branch ?? "").trim();
-    return b === "" || b === "-" ? "SEMUA" : b;
-  } catch {
-    /* Tabel employees belum ada atau tidak bisa dibaca. Jangan mengunci
-       akses karena kegagalan yang bukan penolakan - gagal membuka lebih
-       baik daripada gagal menutup. */
-    return "SEMUA";
-  }
-}
+
 
 export function buildApp(): FastifyInstance {
   const env = loadEnv();
@@ -228,7 +202,7 @@ export function buildApp(): FastifyInstance {
       return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     }
     const { username, password } = parsed.data;
-    let rows = await q<UserRow>("SELECT id, username, pass_hash, name, role, email, is_active, employee_id FROM users WHERE username = ?", [
+    let rows = await q<UserRow>("SELECT id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users WHERE username = ?", [
       username,
     ]);
     if (rows.length === 0) {
@@ -244,7 +218,7 @@ export function buildApp(): FastifyInstance {
           }
         });
         if (match) {
-          rows = await q<UserRow>("SELECT id, username, pass_hash, name, role, email, is_active, employee_id FROM users WHERE employee_id = ?", [
+          rows = await q<UserRow>("SELECT id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users WHERE employee_id = ?", [
             match.id,
           ]);
         }
@@ -289,7 +263,13 @@ export function buildApp(): FastifyInstance {
     /* Cabang user ikut di-token supaya route PDF bisa menegakkan batas tanpa
        query ulang, dan klien tidak bisa memperbesar haknya sendiri karena
        claim ini sudah ditandatangani. */
-    const token = signToken({ id: user.id, username: user.username, role: user.role, branch: await branchOfUser(user) });
+    const token = signToken({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      branch: await branchOfUser(user),
+      v: user.token_version ?? 0,
+    });
     // Sesi realtime: 1 baris aktif per user (last writer wins).
     try {
       const now = new Date().toISOString();
@@ -334,8 +314,11 @@ export function buildApp(): FastifyInstance {
     return ok({ seen: true });
   });
 
-  // Logout eksplisit: hapus baris sesi (basi >3 mnt dianggap offline juga).
+  // Logout eksplisit: hapus baris sesi & cabut token pengguna (bump token_version).
   app.delete("/api/auth/logout", { preHandler: [requireAuth] }, async (req) => {
+    if (req.user?.id) {
+      await bumpTokenVersion(req.user.id);
+    }
     try {
       await exec("DELETE FROM sessions WHERE user_id = ?", [req.user?.id ?? ""]);
     } catch {

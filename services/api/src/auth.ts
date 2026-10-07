@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { randomBytes, randomUUID } from "node:crypto";
 import { loadEnv } from "./env.js";
+import { exec, q } from "./db.js";
 
 export interface AuthUser {
   id: string;
@@ -13,6 +14,9 @@ export interface AuthUser {
    *  batas tanpa query ulang - dan karena token sudah ditandatangani, klien
    *  tidak bisa memperbesar haknya sendiri dengan mengubah claim. */
   branch: string;
+  /** Versi token pengguna untuk mendukung pencabutan (F2-04). */
+  v?: number;
+  employeeId?: string | null;
 }
 
 declare module "fastify" {
@@ -35,7 +39,18 @@ export async function comparePassword(plain: string, hash: string): Promise<bool
 }
 
 export function signToken(payload: AuthUser): string {
-  return jwt.sign(payload, getSecret(), { expiresIn: "8h" });
+  return jwt.sign(
+    {
+      id: payload.id,
+      username: payload.username,
+      role: payload.role,
+      branch: payload.branch,
+      v: payload.v ?? 0,
+      employeeId: payload.employeeId ?? null,
+    },
+    getSecret(),
+    { expiresIn: "8h" },
+  );
 }
 
 export function verifyToken(token: string): AuthUser {
@@ -49,6 +64,8 @@ export function verifyToken(token: string): AuthUser {
     username: String(raw.username ?? ""),
     role: String(raw.role ?? ""),
     branch: String(raw.branch ?? "SEMUA") || "SEMUA",
+    v: typeof raw.v === "number" ? raw.v : 0,
+    employeeId: typeof raw.employeeId === "string" ? raw.employeeId : null,
   };
 }
 
@@ -68,17 +85,124 @@ export function branchAllowed(user: AuthUser | undefined, asked: string): boolea
   return own === want;
 }
 
+export async function branchOfUser(user: { employee_id?: string | null }): Promise<string> {
+  const empId = String(user.employee_id ?? "").trim();
+  if (empId === "") return "SEMUA";
+  try {
+    const rows = await q<{ branch: string }>("SELECT branch FROM employees WHERE id = ?", [empId]);
+    const b = String(rows[0]?.branch ?? "").trim();
+    return b === "" || b === "-" ? "SEMUA" : b;
+  } catch {
+    return "SEMUA";
+  }
+}
+
+interface CachedUserRecord {
+  id: string;
+  username: string;
+  role: string;
+  isActive: boolean;
+  tokenVersion: number;
+  employeeId: string | null;
+  branch: string;
+  cachedAt: number;
+}
+
+const userCache = new Map<string, CachedUserRecord>();
+const CACHE_TTL_MS = 30_000;
+
+export function invalidateUserCache(userId?: string): void {
+  if (userId) {
+    userCache.delete(userId);
+  } else {
+    userCache.clear();
+  }
+}
+
+export async function bumpTokenVersion(userId: string): Promise<void> {
+  await exec("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [userId]);
+  invalidateUserCache(userId);
+}
+
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return reply.status(401).send({ ok: false, error: { message: "Unauthorized", code: "UNAUTHORIZED" } });
   }
   const token = header.slice("Bearer ".length);
+  let payload: AuthUser;
   try {
-    req.user = verifyToken(token);
+    payload = verifyToken(token);
   } catch {
     return reply.status(401).send({ ok: false, error: { message: "Invalid token", code: "UNAUTHORIZED" } });
   }
+
+  const userId = payload.id;
+  if (!userId) {
+    return reply.status(401).send({ ok: false, error: { message: "Invalid token payload", code: "UNAUTHORIZED" } });
+  }
+
+  const now = Date.now();
+  let cached = userCache.get(userId);
+  if (!cached || now - cached.cachedAt > CACHE_TTL_MS) {
+    let rows: Array<{
+      id: string;
+      username: string;
+      role: string;
+      is_active: number | null;
+      token_version: number | null;
+      employee_id: string | null;
+    }> = [];
+    try {
+      rows = await q<{
+        id: string;
+        username: string;
+        role: string;
+        is_active: number | null;
+        token_version: number | null;
+        employee_id: string | null;
+      }>("SELECT id, username, role, is_active, token_version, employee_id FROM users WHERE id = ?", [userId]);
+    } catch {
+      return reply.status(401).send({ ok: false, error: { message: "Authentication failed", code: "UNAUTHORIZED" } });
+    }
+
+    if (rows.length === 0) {
+      return reply.status(401).send({ ok: false, error: { message: "User not found", code: "UNAUTHORIZED" } });
+    }
+
+    const u = rows[0];
+    const branch = await branchOfUser({ employee_id: u.employee_id });
+    cached = {
+      id: u.id,
+      username: u.username,
+      role: u.role,
+      isActive: (u.is_active ?? 1) !== 0,
+      tokenVersion: u.token_version ?? 0,
+      employeeId: u.employee_id,
+      branch,
+      cachedAt: now,
+    };
+    userCache.set(userId, cached);
+  }
+
+  if (!cached.isActive) {
+    return reply.status(401).send({ ok: false, error: { message: "Account is deactivated", code: "UNAUTHORIZED" } });
+  }
+
+  const tokenV = payload.v ?? 0;
+  if (cached.tokenVersion !== tokenV) {
+    return reply.status(401).send({ ok: false, error: { message: "Token has been revoked", code: "UNAUTHORIZED" } });
+  }
+
+  // Peran dan cabang diambil dari DB, bukan token!
+  req.user = {
+    id: cached.id,
+    username: cached.username,
+    role: cached.role,
+    branch: cached.branch,
+    v: cached.tokenVersion,
+    employeeId: cached.employeeId,
+  };
 }
 
 export function requireRole(...roles: string[]) {

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { comparePassword, hashPassword, requireAuth } from "../auth.js";
+import { bumpTokenVersion, comparePassword, hashPassword, requireAuth } from "../auth.js";
 import { requireManageUsers, roleRank } from "../rbac.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { exec, q } from "../db.js";
@@ -27,6 +27,7 @@ interface UserRow {
   email: string;
   is_active: number | null;
   employee_id?: string | null;
+  token_version?: number | null;
 }
 
 function toPublic(row: UserRow): {
@@ -89,7 +90,7 @@ const PasswordSchema = z.object({
   newPassword: z.string().min(8, "Password minimal 8 karakter").max(72),
 });
 
-const SELECT_COLS = "id, username, pass_hash, name, role, email, is_active, employee_id FROM users";
+const SELECT_COLS = "id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users";
 
 export function registerUserRoutes(app: FastifyInstance): void {
   app.get("/api/users", { preHandler: manageGuards }, async () => {
@@ -222,6 +223,12 @@ export function registerUserRoutes(app: FastifyInstance): void {
       nextEmployeeId,
       current.id,
     ]);
+    const roleChanged = parsed.data.role !== undefined && parsed.data.role !== current.role;
+    const activeChanged = parsed.data.isActive !== undefined && ((current.is_active ?? 1) !== 0) !== next.isActive;
+    const employeeChanged = nextEmployeeId !== (current.employee_id ?? null);
+    if (roleChanged || activeChanged || employeeChanged) {
+      await bumpTokenVersion(current.id);
+    }
     await writeAudit({
       actor: requestActor(req),
       action: "update",
@@ -263,7 +270,6 @@ export function registerUserRoutes(app: FastifyInstance): void {
       if (actorRank <= targetRank) {
         return reply.status(403).send(fail("Tidak memiliki izin mereset password pengguna dengan peran setara atau lebih tinggi", "FORBIDDEN"));
       }
-      // TODO(F2-04): panggil bumpTokenVersion(target.id) saat token versioning tersedia
     }
 
     if (self && !privileged) {
@@ -277,6 +283,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       await hashPassword(parsed.data.newPassword),
       target.id,
     ]);
+    await bumpTokenVersion(target.id);
     /* Reset password orang lain = Inbound break-glass: wajib tercatat,
        termasuk apakah pelakunya pemilik akun itu sendiri. */
     await writeAudit({
@@ -309,6 +316,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
     }
 
     await exec("UPDATE users SET is_active = 0 WHERE id = ?", [target.id]);
+    await bumpTokenVersion(target.id);
     await writeAudit({
       actor: requestActor(req),
       action: "deactivate",

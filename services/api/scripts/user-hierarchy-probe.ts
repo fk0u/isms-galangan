@@ -7,9 +7,16 @@ async function main() {
   const app = buildApp();
   await app.ready();
 
-  const dirToken = signToken({ id: "test-dir-1", role: "direktur", branch: "Samarinda" });
-  const mgrToken = signToken({ id: "test-mgr-1", role: "manager", branch: "Samarinda" });
-  const viewToken = signToken({ id: "test-view-1", role: "viewer", branch: "Samarinda" });
+  const usersSeed = await q<{ id: string; username: string; role: string; token_version: number }>(
+    "SELECT id, username, role, token_version FROM users WHERE username IN ('direktur@galangan.com', 'manager@galangan.com', 'demo@galangan.com')",
+  );
+  const dirUser = usersSeed.find((u) => u.username === "direktur@galangan.com")!;
+  const mgrUser = usersSeed.find((u) => u.username === "manager@galangan.com")!;
+  const viewUser = usersSeed.find((u) => u.username === "demo@galangan.com")!;
+
+  const dirToken = signToken({ id: dirUser.id, username: dirUser.username, role: dirUser.role, branch: "Samarinda", v: dirUser.token_version });
+  const mgrToken = signToken({ id: mgrUser.id, username: mgrUser.username, role: mgrUser.role, branch: "Samarinda", v: mgrUser.token_version });
+  const viewToken = signToken({ id: viewUser.id, username: viewUser.username, role: viewUser.role, branch: "Samarinda", v: viewUser.token_version });
 
   let passed = 0;
   let total = 0;
