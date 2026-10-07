@@ -11,6 +11,26 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { fail } from "./envelope.js";
 
+// Hierarki pangkat peran (sementara di rbac.ts; dipindah ke policy.ts di F2-05).
+// Aturan: developer 100, direktur 90, manager 70, operasional 50, viewer 10.
+export const ROLE_RANK = {
+  developer: 100,
+  direktur: 90,
+  manager: 70,
+  operasional: 50,
+  viewer: 10,
+} as const;
+
+export function roleRank(role: unknown): number {
+  const r = String(role ?? "").toLowerCase().trim();
+  if (r === "developer" || r.includes("developer")) return ROLE_RANK.developer;
+  if (r === "direktur" || r.includes("direktur") || r === "direksi" || r === "admin") return ROLE_RANK.direktur;
+  if (r === "manager" || r.includes("manager")) return ROLE_RANK.manager;
+  if (r === "viewer" || r.includes("viewer") || r === "client" || r === "tamu") return ROLE_RANK.viewer;
+  // Peran operasional spesifik (finance, hr, qc, gudang, procurement, proyek, dll)
+  return ROLE_RANK.operasional;
+}
+
 const ALL = "*";
 
 interface PolicyRule {
