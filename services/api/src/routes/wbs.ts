@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
-import { requireCollectionWrite } from "../rbac.js";
+import { requirePermission } from "../policy.js";
 import { exec, getDialect, q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 
@@ -64,14 +64,14 @@ async function upsert(table: string, projectId: string, payload: unknown): Promi
 }
 
 export function registerWbsRoutes(app: FastifyInstance): void {
-  app.get("/api/projects/:id/wbs", { preHandler: [requireAuth] }, async (req) => {
+  app.get("/api/projects/:id/wbs", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
     const { id } = req.params as { id: string };
     const rows = await q<SideRow>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [id]);
     const wbs = rows.length > 0 ? (JSON.parse((rows[0] as SideRow).data) as unknown) : [];
     return ok({ projectId: id, wbs });
   });
 
-  app.put("/api/projects/:id/wbs", { preHandler: [requireAuth, requireCollectionWrite("wbs_by_project")] }, async (req, reply) => {
+  app.put("/api/projects/:id/wbs", { preHandler: [requireAuth, requirePermission("wbs_by_project", "w")] }, async (req, reply) => {
     const parsed = WbsSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
@@ -90,14 +90,14 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     return ok({ projectId: id, wbs: parsed.data.wbs });
   });
 
-  app.get("/api/projects/:id/team", { preHandler: [requireAuth] }, async (req) => {
+  app.get("/api/projects/:id/team", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
     const { id } = req.params as { id: string };
     const rows = await q<SideRow>("SELECT project_id, data FROM team_by_project WHERE project_id = ?", [id]);
     const memberIds = rows.length > 0 ? (JSON.parse((rows[0] as SideRow).data) as unknown) : [];
     return ok({ projectId: id, memberIds });
   });
 
-  app.put("/api/projects/:id/team", { preHandler: [requireAuth, requireCollectionWrite("team_by_project")] }, async (req, reply) => {
+  app.put("/api/projects/:id/team", { preHandler: [requireAuth, requirePermission("team_by_project", "w")] }, async (req, reply) => {
     const parsed = TeamSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };

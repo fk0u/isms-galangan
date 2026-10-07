@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../auth.js";
+import { requireAuditRead } from "../policy.js";
 import { getDialect, q } from "../db.js";
 import { ok } from "../envelope.js";
 
@@ -35,7 +36,7 @@ function parseDiff(raw: string): unknown {
 }
 
 export function registerAuditRoutes(app: FastifyInstance): void {
-  app.get("/api/audit", { preHandler: [requireAuth] }, async (req) => {
+  app.get("/api/audit", { preHandler: [requireAuth, requireAuditRead()] }, async (req) => {
     const query = (req.query ?? {}) as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];

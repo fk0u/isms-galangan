@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Download, KeyRound, Plus, RefreshCw, Pencil, Link2, UserX, UserCheck, Eye, History } from "lucide-react";
 import { Badge, Card, ConfirmModal, Field, KpiCard, Modal, PageHeader, SortTh, sortRows, toast, toggleSort, usePager, AsyncButton, SearchBox, rowMatches, RowAction } from "../../components/ui";
 import type { SortState } from "../../components/ui";
-import { canSetTarget, useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_roles } from "../../i18n/n_roles";
@@ -35,155 +35,43 @@ const MODULES = [
   "Pengaturan",
 ];
 
-const ROLES = [
-  "Direktur",
-  "Project Manager",
-  "Foreman/Tim",
-  "QC Inspector",
-  "QC/HSE Manager",
-  "Warehouse",
-  "Procurement",
-  "Finance",
-  "HR",
-  "Sales",
-  "Client (eks)",
-  "Admin",
-];
+export const ROLES = [
+  "developer",
+  "direktur",
+  "manager",
+  "finance",
+  "hr",
+  "procurement",
+  "gudang",
+  "proyek",
+  "mekanik",
+  "qc",
+  "subkon",
+  "equipment",
+  "drydock",
+  "viewer",
+] as const;
+
+export const ROLE_LABELS: Record<string, string> = {
+  developer: "Developer",
+  direktur: "Direktur",
+  manager: "Manager",
+  finance: "Finance",
+  hr: "HR / SDM",
+  procurement: "Procurement",
+  gudang: "Gudang",
+  proyek: "Proyek & Operasional",
+  mekanik: "Mekanik & Bengkel",
+  qc: "QC & Safety",
+  subkon: "Subkontraktor",
+  equipment: "Equipment & Alat",
+  drydock: "Drydock & Slot",
+  viewer: "Client / Viewer",
+};
 
 /** Matriks RBAC display: sel yang tidak tercantum = tanpa akses. Read-only tanpa backend. */
 const ROLE_MATRIX: Record<string, Record<string, RoleAction[]>> = {
-  Direktur: {
-    Proyek: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Drydock: ["Lihat", "Setujui", "Ekspor"],
-    Inventori: ["Lihat", "Ekspor"],
-    Equipment: ["Lihat", "Ekspor"],
-    Subkontraktor: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    "QC & Safety": ["Lihat", "Ekspor"],
-    CRM: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Procurement: ["Lihat", "Setujui", "Ekspor"],
-    Keuangan: ["Lihat", "Setujui", "Bayar", "Ekspor"],
-    SDM: ["Lihat", "Setujui", "Ekspor"],
-    Kapal: ["Lihat", "Ekspor"],
-    Dokumen: ["Lihat", "Ekspor"],
-    Analytics: ["Lihat", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Absensi: ["Lihat", "Setujui", "Ekspor"],
-    Payroll: ["Lihat", "Setujui", "Bayar", "Ekspor"],
-    Laporan: ["Lihat", "Ekspor"],
-    Monitoring: ["Lihat", "Ekspor"],
-    Pengaturan: ["Lihat", "Ekspor"],
-  },
-  "Project Manager": {
-    Proyek: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Drydock: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Inventori: ["Lihat", "Buat", "Ekspor"],
-    Equipment: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Subkontraktor: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    "QC & Safety": ["Lihat", "Buat"],
-    CRM: ["Lihat"],
-    Procurement: ["Lihat", "Buat", "Ekspor"],
-    Keuangan: ["Lihat", "Ekspor"],
-    SDM: ["Lihat", "Ekspor"],
-    Kapal: ["Lihat"],
-    Dokumen: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Analytics: ["Lihat", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Absensi: ["Lihat", "Setujui", "Ekspor"],
-    Payroll: ["Lihat"],
-    Laporan: ["Lihat", "Buat", "Ekspor"],
-    Monitoring: ["Lihat", "Buat", "Ubah", "Ekspor"],
-  },
-  "Foreman/Tim": {
-    Proyek: ["Lihat", "Ubah"],
-    Drydock: ["Lihat"],
-    Inventori: ["Lihat", "Buat"],
-    Equipment: ["Lihat", "Buat"],
-    Subkontraktor: ["Lihat"],
-    "QC & Safety": ["Lihat", "Buat"],
-    Dokumen: ["Lihat"],
-    Notifikasi: ["Lihat"],
-    Absensi: ["Lihat", "Buat"],
-    Laporan: ["Lihat"],
-    Monitoring: ["Lihat", "Ubah"],
-  },
-  "QC Inspector": {
-    Proyek: ["Lihat"],
-    Monitoring: ["Lihat"],
-    Inventori: ["Lihat"],
-    Equipment: ["Lihat"],
-    "QC & Safety": ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Dokumen: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat", "Ekspor"],
-  },
-  "QC/HSE Manager": {
-    Proyek: ["Lihat", "Setujui"],
-    Monitoring: ["Lihat"],
-    Equipment: ["Lihat"],
-    "QC & Safety": ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    SDM: ["Lihat"],
-    Dokumen: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Absensi: ["Lihat"],
-    Laporan: ["Lihat", "Buat", "Ekspor"],
-  },
-  Warehouse: {
-    Proyek: ["Lihat"],
-    Inventori: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Equipment: ["Lihat"],
-    Procurement: ["Lihat", "Buat"],
-    Dokumen: ["Lihat"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat", "Ekspor"],
-  },
-  Procurement: {
-    Proyek: ["Lihat"],
-    Inventori: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Subkontraktor: ["Lihat", "Buat", "Ubah"],
-    Procurement: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Keuangan: ["Lihat"],
-    Dokumen: ["Lihat", "Buat", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat", "Ekspor"],
-  },
-  Finance: {
-    Proyek: ["Lihat"],
-    CRM: ["Lihat"],
-    Procurement: ["Lihat"],
-    Keuangan: ["Lihat", "Buat", "Ubah", "Setujui", "Bayar", "Ekspor"],
-    Payroll: ["Lihat", "Buat", "Ubah", "Bayar", "Ekspor"],
-    Dokumen: ["Lihat", "Ekspor"],
-    Analytics: ["Lihat", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat", "Buat", "Ekspor"],
-  },
-  HR: {
-    Proyek: ["Lihat"],
-    SDM: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
-    Dokumen: ["Lihat", "Buat", "Ekspor"],
-    Notifikasi: ["Lihat"],
-    Absensi: ["Lihat", "Buat", "Ubah", "Setujui", "Ekspor"],
-    Payroll: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Laporan: ["Lihat", "Ekspor"],
-  },
-  Sales: {
-    Proyek: ["Lihat"],
-    CRM: ["Lihat", "Buat", "Ubah", "Ekspor"],
-    Keuangan: ["Lihat"],
-    Kapal: ["Lihat"],
-    Dokumen: ["Lihat", "Buat", "Ekspor"],
-    Analytics: ["Lihat"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat", "Ekspor"],
-  },
-  "Client (eks)": {
-    Proyek: ["Lihat"],
-    Dokumen: ["Lihat"],
-    Notifikasi: ["Lihat"],
-    Laporan: ["Lihat"],
-    Monitoring: ["Lihat"],
-  },
-  Admin: {
+  developer: {
     Proyek: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
     Drydock: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
     Inventori: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
@@ -203,6 +91,132 @@ const ROLE_MATRIX: Record<string, Record<string, RoleAction[]>> = {
     Laporan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
     Monitoring: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
     Pengaturan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+  },
+  direktur: {
+    Proyek: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Drydock: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Inventori: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Equipment: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Subkontraktor: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    "QC & Safety": ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    CRM: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Procurement: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Keuangan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    SDM: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Kapal: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Dokumen: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Analytics: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Notifikasi: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Absensi: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Payroll: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Laporan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Monitoring: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Pengaturan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+  },
+  manager: {
+    Proyek: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Drydock: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Inventori: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Equipment: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Subkontraktor: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    "QC & Safety": ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    CRM: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Procurement: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Keuangan: ["Lihat", "Ekspor"],
+    Kapal: ["Lihat", "Ekspor"],
+    Dokumen: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Analytics: ["Lihat", "Ekspor"],
+    Notifikasi: ["Lihat"],
+    Absensi: ["Lihat", "Setujui", "Ekspor"],
+    Laporan: ["Lihat", "Buat", "Ekspor"],
+    Monitoring: ["Lihat", "Buat", "Ubah", "Ekspor"],
+  },
+  finance: {
+    Keuangan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Procurement: ["Lihat", "Ekspor"],
+    CRM: ["Lihat"],
+    Proyek: ["Lihat"],
+    Dokumen: ["Lihat", "Ekspor"],
+    Analytics: ["Lihat", "Ekspor"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Buat", "Ekspor"],
+  },
+  hr: {
+    SDM: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Absensi: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Payroll: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Dokumen: ["Lihat", "Buat", "Ekspor"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  procurement: {
+    Procurement: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Inventori: ["Lihat", "Ekspor"],
+    Proyek: ["Lihat"],
+    Dokumen: ["Lihat", "Buat", "Ekspor"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  gudang: {
+    Inventori: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Equipment: ["Lihat"],
+    Procurement: ["Lihat"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  proyek: {
+    Proyek: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Monitoring: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Kapal: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Dokumen: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Inventori: ["Lihat"],
+    Equipment: ["Lihat"],
+    Subkontraktor: ["Lihat"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  mekanik: {
+    Equipment: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Inventori: ["Lihat"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  qc: {
+    "QC & Safety": ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Proyek: ["Lihat"],
+    Monitoring: ["Lihat"],
+    Dokumen: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat", "Ekspor"],
+  },
+  subkon: {
+    Subkontraktor: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Proyek: ["Lihat"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+  },
+  equipment: {
+    Equipment: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Inventori: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+  },
+  drydock: {
+    Drydock: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Ekspor"],
+    Kapal: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Proyek: ["Lihat"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+  },
+  viewer: {
+    Proyek: ["Lihat"],
+    Monitoring: ["Lihat"],
+    Kapal: ["Lihat"],
+    Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+    Laporan: ["Lihat"],
   },
 };
 
@@ -289,23 +303,23 @@ export default function Peran() {
     Bayar: S.actPay,
     Ekspor: S.actExport,
   };
-  const [role, setRole] = useState("Project Manager");
+  const [role, setRole] = useState<string>("manager");
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
 
   /* Live user management (remote only). Matrix below stays as the RBAC reference. */
   const remote = isBackendConfigured();
   const { user: session } = useAuth();
   const { data } = useStore();
-  const canManage = canSetTarget(session?.role);
+  const canManage = hasPermission(session?.permissions, "users", "w");
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ username: "", name: "", role: "Manager", password: "", email: "", employeeId: "" });
+  const [form, setForm] = useState({ username: "", name: "", role: "manager", password: "", email: "", employeeId: "" });
   const [pwTarget, setPwTarget] = useState<ManagedUser | null>(null);
   const [pwValue, setPwValue] = useState("");
   // Ubah user: nama + peran + email via PATCH.
   const [editUser, setEditUser] = useState<ManagedUser | null>(null);
-  const [editUserForm, setEditUserForm] = useState({ name: "", role: "Manager", email: "" });
+  const [editUserForm, setEditUserForm] = useState({ name: "", role: "manager", email: "" });
   const [confirmTarget, setConfirmTarget] = useState<ManagedUser | null>(null);
   const navigate = useNavigate();
   const [linkTarget, setLinkTarget] = useState<ManagedUser | null>(null);
@@ -607,7 +621,7 @@ export default function Peran() {
                   <tr key={u.id} className="hover:bg-surface">
                     <td className="px-3 py-2 font-semibold text-navy-900">{u.username}</td>
                     <td className="px-3 py-2">{u.name}</td>
-                    <td className="px-3 py-2">{u.role}</td>
+                    <td className="px-3 py-2">{ROLE_LABELS[u.role] ?? u.role}</td>
                     <td className="px-3 py-2 text-steel-500">{u.email || "-"}</td>
                     <td className="px-3 py-2 text-steel-600">{empNameOf(u.employeeId)}</td>
                     <td className="px-3 py-2">
@@ -767,7 +781,7 @@ export default function Peran() {
           <Field label={S.selectRole} hint={S.selectRoleHint}>
             <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
               {ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
             </select>
           </Field>
@@ -830,7 +844,7 @@ export default function Peran() {
           <Field label={S.thRole}>
             <select className="input" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
               {ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
             </select>
           </Field>
@@ -924,7 +938,7 @@ export default function Peran() {
           <Field label={S.thRole}>
             <select className="input" value={editUserForm.role} onChange={(e) => setEditUserForm((f) => ({ ...f, role: e.target.value }))}>
               {ROLES.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
             </select>
           </Field>

@@ -135,7 +135,7 @@ const DASH_LEVEL_HEAD: Record<AlertLevel, string> = {
   perhatian: "text-amber-900",
   info: "text-ocean-800",
 };
-import { useAuth, canSetTarget } from "../auth/auth";
+import { useAuth, hasPermission } from "../auth/auth";
 
 import { pdfServerReady } from "../services/pdfClient";
 import { usePdfDoc } from "../components/usePdfDoc";
@@ -206,7 +206,7 @@ export default function Dashboard() {
   const { locale, t } = useT();
   const S = n_misc[locale];
   const { user } = useAuth();
-  const allowedTarget = canSetTarget(user?.role);
+  const allowedTarget = hasPermission(user?.permissions, "projects", "w") || ["developer", "direktur", "manager"].includes(user?.role ?? "");
   const navigate = useNavigate();
   const [isFs, setIsFs] = useState(() => typeof document !== "undefined" && !!document.fullscreenElement);
   useEffect(() => {

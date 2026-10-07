@@ -17,7 +17,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F2-02 | Konfigurasi default aman | P0 | F2-keamanan.md | agent | selesai | PR #7 |
 | F2-03 | Hierarki peran di manajemen user | P0 | F2-keamanan.md | agent | selesai | PR #8 |
 | F2-04 | Token bisa dicabut | P0 | F2-keamanan.md | agent | selesai | PR #9 |
-| F2-05 | `policy.ts`: enum peran + izin baca/tulis | P0 | F2-keamanan.md | | todo | |
+| F2-05 | `policy.ts`: enum peran + izin baca/tulis | P0 | F2-keamanan.md | agent | selesai | PR #10 |
 | F2-06 | Scope cabang di server | P0/P1 | F2-keamanan.md | | todo | |
 | F2-07 | Login mengirim cabang & cache offline aman | P0 | F2-keamanan.md | | todo | |
 | F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | | todo | |

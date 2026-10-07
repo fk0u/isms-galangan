@@ -11,6 +11,7 @@
     "build": "tsc",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "migrate": "tsx --env-file-if-exists=.env src/migrate.ts",
+    "migrate:roles": "tsx --env-file-if-exists=.env scripts/migrate-roles.ts",
     "seed": "tsx --env-file-if-exists=.env src/seed.ts",
     "seed:bulk": "tsx --env-file-if-exists=.env src/seedBulk.ts",
     "seed:gen": "tsx scripts/gen-seed-data.ts",

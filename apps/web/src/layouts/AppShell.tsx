@@ -36,7 +36,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { useAuth } from "../auth/auth";
+import { useAuth, hasPermission } from "../auth/auth";
 import { useStore } from "../data/store";
 import { Badge, Modal, Field, Toaster, toast } from "../components/ui";
 import { apiFetch } from "../services/http";
@@ -201,7 +201,7 @@ export default function AppShell() {
 
   /* Urutan grup ikut alur bisnis galangan: Utama → Komersial (CRM melahirkan
      Proyek) → Operasional → SDM → Aset (master) → Analisis → Sistem. */
-  const navGroups: { label: string; items: { to: string; label: string; icon: ComponentType<{ className?: string }>; alertKey?: ModuleAlertKey; child?: boolean }[] }[] = [
+  const navGroups: { label: string; items: { to: string; label: string; icon: ComponentType<{ className?: string }>; alertKey?: ModuleAlertKey; child?: boolean; col?: string }[] }[] = useMemo(() => [
     {
       label: t.nav.utama,
       items: [
@@ -211,55 +211,67 @@ export default function AppShell() {
     {
       label: t.nav.komersial,
       items: [
-        { to: "/crm", label: t.nav.crm, icon: Handshake, alertKey: "crm" },
-        { to: "/procurement", label: t.nav.procurement, icon: ShoppingCart, alertKey: "procurement" },
-        { to: "/keuangan", label: t.nav.keuangan, icon: Wallet, alertKey: "keuangan" },
+        { to: "/crm", label: t.nav.crm, icon: Handshake, alertKey: "crm", col: "clients" },
+        { to: "/procurement", label: t.nav.procurement, icon: ShoppingCart, alertKey: "procurement", col: "purchaseOrders" },
+        { to: "/keuangan", label: t.nav.keuangan, icon: Wallet, alertKey: "keuangan", col: "invoices" },
       ],
     },
     {
       label: t.nav.operasional,
       items: [
-        { to: "/proyek", label: t.nav.proyek, icon: FolderKanban, alertKey: "proyek" },
-        { to: "/proyek/monitoring", label: t.nav.monitoring, icon: Activity },
-        { to: "/drydock", label: t.nav.drydock, icon: ShipWheel, alertKey: "drydock" },
-        { to: "/inventori", label: t.nav.inventori, icon: Boxes, alertKey: "inventori" },
-        { to: "/equipment", label: t.nav.equipment, icon: Cpu, alertKey: "equipment" },
-        { to: "/subkontraktor", label: t.nav.subkontraktor, icon: HardHat, alertKey: "subkontraktor" },
-        { to: "/qc-safety", label: t.nav.qc, icon: ClipboardCheck, alertKey: "qc" },
+        { to: "/proyek", label: t.nav.proyek, icon: FolderKanban, alertKey: "proyek", col: "projects" },
+        { to: "/proyek/monitoring", label: t.nav.monitoring, icon: Activity, col: "projects" },
+        { to: "/drydock", label: t.nav.drydock, icon: ShipWheel, alertKey: "drydock", col: "drydocks" },
+        { to: "/inventori", label: t.nav.inventori, icon: Boxes, alertKey: "inventori", col: "inventory" },
+        { to: "/equipment", label: t.nav.equipment, icon: Cpu, alertKey: "equipment", col: "equipment" },
+        { to: "/subkontraktor", label: t.nav.subkontraktor, icon: HardHat, alertKey: "subkontraktor", col: "subcontractors" },
+        { to: "/qc-safety", label: t.nav.qc, icon: ClipboardCheck, alertKey: "qc", col: "ncr" },
       ],
     },
     {
       label: t.nav.grupSdm,
       items: [
-        { to: "/sdm", label: t.nav.sdm, icon: Users, alertKey: "sdm" },
-        { to: "/absensi", label: t.nav.absensi, icon: CalendarCheck },
-        { to: "/payroll", label: t.nav.payroll, icon: Banknote, alertKey: "payroll" },
+        { to: "/sdm", label: t.nav.sdm, icon: Users, alertKey: "sdm", col: "employees" },
+        { to: "/absensi", label: t.nav.absensi, icon: CalendarCheck, col: "attendance" },
+        { to: "/payroll", label: t.nav.payroll, icon: Banknote, alertKey: "payroll", col: "payroll" },
       ],
     },
     {
       label: t.nav.aset,
       items: [
-        { to: "/kapal", label: t.nav.kapal, icon: Ship, alertKey: "kapal" },
-        { to: "/dokumen", label: t.nav.dokumen, icon: FolderOpen, alertKey: "dokumen" },
+        { to: "/kapal", label: t.nav.kapal, icon: Ship, alertKey: "kapal", col: "vessels" },
+        { to: "/dokumen", label: t.nav.dokumen, icon: FolderOpen, alertKey: "dokumen", col: "documents" },
       ],
     },
     {
       label: t.nav.analisis,
       items: [
-        { to: "/analytics", label: t.nav.analytics, icon: BarChart3 },
-        { to: "/laporan", label: t.nav.laporan, icon: FileText },
+        { to: "/analytics", label: t.nav.analytics, icon: BarChart3, col: "projects" },
+        { to: "/laporan", label: t.nav.laporan, icon: FileText, col: "projects" },
       ],
     },
     {
       label: t.nav.sistem,
       items: [
         { to: "/notifikasi", label: t.nav.notifikasi, icon: Bell },
-        { to: "/pengaturan", label: t.nav.pengaturan, icon: SettingsIcon },
-        { to: "/pengaturan/peran", label: t.nav.peran, icon: KeyRound, child: true },
-        { to: "/audit", label: t.nav.audit, icon: ShieldCheck },
+        { to: "/pengaturan", label: t.nav.pengaturan, icon: SettingsIcon, col: "settings" },
+        { to: "/pengaturan/peran", label: t.nav.peran, icon: KeyRound, child: true, col: "users" },
+        { to: "/audit", label: t.nav.audit, icon: ShieldCheck, col: "audit" },
       ],
     },
-  ];
+  ], [t]);
+
+  const visibleNavGroups = useMemo(() => {
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          if (!item.col || !user?.permissions) return true;
+          return hasPermission(user.permissions, item.col, "r");
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navGroups, user?.permissions]);
 
   const doLogout = () => {
     if (isBackendConfigured() && getJwt()) {
@@ -423,7 +435,7 @@ export default function AppShell() {
         )}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {navGroups.map((group) => {
+        {visibleNavGroups.map((group) => {
           const gOpen = mini ? true : isGroupOpen(group.label);
           return (
           <div key={group.label} className="mb-3">

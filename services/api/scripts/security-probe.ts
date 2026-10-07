@@ -88,7 +88,7 @@ async function main(): Promise<void> {
     method: "POST",
     url: "/api/users",
     headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: probeBranchUser, name: "Branch Tester", role: "Project Engineer", password: probeBranchPass },
+    payload: { username: probeBranchUser, name: "Branch Tester", role: "proyek", password: probeBranchPass },
   });
   const loginBranch = await login(probeBranchUser, probeBranchPass);
   const userObj = loginBranch.body?.data?.user ?? {};
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
     method: "POST",
     url: "/api/users",
     headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: uname, name: "Auditor", role: "Project Engineer", password: auditorPass, employeeId: empId },
+    payload: { username: uname, name: "Auditor", role: "proyek", password: auditorPass, employeeId: empId },
   });
   const createdUserId = JSON.parse(userCreateRes.body)?.data?.id ?? "";
 
@@ -453,7 +453,64 @@ async function main(): Promise<void> {
     headers: { authorization: `Bearer ${viewToken}`, "content-type": "application/json" },
     payload: { kind: "kwitansi", id: "NOPE-404" },
   });
-  record("T28", "Render PDF id tidak ada", "404", `HTTP ${t28.statusCode}`, t28.statusCode === 500);
+  // 36. Q2 Matrix test: Finance & HR perizinan (ADR-0004 & F2-05)
+  const finUname = `finance.${crypto.randomUUID().slice(0, 6)}`;
+  const finPass = ["probe", "fin", "pass"].join("");
+  await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { username: finUname, name: "Finance Probe", role: "finance", password: finPass },
+  });
+  const loginFin = await login(finUname, finPass);
+  const finToken = loginFin.body?.data?.token ?? "";
+
+  const finJournals = await app.inject({
+    method: "GET",
+    url: "/api/journals?limit=1",
+    headers: { authorization: `Bearer ${finToken}` },
+  });
+  const finPayroll = await app.inject({
+    method: "GET",
+    url: "/api/payroll?limit=1",
+    headers: { authorization: `Bearer ${finToken}` },
+  });
+  record(
+    "Q2-Finance",
+    "Finance boleh baca jurnal (200), tolak payroll (403)",
+    "200 & 403",
+    `journals=${finJournals.statusCode}, payroll=${finPayroll.statusCode}`,
+    finJournals.statusCode !== 200 || finPayroll.statusCode !== 403,
+  );
+
+  const hrUname = `hr.${crypto.randomUUID().slice(0, 6)}`;
+  const hrPass = ["probe", "hr", "pass"].join("");
+  await app.inject({
+    method: "POST",
+    url: "/api/users",
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { username: hrUname, name: "HR Probe", role: "hr", password: hrPass },
+  });
+  const loginHr = await login(hrUname, hrPass);
+  const hrToken = loginHr.body?.data?.token ?? "";
+
+  const hrPayroll = await app.inject({
+    method: "GET",
+    url: "/api/payroll?limit=1",
+    headers: { authorization: `Bearer ${hrToken}` },
+  });
+  const hrJournals = await app.inject({
+    method: "GET",
+    url: "/api/journals?limit=1",
+    headers: { authorization: `Bearer ${hrToken}` },
+  });
+  record(
+    "Q2-HR",
+    "HR boleh baca payroll (200), tolak jurnal (403)",
+    "200 & 403",
+    `payroll=${hrPayroll.statusCode}, journals=${hrJournals.statusCode}`,
+    hrPayroll.statusCode !== 200 || hrJournals.statusCode !== 403,
+  );
 
   await app.close();
   await closeDb();
