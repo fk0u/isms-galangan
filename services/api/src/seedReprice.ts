@@ -185,7 +185,7 @@ async function main(): Promise<void> {
          Tidak ada angka yang diketik dari udara; kalau tidak ada satu pun
          sumber, baris dilewati dan dilaporkan. */
       const d = deriveDays(data, oldLabor, oldRate);
-      let days = d.days;
+      const days = d.days;
       if (days === null) {
         /* Jumlah hari tidak bisa diturunkan. Tarif tetap diisi kalau kosong
            (tidak ada nilai manusia yang tertimpa), tapi laborCost TIDAK

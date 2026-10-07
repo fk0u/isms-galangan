@@ -85,6 +85,7 @@ export default function BomDetail() {
   const [moveEdit, setMoveEdit] = useState<StoreItem | null>(null);
   const [moveEditForm, setMoveEditForm] = useState({ date: "", by: "", purpose: "", supplier: "", pic: "" });
   const [delMove, setDelMove] = useState<StoreItem | null>(null);
+  const [moveQ, setMoveQ] = useState("");
 
   if (!item) {
     return (
@@ -97,7 +98,6 @@ export default function BomDetail() {
     );
   }
 
-  const [moveQ, setMoveQ] = useState("");
   const moves = data.movements.filter((m) => m.itemId === item.id || m.item === item.name);
   const projectIds = Array.from(new Set(moves.map((m) => String(m.by ?? "")).filter((b) => /^(NB|RP|RF|PRJ)-/i.test(b))));
   const usedProjects = data.projects.filter((p) => projectIds.includes(p.id));

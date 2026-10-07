@@ -1,4 +1,4 @@
-﻿/* Blok dokumen - deklaratif, murni, tanpa efek samping.
+/* Blok dokumen - deklaratif, murni, tanpa efek samping.
  *
  * SETIAP blok melakukan dua hal yang TERPISAH:
  *   - `plan(width)` memberitahu document berapa tinggi blok itu pada lebar
@@ -100,7 +100,7 @@ export function drawText(
   const color = o.color ?? [0, 0, 0];
   const w = textWidth(ctx, text, { font, size });
   let tx = x;
-  let align: "left" | "center" | "right" = o.align ?? "left";
+  const align: "left" | "center" | "right" = o.align ?? "left";
   if (align === "right") {
     tx = x + Math.max(0, boxW - w);
   } else if (align === "center") {

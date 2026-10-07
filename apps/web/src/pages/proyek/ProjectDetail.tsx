@@ -335,6 +335,7 @@ if (from === "Desain" && to === "Produksi") {
   const [sort3, setSort3] = useState<SortState>({ key: null, dir: "asc" });
   /* Tabel rincian biaya equipment (card HPP equipment). */
   const [sort4, setSort4] = useState<SortState>({ key: null, dir: "asc" });
+  const [costDetail, setCostDetail] = useState(false);
 
   const weightedProgress = (items: { progress: number; weight: number }[]): number => {
     const totalW = items.reduce((s, w) => s + Number(w.weight || 0), 0);
@@ -416,6 +417,16 @@ if (from === "Desain" && to === "Produksi") {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project?.status, project?.end, project?.progress, project?.statusOverride]);
 
+  const docOwnerOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
+  /* Kandidat rujukan QC untuk form dokumen proyek. Sumbernya `qcCertCandidates`
+     yang sama dengan modul Dokumen - sebelumnya form ini tidak punya cek
+     apa pun, jadi tidak ada cara menunjuk sertifikat mana yang sudah
+     diperiksa tim QC. */
+  const docQcOptions = useMemo(
+    () => qcCertCandidates(data.documents ?? [], project?.id ?? "", "", docSubType),
+    [data.documents, project?.id, docSubType],
+  );
+
   if (!project) return <p className="text-sm text-steel-500">{S.detNotFound}</p>;
   const pid = project.id;
 
@@ -426,21 +437,12 @@ if (from === "Desain" && to === "Produksi") {
   const invoices = data.invoices.filter((i) => i.project === pid);
   const ncrs = data.ncr.filter((n) => n.project === pid);
 
-  /* Kandidat rujukan QC untuk form dokumen proyek. Sumbernya `qcCertCandidates`
-     yang sama dengan modul Dokumen - sebelumnya form ini tidak punya cek
-     apa pun, jadi tidak ada cara menunjuk sertifikat mana yang sudah
-     diperiksa tim QC. */
-  const docQcOptions = useMemo(
-    () => qcCertCandidates(data.documents ?? [], pid, "", docSubType),
-    [data.documents, pid, docSubType],
-  );
   const docNeedsQc = NEEDS_QC_LINK.has(docSubType);
 
   /* Nama pengguna yang sedang login, dipakai sebagai penanggung jawab
      bawaan. `name` bisa kosong di mode offline/lama, jadi ada fallback ke
      username agar tidak pernah tersimpan string kosong. */
   const sessionName = String(session?.name ?? "").trim() || String(session?.username ?? "").trim();
-const docOwnerOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
   const slots = data.dockSlots.filter((s) => s.project === pid);
   const docs = data.documents.filter((d) => d.project === pid);
   const wos = data.workOrders.filter((w) => w.project === pid);
@@ -598,7 +600,6 @@ const createWarranty = async (wbsTask?: string) => {
      Yang BELUM terealisasi (maintenance berjalan) ditampilkan terpisah
      sebagai "committed" - bukan dicampur ke realized. */
   const equipCost = equipmentCostSummary(pid, data.bookings, data.maintenances, data.equipment);
-  const [costDetail, setCostDetail] = useState(false);
   const equipHasCost = equipCost.totalRealized > 0 || equipCost.totalCommitted > 0;
   const hppWithEquip = Number(project.actual ?? 0) + equipCost.totalRealized;
 

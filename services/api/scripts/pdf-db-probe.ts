@@ -1,4 +1,4 @@
-﻿/* Uji ujung-ke-ujung cetakan ulang PDF terhadap database sungguhan.
+/* Uji ujung-ke-ujung cetakan ulang PDF terhadap database sungguhan.
  *
  * Probe (`pdf-probe.ts`) membuktikan mesin dan registry benar dengan model
  * buatan. Probe ini membuktikan hal yang tidak bisa dibuktikan model buatan:
@@ -56,7 +56,7 @@ async function samples(): Promise<Sample[]> {
     if (!recipe) continue;
     /* Surat jalan/DO/Tanda Terima/transmittal semua living di `documents`,
        jadi disaring per `type` supaya tidak mengambil baris lain. */
-    let sql = `SELECT id FROM ${recipe.entity.field}`;
+    const sql = `SELECT id FROM ${recipe.entity.field}`;
     if (recipe.entity.field === "documents") {
       const byKind: Record<string, string> = {
         suratJalan: "Surat Jalan",

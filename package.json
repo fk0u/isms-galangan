@@ -8,6 +8,7 @@
     "check": "npm run check --prefix apps/web && npm run check --prefix services/api",
     "check:web": "npm run check --prefix apps/web",
     "check:api": "npm run check --prefix services/api",
+    "lint": "npm run lint --prefix apps/web && npm run lint --prefix services/api",
     "dev:api": "npm run dev --prefix services/api",
     "dev:web": "npm run dev --prefix apps/web"
   }
