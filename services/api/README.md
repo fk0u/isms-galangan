@@ -64,15 +64,15 @@ Create the database first (`CREATE DATABASE isms;`). The same `001_init.sql` DDL
   (`VARCHAR(128)` PK, no `TEXT DEFAULT`s, `actor` column).
   Delete local `./data/isms.db` and re-run `npm run migrate` to pick up DDL changes.
 
-## Scripts
+## Scripts (Node ≥ 22, memuat `.env` secara otomatis via `--env-file-if-exists=.env`)
 
-- `npm run dev` — `tsx watch src/index.ts` (migrates on boot, then listens on `PORT`)
-- `npm run migrate` — `tsx src/migrate.ts`
-- `npm run seed` — `tsx src/seed.ts` (4 dev users, idempotent)
-- `npm run backup [-- --out ./backups/<name>]` — `tsx src/backup.ts`
-- `npm run restore -- --from ./backups/<name>` — `tsx src/restore.ts`
+- `npm run dev` — `tsx watch --env-file-if-exists=.env src/index.ts` (migrates on boot, then listens on `PORT`)
+- `npm run migrate` — `tsx --env-file-if-exists=.env src/migrate.ts`
+- `npm run seed` — `tsx --env-file-if-exists=.env src/seed.ts` (4 dev users, idempotent)
+- `npm run backup [-- --out ./backups/<name>]` — `tsx --env-file-if-exists=.env src/backup.ts`
+- `npm run restore -- --from ./backups/<name>` — `tsx --env-file-if-exists=.env src/restore.ts`
 - `npm run build` — `tsc` → `dist/`
-- `npm start` — `node dist/index.js`
+- `npm start` — `node --env-file-if-exists=.env dist/index.js`
 
 ## Auth
 
