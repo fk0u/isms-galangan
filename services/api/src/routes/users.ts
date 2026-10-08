@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { bumpTokenVersion, comparePassword, hashPassword, requireAuth } from "../auth.js";
+import { bumpTokenVersion, comparePassword, hashPassword, invalidateUserCache, requireAuth } from "../auth.js";
 import { requireManageUsers, roleRank, ROLES } from "../policy.js";
-import { requestActor, requestIp, writeAudit } from "../audit.js";
-import { exec, q } from "../db.js";
+import { requestActor, requestIp, writeAudit, type AuditInput } from "../audit.js";
+import { exec, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 
 // Kelola users: direktur/developer/manager/admin (rbac.ts requireManageUsers).
@@ -92,6 +92,13 @@ const PasswordSchema = z.object({
 
 const SELECT_COLS = "id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users";
 
+async function persistUserChange(mutate: () => Promise<unknown>, audit: AuditInput): Promise<void> {
+  await withTx(async () => {
+    await mutate();
+    await writeAudit(audit, { required: true });
+  });
+}
+
 export function registerUserRoutes(app: FastifyInstance): void {
   app.get("/api/users", { preHandler: manageGuards }, async () => {
     const rows = await q<UserRow>(`SELECT ${SELECT_COLS} ORDER BY username ASC`);
@@ -120,10 +127,6 @@ export function registerUserRoutes(app: FastifyInstance): void {
     }
     const id = randomUUID();
     const passHash = await hashPassword(parsed.data.password);
-    await exec(
-      "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
-      [id, parsed.data.username, passHash, parsed.data.name, parsed.data.role, parsed.data.email, parsed.data.employeeId || null],
-    );
     const created = {
       id,
       username: parsed.data.username,
@@ -137,14 +140,20 @@ export function registerUserRoutes(app: FastifyInstance): void {
        ini, pembuatan akun/eskalasi peran/reset password tidak pernah muncul
        di audit_log karena routes/users.ts sama sekali tidak memanggil
        writeAudit. Password SENGAJA tidak ikut dicatat. */
-    await writeAudit({
-      actor: requestActor(req),
-      action: "create",
-      table: "users",
-      rowId: id,
-      diff: { username: created.username, name: created.name, role: created.role, email: created.email },
-      ip: requestIp(req),
-    });
+    await persistUserChange(
+      () => exec(
+        "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
+        [id, parsed.data.username, passHash, parsed.data.name, parsed.data.role, parsed.data.email, parsed.data.employeeId || null],
+      ),
+      {
+        actor: requestActor(req),
+        action: "create",
+        table: "users",
+        rowId: id,
+        diff: { username: created.username, name: created.name, role: created.role, email: created.email },
+        ip: requestIp(req),
+      },
+    );
     return reply.status(201).send(ok(created));
   });
 
@@ -215,21 +224,22 @@ export function registerUserRoutes(app: FastifyInstance): void {
           ? (current.is_active ?? 1) !== 0
           : parsed.data.isActive === true || parsed.data.isActive === 1,
     };
-    await exec("UPDATE users SET name = ?, role = ?, email = ?, is_active = ?, employee_id = ? WHERE id = ?", [
-      next.name,
-      next.role,
-      next.email,
-      next.isActive ? 1 : 0,
-      nextEmployeeId,
-      current.id,
-    ]);
     const roleChanged = parsed.data.role !== undefined && parsed.data.role !== current.role;
     const activeChanged = parsed.data.isActive !== undefined && ((current.is_active ?? 1) !== 0) !== next.isActive;
     const employeeChanged = nextEmployeeId !== (current.employee_id ?? null);
-    if (roleChanged || activeChanged || employeeChanged) {
-      await bumpTokenVersion(current.id);
-    }
-    await writeAudit({
+    await persistUserChange(async () => {
+      await exec("UPDATE users SET name = ?, role = ?, email = ?, is_active = ?, employee_id = ? WHERE id = ?", [
+        next.name,
+        next.role,
+        next.email,
+        next.isActive ? 1 : 0,
+        nextEmployeeId,
+        current.id,
+      ]);
+      if (roleChanged || activeChanged || employeeChanged) {
+        await bumpTokenVersion(current.id, { deferCacheInvalidation: true });
+      }
+    }, {
       actor: requestActor(req),
       action: "update",
       table: "users",
@@ -244,6 +254,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       },
       ip: requestIp(req),
     });
+    if (roleChanged || activeChanged || employeeChanged) invalidateUserCache(current.id);
     return ok({ id: current.id, username: current.username, employeeId: nextEmployeeId, ...next });
   });
 
@@ -279,14 +290,13 @@ export function registerUserRoutes(app: FastifyInstance): void {
         (await comparePassword(parsed.data.oldPassword, target.pass_hash));
       if (!oldOk) return reply.status(401).send(fail("Password lama salah", "UNAUTHORIZED"));
     }
-    await exec("UPDATE users SET pass_hash = ? WHERE id = ?", [
-      await hashPassword(parsed.data.newPassword),
-      target.id,
-    ]);
-    await bumpTokenVersion(target.id);
+    const newHash = await hashPassword(parsed.data.newPassword);
     /* Reset password orang lain = Inbound break-glass: wajib tercatat,
        termasuk apakah pelakunya pemilik akun itu sendiri. */
-    await writeAudit({
+    await persistUserChange(async () => {
+      await exec("UPDATE users SET pass_hash = ? WHERE id = ?", [newHash, target.id]);
+      await bumpTokenVersion(target.id, { deferCacheInvalidation: true });
+    }, {
       actor: requestActor(req),
       action: "password_change",
       table: "users",
@@ -294,6 +304,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       diff: { username: target.username, self, verifiedOldPassword: self && !privileged },
       ip: requestIp(req),
     });
+    invalidateUserCache(target.id);
     return ok({ id: target.id, updated: true });
   });
 
@@ -315,9 +326,10 @@ export function registerUserRoutes(app: FastifyInstance): void {
       return reply.status(403).send(fail("Tidak memiliki izin menonaktifkan pengguna dengan peran lebih tinggi", "FORBIDDEN"));
     }
 
-    await exec("UPDATE users SET is_active = 0 WHERE id = ?", [target.id]);
-    await bumpTokenVersion(target.id);
-    await writeAudit({
+    await persistUserChange(async () => {
+      await exec("UPDATE users SET is_active = 0 WHERE id = ?", [target.id]);
+      await bumpTokenVersion(target.id, { deferCacheInvalidation: true });
+    }, {
       actor: requestActor(req),
       action: "deactivate",
       table: "users",
@@ -325,6 +337,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       diff: { username: target.username, isActive: false },
       ip: requestIp(req),
     });
+    invalidateUserCache(target.id);
     return ok({ id: target.id, isActive: false });
   });
 }

@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
+import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { requirePermission } from "../policy.js";
-import { exec, getDialect, q } from "../db.js";
+import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
@@ -14,6 +15,11 @@ const TeamSchema = z.object({
 interface SideRow {
   project_id: string;
   data: string;
+}
+
+interface SideWriteOutcome {
+  projectMissing: boolean;
+  conflict: SideRow | null;
 }
 
 /**
@@ -34,20 +40,6 @@ interface SideRow {
  * yang belum tahu soal fitur ini, dan tidak boleh dibalas 409 demi
  * backwards compatibility.
  */
-async function detectConflict(table: string, projectId: string, baseData: unknown): Promise<SideRow | null> {
-  if (baseData === undefined) return null;
-  const rows = await q<SideRow>(`SELECT project_id, data FROM ${table} WHERE project_id = ?`, [projectId]);
-  const current = rows[0] as SideRow | undefined;
-  /* Tidak ada baris di server: tidak ada apa pun untuk dibentroakkan. */
-  if (current === undefined) return null;
-  return JSON.stringify(baseData) === current.data ? null : current;
-}
-
-async function assertProjectExists(projectId: string): Promise<boolean> {
-  const rows = await q("SELECT id FROM projects WHERE id = ?", [projectId]);
-  return rows.length > 0;
-}
-
 async function upsert(table: string, projectId: string, payload: unknown): Promise<void> {
   const json = JSON.stringify(payload);
   if (getDialect() === "mysql") {
@@ -75,18 +67,38 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     const parsed = WbsSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
-    if (!(await assertProjectExists(id))) {
+    const lockClause = getDialect() === "mysql" ? " FOR UPDATE" : "";
+    const outcome = await withTx<SideWriteOutcome>(async () => {
+      // Lock parent row first so writers serialize even before the side row exists.
+      const projects = await q<{ id: string }>(`SELECT id FROM projects WHERE id = ?${lockClause}`, [id]);
+      if (projects.length === 0) return { projectMissing: true, conflict: null };
+      const beforeRows = await q<SideRow>(`SELECT project_id, data FROM wbs_by_project WHERE project_id = ?${lockClause}`, [id]);
+      const current = beforeRows[0] as SideRow | undefined;
+      if (parsed.data.baseData !== undefined && current && JSON.stringify(parsed.data.baseData) !== current.data) {
+        return { projectMissing: false, conflict: current };
+      }
+      const before = current ? JSON.parse(current.data) as unknown : null;
+      await upsert("wbs_by_project", id, parsed.data.wbs);
+      await writeAudit({
+        actor: requestActor(req),
+        action: before === null ? "create" : "update",
+        table: "wbs_by_project",
+        rowId: id,
+        diff: { before, after: parsed.data.wbs },
+        ip: requestIp(req),
+      }, { required: true });
+      return { projectMissing: false, conflict: null };
+    });
+    if (outcome.projectMissing) {
       return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
     }
-    const bentrok = await detectConflict("wbs_by_project", id, parsed.data.baseData);
-    if (bentrok !== null) {
+    if (outcome.conflict !== null) {
       return reply.status(409).send({
         ok: false,
         error: { message: `WBS ${id} sudah diubah perangkat lain`, code: "STALE" },
-        data: { projectId: id, wbs: JSON.parse(bentrok.data) as unknown },
+        data: { projectId: id, wbs: JSON.parse(outcome.conflict.data) as unknown },
       });
     }
-    await upsert("wbs_by_project", id, parsed.data.wbs);
     return ok({ projectId: id, wbs: parsed.data.wbs });
   });
 
@@ -101,24 +113,44 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     const parsed = TeamSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
-    if (!(await assertProjectExists(id))) {
-      return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
-    }
     for (const memberId of parsed.data.memberIds) {
       const rows = await q("SELECT id FROM employees WHERE id = ?", [memberId]);
       if (rows.length === 0) {
         return reply.status(422).send(fail(`Karyawan ${memberId} tidak ada`, "UNPROCESSABLE"));
       }
     }
-    const bentrok = await detectConflict("team_by_project", id, parsed.data.baseData);
-    if (bentrok !== null) {
+    const lockClause = getDialect() === "mysql" ? " FOR UPDATE" : "";
+    const outcome = await withTx<SideWriteOutcome>(async () => {
+      // Lock parent row first so writers serialize even before the side row exists.
+      const projects = await q<{ id: string }>(`SELECT id FROM projects WHERE id = ?${lockClause}`, [id]);
+      if (projects.length === 0) return { projectMissing: true, conflict: null };
+      const beforeRows = await q<SideRow>(`SELECT project_id, data FROM team_by_project WHERE project_id = ?${lockClause}`, [id]);
+      const current = beforeRows[0] as SideRow | undefined;
+      if (parsed.data.baseData !== undefined && current && JSON.stringify(parsed.data.baseData) !== current.data) {
+        return { projectMissing: false, conflict: current };
+      }
+      const before = current ? JSON.parse(current.data) as unknown : null;
+      await upsert("team_by_project", id, parsed.data.memberIds);
+      await writeAudit({
+        actor: requestActor(req),
+        action: before === null ? "create" : "update",
+        table: "team_by_project",
+        rowId: id,
+        diff: { before, after: parsed.data.memberIds },
+        ip: requestIp(req),
+      }, { required: true });
+      return { projectMissing: false, conflict: null };
+    });
+    if (outcome.projectMissing) {
+      return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
+    }
+    if (outcome.conflict !== null) {
       return reply.status(409).send({
         ok: false,
         error: { message: `Tim proyek ${id} sudah diubah perangkat lain`, code: "STALE" },
-        data: { projectId: id, memberIds: JSON.parse(bentrok.data) as unknown },
+        data: { projectId: id, memberIds: JSON.parse(outcome.conflict.data) as unknown },
       });
     }
-    await upsert("team_by_project", id, parsed.data.memberIds);
     return ok({ projectId: id, memberIds: parsed.data.memberIds });
   });
 }

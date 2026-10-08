@@ -11,8 +11,13 @@ export interface AuditInput {
   ip: string;
 }
 
+export interface AuditWriteOptions {
+  /** Lemparkan kegagalan agar transaksi data pemanggil dapat di-rollback. */
+  required?: boolean;
+}
+
 export function newAuditId(): string {
-  return `AUD-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  return `AUD-${randomUUID().toUpperCase()}`;
 }
 
 let auditErrorCount = 0;
@@ -21,8 +26,8 @@ export function getAuditErrorCount(): number {
   return auditErrorCount;
 }
 
-/** Best-effort: audit failures must never break the main operation. */
-export async function writeAudit(input: AuditInput): Promise<void> {
+/** Audit best-effort untuk aktivitas rutin; mode required dipakai perubahan sensitif. */
+export async function writeAudit(input: AuditInput, options: AuditWriteOptions = {}): Promise<void> {
   try {
     const id = newAuditId();
     const createdAt = new Date().toISOString();
@@ -32,9 +37,10 @@ export async function writeAudit(input: AuditInput): Promise<void> {
       [id, input.actor, input.action, input.table, input.rowId, diffText, input.ip, createdAt],
     );
   } catch (err) {
-    /* audit_log missing (pre-002 DB) or write failed — count it, log, keep going */
+    /* Tetap hitung/log semua error; pemanggil sensitif perlu menerima error agar rollback. */
     auditErrorCount += 1;
     console.error("[audit] write failed:", err);
+    if (options.required) throw err;
   }
 }
 
