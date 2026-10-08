@@ -50,6 +50,9 @@ import { employeeOptions } from "../../utils/employeeOptions";
 import { delayDaysOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
 import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
+import { PhotoUploader } from "../../components/PhotoUploader";
+import type { PhotoUploadItem } from "../../components/PhotoUploader";
+import { ChangeHistory } from "../../components/ChangeHistory";
 import { PRIORITAS } from "./Projects";
 import { TAHAP, tahapOf, hasContract, isOverdue } from "./Projects";
 import { getSetting } from "../../utils/settings";
@@ -186,7 +189,7 @@ export default function ProjectDetail() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamPick, setTeamPick] = useState("");
   const [wbsTaskUpdate, setWbsTaskUpdate] = useState<string | null>(null);
-  const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", dft: "" });
+  const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
   const [showShare, setShowShare] = useState(false);
   const [shareForm, setShareForm] = useState({ docId: "", to: "" });
   const [statusPending, setStatusPending] = useState<string | null>(null);
@@ -909,16 +912,17 @@ const createWarranty = async (wbsTask?: string) => {
     const pred = wbsUpdateForm.predecessor || "";
     if (pred && pred !== wbsTaskUpdate && createsCycle(wbs, wbsTaskUpdate, pred)) { toast(S.detToastCycle, "info"); return; }
     const status = prog >= 100 ? "Selesai" : wbsUpdateForm.status === "Selesai" && prog < 100 ? "Sedang" : wbsUpdateForm.status;
+    const appendedPhotos = wbsUpdateForm.photos.map((photo) => ({ url: photo.url, note: photo.caption.trim() || wbsUpdateForm.photoNote.trim(), date: todayISO() }));
     const updated = wbs.map((w) =>
       w.task === wbsTaskUpdate
         ? {
             ...w, actualHours: hours, materialUsed: wbsUpdateForm.material, status, progress: prog, predecessor: pred || undefined,
             ...(wbsUpdateForm.station ? { station: wbsUpdateForm.station } : { station: undefined }),
-...(wbsUpdateForm.photoNote.trim() || wbsUpdateForm.photoUrl.trim()
-                ? { photos: [...(w.photos ?? []), ...(wbsUpdateForm.photoUrl.trim() ? [{ url: wbsUpdateForm.photoUrl.trim(), note: wbsUpdateForm.photoNote.trim(), date: todayISO() }] : [])] }
+            ...(wbsUpdateForm.photoNote.trim() || appendedPhotos.length > 0
+                ? { photos: [...(w.photos ?? []), ...appendedPhotos] }
                 : {}),
               ...(wbsUpdateForm.photoNote.trim() ? { photoNote: wbsUpdateForm.photoNote.trim() } : { photoNote: undefined }),
-              ...(wbsUpdateForm.photoUrl.trim() ? { photoUrl: wbsUpdateForm.photoUrl.trim() } : { photoUrl: undefined }),
+              ...(appendedPhotos.length > 0 ? { photoUrl: appendedPhotos[appendedPhotos.length - 1]?.url } : {}),
             ...(dftNum !== undefined ? { dft: dftNum } : { dft: undefined }),
           }
         : w
@@ -945,7 +949,7 @@ try {
         log("mengupdate progres WBS", `${wbsTaskUpdate} → ${prog}% (${status})`, "Proyek");
         toast(S.detToastWbsProg);
       setWbsTaskUpdate(null);
-      setWbsUpdateForm({ hours: "", material: "", status: "Sedang", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", dft: "" });
+      setWbsUpdateForm({ hours: "", material: "", status: "Sedang", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [], dft: "" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -1229,7 +1233,7 @@ try {
                               icon={Pencil}
                               tone="neutral"
                               label={`${S.detUpdateBtn} ${w.task}`}
-                              onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
+                              onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
                             />
                         </td>
                       </tr>
@@ -2332,20 +2336,26 @@ try {
             </select>
           </Field>
           <Field label={S.detPhotoNote} hint={S.detPhotoHint}><input className="input" value={wbsUpdateForm.photoNote} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, photoNote: e.target.value })} placeholder={S.detPhotoPh} /></Field>
-          <div className="flex items-center gap-2">
-            <FileUploadButton accept=".png,.jpg,.jpeg" label={S.detPhotoUpload} onUploaded={(url) => setWbsUpdateForm((v) => ({ ...v, photoUrl: url }))} />
-            {wbsUpdateForm.photoUrl ? (
-              <span className="flex flex-wrap items-center gap-2">
-                <SecureImg src={wbsUpdateForm.photoUrl} alt="Foto WBS" name="WBS" className="h-14 w-20 rounded-lg border border-steel-200 object-cover" />
-                <DocumentPreviewCell
-                  doc={{
-                    title: "Foto WBS",
-                    fileUrl: wbsUpdateForm.photoUrl,
-                  }}
-                />
-              </span>
-            ) : null}
-          </div>
+          {wbsUpdateForm.photoUrl && (
+            <div className="flex items-center gap-2">
+              <SecureImg src={wbsUpdateForm.photoUrl} alt={S.detPhotoImage} name={S.detPhotoImage} className="h-14 w-20 rounded-lg border border-steel-200 object-cover" />
+              <DocumentPreviewCell doc={{ title: S.detPhotoImage, fileUrl: wbsUpdateForm.photoUrl }} />
+            </div>
+          )}
+          <Field label={S.detPhotoUpload} hint={S.detPhotoHint}>
+            <PhotoUploader
+              value={wbsUpdateForm.photos}
+              onChange={(photos) => setWbsUpdateForm((current) => ({ ...current, photos }))}
+              labels={{ add: S.detPhotoUpload, caption: S.detPhotoCaption, remove: S.detPhotoRemove, empty: S.detPhotoEmpty, uploading: S.detPhotoUploading, uploadError: S.detPhotoUploadError, imageAlt: S.detPhotoImage }}
+              onUploadError={() => toast(S.detPhotoUploadError, "info")}
+            />
+          </Field>
+          <ChangeHistory
+            table="projects"
+            rowId={pid}
+            locale={locale}
+            labels={{ title: S.detHistoryTitle, loading: S.detHistoryLoading, empty: S.detHistoryEmpty, error: S.detHistoryError, serverUnavailable: S.detHistoryUnavailable, before: S.detHistoryBefore, after: S.detHistoryAfter, redacted: S.detHistoryRedacted }}
+          />
           <Field label={S.statusLabel}>
             <select className="input" value={wbsUpdateForm.status} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, status: e.target.value as "Sedang" | "Selesai" })}>
               <option value="Sedang">Sedang Dikerjakan</option>

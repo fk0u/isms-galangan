@@ -22,8 +22,8 @@ import {
   SearchBox,
   rowMatches,
   RowAction,
-  TimeInput,
 } from "../../components/ui";
+import { TimeInput24 } from "../../components/TimeInput24";
 import type { SortState } from "../../components/ui";
 import { useStore } from "../../data/store";
 import type { StoreItem } from "../../data/store";
@@ -859,10 +859,10 @@ export default function KaryawanDetail() {
               <input type="number" min={0} max={8} step={0.5} className="input" value={attForm.overtime} onChange={(e) => setAttForm({ ...attForm, overtime: e.target.value })} />
             </Field>
             <Field label={locale === "en" ? "Check in" : "Jam masuk"}>
-              <TimeInput value={norm24(attForm.checkIn)} disabled={attForm.status !== "Hadir"} ariaLabel={locale === "en" ? "Check in" : "Jam masuk"} onChange={(v) => setAttForm({ ...attForm, checkIn: v })} />
+              <TimeInput24 value={norm24(attForm.checkIn)} disabled={attForm.status !== "Hadir"} ariaLabel={locale === "en" ? "Check in" : "Jam masuk"} onChange={(v) => setAttForm({ ...attForm, checkIn: v })} />
             </Field>
             <Field label={locale === "en" ? "Check out" : "Jam keluar"}>
-              <TimeInput value={norm24(attForm.checkOut)} disabled={attForm.status !== "Hadir"} ariaLabel={locale === "en" ? "Check out" : "Jam keluar"} onChange={(v) => setAttForm({ ...attForm, checkOut: v })} />
+              <TimeInput24 value={norm24(attForm.checkOut)} disabled={attForm.status !== "Hadir"} ariaLabel={locale === "en" ? "Check out" : "Jam keluar"} onChange={(v) => setAttForm({ ...attForm, checkOut: v })} />
             </Field>
           </FormGrid>
           <p className="text-xs text-steel-500">{locale === "en"
