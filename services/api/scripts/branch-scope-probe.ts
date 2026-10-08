@@ -1,7 +1,7 @@
 // Security Probe: Scope Cabang di Server (F2-06 / ADR-0003 Jalur A)
 import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
-import { q, closeDb } from "../src/db.js";
+import { q, exec, closeDb } from "../src/db.js";
 import { COLLECTIONS } from "../src/routes/crud.js";
 
 async function main() {
@@ -48,11 +48,18 @@ async function main() {
   const dir = dirUsers[0];
   const dirToken = signToken({ id: dir.id, username: dir.username, role: dir.role, branch: "SEMUA", v: dir.token_version ?? 0 });
 
-  // Cari atau buat user non-direktur (mis. peran proyek)
   const projUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
     "SELECT id, username, role, token_version FROM users WHERE role = 'proyek' LIMIT 1",
   );
-  const projUser = projUsers[0] ?? { id: "probe-proj", username: "probe.proj", role: "proyek", token_version: 0 };
+  let projUser = projUsers[0];
+  if (!projUser) {
+    const newId = "probe-proj-" + Date.now();
+    await exec(
+      "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version) VALUES (?, ?, ?, ?, ?, ?, 1, 0)",
+      [newId, "probe.proj@galangan.com", "hash", "Probe Proyek", "proyek", "probe.proj@galangan.com"],
+    );
+    projUser = { id: newId, username: "probe.proj@galangan.com", role: "proyek", token_version: 0 };
+  }
   const projToken = signToken({ id: projUser.id, username: projUser.username, role: "proyek", branch: "Samarinda", v: projUser.token_version ?? 0 });
 
   // 2. POST oleh peran operasional (proyek) tanpa branch -> dipaksa default Samarinda

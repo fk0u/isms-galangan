@@ -46,8 +46,8 @@ export function StatusChips({
             }`}
             transition={{ duration, ease: "easeOut" }}
           >
-            {selected && (
-              <AnimatePresence initial={false}>
+            <AnimatePresence initial={false}>
+              {selected && (
                 <motion.span
                   key="selected-indicator"
                   layoutId={`status-chip-${instanceId}`}
@@ -58,8 +58,8 @@ export function StatusChips({
                   exit={{ opacity: 0 }}
                   transition={{ duration, ease: "easeOut" }}
                 />
-              </AnimatePresence>
-            )}
+              )}
+            </AnimatePresence>
             <span className="relative z-[1]">{option.label}</span>
             {option.count !== undefined && <span className="relative z-[1] tabular-nums opacity-80">{option.count}</span>}
           </motion.button>

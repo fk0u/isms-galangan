@@ -18,7 +18,7 @@ export async function runSeed(): Promise<void> {
     }
     await exec(`INSERT INTO ${row.table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
       row.id,
-      row.branch,
+      row.branch || "Samarinda",
       JSON.stringify(row.data),
       now,
     ]);

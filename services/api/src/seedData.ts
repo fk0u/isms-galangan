@@ -1,4 +1,4 @@
-﻿// Bulk-seed rows for POST /api/admin/seed dan npm run seed. Sumber:
+// Bulk-seed rows for POST /api/admin/seed dan npm run seed. Sumber:
 // - settings: 36 baris (halaman Pengaturan membaca semuanya; JANGAN dikurangi)
 // - coa: apps/web/src/data/financeExcel.ts COA_EXCEL (98 akun, sama dengan FE)
 // - branches/journals/assets: sama dengan FE (financeExcel + seeds.ts)
@@ -14,7 +14,7 @@ export interface WbsSeed { projectId: string; wbs: Array<Record<string, unknown>
 export interface TeamSeed { projectId: string; memberIds: string[] }
 
 const S = (id: string, key: string, value: number, label: string, group: string): SeedRow =>
-  ({ table: "settings", id, branch: "", data: { key, value, label, group } });
+  ({ table: "settings", id, branch: "Samarinda", data: { key, value, label, group } });
 
 const SETTINGS: SeedRow[] = [
   S("SET-PPN","PPN_RATE",12,"PPN Keluaran/Masukan hutang-belanja (%)","Pajak"),
@@ -188,19 +188,19 @@ const WBS_PROJECTS = ["NB-2025-012","RP-2026-003"];
 export function buildSeedRows(): SeedRow[] {
   const rows: SeedRow[] = [...SETTINGS];
   for (const [kode, nama, dk, nrlr] of COA) {
-    rows.push({ table: "coa", id: `COA-${kode}`, branch: "", data: { kode, nama, dk, nrlr } });
+    rows.push({ table: "coa", id: `COA-${kode}`, branch: "Samarinda", data: { kode, nama, dk, nrlr } });
   }
   JU_EX.forEach(([tgl, dokumen, uraian, db, dbAmt, kr, krAmt], i) => {
-    rows.push({ table: "journals", id: `JU-EX-${String(i + 1).padStart(2, "0")}`, branch: "",
+    rows.push({ table: "journals", id: `JU-EX-${String(i + 1).padStart(2, "0")}`, branch: "Samarinda",
       data: { date: tgl, kodePembantu: "", dokumen, uraian, db, kr, amount: dbAmt || krAmt, sumber: "JU", status: "Posted" } });
   });
   ASET_EX.forEach(([gol, perolehan, sisaAwal, susut], i) => {
-    rows.push({ table: "assets", id: `AST-EX-0${i + 1}`, branch: "",
+    rows.push({ table: "assets", id: `AST-EX-0${i + 1}`, branch: "Samarinda",
       data: { nama: gol, kelompok: gol === "Bangunan" ? "BP" : gol.includes("Inventaris") ? "1" : "2",
         bulan: "-", tahun: "2025", nilai: perolehan, sisaAwal, susutTahun: susut, metode: "GL" } });
   });
   for (const [table, id, branch, data] of EX) {
-    rows.push({ table, id, branch, data });
+    rows.push({ table, id, branch: branch || "Samarinda", data });
   }
   // Cermin FE: id sama persis → tampilan lokal & remote identik.
   // EX didahulukan bila ada id kembar (tidak ada saat ini).
@@ -208,7 +208,7 @@ export function buildSeedRows(): SeedRow[] {
   for (const m of FE_MIRROR_ROWS) {
     const key = `${m.table}:${m.id}`;
     if (seen.has(key)) continue;
-    rows.push({ table: m.table, id: m.id, branch: m.branch, data: { ...m.data } });
+    rows.push({ table: m.table, id: m.id, branch: m.branch || "Samarinda", data: { ...m.data } });
     seen.add(key);
   }
   return rows;
