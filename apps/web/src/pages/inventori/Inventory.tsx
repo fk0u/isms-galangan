@@ -35,7 +35,7 @@ import {
 } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, ChartTooltip, Modal, Field, FormGrid, toast, EmptyState, ProgressBar, SortTh, toggleSort, sortRows, usePager, useDebouncedValue, ConfirmModal,
-  NumInput, AsyncButton, SecureImg,
+  NumInput, MoneyInput, AsyncButton, SecureImg,
   SearchBox, rowMatches,
   RowAction,
   EntityPicker,
@@ -66,7 +66,7 @@ import { useModuleSync } from "../../data/useModuleSync";
 import type { CollectionKey } from "../../data/store";
 import { isBackendConfigured } from "../../services/http";
 import { uploadFile } from "../../services/upload";
-import { fmtJumlah, fmtRupiah, fmtMiliar, fmtPersen, fmtTanggal, todayISO } from "../../utils/format";
+import { fmtJumlah, fmtRupiah, fmtMiliar, fmtPersen, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { exportExcel } from "../../utils/export";
 import { sbTonasePlat, sbSjNumber, sbTtNumber, maxSeq, parseSjSeq, SB_KOP } from "../../utils/sb";
@@ -961,7 +961,7 @@ if (k === "mattype") return matTypeOf(i);
     if (!uom2 && konv > 0) { toast(S.convNeedUom2, "info"); return; }
     const numStock = form.stock.trim() === "" ? 0 : Number(form.stock);
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);
-    const numCost = form.cost.trim() === "" ? 0 : Number(form.cost);
+    const numCost = parseRupiah(form.cost);
     if (!Number.isFinite(numStock) || numStock < 0) { toast(S.stockInvalid, "info"); return; }
     if (!Number.isFinite(numMin) || numMin < 0) { toast(S.minInvalid, "info"); return; }
     if (!Number.isFinite(numCost) || numCost < 0) { toast(S.costInvalid, "info"); return; }
@@ -3067,7 +3067,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
               </select>
             </Field>
-            <Field label={S.costLbl}><NumInput min={0} className="input" value={form.cost} onChange={(e) => setF("cost", e.target.value)} /></Field>
+            <Field label={S.costLbl}><MoneyInput className="input" value={form.cost} onChange={(v) => setF("cost", v)} /></Field>
             <Field label={S.volLbl} hint={S.hintVol}><NumInput min={0} className="input" value={form.volume} onChange={(e) => setF("volume", e.target.value)} /></Field>
             <Field label={S.batchLbl} hint={form.category === "Mesin" ? S.hintBatchMesin : S.hintBatchOpt}>
               <input className="input font-mono" value={form.batch} onChange={(e) => setF("batch", e.target.value)} placeholder={S.phBatch} />

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ID_MON as MONTH_ID } from "../../utils/monthAxis";
 import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench, User, Eye, ArrowLeftRight } from "lucide-react";
 import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, ProgressBar, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
-  NumInput, FlowStrip,
+  NumInput, MoneyInput, FlowStrip,
   RowAction, rowMatches,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
@@ -14,7 +14,7 @@ import { useStore } from "../../data/store";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { dockUtilTrend, slotTrend } from "../../data";
-import { fmtJumlah, fmtRupiah, fmtTanggal, fmtRentang, todayISO } from "../../utils/format";
+import { fmtJumlah, fmtRupiah, fmtTanggal, fmtRentang, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { getSetting } from "../../utils/settings";
 import { sameName } from "../../utils/names";
@@ -481,7 +481,7 @@ export default function Drydock() {
       toast(msg, "info");
       return;
     }
-    const ratePerDay = Number(bookForm.ratePerDay || 0);
+    const ratePerDay = parseRupiah(bookForm.ratePerDay);
     if (!Number.isFinite(ratePerDay) || ratePerDay < 0) { setBookError(S.tRateInvalid); return; }
     // No. Dock Space SB: pakai input atau auto (format nnn/DS-SB/SMD/m/yyyy).
     const dsRef = bookForm.dsRef.trim() || sbDsNumber(nextDsSeq());
@@ -1225,7 +1225,7 @@ export default function Drydock() {
               </select>
             </Field>
             <Field label={S.lblRateDay} hint={S.hintRate}>
-              <NumInput min={0} className="input" value={bookForm.ratePerDay} onChange={(e) => setBookForm({ ...bookForm, ratePerDay: e.target.value })} placeholder={S.phRate} />
+              <MoneyInput className="input" value={bookForm.ratePerDay} onChange={(v) => setBookForm({ ...bookForm, ratePerDay: v })} placeholder={S.phRate} />
             </Field>
             <Field label={S.lblDs} hint={S.hintDs}>
               <input className="input font-mono" value={bookForm.dsRef} onChange={(e) => setBookForm({ ...bookForm, dsRef: e.target.value })} placeholder={sbDsNumber(nextDsSeq())} />
@@ -1241,7 +1241,7 @@ export default function Drydock() {
             </Field>
           </FormGrid>
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
-            {S.costEstimate.replace("{a}", String(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)))).replace("{b}", fmtRupiah(Number(bookForm.ratePerDay || 0))).replace("{c}", fmtRupiah(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)) * Math.max(0, Number(bookForm.ratePerDay || 0))))}
+            {S.costEstimate.replace("{a}", String(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)))).replace("{b}", fmtRupiah(parseRupiah(bookForm.ratePerDay))).replace("{c}", fmtRupiah(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)) * parseRupiah(bookForm.ratePerDay)))}
           </p>
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
             {S.capInfo.replace("{a}", selDock?.capacity ?? "-")}

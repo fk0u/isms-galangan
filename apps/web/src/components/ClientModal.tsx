@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Field, Modal, toast,
   NumInput,
+  MoneyInput,
 } from "./ui";
+import { parseRupiah } from "../utils/format";
 import { useStore } from "../data/store";
 import { useT } from "../i18n/LanguageContext";
 import { n_crm } from "../i18n/n_crm";
@@ -45,7 +47,7 @@ export default function ClientModal({
           rating: num(form.rating) || 80,
           since: new Date().getFullYear(),
           klasifikasi: form.klasifikasi,
-          creditLimit: num(form.creditLimit),
+          creditLimit: parseRupiah(form.creditLimit),
           paymentTerms: form.paymentTerms,
           currency: "IDR",
           ...(form.branch ? { branch: form.branch } : {}),
@@ -100,7 +102,7 @@ export default function ClientModal({
           <input className="input" value={form.branch} onChange={(e) => setF("branch", e.target.value)} placeholder="Samarinda" />
         </Field>
         <Field label={`${S.creditLimitLabel} (Rp)`}>
-          <NumInput min={0} className="input" value={form.creditLimit} onChange={(e) => setF("creditLimit", e.target.value)} />
+          <MoneyInput className="input" value={form.creditLimit} onChange={(v) => setF("creditLimit", v)} />
         </Field>
         <Field label={S.paymentTermsLabel}>
           <select className="input" value={form.paymentTerms} onChange={(e) => setF("paymentTerms", e.target.value)}>

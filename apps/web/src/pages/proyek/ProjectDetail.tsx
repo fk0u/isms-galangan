@@ -22,6 +22,7 @@ import {
   toggleSort,
   sortRows,
   NumInput,
+  MoneyInput,
   FileUploadButton,
   AsyncButton,
   RowAction,
@@ -40,7 +41,7 @@ import { DOC_TYPES, NEEDS_QC_LINK, qcCertCandidates, subTypesOf } from "../../ut
 import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import { fmtMiliar, fmtTanggal, fmtRentang, fmtBulan } from "../../data";
-import { fmtRupiah, todayISO } from "../../utils/format";
+import { fmtRupiah, parseRupiah, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -139,7 +140,7 @@ export default function ProjectDetail() {
   const [actualVal, setActualVal] = useState("");
 
   const saveActual = async () => {
-    const v = Number(actualVal);
+    const v = parseRupiah(actualVal);
     if (!Number.isFinite(v) || v < 0) { toast(S.detToastActualInvalid, "info"); return; }
     try {
       await update("projects", pid, { actual: v });
@@ -507,11 +508,12 @@ if (from === "Desain" && to === "Produksi") {
 
   const saveCo = async () => {
     if (!coForm.title.trim()) { toast(S.detToastCoTitle, "info"); return; }
-    if (coForm.impact === "" || !Number.isFinite(Number(coForm.impact))) { toast(S.detToastCoImpact, "info"); return; }
+    const impact = parseRupiah(coForm.impact);
+    if (coForm.impact === "" || !Number.isFinite(impact)) { toast(S.detToastCoImpact, "info"); return; }
     if (!coForm.requestedBy.trim()) { toast(S.detToastCoBy, "info"); return; }
     try {
       await add("changeOrders", {
-        project: pid, title: coForm.title.trim(), impact: Number(coForm.impact),
+        project: pid, title: coForm.title.trim(), impact,
         status: "Diajukan", requestedBy: coForm.requestedBy.trim(), date: coForm.date || todayISO(),
       }, { action: "mengajukan change order", module: "Proyek" });
       toast(S.detToastCoSent);
@@ -678,7 +680,7 @@ const createWarranty = async (wbsTask?: string) => {
     if (!bastForm.milestone) { toast(S.detToastBastMile, "info"); return; }
     if (!bastForm.tanggal) { toast(S.detToastBastDate, "info"); return; }
     if (!bastForm.signer.trim()) { toast(S.detToastBastSigner, "info"); return; }
-    const amt = bastForm.amount === "" ? 0 : Number(bastForm.amount);
+    const amt = bastForm.amount === "" ? 0 : parseRupiah(bastForm.amount);
     if (bastForm.amount !== "" && (!Number.isFinite(amt) || amt < 0)) { toast(S.detToastAmount, "info"); return; }
     if (!wbs.some((t) => t.task === bastForm.milestone)) {
       toast(`BAST ditolak: milestone tidak cocok dengan WBS mana pun`, "info");
@@ -2154,7 +2156,7 @@ try {
           <FormGrid>
             <Field label={S.dateField}><input type="date" className="input" value={bastForm.tanggal} onChange={(e) => setBastForm({ ...bastForm, tanggal: e.target.value })} /></Field>
             <Field label={S.detAmountField} hint={contractValue > 0 ? `Sisa kontrak ${fmtRupiah(sisaKontrak)}` : (boqTotal > 0 ? S.detAmountHintBoq.replace("{a}", fmtRupiah(boqTotal)) : S.detAmountHintPlain)}>
-              <NumInput min={0} className="input" value={bastForm.amount} onChange={(e) => setBastForm({ ...bastForm, amount: e.target.value })} placeholder={contractValue > 0 ? String(sisaKontrak) : (boqTotal > 0 ? String(boqTotal) : S.detAmountPh)} />
+              <MoneyInput className="input" value={bastForm.amount} onChange={(v) => setBastForm({ ...bastForm, amount: v })} placeholder={contractValue > 0 ? String(sisaKontrak) : (boqTotal > 0 ? String(boqTotal) : S.detAmountPh)} />
             </Field>
           </FormGrid>
           <Field label={S.detSignerField}><input className="input" value={bastForm.signer} onChange={(e) => setBastForm({ ...bastForm, signer: e.target.value })} placeholder={S.detSignerPh} /></Field>
@@ -2169,7 +2171,7 @@ try {
         <div className="space-y-3">
           <Field label={S.detCoTitleField}><input className="input" value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })} placeholder={S.detCoTitlePh} /></Field>
           <FormGrid>
-            <Field label={S.detCoImpactField} hint={S.detCoImpactHint}><NumInput className="input" value={coForm.impact} onChange={(e) => setCoForm({ ...coForm, impact: e.target.value })} placeholder={S.detCoImpactPh} /></Field>
+            <Field label={S.detCoImpactField} hint={S.detCoImpactHint}><MoneyInput className="input" value={coForm.impact} onChange={(v) => setCoForm({ ...coForm, impact: v })} placeholder={S.detCoImpactPh} /></Field>
             <Field label={S.dateField}><input type="date" className="input" value={coForm.date} onChange={(e) => setCoForm({ ...coForm, date: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.detRequester}><input className="input" value={coForm.requestedBy} onChange={(e) => setCoForm({ ...coForm, requestedBy: e.target.value })} placeholder={S.detRequesterPh} /></Field>
@@ -2183,7 +2185,7 @@ try {
       <Modal open={showActual} onClose={() => setShowActual(false)} title={S.detActualModal}
         footer={<><button className="btn-secondary" onClick={() => setShowActual(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveActual}>{S.saveBtn}</AsyncButton></>}>
         <Field label={S.detActualAmount}>
-          <NumInput min={0} className="input" value={actualVal} onChange={(e) => setActualVal(e.target.value)} placeholder={S.detActualPh} />
+          <MoneyInput className="input" value={actualVal} onChange={(v) => setActualVal(v)} placeholder={S.detActualPh} />
         </Field>
         <p className="mt-2 text-xs text-steel-500">{S.detActualNow.replace("{a}", fmtRupiah(Number(project.actual ?? 0)))}</p>
       </Modal>
