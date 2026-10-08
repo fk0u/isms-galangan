@@ -23,7 +23,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | agent | selesai | PR #13 |
 | F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | | todo | |
 | F3-A-01 | Hapus filter cabang di top bar | P0 | F3-A-lintas-modul.md | agent | selesai | PR #15 |
-| F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | | todo | |
+| F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | agent | selesai | PR #16 |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
 | F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | selesai | PR #14 |
 | F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | | todo | |
