@@ -397,9 +397,19 @@ async function main(): Promise<void> {
     },
     payload: dummyPayload,
   });
-  const fileUrl = JSON.parse(t21.body)?.data?.url ?? "";
   record("T21", "Viewer dapat upload file", "403", `HTTP ${t21.statusCode}`, t21.statusCode === 201);
 
+  // Probe audit terpisah dari uji akses viewer: lakukan upload dengan akun direktur yang berizin.
+  const t21AllowedUpload = await app.inject({
+    method: "POST",
+    url: "/api/files",
+    headers: {
+      authorization: `Bearer ${dirToken}`,
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+    },
+    payload: dummyPayload,
+  });
+  const fileUrl = JSON.parse(t21AllowedUpload.body)?.data?.url ?? "";
   const t21Audit = await app.inject({
     method: "GET",
     url: `/api/audit?table=files&rowId=${encodeURIComponent(fileUrl)}&limit=5`,
@@ -413,8 +423,8 @@ async function main(): Promise<void> {
     "F2-08-UPLOAD",
     "Upload file tercatat di sumber halaman Audit",
     "HTTP 201 + jejak audit",
-    `upload=${t21.statusCode}, audit=${uploadVisible ? "ada" : "tidak ada"}`,
-    t21.statusCode !== 201 || t21Audit.statusCode !== 200 || !uploadVisible,
+    `upload=${t21AllowedUpload.statusCode}, audit=${uploadVisible ? "ada" : "tidak ada"}`,
+    t21AllowedUpload.statusCode !== 201 || t21Audit.statusCode !== 200 || !uploadVisible,
   );
 
   // 26. T22: GET /files tanpa token
@@ -567,6 +577,28 @@ async function main(): Promise<void> {
     `PUT=${f208Wbs.statusCode}, audit=${wbsVisible ? "ada" : "tidak ada"}`,
     f208Wbs.statusCode !== 200 || f208WbsAudit.statusCode !== 200 || !wbsVisible,
   );
+  const concurrentWbs = await Promise.all([
+    app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/wbs`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { wbs: [{ id: "F2-08-WBS-A" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+    }),
+    app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/wbs`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { wbs: [{ id: "F2-08-WBS-B" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+    }),
+  ]);
+  const concurrentWbsStatuses = concurrentWbs.map((res) => res.statusCode).sort((a, b) => a - b);
+  record(
+    "F2-08-WBS-RACE",
+    "PUT WBS bersamaan tidak mengaudit snapshot lama",
+    "satu HTTP 200 dan satu HTTP 409",
+    `HTTP ${concurrentWbsStatuses.join("/")}`,
+    concurrentWbsStatuses[0] !== 200 || concurrentWbsStatuses[1] !== 409,
+  );
 
   const f208Team = await app.inject({
     method: "PUT",
@@ -589,6 +621,28 @@ async function main(): Promise<void> {
     "HTTP 200 + jejak audit",
     `PUT=${f208Team.statusCode}, audit=${teamVisible ? "ada" : "tidak ada"}`,
     f208Team.statusCode !== 200 || f208TeamAudit.statusCode !== 200 || !teamVisible,
+  );
+  const concurrentTeam = await Promise.all([
+    app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/team`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { memberIds: [], baseData: [f208EmployeeId] },
+    }),
+    app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/team`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { memberIds: [f208EmployeeId, f208EmployeeId], baseData: [f208EmployeeId] },
+    }),
+  ]);
+  const concurrentTeamStatuses = concurrentTeam.map((res) => res.statusCode).sort((a, b) => a - b);
+  record(
+    "F2-08-TEAM-RACE",
+    "PUT team bersamaan tidak mengaudit snapshot lama",
+    "satu HTTP 200 dan satu HTTP 409",
+    `HTTP ${concurrentTeamStatuses.join("/")}`,
+    concurrentTeamStatuses[0] !== 200 || concurrentTeamStatuses[1] !== 409,
   );
 
   // F2-08: kegagalan insert audit harus menggagalkan PATCH dan membatalkan perubahan invoice.

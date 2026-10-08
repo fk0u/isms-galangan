@@ -17,7 +17,7 @@ export interface AuditWriteOptions {
 }
 
 export function newAuditId(): string {
-  return `AUD-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+  return `AUD-${randomUUID().toUpperCase()}`;
 }
 
 let auditErrorCount = 0;
