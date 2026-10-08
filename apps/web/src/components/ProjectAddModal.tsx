@@ -1,24 +1,26 @@
 // Modal tambah proyek bersama — dipakai halaman Proyek DAN Dashboard
 // ("Proyek Baru" langsung buka form, tanpa pindah halaman).
 // Logika + validasi pindahan utuh dari Projects.tsx (satu sumber).
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Field, FormGrid, Modal, toast,
   NumInput, MoneyInput, AsyncButton,
 } from "./ui";
+import { SearchSelect } from "./SearchSelect";
 import type { StoreItem } from "../data/store";
+import { useStore } from "../data/store";
+import { useAuth } from "../auth/auth";
 import { parseRupiah, todayISO } from "../utils/format";
 import ClientModal from "./ClientModal";
 
 const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
 const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
-const branchOptions = ["Samarinda", "Balikpapan", "Banjarmasin"];
 const PREFIX_TIPE: Record<string, string> = { "New Build": "NB", Repair: "RP", Retrofit: "RF" };
 
 const emptyForm = {
   vessel: "",
   type: "New Build",
   client: "",
-  branch: "Samarinda",
+  plannedDockId: "",
   start: "",
   end: "",
   budget: "",
@@ -33,7 +35,17 @@ const emptyForm = {
 
 type Dict = Record<string, string>;
 
-export default function ProjectAddModal({ open, onClose, S, projects, vessels, clients, employees, add }: {
+export default function ProjectAddModal({
+  open,
+  onClose,
+  S,
+  projects,
+  vessels,
+  clients,
+  employees,
+  docks,
+  add,
+}: {
   open: boolean;
   onClose: () => void;
   S: Dict;
@@ -41,8 +53,12 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
   vessels: StoreItem[];
   clients: StoreItem[];
   employees: StoreItem[];
+  docks?: StoreItem[];
   add: (collection: any, item: any, meta?: any) => Promise<StoreItem>;
 }) {
+  const { user } = useAuth();
+  const { branch: storeBranch } = useStore();
+  const activeBranch = (user?.branch && user.branch !== "SEMUA") ? user.branch : (storeBranch || "Samarinda");
 
   const [form, setForm] = useState(emptyForm);
   const [scopeRows, setScopeRows] = useState([{ service: "", lokasi: "", deskripsi: "" }]);
@@ -50,6 +66,52 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
 
   const setF = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const vesselExists = vessels.some((v) => String(v.name ?? "").toLowerCase() === form.vessel.trim().toLowerCase());
+
+  const vesselOptions = useMemo(
+    () =>
+      vessels.map((v) => ({
+        value: String(v.name ?? ""),
+        label: String(v.name ?? ""),
+        subLabel: v.type ? `${v.type} · IMO ${v.imo || "-"}` : undefined,
+      })),
+    [vessels]
+  );
+
+  const clientOptions = useMemo(
+    () =>
+      clients.map((c) => ({
+        value: String(c.name ?? ""),
+        label: String(c.name ?? ""),
+        subLabel: c.type ? String(c.type) : (c.phone ? String(c.phone) : undefined),
+      })),
+    [clients]
+  );
+
+  const dockOptions = useMemo(
+    () =>
+      (docks ?? []).map((d) => ({
+        value: String(d.id),
+        label: String(d.name ?? d.id),
+        subLabel: d.capacity ? String(d.capacity) : (d.status ? String(d.status) : undefined),
+      })),
+    [docks]
+  );
+
+  const pmOptions = useMemo(
+    () =>
+      employees
+        .filter((e) => {
+          const role = String(e.role ?? "").toLowerCase();
+          const dept = String(e.dept ?? "").toLowerCase();
+          return role.includes("manager") || role.includes("pm") || dept === "proyek" || role.includes("proyek");
+        })
+        .map((e) => ({
+          value: String(e.name ?? ""),
+          label: String(e.name ?? ""),
+          subLabel: `${e.role || e.dept || "Karyawan"}`,
+        })),
+    [employees]
+  );
 
   const nextProjectCode = (type: string, start: string): string => {
     const prefix = PREFIX_TIPE[type] ?? "PRJ";
@@ -72,8 +134,6 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
 
   const save = async () => {
     if (!form.vessel.trim() || !form.client.trim()) { toast(S.prjToastVesselClient, "info"); return; }
-    if (!form.branch.trim()) { toast(S.prjToastBranchReq, "info"); return; }
-    if (!branchOptions.includes(form.branch)) { toast(S.prjToastBranchUnknown, "info"); return; }
     const scopeItems = scopeRows
       .map((r) => ({
         service: r.service.trim(),
@@ -109,12 +169,13 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
           id: code,
           vessel: form.vessel.trim(),
           type: form.type,
-          client: form.client,
-          status: form.status,
+          client: form.client.trim(),
+          status: "Dalam Proses",
+          plannedDockId: form.plannedDockId || "",
           tahap: form.tahap,
           prioritas: form.prioritas,
-          tahapLog: [{ from: "-", to: form.tahap, date: todayISO(), by: "Anda", reason: "Proyek dibuat" }],
-          branch: form.branch,
+          tahapLog: [{ from: "-", to: form.tahap, date: todayISO(), by: user?.name || "Anda", reason: "Proyek dibuat" }],
+          branch: activeBranch,
           start: form.start,
           end: form.end,
           progress: 0,
@@ -133,7 +194,7 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
           class: "BKI",
           flag: "Indonesia",
           built: new Date().getFullYear(),
-          owner: form.client,
+          owner: form.client.trim(),
           loa: Number(form.vesselLoa), beam: 0, draft: 0, bollard: 0,
           status: form.type === "New Build" ? "Dalam Pembangunan" : "Dalam Docking",
           certificates: [],
@@ -170,21 +231,36 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
           </p>
           <FormGrid>
             <Field label={S.prjVesselName}>
-              <input className="input" list="vessel-list" placeholder={S.prjVesselPh} value={form.vessel} onChange={(e) => setF("vessel", e.target.value)} />
-              <datalist id="vessel-list">
-                {vessels.map((v) => <option key={v.id} value={String(v.name)} />)}
-              </datalist>
+              <SearchSelect
+                value={form.vessel}
+                onChange={(v) => setF("vessel", v)}
+                options={vesselOptions}
+                placeholder={S.prjVesselPh}
+                ariaLabel={S.prjVesselAria || S.prjVesselName}
+                allowCustom
+                emptyText={S.prjVesselEmpty}
+              />
             </Field>
             <Field label={S.colClient}>
-              <div className="flex gap-2">
-                <select className="input flex-1" value={form.client} onChange={(e) => {
-                  if (e.target.value === "__baru__") { setShowClientModal(true); return; }
-                  setF("client", e.target.value);
-                }}>
-                  <option value="">{S.prjPickClient}</option>
-                  {clients.map((c) => <option key={c.id} value={String(c.name)}>{String(c.name)}</option>)}
-                  <option value="__baru__">{S.prjAddClient}</option>
-                </select>
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <SearchSelect
+                    value={form.client}
+                    onChange={(v) => setF("client", v)}
+                    options={clientOptions}
+                    placeholder={S.prjPickClient}
+                    ariaLabel={S.prjClientAria || S.colClient}
+                    emptyText={S.prjClientEmpty}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary whitespace-nowrap text-xs shrink-0 py-2"
+                  onClick={() => setShowClientModal(true)}
+                  title={S.prjAddClient}
+                >
+                  {S.prjAddClientBtn || "+ Klien"}
+                </button>
               </div>
             </Field>
             <Field label={S.prjType}>
@@ -199,29 +275,30 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
                 {TAHAP.map((t) => <option key={t}>{t}</option>)}
               </select>
             </Field>
-            {/* Field status dihapus dari form proyek baru (P12): proyek yang baru dibuat
-                selalu mulai "Dalam Proses" - atau langsung "Sedang Berjalan"
-                kalau tahapnya sudah lanjut - dan status diubah dari halaman
-                detail.
-                Memilih "Tertunda" di awal hampir selalu salah, jadi lebih baik
-                tidak menawarkan pilihan itu sama sekali. */}
             <Field label={S.prjFieldPrioritas}>
               <select className="input" value={form.prioritas} onChange={(e) => setF("prioritas", e.target.value)}>
                 {PRIORITAS.map((r) => <option key={r}>{r}</option>)}
               </select>
             </Field>
-            <Field label={S.branchLabel}>
-              <select className="input" value={form.branch} onChange={(e) => setF("branch", e.target.value)}>
-                {branchOptions.map((b) => <option key={b}>{b}</option>)}
-              </select>
+            <Field label={S.prjPlannedDock}>
+              <SearchSelect
+                value={form.plannedDockId}
+                onChange={(v) => setF("plannedDockId", v)}
+                options={dockOptions}
+                placeholder={S.prjPickDock}
+                ariaLabel={S.prjDockAria || S.prjPlannedDock}
+                emptyText={S.prjDockEmpty}
+              />
             </Field>
             <Field label={S.prjFieldPm}>
-              <select className="input" value={form.manager} onChange={(e) => setF("manager", e.target.value)}>
-                <option value="">{S.prjPickPm}</option>
-                {employees.filter((e) => String(e.dept ?? "") === "Proyek" || String(e.role ?? "").includes("Manager")).map((e) => (
-                  <option key={e.id} value={String(e.name)}>{String(e.name)}</option>
-                ))}
-              </select>
+              <SearchSelect
+                value={form.manager}
+                onChange={(v) => setF("manager", v)}
+                options={pmOptions}
+                placeholder={S.prjPickPm}
+                ariaLabel={S.prjPmAria || S.prjFieldPm}
+                emptyText={S.prjPmEmpty}
+              />
             </Field>
             <Field label={S.prjStart}><input type="date" className="input" value={form.start} onChange={(e) => setF("start", e.target.value)} /></Field>
             <Field label={S.prjEnd}><input type="date" className="input" value={form.end} onChange={(e) => setF("end", e.target.value)} /></Field>

@@ -1021,13 +1021,17 @@ export function EntityPicker({
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
+        if (allowCustom && query.trim() !== "") {
+          commit(query.trim());
+        } else {
+          setOpen(false);
+          setQuery("");
+        }
       }
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  }, [open, allowCustom, query]);
 
   const commit = (v: string) => {
     onChange(v);
@@ -1123,7 +1127,20 @@ export function EntityPicker({
           role="listbox"
           className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-steel-200 bg-white py-1 shadow-lift"
         >
-          {filtered.length === 0 && (
+          {allowCustom && query.trim() !== "" && !options.some((o) => o.label.toLowerCase() === query.trim().toLowerCase() || o.value.toLowerCase() === query.trim().toLowerCase()) && (
+            <li
+              role="option"
+              aria-selected={false}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                commit(query.trim());
+              }}
+              className="cursor-pointer border-b border-steel-100 bg-ocean-50/50 px-3 py-2 text-sm text-ocean-700 hover:bg-ocean-100/60"
+            >
+              <span className="block font-medium truncate">+ "{query.trim()}"</span>
+            </li>
+          )}
+          {filtered.length === 0 && (!allowCustom || query.trim() === "") && (
             <li className="px-3 py-2 text-xs text-steel-400">{emptyText ?? t.common.listSearchEmpty}</li>
           )}
           {filtered.map((o, i) => (
