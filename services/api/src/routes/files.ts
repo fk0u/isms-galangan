@@ -5,6 +5,8 @@ import type { FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { requireAuth } from "../auth.js";
+import { requestActor, requestIp, writeAudit } from "../audit.js";
+import { withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -155,7 +157,25 @@ export function registerFileRoutes(app: FastifyInstance): void {
     const dir = path.join(root, month);
     fs.mkdirSync(dir, { recursive: true });
     const name = `${randomUUID().replace(/-/g, "")}${ext}`;
-    fs.writeFileSync(path.join(dir, name), buf);
-    return reply.status(201).send(ok({ url: `/files/${month}/${name}`, name: part.filename ?? name, size: buf.length }));
+    const filePath = path.join(dir, name);
+    const url = `/files/${month}/${name}`;
+    fs.writeFileSync(filePath, buf);
+    try {
+      await withTx(async () => {
+        await writeAudit({
+          actor: requestActor(req),
+          action: "upload",
+          table: "files",
+          rowId: url,
+          diff: { name: part.filename ?? name, size: buf.length, extension: ext },
+          ip: requestIp(req),
+        }, { required: true });
+      });
+    } catch (err) {
+      /* Berkas di disk tidak boleh tertinggal tanpa jejak audit yang wajib. */
+      try { fs.rmSync(filePath, { force: true }); } catch { /* pertahankan error audit */ }
+      throw err;
+    }
+    return reply.status(201).send(ok({ url, name: part.filename ?? name, size: buf.length }));
   });
 }

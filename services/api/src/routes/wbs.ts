@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
+import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { requirePermission } from "../policy.js";
-import { exec, getDialect, q } from "../db.js";
+import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
@@ -86,7 +87,19 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         data: { projectId: id, wbs: JSON.parse(bentrok.data) as unknown },
       });
     }
-    await upsert("wbs_by_project", id, parsed.data.wbs);
+    const beforeRows = await q<SideRow>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [id]);
+    const before = beforeRows.length > 0 ? JSON.parse((beforeRows[0] as SideRow).data) as unknown : null;
+    await withTx(async () => {
+      await upsert("wbs_by_project", id, parsed.data.wbs);
+      await writeAudit({
+        actor: requestActor(req),
+        action: before === null ? "create" : "update",
+        table: "wbs_by_project",
+        rowId: id,
+        diff: { before, after: parsed.data.wbs },
+        ip: requestIp(req),
+      }, { required: true });
+    });
     return ok({ projectId: id, wbs: parsed.data.wbs });
   });
 
@@ -118,7 +131,19 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         data: { projectId: id, memberIds: JSON.parse(bentrok.data) as unknown },
       });
     }
-    await upsert("team_by_project", id, parsed.data.memberIds);
+    const beforeRows = await q<SideRow>("SELECT project_id, data FROM team_by_project WHERE project_id = ?", [id]);
+    const before = beforeRows.length > 0 ? JSON.parse((beforeRows[0] as SideRow).data) as unknown : null;
+    await withTx(async () => {
+      await upsert("team_by_project", id, parsed.data.memberIds);
+      await writeAudit({
+        actor: requestActor(req),
+        action: before === null ? "create" : "update",
+        table: "team_by_project",
+        rowId: id,
+        diff: { before, after: parsed.data.memberIds },
+        ip: requestIp(req),
+      }, { required: true });
+    });
     return ok({ projectId: id, memberIds: parsed.data.memberIds });
   });
 }

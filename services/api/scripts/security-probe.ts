@@ -1,6 +1,6 @@
 /**
  * security-probe.ts — Runtime Security Probe untuk ISMS API (F1-05).
- * Memeriksa 35 skenario keamanan menggunakan Fastify app.inject() tanpa membuka port.
+ * Memeriksa skenario baseline dan regresi task keamanan memakai app.inject() tanpa membuka port.
  *
  * Pada fase baseline (F1-05), skrip ini melaporkan status (mode --report)
  * tanpa menggagalkan proses (exit 0). Pada Fase 2 (F2-09), probe ini
@@ -11,7 +11,7 @@ import crypto from "node:crypto";
 import { buildApp } from "../src/app.js";
 import { migrate } from "../src/migrate.js";
 import { runSeed } from "../src/seed.js";
-import { closeDb, q } from "../src/db.js";
+import { closeDb, exec, getDialect, q } from "../src/db.js";
 import { SEED_ACCOUNTS, signToken } from "../src/auth.js";
 
 function getSeedPass(username: string): string {
@@ -40,7 +40,7 @@ function record(id: string, test: string, expected: string, observed: string, vu
 async function main(): Promise<void> {
   const isReportMode = process.argv.includes("--report") || !process.argv.includes("--fail-on-vuln");
 
-  console.log("=== ISMS Security Probe (35 Baseline Scenarios) ===\n");
+  console.log("=== ISMS Security Probe (baseline + F2-08 audit) ===\n");
 
   // Pastikan migrasi & seed dev telah diterapkan di database
   await migrate();
@@ -400,6 +400,23 @@ async function main(): Promise<void> {
   const fileUrl = JSON.parse(t21.body)?.data?.url ?? "";
   record("T21", "Viewer dapat upload file", "403", `HTTP ${t21.statusCode}`, t21.statusCode === 201);
 
+  const t21Audit = await app.inject({
+    method: "GET",
+    url: `/api/audit?table=files&rowId=${encodeURIComponent(fileUrl)}&limit=5`,
+    headers: { authorization: `Bearer ${dirToken}` },
+  });
+  const t21AuditRows = (JSON.parse(t21Audit.body) as {
+    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+  }).data?.rows ?? [];
+  const uploadVisible = t21AuditRows.some((row) => row.table_name === "files" && row.row_id === fileUrl);
+  record(
+    "F2-08-UPLOAD",
+    "Upload file tercatat di sumber halaman Audit",
+    "HTTP 201 + jejak audit",
+    `upload=${t21.statusCode}, audit=${uploadVisible ? "ada" : "tidak ada"}`,
+    t21.statusCode !== 201 || t21Audit.statusCode !== 200 || !uploadVisible,
+  );
+
   // 26. T22: GET /files tanpa token
   const t22 = await app.inject({
     method: "GET",
@@ -512,6 +529,119 @@ async function main(): Promise<void> {
     hrPayroll.statusCode !== 200 || hrJournals.statusCode !== 403,
   );
 
+  // F2-08: PUT WBS dan team harus tampak pada sumber audit yang dipakai halaman Audit.
+  const f208ProjectId = `PRJ-F208-${crypto.randomUUID().slice(0, 8)}`;
+  const f208EmployeeId = `EMP-F208-${crypto.randomUUID().slice(0, 8)}`;
+  const f208Now = new Date().toISOString();
+  await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    f208ProjectId,
+    "Samarinda",
+    JSON.stringify({ vessel: "F2-08 synthetic probe", client: "F2-08 synthetic probe" }),
+    f208Now,
+  ]);
+  await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    f208EmployeeId,
+    "Samarinda",
+    JSON.stringify({ name: "F2-08 synthetic probe" }),
+    f208Now,
+  ]);
+  const f208Wbs = await app.inject({
+    method: "PUT",
+    url: `/api/projects/${f208ProjectId}/wbs`,
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { wbs: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+  });
+  const f208WbsAudit = await app.inject({
+    method: "GET",
+    url: `/api/audit?table=wbs_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
+    headers: { authorization: `Bearer ${dirToken}` },
+  });
+  const f208WbsRows = (JSON.parse(f208WbsAudit.body) as {
+    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+  }).data?.rows ?? [];
+  const wbsVisible = f208WbsRows.some((row) => row.table_name === "wbs_by_project" && row.row_id === f208ProjectId);
+  record(
+    "F2-08-WBS",
+    "PUT WBS tercatat di sumber halaman Audit",
+    "HTTP 200 + jejak audit",
+    `PUT=${f208Wbs.statusCode}, audit=${wbsVisible ? "ada" : "tidak ada"}`,
+    f208Wbs.statusCode !== 200 || f208WbsAudit.statusCode !== 200 || !wbsVisible,
+  );
+
+  const f208Team = await app.inject({
+    method: "PUT",
+    url: `/api/projects/${f208ProjectId}/team`,
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { memberIds: [f208EmployeeId] },
+  });
+  const f208TeamAudit = await app.inject({
+    method: "GET",
+    url: `/api/audit?table=team_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
+    headers: { authorization: `Bearer ${dirToken}` },
+  });
+  const f208TeamRows = (JSON.parse(f208TeamAudit.body) as {
+    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+  }).data?.rows ?? [];
+  const teamVisible = f208TeamRows.some((row) => row.table_name === "team_by_project" && row.row_id === f208ProjectId);
+  record(
+    "F2-08-TEAM",
+    "PUT team tercatat di sumber halaman Audit",
+    "HTTP 200 + jejak audit",
+    `PUT=${f208Team.statusCode}, audit=${teamVisible ? "ada" : "tidak ada"}`,
+    f208Team.statusCode !== 200 || f208TeamAudit.statusCode !== 200 || !teamVisible,
+  );
+
+  // F2-08: kegagalan insert audit harus menggagalkan PATCH dan membatalkan perubahan invoice.
+  const f208InvoiceId = `INV-F208-${crypto.randomUUID().slice(0, 8)}`;
+  await exec("INSERT INTO invoices (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    f208InvoiceId,
+    "Samarinda",
+    JSON.stringify({ client: "F2-08 synthetic probe", amount: 100 }),
+    f208Now,
+  ]);
+  const triggerName = `f208_audit_fail_${crypto.randomUUID().replace(/-/g, "")}`;
+  if (getDialect() === "mysql") {
+    await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'F2-08 probe'`);
+  } else {
+    await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'F2-08 probe'); END`);
+  }
+  let f208InvoicePatchStatus = 0;
+  try {
+    const f208InvoicePatch = await app.inject({
+      method: "PATCH",
+      url: `/api/invoices/${f208InvoiceId}`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { data: { amount: 200 } },
+    });
+    f208InvoicePatchStatus = f208InvoicePatch.statusCode;
+  } finally {
+    await exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+  }
+  const f208InvoiceRows = await q<{ data: string }>("SELECT data FROM invoices WHERE id = ?", [f208InvoiceId]);
+  let f208Amount: unknown = null;
+  try {
+    f208Amount = JSON.parse(f208InvoiceRows[0]?.data ?? "{}") as Record<string, unknown>;
+    f208Amount = (f208Amount as Record<string, unknown>).amount;
+  } catch {
+    f208Amount = null;
+  }
+  record(
+    "F2-08-INVOICE",
+    "Audit gagal membatalkan PATCH invoice",
+    "HTTP 500; amount tetap 100",
+    `HTTP ${f208InvoicePatchStatus}; amount=${String(f208Amount)}`,
+    f208InvoicePatchStatus !== 500 || f208Amount !== 100,
+  );
+
+  // Bersihkan fixture sintetis agar probe tidak mengotori data lokal.
+  await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["wbs_by_project", f208ProjectId]);
+  await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["team_by_project", f208ProjectId]);
+  await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [f208ProjectId]);
+  await exec("DELETE FROM team_by_project WHERE project_id = ?", [f208ProjectId]);
+  await exec("DELETE FROM projects WHERE id = ?", [f208ProjectId]);
+  await exec("DELETE FROM employees WHERE id = ?", [f208EmployeeId]);
+  await exec("DELETE FROM invoices WHERE id = ?", [f208InvoiceId]);
+
   await app.close();
   await closeDb();
 
@@ -520,7 +650,7 @@ async function main(): Promise<void> {
   const oks = total - vulns;
 
   console.log("\n" + "=".repeat(85));
-  console.log("HASIL SECURITY PROBE (35 SKENARIO BASELINE AUDIT)");
+  console.log("HASIL SECURITY PROBE (BASELINE + F2-08 AUDIT)");
   console.log("=".repeat(85));
   for (const r of results) {
     const status = r.vulnerable ? "\x1b[31mVULN\x1b[0m" : "\x1b[32mOK  \x1b[0m";
