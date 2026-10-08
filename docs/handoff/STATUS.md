@@ -25,7 +25,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-A-01 | Hapus filter cabang di top bar | P0 | F3-A-lintas-modul.md | | todo | |
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | | todo | |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
-| F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | review | PR #14: https://github.com/fk0u/isms-galangan/pull/14 |
+| F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | selesai | PR #14 |
 | F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | | todo | |
 | F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | | todo | |
 | F3-B-03 | Card status gradient + label | P1 | F3-B-proyek.md | | todo | |
