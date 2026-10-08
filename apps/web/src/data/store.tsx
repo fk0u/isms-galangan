@@ -994,24 +994,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     saveTombstonesPersisted(tombstonesRef.current);
   }, []);
-  const [branch, setBranchState] = useState<string>(() => {
-    // Cabang global di localStorage (migrasi dari sessionStorage, kunci sama).
-    try {
-      return localStorage.getItem(BRANCH_KEY) ?? sessionStorage.getItem(BRANCH_KEY) ?? "SEMUA";
-    } catch {
-      return "SEMUA";
-    }
-  });
+  /* F3-A-01: Cabang dikendalikan oleh sesi user (user.branch), bukan dari
+     input dropdown atau localStorage. Default "SEMUA". Bersihkan sisa kunci lama. */
+  const [branch, setBranchState] = useState<string>("SEMUA");
   const branchRef = useRef(branch);
   branchRef.current = branch;
 
-  const setBranch = (b: string) => {
-    setBranchState(b);
+  useEffect(() => {
     try {
-      localStorage.setItem(BRANCH_KEY, b);
+      localStorage.removeItem(BRANCH_KEY);
+      sessionStorage.removeItem(BRANCH_KEY);
     } catch {
       /* abaikan */
     }
+  }, []);
+
+  const setBranch = (b: string) => {
+    setBranchState(b);
   };
 
   /* useCallback WAJIB: nilai `inBranch` masuk ke dep array memo konteks
