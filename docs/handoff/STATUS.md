@@ -20,7 +20,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F2-05 | `policy.ts`: enum peran + izin baca/tulis | P0 | F2-keamanan.md | agent | selesai | PR #10 |
 | F2-06 | Scope cabang di server | P0/P1 | F2-keamanan.md | agent | selesai | PR #11 |
 | F2-07 | Login mengirim cabang & cache offline aman | P0 | F2-keamanan.md | agent | selesai | PR #12 |
-| F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | agent | review | PR [#13](https://github.com/fk0u/isms-galangan/pull/13); check hijau |
+| F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | agent | selesai | PR #13 |
 | F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | | todo | |
 | F3-A-01 | Hapus filter cabang di top bar | P0 | F3-A-lintas-modul.md | | todo | |
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | | todo | |
