@@ -21,3 +21,5 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-08 21:40 WITA | F3-B-02 | selesai | PR #17 | tabel proyek: nomor urut (page-1)*size+i+1, tombol Detail di kolom aksi, default sort createdAt desc, probe:table pass
 2026-10-08 21:55 WITA | F3-B-05 | selesai | PR #18 | form proyek baru: plannedDockId SearchSelect drydocks, SearchSelect kapal/klien/PM, status otomatis Dalam Proses, cabang otomatis dari sesi, probe:project-add pass
 2026-10-08 22:12 WITA | F3-B-06 | selesai | PR #19 | rumus progres proyek berbobot (ADR-0011): calcProjectProgress & projectProgressOf di utils/projectProgress.ts, konsisten di Projects/ProjectDetail/Monitoring/Dashboard/Analytics, probe:progress pass
+2026-10-08 22:56 WITA | F3-B-09 | selesai | PR #20 | WBS: modal update progres material SearchSelect & alur F3-D stok/PR, integrasi ChangeHistory per task, assign internal & eksternal otomatis buat WO, probe:wbs pass
+

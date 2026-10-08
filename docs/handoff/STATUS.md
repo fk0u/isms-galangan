@@ -34,7 +34,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-06 | Rumus progres proyek | P0 | F3-B-proyek.md | agent | selesai | PR #19 |
 | F3-B-07 | Header & card progres | P1 | F3-B-proyek.md | | todo | |
 | F3-B-08 | Ringkasan: Log Penawaran & Tagihan, milestone | P1 | F3-B-proyek.md | | todo | |
-| F3-B-09 | WBS: progres, material, histori, foto, assign | P0 | F3-B-proyek.md | | todo | |
+| F3-B-09 | WBS: progres, material, histori, foto, assign | P0 | F3-B-proyek.md | agent | selesai | PR #20 |
 | F3-B-10 | Gantt mini dengan label bulan | P2 | F3-B-proyek.md | | todo | |
 | F3-B-11 | Perubahan & Risiko: hapus tabel risiko | P1 | F3-B-proyek.md | | todo | |
 | F3-B-12 | Terkait: Trial & Garansi | P1 | F3-B-proyek.md | | todo | |
