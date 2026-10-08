@@ -44,7 +44,7 @@ export const REFS: Record<string, Record<string, RefDef>> = {
   payroll: { employeeId: { target: "employees" } },
   attendance: { employeeId: { target: "employees" } },
   leaves: { employeeId: { target: "employees" } },
-  projects: {},
+  projects: { plannedDockId: { target: "drydocks", allow: ["", "-"] } },
   vessels: {},
   drydocks: {},
   inventory: {},
