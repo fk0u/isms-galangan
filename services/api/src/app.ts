@@ -20,6 +20,7 @@ import { registerWbsRoutes } from "./routes/wbs.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerPdfRoutes } from "./routes/pdf.js";
+import { registerBoqDocRoutes } from "./routes/boqDocs.js";
 
 const LoginSchema = z.object({
   username: z.string().min(1),
@@ -362,6 +363,7 @@ export function buildApp(): FastifyInstance {
   registerAdminRoutes(app);
   registerUserRoutes(app);
   registerPdfRoutes(app);
+  registerBoqDocRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {
     return reply.status(404).send(fail("Not found", "NOT_FOUND"));

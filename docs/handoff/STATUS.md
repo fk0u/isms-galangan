@@ -40,7 +40,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-12 | Terkait: Trial & Garansi | P1 | F3-B-proyek.md | | todo | |
 | F3-B-13 | Tab Tim terhubung SDM | P1 | F3-B-proyek.md | | todo | |
 | F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | todo | |
-| F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | | todo | |
+| F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
 | F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | | todo | |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | | todo | |
 | F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | todo | |

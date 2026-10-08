@@ -23,3 +23,4 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-08 22:12 WITA | F3-B-06 | selesai | PR #19 | rumus progres proyek berbobot (ADR-0011): calcProjectProgress & projectProgressOf di utils/projectProgress.ts, konsisten di Projects/ProjectDetail/Monitoring/Dashboard/Analytics, probe:progress pass
 2026-10-08 22:56 WITA | F3-B-09 | selesai | PR #20 | WBS: modal update progres material SearchSelect & alur F3-D stok/PR, integrasi ChangeHistory per task, assign internal & eksternal otomatis buat WO, probe:wbs pass
 
+2026-10-09 07:17 WITA | F3-C-01 | selesai | PR boqDocs | koleksi boqDocs + migrasi 009, POST /api/boqDocs/:id/status & /revise (withTx), kunci item surat Disetujui/Digantikan 409, unik nomor+revisi, refs & policy & store PREFIX BQD, probe:boq 13/13
