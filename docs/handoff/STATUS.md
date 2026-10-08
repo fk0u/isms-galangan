@@ -30,7 +30,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | agent | selesai | PR #17 |
 | F3-B-03 | Card status gradient + label | P1 | F3-B-proyek.md | | todo | |
 | F3-B-04 | Filter jadi deret chip | P1 | F3-B-proyek.md | | todo | |
-| F3-B-05 | Form proyek baru | P0 | F3-B-proyek.md | agent | jalan | |
+| F3-B-05 | Form proyek baru | P0 | F3-B-proyek.md | agent | selesai | PR #18 |
 | F3-B-06 | Rumus progres proyek | P0 | F3-B-proyek.md | | todo | |
 | F3-B-07 | Header & card progres | P1 | F3-B-proyek.md | | todo | |
 | F3-B-08 | Ringkasan: Log Penawaran & Tagihan, milestone | P1 | F3-B-proyek.md | | todo | |
