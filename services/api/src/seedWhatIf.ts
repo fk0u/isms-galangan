@@ -342,9 +342,18 @@ function build(): { rows: Row[]; wbsRows: Array<{ projectId: string; wbs: unknow
     put("spareparts", `SIM-SPR-${pad(i)}`, {
       vessel: v, name: pick(GOODS), stock: int(0, 100), minStock: 10, usedDate: "", technician: "",
     });
+    const projectId = `SIM-PRJ-${pad((i % 100) + 1)}`;
+    const boqDocId = `SIM-BQD-${pad(i)}`;
+    const quantity = int(1, 100);
+    const unitPrice = int(100000, 5000000);
+    put("boqDocs", boqDocId, {
+      projectId, number: `BQ/${projectId}/001`, revision: 0, status: "Disetujui",
+      issuedAt: iso(2026, 8, 1), approvedAt: iso(2026, 8, 5),
+      note: "Surat BoQ simulasi.", total: quantity * unitPrice,
+    });
     put("boq", `SIM-BOQ-${pad(i)}`, {
-      projectId: `SIM-PRJ-${pad((i % 100) + 1)}`, item: pick(GOODS), quantity: int(1, 100),
-      unitPrice: int(100000, 5000000), status: pick(["Draft", "Diajukan", "Disetujui"]),
+      projectId, boqDocId, item: pick(GOODS), quantity,
+      unitPrice, totalPrice: quantity * unitPrice, status: pick(["Draft", "Diajukan", "Disetujui"]),
     });
   }
 

@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (473 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (480 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -22,7 +22,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Material & marking",
           "pct": 30,
           "due": "2026-08-15",
-          "doneAt": "2026-08-07"
+          "doneAt": "2026-08-08"
         },
         {
           "title": "Fabrikasi section 4-6",
@@ -51,7 +51,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Surface preparation",
           "pct": 25,
           "due": "2026-08-20",
-          "doneAt": "2026-08-12"
+          "doneAt": "2026-08-13"
         },
         {
           "title": "Primer coating",
@@ -80,7 +80,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Bearing overhaul",
           "pct": 45,
           "due": "2026-09-10",
-          "doneAt": "2026-09-02"
+          "doneAt": "2026-09-03"
         },
         {
           "title": "Alignment & trial run",
@@ -109,13 +109,13 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Ereksi perancah",
           "pct": 50,
           "due": "2026-06-30",
-          "doneAt": "2026-06-22"
+          "doneAt": "2026-06-23"
         },
         {
           "title": "Pen dismantled",
           "pct": 50,
           "due": "2026-07-20",
-          "doneAt": "2026-07-12"
+          "doneAt": "2026-07-13"
         }
       ]
     }
@@ -134,7 +134,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Panel delivery & setting",
           "pct": 40,
           "due": "2026-09-20",
-          "doneAt": "2026-09-12"
+          "doneAt": "2026-09-13"
         },
         {
           "title": "Cable pulling & termination",
@@ -164,13 +164,13 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Tanda selar & ban daprah",
           "pct": 60,
           "due": "2026-08-05",
-          "doneAt": "2026-07-28"
+          "doneAt": "2026-07-29"
         },
         {
           "title": "Pressure test tank",
           "pct": 40,
           "due": "2026-08-20",
-          "doneAt": "2026-08-12"
+          "doneAt": "2026-08-13"
         }
       ]
     }
@@ -8041,11 +8041,78 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     }
   },
   {
+    "table": "boqDocs",
+    "id": "BQD-RP-2026-003-R0",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "RP-2026-003",
+      "number": "BQ/RP-2026-003/001",
+      "revision": 0,
+      "status": "Digantikan",
+      "issuedAt": "2026-07-01",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2026-07-20",
+      "supersededBy": "BQD-RP-2026-003-R1",
+      "note": "Surat awal sebelum revisi 1.",
+      "total": 732000000
+    }
+  },
+  {
+    "table": "boqDocs",
+    "id": "BQD-RP-2026-003-R1",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "RP-2026-003",
+      "number": "BQ/RP-2026-003/001",
+      "revision": 1,
+      "status": "Disetujui",
+      "supersedes": "BQD-RP-2026-003-R0",
+      "issuedAt": "2026-08-01",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2026-08-15",
+      "note": "Revisi 1 menyesuaikan harga coating.",
+      "total": 738000000
+    }
+  },
+  {
+    "table": "boqDocs",
+    "id": "BQD-NB-2025-012-R0",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "NB-2025-012",
+      "number": "BQ/NB-2025-012/001",
+      "revision": 0,
+      "status": "Disetujui",
+      "issuedAt": "2025-11-01",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2025-11-01",
+      "note": "Surat BoQ demo Rev 0.",
+      "total": 1390000000
+    }
+  },
+  {
+    "table": "boqDocs",
+    "id": "BQD-RP-2026-005-R0",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "RP-2026-005",
+      "number": "BQ/RP-2026-005/001",
+      "revision": 0,
+      "status": "Disetujui",
+      "issuedAt": "2026-07-15",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2026-07-15",
+      "note": "Surat BoQ demo Rev 0.",
+      "total": 320000000
+    }
+  },
+  {
     "table": "boq",
     "id": "BQ-001",
     "branch": "",
     "data": {
       "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R0",
       "name": "Overhaul Main Engine",
       "description": "Overhaul & replacement main engine bearing",
       "quantity": 1,
@@ -8063,10 +8130,11 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R0",
       "name": "Coating Lambung",
       "description": "Epoxy coating hull exterior",
       "quantity": 120,
-      "unit": "mÂ²",
+      "unit": "m²",
       "unitPrice": 850000,
       "totalPrice": 102000000,
       "category": "Paint",
@@ -8082,6 +8150,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R0",
       "name": "Inspection Docking",
       "description": "Survey & inspection during drydock",
       "quantity": 1,
@@ -8097,10 +8166,69 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
   },
   {
     "table": "boq",
+    "id": "BQ-007",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R1",
+      "name": "Overhaul Main Engine",
+      "description": "Overhaul & replacement main engine bearing",
+      "quantity": 1,
+      "unit": "set",
+      "unitPrice": 480000000,
+      "totalPrice": 480000000,
+      "category": "Mechanical",
+      "status": "Approved",
+      "requestedBy": "Rudi Hartono"
+    }
+  },
+  {
+    "table": "boq",
+    "id": "BQ-008",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R1",
+      "name": "Coating Lambung",
+      "description": "Epoxy coating hull exterior",
+      "quantity": 120,
+      "unit": "m²",
+      "unitPrice": 900000,
+      "totalPrice": 108000000,
+      "category": "Paint",
+      "status": "Approved",
+      "requestedBy": "Sari Wulandari",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2026-08-15"
+    }
+  },
+  {
+    "table": "boq",
+    "id": "BQ-009",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "boqDocId": "BQD-RP-2026-003-R1",
+      "name": "Inspection Docking",
+      "description": "Survey & inspection during drydock",
+      "quantity": 1,
+      "unit": "service",
+      "unitPrice": 150000000,
+      "totalPrice": 150000000,
+      "category": "Survey",
+      "status": "Approved",
+      "requestedBy": "Rudi Hartono",
+      "approvedBy": "Direktur Demo",
+      "approvedAt": "2026-08-15"
+    }
+  },
+  {
+    "table": "boq",
     "id": "BQ-004",
     "branch": "",
     "data": {
       "projectId": "NB-2025-012",
+      "boqDocId": "BQD-NB-2025-012-R0",
       "name": "Fabrikasi Baja Section 4-7",
       "description": "Steel fabrication for hull section",
       "quantity": 45,
@@ -8120,6 +8248,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "projectId": "NB-2025-012",
+      "boqDocId": "BQD-NB-2025-012-R0",
       "name": "Mesin & Kelistrikan",
       "description": "Aux engine & electrical installation",
       "quantity": 1,
@@ -8137,6 +8266,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "projectId": "RP-2026-005",
+      "boqDocId": "BQD-RP-2026-005-R0",
       "name": "Bearing Overhaul",
       "description": "Replace bearing on main propulsion",
       "quantity": 4,

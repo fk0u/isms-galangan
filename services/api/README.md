@@ -68,6 +68,7 @@ Create the database first (`CREATE DATABASE isms;`). The same `001_init.sql` DDL
 
 - `npm run dev` — `tsx watch --env-file-if-exists=.env src/index.ts` (migrates on boot, then listens on `PORT`)
 - `npm run migrate` — `tsx --env-file-if-exists=.env src/migrate.ts`
+- `npm run migrate:boq-docs` — pratinjau pengelompokan BoQ lama per proyek; migrasi dijalankan dengan `npm run migrate:boq-docs -- --apply` setelah skema `boqDocs` tersedia (`npm run migrate`). Operasi apply atomik dan dapat dijalankan ulang.
 - `npm run seed` — `tsx --env-file-if-exists=.env src/seed.ts` (4 dev users, idempotent)
 - `npm run backup [-- --out ./backups/<name>]` — `tsx --env-file-if-exists=.env src/backup.ts`
 - `npm run restore -- --from ./backups/<name>` — `tsx --env-file-if-exists=.env src/restore.ts`
