@@ -2,15 +2,31 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
-import { requestActor, requestIp, shallowDiff, writeAudit } from "../audit.js";
+import { requestActor, requestIp, shallowDiff, writeAudit, type AuditInput } from "../audit.js";
 import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
-import { exec, getDialect, q } from "../db.js";
+import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
 export const DEFAULT_BRANCH = "Samarinda";
+
+const REQUIRED_AUDIT_TABLES = new Set([
+  "invoices", "payables", "journals", "payroll", "users", "settings", "coa", "purchaseOrders",
+]);
+
+async function persistWithAudit(table: string, persist: () => Promise<unknown>, audit: AuditInput): Promise<void> {
+  if (REQUIRED_AUDIT_TABLES.has(table)) {
+    await withTx(async () => {
+      await persist();
+      await writeAudit(audit, { required: true });
+    });
+    return;
+  }
+  await persist();
+  await writeAudit(audit);
+}
 
 // ID prefix per collection — disalin dari apps/web/src/data/store.tsx PREFIX
 // (wajib sama; newId dipakai dua sisi). inventory=STK agar tak tabrakan
@@ -344,10 +360,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const refError = await checkRefs(table, rowData as Record<string, unknown>);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
-    await exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
+    await persistWithAudit(table, () => exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
       id, branch, JSON.stringify(rowData), now,
-    ]);
-    await writeAudit({
+    ]), {
       actor: requestActor(req),
       action: "create",
       table,
@@ -410,10 +425,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
-    await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
+    await persistWithAudit(table, () => exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
       branch, JSON.stringify(merged), now, id,
-    ]);
-    await writeAudit({
+    ]), {
       actor: requestActor(req),
       action: "update",
       table,
@@ -442,8 +456,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
         .status(409)
         .send(fail(`Tidak dapat menghapus: masih dipakai oleh ${usages.join(", ")}`, "REFERENCED"));
     }
-    await exec(`DELETE FROM ${table} WHERE id = ?`, [id]);
-    await writeAudit({
+    await persistWithAudit(table, () => exec(`DELETE FROM ${table} WHERE id = ?`, [id]), {
       actor: requestActor(req),
       action: "delete",
       table,
