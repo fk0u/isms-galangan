@@ -155,6 +155,8 @@ export interface StoreShape {
   coa: StoreItem[];
   journals: StoreItem[];
   assets: StoreItem[];
+  /** Surat BoQ per nomor surat (ADR-0006). Kosong di seed lokal; diisi dari API. */
+  boqDocs: StoreItem[];
   wbsByProject: Record<string, WbsItem[]>;
   teamByProject: Record<string, string[]>;
 }
@@ -332,6 +334,7 @@ function buildSeeds(): StoreShape {
       coa: clone(seedCoa),
       journals: clone(seedJournals),
       assets: clone(seedAssets),
+      boqDocs: [],
 wbsByProject: {},
      teamByProject: clone(seedTeamByProject),
    };
@@ -484,6 +487,7 @@ const PREFIX: Record<string, string> = {
     coa: "COA",
     journals: "JU",
     assets: "AST",
+    boqDocs: "BQD",
  };
 
 const ARRAY_KEYS: (keyof StoreShape)[] = [
@@ -495,7 +499,7 @@ const ARRAY_KEYS: (keyof StoreShape)[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties",
-  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
 ];
 
 function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
@@ -701,7 +705,7 @@ const OFFLINE_COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
 ];
 
 /* Hidrasi cache offline dari IndexedDB saat boot. Berjalan sebelum resync

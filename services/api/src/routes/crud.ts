@@ -8,6 +8,7 @@ import { cursorOf, parseCursor } from "./crudCursor.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
+import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
 export const DEFAULT_BRANCH = "Samarinda";
@@ -89,6 +90,7 @@ export const PREFIX: Record<string, string> = {
   coa: "COA",
   journals: "JU",
   assets: "AST",
+  boqDocs: "BQD",
 };
 
 // Every envelope table from migrations/001_init.sql except users
@@ -102,7 +104,7 @@ export const COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
 ];
 
 // Tulis settings/coa dibatasi di registerCrud (requireSettingsWrite).
@@ -127,6 +129,7 @@ const PatchSchema = z.object({
 // bukan menyimpan lokal): data harus objek + field kunci koleksi kritis.
 // PATCH parsial tidak divalidasi isi (sengaja).
 const REQUIRED_DATA: Record<string, string[]> = {
+  boqDocs: ["projectId", "number"],
   projects: ["vessel", "client"],
   vessels: ["name"],
   invoices: ["client"],
@@ -345,10 +348,14 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const branch = isPrivileged && requestedBranch ? requestedBranch : DEFAULT_BRANCH;
     const now = new Date().toISOString();
     // 5. activities: actor diisi dari token; tolak pemalsuan nama aktor
-    const rowData = { ...parsed.data.data };
+    let rowData: Record<string, unknown> = { ...parsed.data.data };
+    if (table === "boqDocs") rowData = normalizeNewDoc(rowData);
     if (table === "activities") {
       rowData.user = requestActor(req);
     }
+    // ADR-0006: surat BoQ terkunci & unik (projectId, number, revision).
+    const createLock = await boqLockError(table, null, rowData);
+    if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const uniq = UNIQUE_FIELD[table];
@@ -423,6 +430,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       );
       if (fieldError) return reply.status(409).send(fail(fieldError, "CONFLICT"));
     }
+    const patchLock = await boqLockError(table, oldData, merged);
+    if (patchLock) return reply.status(409).send(fail(patchLock, "LOCKED"));
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     await persistWithAudit(table, () => exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
@@ -450,6 +459,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const doomed = rows[0] as Row;
+    const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
+    if (deleteLock) return reply.status(409).send(fail(deleteLock, "LOCKED"));
     const usages = await findUsages(table, id);
     if (usages.length > 0) {
       return reply
