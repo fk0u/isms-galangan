@@ -16,6 +16,7 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-07 23:05 WITA | F2-07 | selesai | PR #12 | respons login branch, purgeOfflineCache idb & localStorage, konfirmasi dirty queue, isolasi per ownerUserId, probe T01 OK
 2026-10-08 20:50 WITA | F3-A-04 | selesai | PR #14 | 6 komponen bersama (SearchSelect, DateInput, TimeInput24, PhotoUploader, ChangeHistory, StatusChips) + probe SSR + fix CI fresh seed branch Samarinda
 2026-10-08 20:58 WITA | F2-08 | selesai | PR #13 | audit trail wajib & terbatas (tabel audit_log, proteksi penulisan dan pembatasan akses audit)
+2026-10-08 21:05 WITA | F3-A-01 | selesai | PR #15 | hapus filter cabang di top bar, cabang dikendalikan oleh sesi user, hapus BRANCH_KEY dari storage
 
 
 
