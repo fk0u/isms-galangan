@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { bumpTokenVersion, comparePassword, hashPassword, requireAuth } from "../auth.js";
+import { bumpTokenVersion, comparePassword, hashPassword, invalidateUserCache, requireAuth } from "../auth.js";
 import { requireManageUsers, roleRank, ROLES } from "../policy.js";
 import { requestActor, requestIp, writeAudit, type AuditInput } from "../audit.js";
 import { exec, q, withTx } from "../db.js";
@@ -237,7 +237,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
         current.id,
       ]);
       if (roleChanged || activeChanged || employeeChanged) {
-        await bumpTokenVersion(current.id);
+        await bumpTokenVersion(current.id, { deferCacheInvalidation: true });
       }
     }, {
       actor: requestActor(req),
@@ -254,6 +254,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       },
       ip: requestIp(req),
     });
+    if (roleChanged || activeChanged || employeeChanged) invalidateUserCache(current.id);
     return ok({ id: current.id, username: current.username, employeeId: nextEmployeeId, ...next });
   });
 
@@ -294,7 +295,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
        termasuk apakah pelakunya pemilik akun itu sendiri. */
     await persistUserChange(async () => {
       await exec("UPDATE users SET pass_hash = ? WHERE id = ?", [newHash, target.id]);
-      await bumpTokenVersion(target.id);
+      await bumpTokenVersion(target.id, { deferCacheInvalidation: true });
     }, {
       actor: requestActor(req),
       action: "password_change",
@@ -303,6 +304,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       diff: { username: target.username, self, verifiedOldPassword: self && !privileged },
       ip: requestIp(req),
     });
+    invalidateUserCache(target.id);
     return ok({ id: target.id, updated: true });
   });
 
@@ -326,7 +328,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
 
     await persistUserChange(async () => {
       await exec("UPDATE users SET is_active = 0 WHERE id = ?", [target.id]);
-      await bumpTokenVersion(target.id);
+      await bumpTokenVersion(target.id, { deferCacheInvalidation: true });
     }, {
       actor: requestActor(req),
       action: "deactivate",
@@ -335,6 +337,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       diff: { username: target.username, isActive: false },
       ip: requestIp(req),
     });
+    invalidateUserCache(target.id);
     return ok({ id: target.id, isActive: false });
   });
 }

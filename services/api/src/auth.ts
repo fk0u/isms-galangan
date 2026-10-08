@@ -119,9 +119,12 @@ export function invalidateUserCache(userId?: string): void {
   }
 }
 
-export async function bumpTokenVersion(userId: string): Promise<void> {
+export async function bumpTokenVersion(
+  userId: string,
+  options: { deferCacheInvalidation?: boolean } = {},
+): Promise<void> {
   await exec("UPDATE users SET token_version = token_version + 1 WHERE id = ?", [userId]);
-  invalidateUserCache(userId);
+  if (!options.deferCacheInvalidation) invalidateUserCache(userId);
 }
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
