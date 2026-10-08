@@ -10,15 +10,17 @@ export async function runSeed(): Promise<void> {
   const now = new Date().toISOString();
   let inserted = 0;
   let skipped = 0;
+  const DEFAULT_BRANCH = "Samarinda";
   for (const row of buildSeedRows()) {
     const exists = await q("SELECT id FROM " + row.table + " WHERE id = ?", [row.id]);
     if (exists.length > 0) {
       skipped += 1;
       continue;
     }
+    const normalizedBranch = String(row.branch ?? "").trim() || DEFAULT_BRANCH;
     await exec(`INSERT INTO ${row.table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
       row.id,
-      row.branch,
+      normalizedBranch,
       JSON.stringify(row.data),
       now,
     ]);

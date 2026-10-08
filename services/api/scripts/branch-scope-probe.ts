@@ -1,7 +1,8 @@
 // Security Probe: Scope Cabang di Server (F2-06 / ADR-0003 Jalur A)
+import { randomUUID } from "node:crypto";
 import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
-import { q, closeDb } from "../src/db.js";
+import { q, exec, closeDb } from "../src/db.js";
 import { COLLECTIONS } from "../src/routes/crud.js";
 
 async function main() {
@@ -40,7 +41,7 @@ async function main() {
   }
   assert("Semua tabel envelope bebas dari kolom branch kosong/NULL", totalEmptyAcrossAll === 0, `ditemukan ${totalEmptyAcrossAll} baris kosong`);
 
-  // Cari user direktur dan non-direktur (mis. demo / user tester)
+  // Cari user direktur untuk skenario yang boleh mengubah branch.
   const dirUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
     "SELECT id, username, role, token_version FROM users WHERE role = 'direktur' LIMIT 1",
   );
@@ -48,18 +49,33 @@ async function main() {
   const dir = dirUsers[0];
   const dirToken = signToken({ id: dir.id, username: dir.username, role: dir.role, branch: "SEMUA", v: dir.token_version ?? 0 });
 
-  // Cari atau buat user non-direktur (mis. peran proyek)
+  // Cari atau buat user non-direktur (peran proyek) yang benar-benar ada di DB.
   const projUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
     "SELECT id, username, role, token_version FROM users WHERE role = 'proyek' LIMIT 1",
   );
-  const projUser = projUsers[0] ?? { id: "probe-proj", username: "probe.proj", role: "proyek", token_version: 0 };
+  let probeUserId: string | null = null;
+  if (projUsers.length === 0) {
+    probeUserId = randomUUID();
+    await exec(
+      "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version) VALUES (?, ?, ?, ?, ?, ?, 1, 0)",
+      [probeUserId, `probe.proyek.${Date.now()}@local`, "probe-hash-unused", "Probe Proyek", "proyek", "probe.proyek@local"],
+    );
+  }
+  const freshProjUsers = probeUserId
+    ? await q<{ id: string; username: string; role: string; token_version: number }>(
+      "SELECT id, username, role, token_version FROM users WHERE id = ? LIMIT 1",
+      [probeUserId],
+    )
+    : projUsers;
+  if (freshProjUsers.length === 0) throw new Error("Proyek user not found in DB");
+  const projUser = freshProjUsers[0];
   const projToken = signToken({ id: projUser.id, username: projUser.username, role: "proyek", branch: "Samarinda", v: projUser.token_version ?? 0 });
 
   // 2. POST oleh peran operasional (proyek) tanpa branch -> dipaksa default Samarinda
   const createRes1 = await app.inject({
     method: "POST",
     url: "/api/surveys",
-    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    headers: { authorization: "Bearer " + projToken, "content-type": "application/json" },
     payload: {
       data: { judul: "Survey Probe 1", surveyor: "Tester" },
     },
@@ -72,7 +88,7 @@ async function main() {
   const createRes2 = await app.inject({
     method: "POST",
     url: "/api/surveys",
-    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    headers: { authorization: "Bearer " + projToken, "content-type": "application/json" },
     payload: {
       branch: "Balikpapan",
       data: { judul: "Survey Probe 2", surveyor: "Tester" },
@@ -82,44 +98,53 @@ async function main() {
   const created2 = JSON.parse(createRes2.body)?.data;
   assert("Server memaksa branch = 'Samarinda' untuk peran non-direktur", created2?.branch === "Samarinda", `branch=${created2?.branch}`);
 
-  // 4. PATCH branch oleh peran operasional -> ditolak 403 Forbidden
-  const patchOperasionalRes = await app.inject({
-    method: "PATCH",
-    url: `/api/surveys/${created1.id}`,
-    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
-    payload: {
-      branch: "Balikpapan",
-    },
-  });
-  assert("PATCH branch oleh peran operasional ditolak 403 Forbidden", patchOperasionalRes.statusCode === 403, `HTTP ${patchOperasionalRes.statusCode}`);
+  if (created1?.id) {
+    // 4. PATCH branch oleh peran operasional -> ditolak 403 Forbidden
+    const patchOperasionalRes = await app.inject({
+      method: "PATCH",
+      url: `/api/surveys/${created1.id}`,
+      headers: { authorization: "Bearer " + projToken, "content-type": "application/json" },
+      payload: {
+        branch: "Balikpapan",
+      },
+    });
+    assert("PATCH branch oleh peran operasional ditolak 403 Forbidden", patchOperasionalRes.statusCode === 403, `HTTP ${patchOperasionalRes.statusCode}`);
 
-  // 5. PATCH data biasa tanpa mengubah branch oleh peran operasional -> berhasil 200
-  const patchDataRes = await app.inject({
-    method: "PATCH",
-    url: `/api/surveys/${created1.id}`,
-    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
-    payload: {
-      data: { judul: "Survey Probe 1 Updated" },
-    },
-  });
-  assert("PATCH data biasa oleh peran operasional berhasil 200 OK", patchDataRes.statusCode === 200, `HTTP ${patchDataRes.statusCode}`);
+    // 5. PATCH data biasa tanpa mengubah branch oleh peran operasional -> berhasil 200
+    const patchDataRes = await app.inject({
+      method: "PATCH",
+      url: `/api/surveys/${created1.id}`,
+      headers: { authorization: "Bearer " + projToken, "content-type": "application/json" },
+      payload: {
+        data: { judul: "Survey Probe 1 Updated" },
+      },
+    });
+    assert("PATCH data biasa oleh peran operasional berhasil 200 OK", patchDataRes.statusCode === 200, `HTTP ${patchDataRes.statusCode}`);
 
-  // 6. PATCH branch oleh direktur -> diizinkan 200 OK
-  const patchDirRes = await app.inject({
-    method: "PATCH",
-    url: `/api/surveys/${created1.id}`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: {
-      branch: "Banjarmasin",
-    },
-  });
-  assert("PATCH branch oleh direktur diizinkan 200 OK", patchDirRes.statusCode === 200, `HTTP ${patchDirRes.statusCode}`);
-  const patchedDirData = JSON.parse(patchDirRes.body)?.data;
-  assert("Branch berhasil diperbarui ke 'Banjarmasin' oleh direktur", patchedDirData?.branch === "Banjarmasin", `branch=${patchedDirData?.branch}`);
+    // 6. PATCH branch oleh direktur -> diizinkan 200 OK
+    const patchDirRes = await app.inject({
+      method: "PATCH",
+      url: `/api/surveys/${created1.id}`,
+      headers: { authorization: "Bearer " + dirToken, "content-type": "application/json" },
+      payload: {
+        branch: "Banjarmasin",
+      },
+    });
+    assert("PATCH branch oleh direktur diizinkan 200 OK", patchDirRes.statusCode === 200, `HTTP ${patchDirRes.statusCode}`);
+    const patchedDirData = JSON.parse(patchDirRes.body)?.data;
+    assert("Branch berhasil diperbarui ke 'Banjarmasin' oleh direktur", patchedDirData?.branch === "Banjarmasin", `branch=${patchedDirData?.branch}`);
+  }
 
   // Bersihkan data tes
-  await app.inject({ method: "DELETE", url: `/api/surveys/${created1.id}`, headers: { authorization: `Bearer ${dirToken}` } });
-  await app.inject({ method: "DELETE", url: `/api/surveys/${created2.id}`, headers: { authorization: `Bearer ${dirToken}` } });
+  if (created1?.id) {
+    await app.inject({ method: "DELETE", url: `/api/surveys/${created1.id}`, headers: { authorization: "Bearer " + dirToken } });
+  }
+  if (created2?.id) {
+    await app.inject({ method: "DELETE", url: `/api/surveys/${created2.id}`, headers: { authorization: "Bearer " + dirToken } });
+  }
+  if (probeUserId) {
+    await exec("DELETE FROM users WHERE id = ?", [probeUserId]);
+  }
 
   console.log(`\nHasil: ${passed}/${total} checks passed.`);
   await closeDb();
