@@ -4,10 +4,11 @@ import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench,
 import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, ProgressBar, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
   NumInput, FlowStrip,
   RowAction, rowMatches,
-  EntityPicker,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { AsyncButton } from "../../components/ui";
+import { DateInput } from "../../components/DateInput";
+import { SearchSelect as SharedSearchSelect } from "../../components/SearchSelect";
 import { employeeOptions, isKnownEmployee } from "../../utils/employeeOptions";
 import { useStore } from "../../data/store";
 import type { StoreItem, CollectionKey } from "../../data/store";
@@ -1233,7 +1234,7 @@ export default function Drydock() {
               <input className="input" value={bookForm.vessel2} onChange={(e) => setBookForm({ ...bookForm, vessel2: e.target.value })} placeholder={S.phPartner} />
             </Field>
             <Field label={S.lblCalDate} hint={S.hintCalDate}>
-              <input type="date" className="input" value={bookForm.startDate} onChange={(e) => setBookForm({ ...bookForm, startDate: e.target.value })} />
+              <DateInput locale={locale} ariaLabel={S.lblCalDate} value={bookForm.startDate} onChange={(startDate) => setBookForm({ ...bookForm, startDate })} />
             </Field>
             <Field label={S.areaLabel}>
               <input className="input" value={bookForm.area} onChange={(e) => setBookForm({ ...bookForm, area: e.target.value })} placeholder={S.areaPh} />
@@ -1274,7 +1275,7 @@ export default function Drydock() {
       <Modal open={picModal !== null} onClose={() => setPicModal(null)} title={S.picTitle.replace("{a}", picModal?.name ?? "")}
         footer={<><button className="btn-secondary" onClick={() => setPicModal(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={savePic}>{S.btnSavePic}</button></>}>
         <Field label={S.lblPic} hint={S.hintPic}>
-          <EntityPicker value={picDraft} onChange={setPicDraft} options={picOptions} placeholder={S.phPic} ariaLabel={S.lblPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picDraft.trim() !== "" && !isKnownEmployee(data.employees, picDraft)} />
+          <SharedSearchSelect value={picDraft} onChange={setPicDraft} options={picOptions.map(({ value, label, hint }) => ({ value, label, subLabel: hint }))} placeholder={S.phPic} ariaLabel={S.lblPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picDraft.trim() !== "" && !isKnownEmployee(data.employees, picDraft)} />
         </Field>
       </Modal>
 
@@ -1302,4 +1303,3 @@ export default function Drydock() {
     </div>
   );
 }
-

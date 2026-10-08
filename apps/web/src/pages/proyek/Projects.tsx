@@ -38,6 +38,7 @@ import { FilterPopover } from "../../components/FilterPopover";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
+import { StatusChips } from "../../components/StatusChips";
 
 export const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
 export const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
@@ -310,10 +311,12 @@ export default function Projects() {
                 </select>
               </Field>
               <Field label={S.statusLabel}>
-                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterStatusAria} value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
-                  <option value="Semua">{S.prjAllStatus}</option>
-                  {statusOptions.filter((s) => s !== "Semua").map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <StatusChips
+                  value={draft.status}
+                  onChange={(status) => setDraft({ ...draft, status })}
+                  options={statusOptions.map((status) => ({ value: status, label: status === "Semua" ? S.prjAllStatus : status }))}
+                  ariaLabel={S.prjFilterStatusAria}
+                />
               </Field>
               <Field label={S.prjFieldPrioritas}>
                 <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterPrioritasAria} value={draft.prioritas} onChange={(e) => setDraft({ ...draft, prioritas: e.target.value })}>

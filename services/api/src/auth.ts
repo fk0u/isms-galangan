@@ -240,6 +240,7 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
   { username: "dev@alk.id", name: "Developer", role: "developer", email: "dev@alk.id" },
   { username: "direktur@galangan.com", name: "Direktur", role: "direktur", email: "direktur@galangan.com" },
   { username: "manager@galangan.com", name: "Manager", role: "manager", email: "manager@galangan.com" },
+  { username: "proyek@galangan.com", name: "Staff Proyek", role: "proyek", email: "proyek@galangan.com" },
 ];
 
 export async function seedUsers(
