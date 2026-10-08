@@ -53,6 +53,7 @@ import { useModuleSync } from "../data/useModuleSync";
 import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../utils/monthAxis";
 import { lastPoint, numOf, pctChange, prevPoint } from "../utils/series";
 import { warnLevelOf } from "../utils/inventoryWarn";
+import { projectProgressOf } from "../utils/projectProgress";
 import {
   ALERT_LEVELS,
   MODULE_ALERT_TO,
@@ -855,10 +856,15 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
                     <p className="text-xs text-steel-500">{p.id} · {p.client}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-24">
-                      <ProgressBar value={p.progress} tone={p.status === "Terlambat" ? "red" : "navy"} />
-                      <p className="mt-1 text-right text-[11px] text-steel-500">{p.progress}%</p>
-                    </div>
+                    {(() => {
+                      const prog = projectProgressOf(p, data.wbsByProject, data.boq);
+                      return (
+                        <div className="w-24">
+                          <ProgressBar value={prog} tone={p.status === "Terlambat" ? "red" : "navy"} />
+                          <p className="mt-1 text-right text-[11px] text-steel-500">{prog}%</p>
+                        </div>
+                      );
+                    })()}
                     <Badge tone={p.status === "Terlambat" ? "red" : p.status === "Selesai" ? "green" : p.status === "Tertunda" ? "amber" : p.status === "Batal" ? "gray" : "blue"}>
                       {statusLabel(String(p.status), locale)}
                     </Badge>

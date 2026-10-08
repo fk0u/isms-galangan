@@ -43,6 +43,7 @@ import { n_prj } from "../../i18n/n_prj";
 import { fmtMiliar, fmtTanggal, fmtRentang, fmtBulan } from "../../data";
 import { fmtRupiah, parseRupiah, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
+import { calcProjectProgress } from "../../utils/projectProgress";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { canonPrioritas, scopeList } from "../../utils/scope";
@@ -341,12 +342,6 @@ if (from === "Desain" && to === "Produksi") {
   const [sort4, setSort4] = useState<SortState>({ key: null, dir: "asc" });
   const [costDetail, setCostDetail] = useState(false);
 
-  const weightedProgress = (items: { progress: number; weight: number }[]): number => {
-    const totalW = items.reduce((s, w) => s + Number(w.weight || 0), 0);
-    if (totalW <= 0) return 0;
-    return Math.round(items.reduce((s, w) => s + (Number(w.progress || 0) * Number(w.weight || 0)), 0) / totalW);
-  };
-
   const createsCycle = (items: WbsExt[], task: string, pred: string): boolean => {
     const map = new Map(items.map((w) => [String(w.task), String(w.predecessor ?? "")]));
     let cur = pred;
@@ -378,7 +373,8 @@ if (from === "Desain" && to === "Produksi") {
     // otomatis - template fallback tidak boleh menimpa progres seed/manual.
     if (!data.wbsByProject?.[project.id]) return;
     const wbs = wbsFor(project.id);
-    const newProgress = weightedProgress(wbs);
+    const projectBoq = (data.boq ?? []).filter((b) => String(b.projectId ?? "") === String(project.id));
+    const newProgress = calcProjectProgress(wbs, projectBoq);
     if (newProgress !== project.progress) {
       update("projects", project.id, { progress: newProgress });
     }
@@ -587,7 +583,8 @@ const createWarranty = async (wbsTask?: string) => {
   };
 
   const bastList = (data.bast ?? []).filter((b) => b.projectId === pid);
-  const boqTotal = (data.boq ?? []).filter((b) => b.projectId === pid).reduce((s, b) => s + Number(b.totalPrice || 0), 0);
+  const projectBoq = (data.boq ?? []).filter((b) => b.projectId === pid);
+  const boqTotal = projectBoq.reduce((s, b) => s + Number(b.totalPrice || 0), 0);
 
   /* ================= BIAYA EQUIPMENT -> HPP PROYEK =================
      Relasi ini SEBELUMNYA tidak ada di modul Proyek sama sekali: biaya
@@ -629,7 +626,8 @@ const createWarranty = async (wbsTask?: string) => {
 
   // Tutup proyek cek: WBS 100% + BAST Disetujui + invoice Lunas (NCR dicek terpisah).
   const closeBlockReason = (): string | null => {
-    if (weightedProgress(wbs) !== 100) return `WBS belum 100% (progres ${weightedProgress(wbs)}%)`;
+    const prog = calcProjectProgress(wbs, projectBoq);
+    if (prog !== 100) return `WBS belum 100% (progres ${prog}%)`;
     if (!bastList.some((b) => String(b.status) === "Disetujui")) return "belum ada BAST yang Disetujui";
     if (invoices.length === 0) return "belum ada invoice";
     const open = invoices.filter((i) => String(i.status) !== "Lunas");
@@ -931,7 +929,7 @@ const createWarranty = async (wbsTask?: string) => {
     );
 try {
         await setWbs(pid, updated);
-        await update("projects", pid, { progress: weightedProgress(updated) });
+        await update("projects", pid, { progress: calcProjectProgress(updated, projectBoq) });
         /* D3: material terpilih → kurangi stok inventory + catat movement.
            Tanpa pengurangan stok, WBS dan inventory akan divergensi. */
         if (wbsUpdateForm.material) {
@@ -969,7 +967,7 @@ try {
     if (totalW !== 100) { toast(S.detToastWeightTotal.replace("{n}", String(totalW)), "info"); return; }
     try {
       await setWbs(pid, next);
-      await update("projects", pid, { progress: weightedProgress(next) });
+      await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) });
       log("menambah tahapan WBS", `${pid} · ${wbsForm.task.trim()}`, "Proyek");
       toast(S.detToastStageAdd);
       setShowWbs(false);

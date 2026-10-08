@@ -39,6 +39,7 @@ import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash }
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { StatusChips } from "../../components/StatusChips";
+import { projectProgressOf } from "../../utils/projectProgress";
 
 export const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
 export const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
@@ -201,7 +202,7 @@ export default function Projects() {
   const totalBudget = list.reduce((s, p) => s + Number(p.budget || 0), 0);
   const inProgress = list.filter((p) => p.status !== "Selesai").length;
   const delayed = list.filter((p) => p.status === "Terlambat").length;
-  const avgProgress = list.length ? Math.round(list.reduce((s, p) => s + Number(p.progress || 0), 0) / list.length) : 0;
+  const avgProgress = list.length ? Math.round(list.reduce((s, p) => s + projectProgressOf(p, data.wbsByProject, data.boq), 0) / list.length) : 0;
   /* Pengurutan tanggal lewat `createdAtOf`/`lastTouchedAt`, bukan field mentah:
      `updated_at` milik server adalah ISO penuh sementara `createdAt` bisa
      "YYYY-MM-DD" saja. Dicampur dalam satu kolom, urutan leksikografis
@@ -211,7 +212,7 @@ export default function Projects() {
   const sorted = useMemo(() => sortRows(list, sort, (p: StoreItem, k) => {
     if (k === "budget") return Number(p.budget);
     if (k === "actual") return Number(p.actual);
-    if (k === "progress") return Number(p.progress);
+    if (k === "progress") return projectProgressOf(p, data.wbsByProject, data.boq);
     if (k === "tahap") return String(tahapOf(p));
     if (k === "createdAt") return createdAtOf(p) ?? "";
     if (k === "updatedAt") return lastTouchedAt(p) ?? "";
@@ -406,8 +407,15 @@ export default function Projects() {
                     <td className="td"><StatusBadge status={p.status} /></td>
                     <td className="td">
                       <div className="flex items-center gap-2">
-                        <ProgressBar value={p.progress} className="w-20" tone={p.status === "Terlambat" ? "red" : "navy"} />
-                        <span className="text-xs font-medium text-steel-600">{p.progress}%</span>
+                        {(() => {
+                          const prog = projectProgressOf(p, data.wbsByProject, data.boq);
+                          return (
+                            <>
+                              <ProgressBar value={prog} className="w-20" tone={p.status === "Terlambat" ? "red" : "navy"} />
+                              <span className="text-xs font-medium text-steel-600">{prog}%</span>
+                            </>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="td font-medium text-navy-900">{fmtMiliar(p.budget)}</td>

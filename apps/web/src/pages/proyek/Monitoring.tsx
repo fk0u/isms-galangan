@@ -19,6 +19,7 @@ import { fmtBulan, fmtMiliar, fmtRupiah, todayISO } from "../../utils/format";
 import { exportExcel } from "../../utils/export";
 import { TAHAP, tahapOf, isOverdue } from "./Projects";
 import { canonPrioritas } from "../../utils/scope";
+import { projectProgressOf } from "../../utils/projectProgress";
 
 const prioritasTone: Record<string, "gray" | "blue" | "amber" | "red"> = {
   Rendah: "gray",
@@ -130,7 +131,7 @@ export default function Monitoring() {
   const isLate = (p: StoreItem): boolean => p.status === "Terlambat" || isOverdue(p, todayISO());
   for (const p of filtered) {
     if (isLate(p)) {
-      attention.push({ group: "Terlambat", title: `${p.id} · ${p.vessel}`, desc: S.monLateDesc.replace("{n}", String(p.progress)), pid: p.id });
+      attention.push({ group: "Terlambat", title: `${p.id} · ${p.vessel}`, desc: S.monLateDesc.replace("{n}", String(projectProgressOf(p, data.wbsByProject, data.boq))), pid: p.id });
     }
     if (Number(p.actual) > Number(p.budget)) {
       attention.push({ group: "Over-budget", title: `${p.id} · ${p.vessel}`, desc: S.monOverDesc.replace("{a}", fmtRupiah(Number(p.actual))).replace("{b}", fmtRupiah(Number(p.budget))), pid: p.id });
@@ -163,7 +164,7 @@ export default function Monitoring() {
       ["Kode", "Kapal", "Tipe", "Cabang", "Tahap", "Prioritas", "Status", "Progres %", "Budget (Rp)", "Actual (Rp)", "NCR Terbuka", "CO Diajukan"],
       ...filtered.map((p) => [
         p.id, p.vessel, p.type, p.branch, tahapOf(p), p.prioritas ?? "Sedang", p.status,
-        Number(p.progress || 0), Number(p.budget || 0), Number(p.actual || 0),
+        projectProgressOf(p, data.wbsByProject, data.boq), Number(p.budget || 0), Number(p.actual || 0),
         openNcr(p.id).length, diajukanCo(p.id).length,
       ]),
     ];
@@ -282,10 +283,15 @@ export default function Monitoring() {
                           {delay > 0 ? S.monDelayDays.replace("{n}", String(delay)) : S.monDelayCheck}
                         </p>
                       )}
-                      <div className="mt-2 flex items-center gap-2">
-                        <ProgressBar value={Number(p.progress || 0)} className="flex-1" tone={p.status === "Terlambat" ? "red" : "navy"} />
-                        <span className="text-xs font-medium text-steel-600">{p.progress}%</span>
-                      </div>
+                      {(() => {
+                        const prog = projectProgressOf(p, data.wbsByProject, data.boq);
+                        return (
+                          <div className="mt-2 flex items-center gap-2">
+                            <ProgressBar value={prog} className="flex-1" tone={p.status === "Terlambat" ? "red" : "navy"} />
+                            <span className="text-xs font-medium text-steel-600">{prog}%</span>
+                          </div>
+                        );
+                      })()}
                       <p className="mt-1.5 text-[11px] text-steel-500">{fmtMiliar(Number(p.actual))} / {fmtMiliar(Number(p.budget))}</p>
                       <ProgressBar value={pct} tone={pct > 100 ? "red" : "ocean"} />
                       <p className="mt-1.5 text-[11px] text-steel-500">{S.monNcrOpen}<span className={`font-semibold ${openNcr(p.id).length > 0 ? "text-rose-600" : "text-steel-500"}`}>{openNcr(p.id).length}{openNcr(p.id).some((n) => n.severity === "Critical") ? S.monCritSuffix : ""}</span></p>
