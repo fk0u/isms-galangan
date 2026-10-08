@@ -62,6 +62,7 @@ import {
   rebindLegacyMonthSeries,
 } from "../utils/monthAxis";
 import { briefOf, lastPoint, numOf, prevPoint, safeText } from "../utils/series";
+import { projectProgressOf } from "../utils/projectProgress";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import {
@@ -243,7 +244,7 @@ export default function Analytics() {
   const [notes, setNotes] = useState<Record<string, string[]>>(() => loadNotes());
 
   const avgProgress = data.projects.length
-    ? Math.round(data.projects.reduce((s, p) => s + Number(p.progress || 0), 0) / data.projects.length)
+    ? Math.round(data.projects.reduce((s, p) => s + projectProgressOf(p, data.wbsByProject, data.boq), 0) / data.projects.length)
     : 0;
   const openNcr = data.ncr.filter((n) => n.status !== "Tertutup").length;
   const openNcrCritical = data.ncr.filter((n) => n.status !== "Tertutup" && n.severity === "Critical").length;
