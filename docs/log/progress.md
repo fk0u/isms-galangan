@@ -20,4 +20,4 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-08 21:32 WITA | F3-A-02 | selesai | PR #16 | format titik untuk semua input harga di 12 file, parseRupiah, probe:money 15/15 PASS
 2026-10-08 21:40 WITA | F3-B-02 | selesai | PR #17 | tabel proyek: nomor urut (page-1)*size+i+1, tombol Detail di kolom aksi, default sort createdAt desc, probe:table pass
 2026-10-08 21:55 WITA | F3-B-05 | selesai | PR #18 | form proyek baru: plannedDockId SearchSelect drydocks, SearchSelect kapal/klien/PM, status otomatis Dalam Proses, cabang otomatis dari sesi, probe:project-add pass
-
+2026-10-08 22:12 WITA | F3-B-06 | selesai | PR #19 | rumus progres proyek berbobot (ADR-0011): calcProjectProgress & projectProgressOf di utils/projectProgress.ts, konsisten di Projects/ProjectDetail/Monitoring/Dashboard/Analytics, probe:progress pass
