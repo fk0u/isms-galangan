@@ -559,24 +559,6 @@ export default function AppShell() {
               >
                 {backendMode === "remote" && !backendError ? S.shServerBadge : S.shLocalBadge}
               </span>
-              <select
-                className="input w-auto border-0 bg-transparent py-1 text-sm font-medium text-navy-800 shadow-none"
-                value={branch}
-                aria-label={S.shPickBranchAria}
-                onChange={(e) => setBranch(e.target.value)}
-                /* Akun yang terikat satu cabang tidak boleh memilih
-                   "Semua Cabang": server akan menolak permintaan PDF-nya
-                   dengan 403 karena di luar cakupan. Menampilkan opsi yang
-                   pasti ditolak lebih buruk daripada menyembunyikannya. */
-                title={userBranch === "SEMUA" ? undefined : t.nav.lockedToBranch.replace("{a}", userBranch)}
-              >
-                {userBranch === "SEMUA" && <option value="SEMUA">{t.nav.allBranches}</option>}
-                {(data.branches ?? [])
-                  .filter((b) => userBranch === "SEMUA" || String(b.city) === userBranch)
-                  .map((b) => (
-                    <option key={b.id} value={b.city}>{b.name}</option>
-                  ))}
-              </select>
             </div>
           </div>
 
