@@ -24,4 +24,4 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-08 22:56 WITA | F3-B-09 | selesai | PR #20 | WBS: modal update progres material SearchSelect & alur F3-D stok/PR, integrasi ChangeHistory per task, assign internal & eksternal otomatis buat WO, probe:wbs pass
 
 2026-10-09 07:17 WITA | F3-C-01 | selesai | PR boqDocs | koleksi boqDocs + migrasi 009, POST /api/boqDocs/:id/status & /revise (withTx), kunci item surat Disetujui/Digantikan 409, unik nomor+revisi, refs & policy & store PREFIX BQD, probe:boq 13/13
-2026-10-09 07:45 WITA | F3-C-02 | review | belum ada | migrasi boqDocs idempoten (--dry-run/--apply, transaksional), validasi relasi proyek/surat, seed 4 surat/3 proyek/Rev 1; uji salinan DB 6/6 tertaut, npm run check exit 0; menunggu PR, merge oleh OWNER
+2026-10-09 07:45 WITA | F3-C-02 | terblokir | belum ada | migrasi boqDocs idempoten (--dry-run/--apply, transaksional), validasi relasi proyek/surat, seed 4 surat/3 proyek/Rev 1; uji salinan DB 6/6 tertaut, npm run check exit 0; commit lokal 55baa30; push/PR menunggu otorisasi GitHub, merge oleh OWNER
