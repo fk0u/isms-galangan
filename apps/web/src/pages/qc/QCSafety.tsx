@@ -3,7 +3,7 @@ import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from ".
 import { Plus, ShieldCheck, AlertTriangle, Siren, Award, Send, Eye, Pencil, Trash2 } from "lucide-react";
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut, ChartTooltip, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, usePager, toast,
-  NumInput, FlowStrip, FileUploadButton, useBusy, AsyncButton, SearchBox, rowMatches,
+  NumInput, MoneyInput, FlowStrip, FileUploadButton, useBusy, AsyncButton, SearchBox, rowMatches,
   RowAction,
   EntityPicker,
 } from "../../components/ui";
@@ -12,7 +12,7 @@ import { employeeOptions, isKnownEmployee } from "../../utils/employeeOptions";
 import { useStore, type StoreItem, type CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { inspectionTrend, ncrTrend, incidentTrend, hseTrend } from "../../data";
-import { fmtRupiah, fmtTanggal, todayISO } from "../../utils/format";
+import { fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { getSetting } from "../../utils/settings";
@@ -732,8 +732,8 @@ export default function QCSafety() {
     try {
     if (!ncrDetail) return;
     const hours = Number(reworkDraft.hours || 0);
-    const rate = Number(reworkDraft.rate || 0);
-    const material = Number(reworkDraft.material || 0);
+    const rate = parseRupiah(reworkDraft.rate);
+    const material = parseRupiah(reworkDraft.material);
     if (hours < 0 || rate < 0 || material < 0 || [hours, rate, material].some((v) => !Number.isFinite(v))) {
       toast(S.tReworkValid, "info");
       return;
@@ -2054,11 +2054,11 @@ export default function QCSafety() {
               <p className="text-xs font-semibold text-steel-500">{S.reworkHead}</p>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <Field label={S.fJam}><NumInput min={0} step={0.5} className="input" value={reworkDraft.hours} onChange={(e) => setReworkDraft({ ...reworkDraft, hours: e.target.value })} placeholder={S.phCth12} /></Field>
-                <Field label={S.fRate}><NumInput min={0} className="input" value={reworkDraft.rate} onChange={(e) => setReworkDraft({ ...reworkDraft, rate: e.target.value })} placeholder={S.phCth75} /></Field>
-                <Field label={S.fMaterial}><NumInput min={0} className="input" value={reworkDraft.material} onChange={(e) => setReworkDraft({ ...reworkDraft, material: e.target.value })} placeholder={S.phCth500} /></Field>
+                <Field label={S.fRate}><MoneyInput className="input" value={reworkDraft.rate} onChange={(v) => setReworkDraft({ ...reworkDraft, rate: v })} placeholder={S.phCth75} /></Field>
+                <Field label={S.fMaterial}><MoneyInput className="input" value={reworkDraft.material} onChange={(v) => setReworkDraft({ ...reworkDraft, material: v })} placeholder={S.phCth500} /></Field>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <p className="text-sm text-steel-600">{S.totalN.split("{n}")[0]}<span className="font-semibold text-navy-900">{fmtRupiah((Number(reworkDraft.hours) || 0) * (Number(reworkDraft.rate) || 0) + (Number(reworkDraft.material) || 0))}</span>{S.totalN.split("{n}")[1]}</p>
+                <p className="text-sm text-steel-600">{S.totalN.split("{n}")[0]}<span className="font-semibold text-navy-900">{fmtRupiah((Number(reworkDraft.hours) || 0) * parseRupiah(reworkDraft.rate) + parseRupiah(reworkDraft.material))}</span>{S.totalN.split("{n}")[1]}</p>
                 <AsyncButton className="btn-secondary text-xs" onAction={saveRework}>{S.btnSimpanRework}</AsyncButton>
               </div>
             </div>

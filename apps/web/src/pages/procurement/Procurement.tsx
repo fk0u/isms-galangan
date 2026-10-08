@@ -95,7 +95,7 @@ const RFQ_STAGE_COLOR: Record<string, string> = {
 const PR_PENDING = ["Draft", "Menunggu Approval", "RFQ", "Diajukan"];
 
 const lineTotal = (lines: { qty: string | number; price: string | number }[]): number =>
-  lines.reduce((s, l) => s + Number(l.qty || 0) * Number(l.price || 0), 0);
+  lines.reduce((s, l) => s + Number(l.qty || 0) * parseRupiah(String(l.price || 0)), 0);
 
 const poLines = (po: StoreItem): POLine[] => (Array.isArray(po.lines) ? (po.lines as POLine[]) : []);
 
@@ -2033,12 +2033,12 @@ const sparkVendors = useMemo(() => {
                     <select className="input col-span-1" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
                       {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
                     </select>
-                    <NumInput min={0} className="input col-span-2" placeholder={S.harga} value={l.price} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, price: e.target.value } : x)))} />
+                    <MoneyInput className="input col-span-2" placeholder={S.harga} value={l.price} onChange={(v) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, price: v } : x)))} />
                     <button className="btn-secondary col-span-1 text-xs" aria-label={S.ariaHapusBaris.replace("{n}", String(idx + 1))} onClick={() => setBigLines((s) => s.filter((_, i) => i !== idx))}><X className="h-3.5 w-3.5" /></button>
                   </div>
                   <input className="input mt-2 !py-1.5 text-xs" placeholder="Kebutuhan / untuk apa (cth: sheer bulkhead XV-42)" value={l.need ?? ""} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, need: e.target.value } : x)))} />
                   <p className="mt-1 text-[11px] text-steel-500">
-                    {l.name.trim() || "Baris ini"} · {fmtJumlah(Number(l.qty || 0))} {l.unit} × {fmtRupiah(Number(l.price || 0))} = <b className="text-navy-900">{fmtRupiah(Number(l.qty || 0) * Number(l.price || 0))}</b>
+                    {l.name.trim() || "Baris ini"} · {fmtJumlah(Number(l.qty || 0))} {l.unit} × {fmtRupiah(parseRupiah(l.price))} = <b className="text-navy-900">{fmtRupiah(Number(l.qty || 0) * parseRupiah(l.price))}</b>
                   </p>
                 </div>
               ))}

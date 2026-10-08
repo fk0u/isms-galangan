@@ -15,6 +15,7 @@ import {
   toggleSort,
   sortRows,
   NumInput,
+  MoneyInput,
   useBusy,
   AsyncButton,
   ConfirmModal,
@@ -23,7 +24,7 @@ import {
 import type { SortState } from "../../components/ui";
 import SparepartServiceSection from "../proyek/SparepartServiceSection";
 import { useStore } from "../../data/store";
-import { fmtBulan, fmtJumlah, fmtRupiah, fmtTanggal, monthISO, todayISO } from "../../utils/format";
+import { fmtBulan, fmtJumlah, fmtRupiah, fmtTanggal, monthISO, parseRupiah, todayISO } from "../../utils/format";
 import { sameName, vesselMatch } from "../../utils/names";
 import { COMPLIANCE_ITEMS, complianceSummary } from "./Vessels";
 import { getSetting } from "../../utils/settings";
@@ -358,7 +359,7 @@ export default function VesselDetail() {
   const saveIns = async () => {
     try {
     if (!insForm.polis.trim()) { toast(S.vdPolisReq, "info"); return; }
-    const premi = Number(insForm.premi || 0);
+    const premi = parseRupiah(insForm.premi);
     if (!Number.isFinite(premi) || premi < 0) { toast(S.vdPremiMin, "info"); return; }
     if (!insForm.expiry) { toast(S.vdInsExpiryReq, "info"); return; }
     await update("vessels", v.id, { insurance: { polis: insForm.polis.trim(), premi, expiry: insForm.expiry } });
@@ -855,7 +856,7 @@ export default function VesselDetail() {
         <div className="space-y-3">
           <Field label={S.vdPolisNo}><input className="input font-mono" value={insForm.polis} onChange={(e) => setInsForm({ ...insForm, polis: e.target.value })} placeholder={S.vdPolisPh} /></Field>
           <FormGrid>
-            <Field label={S.vdPremiRp}><NumInput min={0} className="input" value={insForm.premi} onChange={(e) => setInsForm({ ...insForm, premi: e.target.value })} placeholder={S.vdPremiPh} /></Field>
+            <Field label={S.vdPremiRp}><MoneyInput className="input" value={insForm.premi} onChange={(v) => setInsForm({ ...insForm, premi: v })} placeholder={S.vdPremiPh} /></Field>
             <Field label={S.vdExpiryField}><input type="date" className="input" value={insForm.expiry} onChange={(e) => setInsForm({ ...insForm, expiry: e.target.value })} /></Field>
           </FormGrid>
         </div>

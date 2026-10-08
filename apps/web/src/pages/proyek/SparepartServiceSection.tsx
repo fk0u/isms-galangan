@@ -3,10 +3,11 @@ import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import { Card, StatusBadge, Modal, Field, FormGrid, toast, EmptyState, Badge, ConfirmModal,
-  NumInput, AsyncButton, SearchBox, rowMatches,
+  MoneyInput, AsyncButton, SearchBox, rowMatches,
 } from "../../components/ui";
 import { Plus, Wrench, Package, Box, RotateCcw, FileDown } from "lucide-react";
 import { exportExcel, fmtRupiah } from "../../utils/export";
+import { parseRupiah } from "../../utils/format";
 import type { ServiceRecord, Sparepart } from "../../data";
 
 export type SparepartServiceView = "3d" | "service" | "sparepart" | "all";
@@ -278,7 +279,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       partNumber: form.partNumber.trim() || "-",
       category: form.category,
       status: form.status,
-      cost: Number(form.cost) || 0,
+      cost: parseRupiah(form.cost),
       notes: form.notes.trim(),
       technician: form.technician.trim() || "-",
       usedDate: form.usedDate || "-",
@@ -314,7 +315,7 @@ const payload = {
         description: svcForm.description.trim(),
         status: svcForm.status,
         technician: svcForm.technician.trim() || "Belum ditentukan",
-        cost: Number(svcForm.cost) || 0,
+        cost: parseRupiah(svcForm.cost),
         ...(svcForm.boqRef ? { boqRef: svcForm.boqRef } : {}),
       };
     if (editSvc) {
@@ -518,7 +519,7 @@ const payload = {
             </Field>
           </FormGrid>
           <FormGrid>
-            <Field label={S.spsCost}><NumInput className="input" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></Field>
+            <Field label={S.spsCost}><MoneyInput className="input" value={form.cost} onChange={(v) => setForm({ ...form, cost: v })} /></Field>
             <Field label={S.spsNotes}><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={S.spsNotesPh} /></Field>
           </FormGrid>
           <FormGrid>
@@ -565,7 +566,7 @@ const payload = {
             <Field label={S.dateField}><input type="date" className="input" value={svcForm.date} onChange={(e) => setSvcForm({ ...svcForm, date: e.target.value })} /></Field>
             <Field label={S.spsSvcTech}><input className="input" value={svcForm.technician} onChange={(e) => setSvcForm({ ...svcForm, technician: e.target.value })} placeholder={S.spsTechPh} /></Field>
           </FormGrid>
-          <Field label={S.spsSvcCost}><NumInput className="input" value={svcForm.cost} onChange={(e) => setSvcForm({ ...svcForm, cost: e.target.value })} /></Field>
+          <Field label={S.spsSvcCost}><MoneyInput className="input" value={svcForm.cost} onChange={(v) => setSvcForm({ ...svcForm, cost: v })} /></Field>
           {/* D12: referensi opsional ke item BoQ project ini. */}
           {projectId && (() => {
             const boqItems = (data.boq ?? []).filter((b) => String(b.projectId ?? "") === projectId);

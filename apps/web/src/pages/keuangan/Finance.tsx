@@ -4679,8 +4679,8 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
             <Field label={S.fPoRef} hint={S.poFormatHint}><input className="input font-mono" value={apForm.po} onChange={(e) => setApForm({ ...apForm, po: e.target.value })} placeholder={S.poPh} /></Field>
             <Field label={S.fVessel} hint={S.vesselHint}><input className="input" value={apForm.vessel} onChange={(e) => setApForm({ ...apForm, vessel: e.target.value })} /></Field>
             <Field label={S.fItem}><input className="input" value={apForm.item} onChange={(e) => setApForm({ ...apForm, item: e.target.value })} placeholder={S.itemPh} /></Field>
-            <Field label={S.fOpenBal}><NumInput min={0} className="input" value={apForm.openAwal} onChange={(e) => setApForm({ ...apForm, openAwal: e.target.value })} /></Field>
-            <Field label={S.fCloseBal}><NumInput min={0} className="input" value={apForm.amt} onChange={(e) => setApForm({ ...apForm, amt: e.target.value })} /></Field>
+            <Field label={S.fOpenBal}><MoneyInput className="input" value={apForm.openAwal} onChange={(v) => setApForm({ ...apForm, openAwal: v })} /></Field>
+            <Field label={S.fCloseBal}><MoneyInput className="input" value={apForm.amt} onChange={(v) => setApForm({ ...apForm, amt: v })} /></Field>
             <Field label={S.dueLabel}><input type="date" required className="input" value={apForm.due} onChange={(e) => setApForm({ ...apForm, due: e.target.value })} /></Field>
           </FormGrid>
           <label className="flex items-center gap-2 text-sm text-steel-600">
@@ -4698,8 +4698,8 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
             <Field label={S.fKodePembantu}><input className="input font-mono" value={apEditForm.kodePembantu} onChange={(e) => setApEditForm({ ...apEditForm, kodePembantu: e.target.value })} /></Field>
             <Field label={S.fVessel}><input className="input" value={apEditForm.vessel} onChange={(e) => setApEditForm({ ...apEditForm, vessel: e.target.value })} /></Field>
             <Field label={S.fItem}><input className="input" value={apEditForm.item} onChange={(e) => setApEditForm({ ...apEditForm, item: e.target.value })} /></Field>
-            <Field label={S.fOpenBal}><NumInput min={0} className="input" value={apEditForm.openAwal} onChange={(e) => setApEditForm({ ...apEditForm, openAwal: e.target.value })} /></Field>
-            <Field label={S.fCloseBal}><NumInput min={0} className="input" value={apEditForm.amt} onChange={(e) => setApEditForm({ ...apEditForm, amt: e.target.value })} /></Field>
+            <Field label={S.fOpenBal}><MoneyInput className="input" value={apEditForm.openAwal} onChange={(v) => setApEditForm({ ...apEditForm, openAwal: v })} /></Field>
+            <Field label={S.fCloseBal}><MoneyInput className="input" value={apEditForm.amt} onChange={(v) => setApEditForm({ ...apEditForm, amt: v })} /></Field>
             <Field label={S.dueLabel}><input type="date" required className="input" value={apEditForm.due} onChange={(e) => setApEditForm({ ...apEditForm, due: e.target.value })} /></Field>
           </FormGrid>
           <label className="flex items-center gap-2 text-sm text-steel-600">

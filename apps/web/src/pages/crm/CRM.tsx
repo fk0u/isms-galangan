@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus, Send, Users2, Star, Handshake, ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, Donut, Modal, Field, FormGrid, StatusBadge, ConfirmModal, EmptyState, SortTh, toggleSort, sortRows, toast, usePager,
   NumInput,
+  MoneyInput,
   SearchBox,
   rowMatches,
   RowAction,
@@ -14,7 +15,7 @@ import { useStore } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
 import type { StoreItem, CollectionKey } from "../../data/store";
-import { fmtMiliar, fmtRupiah, fmtTanggal, todayISO } from "../../utils/format";
+import { fmtMiliar, fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { sameName } from "../../utils/names";
 import { AlertBannerView, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
@@ -54,7 +55,7 @@ const STAGE_TONE: Record<string, "gray" | "amber" | "violet" | "green" | "teal" 
 };
 
 const isTerminal = (stage: string) => TERMINAL.includes(stage);
-const num = (v: unknown): number => Number(v) || 0;
+const num = (v: unknown): number => (typeof v === "number" ? (Number.isFinite(v) ? v : 0) : parseRupiah(String(v ?? "")));
 const PREFIX_TIPE: Record<string, string> = { "New Build": "NB", Repair: "RP", Retrofit: "RF" };
 
 const PROB: Record<string, number> = { Lead: 0.1, Penawaran: 0.3, Negosiasi: 0.6, Menang: 1 };
@@ -1203,7 +1204,7 @@ export default function CRM() {
                   </select>
                 </Field>
                 <Field label={S.poNoLabel}><input className="input font-mono" value={poForm.no} onChange={(e) => setPoForm({ ...poForm, no: e.target.value })} placeholder={S.poNoPh} /></Field>
-                <Field label={S.amountLabel}><NumInput min={0} className="input" value={poForm.amount} onChange={(e) => setPoForm({ ...poForm, amount: e.target.value })} /></Field>
+                <Field label={S.amountLabel}><MoneyInput className="input" value={poForm.amount} onChange={(v) => setPoForm({ ...poForm, amount: v })} /></Field>
                 <Field label={S.dateLabel}><input type="date" className="input" value={poForm.date} onChange={(e) => setPoForm({ ...poForm, date: e.target.value })} /></Field>
               </div>
               <button className="btn-secondary mt-2 text-xs" onClick={() => { setClientPoEditId(null); setPoForm({ contractId: "", projectId: "", no: "", amount: "", date: todayISO() }); void saveClientPo(); }}><Plus className="h-3.5 w-3.5" /> {clientPoEditId ? (locale === "en" ? "Update PO" : "Perbarui PO") : S.logPoBtn}</button>

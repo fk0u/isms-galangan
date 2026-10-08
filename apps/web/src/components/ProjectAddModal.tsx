@@ -3,10 +3,10 @@
 // Logika + validasi pindahan utuh dari Projects.tsx (satu sumber).
 import { useState } from "react";
 import { Field, FormGrid, Modal, toast,
-  NumInput, AsyncButton,
+  NumInput, MoneyInput, AsyncButton,
 } from "./ui";
 import type { StoreItem } from "../data/store";
-import { todayISO } from "../utils/format";
+import { parseRupiah, todayISO } from "../utils/format";
 import ClientModal from "./ClientModal";
 
 const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
@@ -84,7 +84,7 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
     if (scopeItems.length === 0) { toast(S.prjToastScopeMin, "info"); return; }
     if (!form.start || !form.end) { toast(S.prjToastDatesReq, "info"); return; }
     if (form.end < form.start) { toast(S.prjToastDateOrder, "info"); return; }
-    const budget = Number(form.budget);
+    const budget = parseRupiah(form.budget);
     if (!Number.isFinite(budget) || budget <= 0) { toast(S.prjToastBudget, "info"); return; }
     if (!form.manager) { toast(S.prjToastPm, "info"); return; }
     if (form.type === "New Build" && projects.some((p) => String(p.vessel ?? "").trim().toLowerCase() === form.vessel.trim().toLowerCase() && String(p.type) === "New Build")) {
@@ -241,7 +241,7 @@ export default function ProjectAddModal({ open, onClose, S, projects, vessels, c
             </div>
           )}
           <Field label={S.prjBudget}>
-            <NumInput className="input" min={0} value={form.budget} onChange={(e) => setF("budget", e.target.value)} placeholder={S.prjBudgetPh} />
+            <MoneyInput className="input" value={form.budget} onChange={(v) => setF("budget", v)} placeholder={S.prjBudgetPh} />
           </Field>
           <div className="rounded-xl border border-steel-200 p-3">
             <div className="mb-2 flex items-center justify-between">
