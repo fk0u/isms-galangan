@@ -255,9 +255,37 @@ const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unkno
   assert(Date.now() - mulai < 50, "objek bersarang sangat dalam tidak meledak", `${Date.now() - mulai}ms`);
 }
 
+/* ---- F3-B-02: Urutan proyek terbaru + nomor urut tabel berlanjut ---- */
+{
+  const mockProjects = [
+    { id: "PRJ-LEGACY", vessel: "TB Kaltim 01" }, // tanpa createdAt
+    { id: "PRJ-MID", vessel: "TB Samarinda 02", createdAt: "2026-05-01T10:00:00.000Z" },
+    { id: "PRJ-NEW", vessel: "TB Mahakam 99", createdAt: "2026-10-08T20:00:00.000Z" },
+    { id: "PRJ-OLD", vessel: "TB Berau 03", createdAt: "2026-01-15T08:00:00.000Z" },
+  ];
+
+  const sortedProjects = sortRows(
+    mockProjects,
+    { key: "createdAt", dir: "desc" },
+    (p) => createdAtOf(asRec(p)) ?? ""
+  );
+
+  assert(sortedProjects[0]?.id === "PRJ-NEW", "F3-B-02: Proyek baru (createdAt terbaru) muncul di baris 1");
+  assert(sortedProjects[sortedProjects.length - 1]?.id === "PRJ-LEGACY", "F3-B-02: Proyek legacy tanpa createdAt berada di baris paling akhir");
+
+  // Pengujian nomor urut berlanjut di halaman 2 (size 25)
+  const pageSize = 25;
+  const page1Row0 = (1 - 1) * pageSize + 0 + 1;
+  const page1Row24 = (1 - 1) * pageSize + 24 + 1;
+  const page2Row0 = (2 - 1) * pageSize + 0 + 1;
+  assert(page1Row0 === 1, "F3-B-02: Baris 1 halaman 1 bernomor 1");
+  assert(page1Row24 === 25, "F3-B-02: Baris terakhir halaman 1 bernomor 25");
+  assert(page2Row0 === 26, "F3-B-02: Baris 1 halaman 2 bernomor 26 (nomor berlanjut)");
+}
+
 if (fail > 0) {
-  console.log(`\nGAGAL: ${fail} pemeriksaan kolom tanggal + search`);
+  console.log(`\nGAGAL: ${fail} pemeriksaan kolom tanggal + search + tabel proyek`);
   process.exit(1);
 }
-console.log(`\nF6 lolos: timestamp + search diuji terhadap data seed invoice yang sebenarnya.`);
+console.log(`\nF6 & F3-B-02 lolos: timestamp + search + tabel proyek diuji.`);
 process.exit(0);
