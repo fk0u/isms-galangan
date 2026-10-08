@@ -51,6 +51,26 @@ export interface WbsPhoto {
   date: string;
 }
 
+export interface WbsAssignee {
+  type: "internal" | "external";
+  id: string;
+  name?: string;
+  woId?: string;
+}
+
+export interface WbsHistoryItem {
+  id?: string;
+  date: string;
+  actor: string;
+  action?: string;
+  from: number;
+  to: number;
+  note?: string;
+  photos?: string[];
+  material?: string;
+  qty?: number;
+}
+
 export interface WbsItem {
   task: string;
   start: string;
@@ -59,6 +79,7 @@ export interface WbsItem {
   weight: number;
   actualHours?: number;
   materialUsed?: string;
+  materialQty?: number;
   completedBy?: string;
   completionDate?: string;
   status?: "Sedang" | "Selesai";
@@ -69,6 +90,8 @@ export interface WbsItem {
       untuk backward compatibility dengan data lama. */
   photos?: WbsPhoto[];
   dft?: number;
+  assignee?: WbsAssignee;
+  history?: WbsHistoryItem[];
 }
 
 export interface StoreShape {

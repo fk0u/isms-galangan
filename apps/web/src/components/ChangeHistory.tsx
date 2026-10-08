@@ -46,15 +46,27 @@ function formatTime(value: unknown, locale: "id" | "en"): string {
   }).format(date);
 }
 
-/** Riwayat audit server yang difilter tepat pada nama tabel dan ID baris. */
+export interface HistoryEntryItem {
+  id?: string;
+  actor: string;
+  date: string;
+  action?: string;
+  before?: unknown;
+  after?: unknown;
+  note?: string;
+  photos?: string[];
+}
+
+/** Riwayat audit server yang difilter tepat pada nama tabel dan ID baris, atau entri riwayat kustom. */
 export function ChangeHistory({
   table,
   rowId,
   locale = "id",
   labels,
+  entries,
 }: {
-  table: string;
-  rowId: string;
+  table?: string;
+  rowId?: string;
   locale?: "id" | "en";
   labels: {
     title: string;
@@ -66,11 +78,16 @@ export function ChangeHistory({
     after: string;
     redacted: string;
   };
+  entries?: HistoryEntryItem[];
 }) {
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
 
   useEffect(() => {
+    if (entries !== undefined) {
+      setState("ready");
+      return;
+    }
     if (!isBackendConfigured()) {
       setRows([]);
       setState("unavailable");
@@ -101,7 +118,49 @@ export function ChangeHistory({
       });
 
     return () => { cancelled = true; };
-  }, [table, rowId]);
+  }, [table, rowId, entries]);
+
+  if (entries !== undefined) {
+    return (
+      <section className="rounded-xl border border-steel-200 bg-white p-3" aria-label={labels.title}>
+        <h4 className="text-sm font-semibold text-navy-900">{labels.title}</h4>
+        {entries.length === 0 ? (
+          <p className="mt-2 text-xs text-steel-500">{labels.empty}</p>
+        ) : (
+          <ol className="mt-2 max-h-64 space-y-3 overflow-y-auto">
+            {entries.map((item, index) => (
+              <li key={item.id ?? index} className="border-t border-steel-100 pt-2 first:border-0 first:pt-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
+                  <span className="font-medium text-navy-900">{item.actor || "—"}</span>
+                  <time className="text-steel-500">{formatTime(item.date, locale)}</time>
+                </div>
+                {item.action && <p className="mt-0.5 text-xs text-steel-600">{item.action}</p>}
+                {(item.before !== undefined || item.after !== undefined) && (
+                  <p className="mt-1 text-xs text-steel-700">
+                    <span className="text-steel-500">{labels.before}: </span>
+                    <span className="font-mono">{String(item.before ?? "—")}</span>
+                    <span aria-hidden="true" className="mx-1 text-steel-400">→</span>
+                    <span className="text-steel-500">{labels.after}: </span>
+                    <span className="font-semibold text-navy-800">{String(item.after ?? "—")}</span>
+                  </p>
+                )}
+                {item.note && <p className="mt-1 text-xs italic text-steel-600">"{item.note}"</p>}
+                {item.photos && item.photos.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {item.photos.map((url, pIdx) => (
+                      <a key={pIdx} href={url} target="_blank" rel="noopener noreferrer" className="inline-block overflow-hidden rounded border border-steel-200 hover:opacity-80">
+                        <img src={url} alt={`Dokumentasi ${pIdx + 1}`} className="h-10 w-14 object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-xl border border-steel-200 bg-white p-3" aria-label={labels.title}>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../auth/auth";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -33,7 +33,7 @@ import BoQSection from "./BoQSection";
 import ReportSection from "./ReportSection";
 import SparepartServiceSection from "./SparepartServiceSection";
 import { useStore } from "../../data/store";
-import type { StoreItem, WbsItem, CollectionKey } from "../../data/store";
+import type { StoreItem, WbsItem, WbsAssignee, WbsHistoryItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { DocumentPreviewCell, DocumentPreviewPanel, DownloadFileButton, InlineDocPreview } from "../../components/DocumentPreview";
 import { docAttachment, looksLikeUrl } from "../../utils/docAttachment";
@@ -52,6 +52,7 @@ import { employeeOptions } from "../../utils/employeeOptions";
 import { delayDaysOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
 import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
+import { SearchSelect } from "../../components/SearchSelect";
 import { PhotoUploader } from "../../components/PhotoUploader";
 import type { PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
@@ -191,7 +192,10 @@ export default function ProjectDetail() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamPick, setTeamPick] = useState("");
   const [wbsTaskUpdate, setWbsTaskUpdate] = useState<string | null>(null);
-  const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
+  const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", materialQty: "1", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
+  const [wbsAssignTask, setWbsAssignTask] = useState<string | null>(null);
+  const [assignForm, setAssignForm] = useState({ type: "internal" as "internal" | "external", employeeId: "", subconId: "" });
+  const [wbsHistoryTask, setWbsHistoryTask] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [shareForm, setShareForm] = useState({ docId: "", to: "" });
   const [statusPending, setStatusPending] = useState<string | null>(null);
@@ -913,10 +917,28 @@ const createWarranty = async (wbsTask?: string) => {
     if (pred && pred !== wbsTaskUpdate && createsCycle(wbs, wbsTaskUpdate, pred)) { toast(S.detToastCycle, "info"); return; }
     const status = prog >= 100 ? "Selesai" : wbsUpdateForm.status === "Selesai" && prog < 100 ? "Sedang" : wbsUpdateForm.status;
     const appendedPhotos = wbsUpdateForm.photos.map((photo) => ({ url: photo.url, note: photo.caption.trim() || wbsUpdateForm.photoNote.trim(), date: todayISO() }));
+    const currentTask = wbs.find((w) => w.task === wbsTaskUpdate);
+    const prevProg = Number(currentTask?.progress ?? 0);
+    const qtyNum = Math.max(1, Number(wbsUpdateForm.materialQty) || 1);
+
+    const historyEntry: WbsHistoryItem = {
+      id: `wbs-hist-${Date.now()}`,
+      date: new Date().toISOString(),
+      actor: sessionName || "User",
+      action: `Update progres: ${prevProg}% → ${prog}%`,
+      from: prevProg,
+      to: prog,
+      note: wbsUpdateForm.photoNote.trim() || undefined,
+      photos: appendedPhotos.map((p) => p.url),
+      material: wbsUpdateForm.material || undefined,
+      qty: wbsUpdateForm.material ? qtyNum : undefined,
+    };
+
     const updated = wbs.map((w) =>
       w.task === wbsTaskUpdate
         ? {
-            ...w, actualHours: hours, materialUsed: wbsUpdateForm.material, status, progress: prog, predecessor: pred || undefined,
+            ...w, actualHours: hours, materialUsed: wbsUpdateForm.material, materialQty: wbsUpdateForm.material ? qtyNum : undefined,
+            status, progress: prog, predecessor: pred || undefined,
             ...(wbsUpdateForm.station ? { station: wbsUpdateForm.station } : { station: undefined }),
             ...(wbsUpdateForm.photoNote.trim() || appendedPhotos.length > 0
                 ? { photos: [...(w.photos ?? []), ...appendedPhotos] }
@@ -924,32 +946,123 @@ const createWarranty = async (wbsTask?: string) => {
               ...(wbsUpdateForm.photoNote.trim() ? { photoNote: wbsUpdateForm.photoNote.trim() } : { photoNote: undefined }),
               ...(appendedPhotos.length > 0 ? { photoUrl: appendedPhotos[appendedPhotos.length - 1]?.url } : {}),
             ...(dftNum !== undefined ? { dft: dftNum } : { dft: undefined }),
+            history: [...(w.history ?? []), historyEntry],
           }
         : w
     );
-try {
-        await setWbs(pid, updated);
-        await update("projects", pid, { progress: calcProjectProgress(updated, projectBoq) });
-        /* D3: material terpilih → kurangi stok inventory + catat movement.
-           Tanpa pengurangan stok, WBS dan inventory akan divergensi. */
-        if (wbsUpdateForm.material) {
-          const invItem = invList.find((inv) => String(inv.name ?? "") === wbsUpdateForm.material);
-          if (invItem) {
-            const curStock = Number(invItem.stock ?? 0);
-            if (curStock > 0) {
-              await update("inventory", String(invItem.id), { stock: curStock - 1 });
+    try {
+      await setWbs(pid, updated);
+      await update("projects", pid, { progress: calcProjectProgress(updated, projectBoq) });
+      /* D3 & F3-D: material terpilih → kurangi stok inventory + catat movement.
+         Bila stok tidak cukup, keluarkan yang ada dan buat requisition (PR) untuk kekurangannya. */
+      if (wbsUpdateForm.material) {
+        const invItem = invList.find((inv) => String(inv.name ?? "") === wbsUpdateForm.material);
+        if (invItem) {
+          const curStock = Number(invItem.stock ?? 0);
+          if (curStock >= qtyNum) {
+            await update("inventory", String(invItem.id), { stock: curStock - qtyNum });
+            await add("movements", {
+              item: String(invItem.name ?? ""), itemId: String(invItem.id),
+              type: "Pengeluaran", qty: qtyNum, by: sessionName ? `${sessionName} (WBS: ${wbsTaskUpdate})` : `WBS: ${wbsTaskUpdate}`,
+              date: todayISO(), tone: "out",
+              ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
+            }, { action: "pemakaian material WBS", module: "Proyek" });
+          } else {
+            // Alur F3-D bila stok kurang:
+            const available = Math.max(0, curStock);
+            const diff = qtyNum - available;
+            if (available > 0) {
+              await update("inventory", String(invItem.id), { stock: 0 });
               await add("movements", {
                 item: String(invItem.name ?? ""), itemId: String(invItem.id),
-                type: "Pengeluaran", qty: 1, by: `WBS: ${wbsTaskUpdate}`,
+                type: "Pengeluaran", qty: available, by: sessionName ? `${sessionName} (WBS: ${wbsTaskUpdate})` : `WBS: ${wbsTaskUpdate}`,
                 date: todayISO(), tone: "out",
-              }, { action: "pemakaian material WBS", module: "Proyek" });
+                ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
+              }, { action: "pemakaian sebagian material WBS", module: "Proyek" });
             }
+            await add("requisitions", {
+              projectId: pid,
+              item: String(invItem.name ?? ""),
+              itemId: String(invItem.id),
+              qty: diff,
+              unit: String(invItem.unit ?? "pcs"),
+              status: "Diajukan",
+              date: todayISO(),
+              requestedBy: sessionName || "WBS",
+              note: `Permintaan material WBS: ${wbsTaskUpdate} (stok tersedia ${available}, butuh ${qtyNum})`,
+              ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
+            }, { action: "permintaan material WBS kekurangan stok", module: "Proyek" });
+            toast(S.detMaterialStockLess.replace("{stock}", String(available)).replace("{diff}", String(diff)), "info");
           }
         }
-        log("mengupdate progres WBS", `${wbsTaskUpdate} → ${prog}% (${status})`, "Proyek");
-        toast(S.detToastWbsProg);
+      }
+      log("mengupdate progres WBS", `${wbsTaskUpdate} → ${prog}% (${status})`, "Proyek");
+      toast(S.detToastWbsProg);
       setWbsTaskUpdate(null);
-      setWbsUpdateForm({ hours: "", material: "", status: "Sedang", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [], dft: "" });
+      setWbsUpdateForm({ hours: "", material: "", materialQty: "1", status: "Sedang", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [], dft: "" });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : S.saveFail, "info");
+    }
+  };
+
+  const saveAssign = async () => {
+    if (!wbsAssignTask) return;
+    const targetTask = wbs.find((w) => w.task === wbsAssignTask);
+    if (!targetTask) return;
+
+    let assignee: WbsAssignee | undefined;
+    if (assignForm.type === "internal") {
+      if (!assignForm.employeeId) {
+        toast(S.detPickEmployee, "info");
+        return;
+      }
+      const emp = (data.employees ?? []).find((e) => String(e.id) === assignForm.employeeId);
+      assignee = {
+        type: "internal",
+        id: assignForm.employeeId,
+        name: String(emp?.name ?? assignForm.employeeId),
+      };
+    } else {
+      if (!assignForm.subconId) {
+        toast(S.detAssignSubconLabel, "info");
+        return;
+      }
+      const sub = (data.subcontractors ?? []).find((s) => String(s.id) === assignForm.subconId);
+      const subName = String(sub?.name ?? assignForm.subconId);
+      const existingWo = (data.workOrders ?? []).find(
+        (w) => w.project === pid && String(w.sub ?? "") === subName && String(w.scope ?? "") === wbsAssignTask
+      );
+      let woId = existingWo ? String(existingWo.id) : "";
+      if (!existingWo) {
+        const createdWo = await add("workOrders", {
+          sub: subName,
+          project: pid,
+          scope: wbsAssignTask,
+          progress: 0,
+          status: "Dalam Proses",
+          date: todayISO(),
+          targetDate: targetTask.end || todayISO(),
+          branch: project.branch || session?.branch || "Samarinda",
+          wbsTask: wbsAssignTask,
+        }, { action: "buat WO dari penugasan WBS", module: "Proyek" });
+        woId = String(createdWo.id);
+        toast(S.detAssignWoCreated.replace("{id}", woId));
+      }
+      assignee = {
+        type: "external",
+        id: assignForm.subconId,
+        name: subName,
+        woId,
+      };
+    }
+
+    const updated = wbs.map((w) => (w.task === wbsAssignTask ? { ...w, assignee } : w));
+    try {
+      await setWbs(pid, updated);
+      log("menugaskan tahap WBS", `${wbsAssignTask} → ${assignee.type}: ${assignee.name}`, "Proyek");
+      toast(S.detAssignSuccess);
+      setWbsAssignTask(null);
+      setAssignForm({ type: "internal", employeeId: "", subconId: "" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -1207,7 +1320,7 @@ try {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface">
-                    <tr><SortTh label={S.colStageName} sortKey="task" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detStart} sortKey="start" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detEnd} sortKey="end" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colWeight} sortKey="weight" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPred} sortKey="predecessor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.actionTh}</th></tr>
+                    <tr><SortTh label={S.colStageName} sortKey="task" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detStart} sortKey="start" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detEnd} sortKey="end" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colWeight} sortKey="weight" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPred} sortKey="predecessor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.detAssignCol}</th><th className="th">{S.actionTh}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
                     {sortRows(wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "dft", "predecessor"])), sort, (w: WbsExt, k) => k === "weight" ? Number(w.weight) : k === "progress" ? Number(w.progress) : String((w as unknown as Record<string, unknown>)[k] ?? "")).map((w) => (
@@ -1229,12 +1342,48 @@ try {
                           </div>
                         </td>
                         <td className="td">
+                          {w.assignee ? (
+                            w.assignee.type === "internal" ? (
+                              <span className="inline-flex items-center gap-1 rounded bg-ocean-50 px-2 py-0.5 text-xs font-medium text-ocean-700" title={w.assignee.name}>
+                                <span className="font-semibold">{S.detAssignInternalBadge}:</span> {w.assignee.name}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700" title={`${w.assignee.name} (${w.assignee.woId ?? ""})`}>
+                                <span className="font-semibold">{S.detAssignExternalBadge}:</span> {w.assignee.name} {w.assignee.woId ? `(${w.assignee.woId})` : ""}
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-xs text-steel-400">—</span>
+                          )}
+                        </td>
+                        <td className="td">
+                          <div className="flex items-center gap-1">
+                            <RowAction
+                              icon={UserPlus}
+                              tone="neutral"
+                              label={`${S.detAssignBtn} ${w.task}`}
+                              onClick={() => {
+                                setWbsAssignTask(w.task);
+                                setAssignForm({
+                                  type: w.assignee?.type ?? "internal",
+                                  employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
+                                  subconId: w.assignee?.type === "external" ? w.assignee.id : "",
+                                });
+                              }}
+                            />
+                            <RowAction
+                              icon={History}
+                              tone="neutral"
+                              label={`${S.detWbsHistoryBtn} ${w.task}`}
+                              onClick={() => setWbsHistoryTask(w.task)}
+                            />
                             <RowAction
                               icon={Pencil}
                               tone="neutral"
                               label={`${S.detUpdateBtn} ${w.task}`}
-                              onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
+                              onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
                             />
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2320,15 +2469,24 @@ try {
             <Field label={S.detDft} hint={S.detDftHint}><NumInput min={0} className="input" value={wbsUpdateForm.dft} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, dft: e.target.value })} placeholder={S.detDftPh} /></Field>
           </FormGrid>
           <Field label={S.detMaterial}>
-            <select className="input" value={wbsUpdateForm.material} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, material: e.target.value })}>
-              <option value="">{locale === "en" ? "-- select material --" : "-- pilih material --"}</option>
-              {invList.map((inv) => (
-                <option key={inv.id} value={String(inv.name ?? "")}>
-                  {String(inv.name ?? "")} — stok: {String(inv.stock ?? 0)}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              value={wbsUpdateForm.material}
+              onChange={(val) => setWbsUpdateForm({ ...wbsUpdateForm, material: val })}
+              options={invList.map((inv) => ({
+                value: String(inv.name ?? ""),
+                label: String(inv.name ?? ""),
+                sublabel: `Stok: ${Number(inv.stock ?? 0)} ${String(inv.unit ?? "unit")}`,
+              }))}
+              ariaLabel={S.detMaterial}
+              placeholder={locale === "en" ? "Select material…" : "Pilih material…"}
+              emptyText={locale === "en" ? "No materials found" : "Material tidak ditemukan"}
+            />
           </Field>
+          {wbsUpdateForm.material && (
+            <Field label={S.detMaterialQty} hint={S.detMaterialQtyHint}>
+              <NumInput min={1} className="input" value={wbsUpdateForm.materialQty} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, materialQty: e.target.value })} placeholder="1" />
+            </Field>
+          )}
           <Field label={S.detStation} hint={wbsTaskUpdate && /hull/i.test(wbsTaskUpdate) ? S.detStationReq : S.detStationOpt}>
             <select className="input" value={wbsUpdateForm.station} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, station: e.target.value })}>
               <option value="">{S.detPickStation}</option>
@@ -2350,12 +2508,26 @@ try {
               onUploadError={() => toast(S.detPhotoUploadError, "info")}
             />
           </Field>
-          <ChangeHistory
-            table="projects"
-            rowId={pid}
-            locale={locale}
-            labels={{ title: S.detHistoryTitle, loading: S.detHistoryLoading, empty: S.detHistoryEmpty, error: S.detHistoryError, serverUnavailable: S.detHistoryUnavailable, before: S.detHistoryBefore, after: S.detHistoryAfter, redacted: S.detHistoryRedacted }}
-          />
+          {(() => {
+            const currentTask = wbs.find((w) => w.task === wbsTaskUpdate);
+            const entries = (currentTask?.history ?? []).map((h) => ({
+              id: h.id,
+              actor: h.actor,
+              date: h.date,
+              action: h.action,
+              before: h.from !== undefined ? `${h.from}%` : undefined,
+              after: h.to !== undefined ? `${h.to}%` : undefined,
+              note: h.note,
+              photos: h.photos,
+            }));
+            return (
+              <ChangeHistory
+                entries={entries}
+                locale={locale}
+                labels={{ title: S.detHistoryTitle, loading: S.detHistoryLoading, empty: S.detHistoryEmpty, error: S.detHistoryError, serverUnavailable: S.detHistoryUnavailable, before: S.detHistoryBefore, after: S.detHistoryAfter, redacted: S.detHistoryRedacted }}
+              />
+            );
+          })()}
           <Field label={S.statusLabel}>
             <select className="input" value={wbsUpdateForm.status} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, status: e.target.value as "Sedang" | "Selesai" })}>
               <option value="Sedang">Sedang Dikerjakan</option>
@@ -2369,6 +2541,116 @@ try {
             </select>
           </Field>
         </div>
+      </Modal>
+
+      {/* Modal Assign WBS */}
+      <Modal
+        open={wbsAssignTask !== null}
+        onClose={() => setWbsAssignTask(null)}
+        title={S.detAssignTitle.replace("{a}", wbsAssignTask ?? "")}
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setWbsAssignTask(null)}>{S.cancelBtn}</button>
+            <AsyncButton className="btn-primary" onAction={saveAssign}>{S.saveBtn}</AsyncButton>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label={S.detAssignType}>
+            <div className="flex gap-4">
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-700">
+                <input
+                  type="radio"
+                  name="assignType"
+                  value="internal"
+                  checked={assignForm.type === "internal"}
+                  onChange={() => setAssignForm({ ...assignForm, type: "internal" })}
+                />
+                {S.detAssignInternal}
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-700">
+                <input
+                  type="radio"
+                  name="assignType"
+                  value="external"
+                  checked={assignForm.type === "external"}
+                  onChange={() => setAssignForm({ ...assignForm, type: "external" })}
+                />
+                {S.detAssignExternal}
+              </label>
+            </div>
+          </Field>
+
+          {assignForm.type === "internal" ? (
+            <Field label={S.detAssignEmployeeLabel}>
+              <SearchSelect
+                value={assignForm.employeeId}
+                onChange={(val) => setAssignForm({ ...assignForm, employeeId: val })}
+                options={(data.employees ?? []).map((e) => ({
+                  value: String(e.id),
+                  label: String(e.name ?? e.id),
+                  sublabel: `${String(e.role ?? e.jabatan ?? "")} · ${String(e.branch ?? "")}`,
+                }))}
+                ariaLabel={S.detAssignEmployeeLabel}
+                placeholder={S.detPickEmployee}
+                emptyText={locale === "en" ? "No employees found" : "Karyawan tidak ditemukan"}
+              />
+            </Field>
+          ) : (
+            <Field label={S.detAssignSubconLabel}>
+              <SearchSelect
+                value={assignForm.subconId}
+                onChange={(val) => setAssignForm({ ...assignForm, subconId: val })}
+                options={(data.subcontractors ?? []).map((s) => ({
+                  value: String(s.id),
+                  label: String(s.name ?? s.id),
+                  sublabel: `${String(s.specialty ?? s.bidang ?? "")} · ${String(s.city ?? "")}`,
+                }))}
+                ariaLabel={S.detAssignSubconLabel}
+                placeholder={S.detAssignSubconLabel}
+                emptyText={locale === "en" ? "No subcontractors found" : "Subkontraktor tidak ditemukan"}
+              />
+            </Field>
+          )}
+        </div>
+      </Modal>
+
+      {/* Modal Riwayat WBS Task */}
+      <Modal
+        open={wbsHistoryTask !== null}
+        onClose={() => setWbsHistoryTask(null)}
+        title={S.detWbsHistoryTitle.replace("{a}", wbsHistoryTask ?? "")}
+        footer={<button className="btn-secondary" onClick={() => setWbsHistoryTask(null)}>{S.cancelBtn}</button>}
+      >
+        {(() => {
+          const targetWbs = wbs.find((w) => w.task === wbsHistoryTask);
+          const entries = (targetWbs?.history ?? []).map((h) => ({
+            id: h.id,
+            actor: h.actor,
+            date: h.date,
+            action: h.action,
+            before: h.from !== undefined ? `${h.from}%` : undefined,
+            after: h.to !== undefined ? `${h.to}%` : undefined,
+            note: h.note,
+            photos: h.photos,
+          }));
+          return (
+            <ChangeHistory
+              entries={entries}
+              locale={locale}
+              labels={{
+                title: S.detHistoryTitle,
+                loading: S.detHistoryLoading,
+                empty: S.detHistoryEmpty,
+                error: S.detHistoryError,
+                serverUnavailable: S.detHistoryUnavailable,
+                before: S.detHistoryBefore,
+                after: S.detHistoryAfter,
+                redacted: S.detHistoryRedacted,
+              }}
+            />
+          );
+        })()}
       </Modal>
 
       {/* Modal WBS */}
