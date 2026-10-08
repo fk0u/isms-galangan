@@ -18,7 +18,5 @@ Waktu (WITA) | Task | Status | PR | Catatan
 2026-10-08 20:58 WITA | F2-08 | selesai | PR #13 | audit trail wajib & terbatas (tabel audit_log, proteksi penulisan dan pembatasan akses audit)
 2026-10-08 21:05 WITA | F3-A-01 | selesai | PR #15 | hapus filter cabang di top bar, cabang dikendalikan oleh sesi user, hapus BRANCH_KEY dari storage
 2026-10-08 21:32 WITA | F3-A-02 | selesai | PR #16 | format titik untuk semua input harga di 12 file, parseRupiah, probe:money 15/15 PASS
-
-
-
+2026-10-08 21:40 WITA | F3-B-02 | selesai | PR #17 | tabel proyek: nomor urut (page-1)*size+i+1, tombol Detail di kolom aksi, default sort createdAt desc, probe:table pass
 

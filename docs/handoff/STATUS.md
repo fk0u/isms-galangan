@@ -27,7 +27,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
 | F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | selesai | PR #14 |
 | F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | | todo | |
-| F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | | todo | |
+| F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | agent | selesai | PR #17 |
 | F3-B-03 | Card status gradient + label | P1 | F3-B-proyek.md | | todo | |
 | F3-B-04 | Filter jadi deret chip | P1 | F3-B-proyek.md | | todo | |
 | F3-B-05 | Form proyek baru | P0 | F3-B-proyek.md | | todo | |
