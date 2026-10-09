@@ -414,14 +414,8 @@ export const vessels = [
   },
 ];
 
-/* Fasilitas dock. `lengthM`/`widthM`/`depthM` adalah angka yang dipakai peta
-   fasilitas; `capacity` tetap dipertahankan untuk tampilan karena sudah
-   dibaca di banyak tempat.
-
-   Peta TIDAK mengurai `capacity` sebagai sumber dimensinya._capacity itu
-   teks bebas ("80m / bearer", "New build assembly") dan facilityMap sengaja
-   menolak facilities yang panjangnya tidak terbaca - lebih baik tidak
-   menampilkan daripada menampilkan skala yang salah. */
+/* Data fasilitas dock. `capacity` tetap dipertahankan sebagai teks untuk
+   tampilan, sedangkan dimensi numerik disimpan terpisah sebagai metadata. */
 export const drydocks = [
   { id: "DD-1", name: "Drydock 1 - Panjang 120m", capacity: "120m / 12m / 6m draft", status: "Terpakai", kind: "graving", lengthM: 120, widthM: 12, depthM: 6 },
   { id: "DD-2", name: "Drydock 2 - Panjang 90m", capacity: "90m / 10m / 5m draft", status: "Terpakai", kind: "graving", lengthM: 90, widthM: 10, depthM: 5 },
@@ -1045,4 +1039,3 @@ export const pipelineTrend = mk([42, 45, 44, 48, 47, 51, 49, 53, 55, 58, 60, 61]
 export const winRateTrend = mk([58, 60, 59, 62, 61, 63, 64, 65, 64, 66, 67, 68]);
 export const wonTrend = mk([28, 30, 29, 33, 32, 36, 34, 38, 40, 43, 46, 49]);
 export const activeEmployeeTrend = mk([232, 238, 242, 238, 242, 246, 244, 250, 254, 258, 262, 266]);
-

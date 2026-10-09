@@ -54,7 +54,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-E-04 | Tombol Kembali ke asal | P0 | F3-E-monitoring.md | | todo | |
 | F3-E-05 | Highlight menu aktif di sidebar | P1 | F3-E-monitoring.md | | todo | |
 | F3-F-01 | Batas maksimal kapal per dock | P1 | F3-F-drydock.md | | todo | |
-| F3-F-02 | Sederhanakan halaman: Mapping slot area | P0 | F3-F-drydock.md | | todo | |
+| F3-F-02 | Sederhanakan halaman: Mapping slot area | P0 | F3-F-drydock.md | agent | review | Branch `feat/F3-F-02-drydock-mapping` dari `origin/main`; `npm run check` hijau; klik/detail slot diuji ID + EN; menunggu reviewer independen |
 | F3-F-03 | Waiting list dock | P1 | F3-F-drydock.md | | todo | |
 | F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | | todo | |
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | todo | |

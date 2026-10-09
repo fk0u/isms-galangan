@@ -13,7 +13,7 @@ P1 · 4 j · DRY-01
 ### F3-F-02 — Sederhanakan halaman: Mapping slot area
 P0 · 1 HK · DRY-02
 **Langkah.** Hapus section: Peta kapasitas, Utilisasi per fasilitas, Peta kapasitas area, Slot per area (komponen & i18n yang tidak dipakai lagi ikut dihapus; probe facility mungkin perlu diperbarui — `scripts/facility-probe.ts`). Pertahankan **Mapping slot area**: setiap slot bisa diklik → panel detail berisi isi "Slot docking aktif" untuk slot tersebut (kapal, proyek, tanggal, progres).
-**Kriteria.** [ ] Section terhapus tidak meninggalkan import/i18n mati (lint). [ ] Klik slot membuka detail.
+**Kriteria.** [x] Section terhapus tidak meninggalkan import/i18n mati (lint). [x] Klik slot membuka detail.
 
 ### F3-F-03 — Waiting list dock
 P1 · 4 j · DRY-03

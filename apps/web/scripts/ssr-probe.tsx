@@ -545,33 +545,30 @@ try {
   }
 }
 
-/* Peta fasilitas harus benar-benar MUNCUL di halaman Drydock.
- *
- * `FacilityMap` mengembalikan null kalau tidak ada fasilitas yang bisa
- * digambar atau skalanya 0. Itu kondisi yang sangat mungkin terjadi setelah
- * ada perubahan nama dock - dan gejalanya bukan error, hanya halaman yang
- * jadi pelan. "28/28 render tanpa error" tidak akan menangkapnya, jadi yang
- * mengikat di sini: peta harus ada di HTML hasil render. */
+/* Drydock mempertahankan mapping slot area dan daftar slot aktif, tetapi
+   menghilangkan section peta kapasitas yang tidak lagi menjadi kebutuhan. */
 {
   const html = rendered.get("Drydock") ?? "";
   const problems: string[] = [];
-  if (!html.includes("Peta Fasilitas")) problems.push('judul "Peta Fasilitas" tidak ada di HTML');
-  if (!/<svg[^>]*role="img"/.test(html)) problems.push("peta fasilitas tidak menghasilkan <svg>");
-  if (!/\d+\s*m<\/text>/.test(html)) problems.push("skala panjang tidak ter-render sebagai angka meter");
-  if (!html.includes("Drydock 1")) problems.push("baris fasilitas Drydock 1 tidak ada di peta");
+  if (!html.includes("Mapping Slot per Area")) problems.push('mapping "Mapping Slot per Area" tidak ada di HTML');
+  if (!html.includes("Slot Docking Aktif")) problems.push('daftar "Slot Docking Aktif" tidak ada di HTML');
+  if (html.includes("Peta Fasilitas")) problems.push("section peta fasilitas lama masih ter-render");
+  if (html.includes("Peta Kapasitas Area")) problems.push("section peta kapasitas area masih ter-render");
+  if (html.includes("Utilisasi per Fasilitas")) problems.push("section utilisasi per fasilitas masih ter-render");
+  if (html.includes(">Slot per Area<")) problems.push("tabel Slot per Area lama masih ter-render");
 
   if (problems.length === 0) {
-    console.log("PASS  peta fasilitas muncul di halaman Drydock dengan skala panjang");
+    console.log("PASS  mapping slot area dan slot aktif tetap ada tanpa section kapasitas lama");
     pass += 1;
   } else {
-    console.log(`FAIL  peta fasilitas: ${problems.join("; ")}`);
-    failures.push("peta fasilitas drydock");
+    console.log(`FAIL  mapping slot area drydock: ${problems.join("; ")}`);
+    failures.push("mapping slot area drydock");
   }
 }
 
 /* Pemeriksaan di luar loop PAGES: (1) ringkasan portofolio tanpa area cetak
    DOM, (2) penggabungan tarikan, (3) saldo historikal as-of, (4) kesetaraan
-   sel tabel, (5) peta fasilitas drydock, (6) magic bytes PDF, (7) jalur klien
+   sel tabel, (5) mapping slot area drydock, (6) magic bytes PDF, (7) jalur klien
    PDF. Naikkan kalau menambah pemeriksaan baru di sini, supaya penyebut tidak
    diam-diam salah. */
 const EXTRA_CHECKS = 7;
