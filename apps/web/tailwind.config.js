@@ -3,30 +3,30 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      /* Design system "Swiss Industrial" (ADR-0013): putih netral + tinta + satu
-         aksen merah. Nama token lama (navy/steel/ocean/teal/rose/violet)
-         dipertahankan supaya ±2.600 pemakaian di halaman ikut berubah tanpa
-         menyentuh tiap file — maknanya kini: navy = tinta, steel = abu netral,
-         ocean & rose = merah aksen, teal & violet = netral gelap. */
+      /* Design system "Minimal Modern" (ADR-0014): putih netral + satu aksen
+         merah. Nama token lama (navy/steel/ocean/teal/rose/violet) dipertahankan
+         sebagai alias supaya ±2.600 pemakaian di halaman ikut berubah — maknanya:
+         navy = tinta, steel = abu netral, ocean & rose = merah aksen,
+         teal & violet = netral gelap. Kode baru: ink / accent / steel / surface. */
       colors: {
         navy: {
-          50: "#F5F5F5",
-          100: "#EBEBEB",
-          200: "#D6D6D6",
-          900: "#0A0A0A",
-          800: "#141414",
-          700: "#1C1C1C",
-          600: "#2B2B2B",
+          50: "#FAFAFA",
+          100: "#F4F4F5",
+          200: "#E4E4E7",
+          900: "#09090B",
+          800: "#18181B",
+          700: "#27272A",
+          600: "#3F3F46",
         },
         steel: {
-          700: "#262626",
-          600: "#474747",
-          500: "#666666",
-          400: "#8F8F8F",
-          300: "#C7C7C7",
-          200: "#E2E2E2",
-          100: "#F1F1F1",
-          50: "#F8F8F8",
+          700: "#27272A",
+          600: "#52525B",
+          500: "#71717A",
+          400: "#A1A1AA",
+          300: "#D4D4D8",
+          200: "#E4E4E7",
+          100: "#F4F4F5",
+          50: "#FAFAFA",
         },
         ocean: {
           700: "#A30F0F",
@@ -38,9 +38,9 @@ export default {
           100: "#FFE3E3",
           50: "#FFF3F3",
         },
-        /* Panel sekunder & hover: abu sangat terang (halaman tetap putih). */
-        surface: "#F7F7F7",
-        ink: "#0A0A0A",
+        /* Latar kanvas aplikasi: abu sangat terang; kartu putih di atasnya. */
+        surface: "#FAFAFA",
+        ink: "#09090B",
         accent: "#E61919",
         teal: {
           600: "#141414",
@@ -72,11 +72,12 @@ export default {
         mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
         display: ["Inter", "system-ui", "sans-serif"],
       },
-      /* Tanpa bayangan lembut: kedalaman diganti garis 1px tinta. */
+      /* Bayangan sangat tipis: kartu hampir rata, lapisan (modal, popover)
+         sedikit terangkat. */
       boxShadow: {
-        soft: "none",
-        lift: "none",
-        glow: "none",
+        soft: "0 1px 2px rgba(9,9,11,0.04), 0 1px 1px rgba(9,9,11,0.02)",
+        lift: "0 12px 32px -8px rgba(9,9,11,0.16), 0 2px 6px rgba(9,9,11,0.06)",
+        glow: "0 0 0 3px rgba(230,25,25,0.16)",
       },
       /* Tanpa gradien: nama kelas lama dipertahankan, isinya warna solid. */
       backgroundImage: {

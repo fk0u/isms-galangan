@@ -8,15 +8,6 @@ import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import { toast } from "../components/ui";
 
-/* Tanda registrasi di sudut kompartemen (Swiss industrial print). */
-function Crosshair({ className = "" }: { className?: string }) {
-  return (
-    <svg className={`absolute h-4 w-4 text-navy-900 ${className}`} viewBox="0 0 16 16" aria-hidden="true">
-      <path d="M8 0v16M0 8h16" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
-
 export default function Login() {
   const { login } = useAuth();
   const { resync } = useStore();
@@ -107,44 +98,36 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Panel kiri - poster industri */}
-      <div className="relative hidden w-[52%] flex-col justify-between border-r-2 border-navy-900 p-10 lg:flex">
-        <Crosshair className="left-4 top-4" />
-        <Crosshair className="right-4 top-4" />
-        <Crosshair className="bottom-4 left-4" />
-
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center bg-navy-900 text-white">
-              <Anchor className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-black uppercase leading-none tracking-[-0.03em] text-navy-900">ISMS Galangan</p>
-              <p className="mono-label mt-1.5">Shipyard Management System</p>
-            </div>
+      {/* Panel kiri - identitas, tenang */}
+      <div className="relative hidden w-[48%] flex-col justify-between border-r border-steel-200 bg-surface p-12 lg:flex">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ocean-500 text-white shadow-soft">
+            <Anchor className="h-5 w-5" />
           </div>
-          <div className="text-right font-mono text-[10.5px] font-semibold uppercase leading-relaxed tracking-[0.1em] text-steel-600">
-            <p className="flex items-center justify-end gap-1.5"><ShipWheel className="h-3.5 w-3.5" /> REV 2026.1</p>
-            <p>UNIT / SMD-01</p>
-            <p className="text-ocean-500">PT SYUKUR BERSAUDARA</p>
+          <div>
+            <p className="text-sm font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
+            <p className="text-xs text-steel-500">PT Syukur Bersaudara</p>
           </div>
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-steel-600 ring-1 ring-inset ring-steel-200">
+            <ShipWheel className="h-3.5 w-3.5" /> v2026.1
+          </span>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <p className="mono-label mb-4 flex items-center gap-2">
-            <Container className="h-3.5 w-3.5" /> [ New Build / Repair / Retrofit ]
+        <motion.div
+          initial={{ opacity: 0, transform: "translateY(8px)" }}
+          animate={{ opacity: 1, transform: "translateY(0px)" }}
+          transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+          className="max-w-lg"
+        >
+          <p className="inline-flex items-center gap-2 text-[13px] font-medium text-ocean-600">
+            <Container className="h-4 w-4" /> New build · Repair · Retrofit
           </p>
-          <h1 className="display text-[clamp(3.5rem,7.2vw,7.5rem)]">
-            Command
-            <br />
-            your
-            <br />
-            shipyard<span className="text-ocean-500">.</span>
+          <h1 className="display mt-4 text-[44px] xl:text-[52px]">
+            Seluruh galangan, dalam satu sistem<span className="text-ocean-500">.</span>
           </h1>
-          <div className="rule-accent mt-6 w-24" />
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-steel-600">
-            Integrated Shipbuilding Management System — 13 modul: proyek, drydock, inventori, QC,
-            keuangan, dan siklus hidup kapal dalam satu sistem.
+          <p className="mt-4 text-[15px] leading-relaxed text-steel-500">
+            Proyek, drydock, inventori, QC, keuangan, dan siklus hidup kapal — terhubung dan
+            terpantau real-time.
           </p>
         </motion.div>
 
@@ -156,20 +139,19 @@ export default function Login() {
               { v: "52T", l: "Bollard pull" },
               { v: "24/7", l: "Yard ops" },
             ].map((s) => (
-              <div key={s.l} className="p-4">
-                <dd className="text-[28px] font-black leading-none tracking-[-0.04em] text-navy-900 tabular-nums">{s.v}</dd>
-                <dt className="mono-label mt-2">{s.l}</dt>
+              <div key={s.l} className="px-4 py-3.5">
+                <dd className="text-xl font-semibold tracking-[-0.02em] text-navy-900 tabular-nums">{s.v}</dd>
+                <dt className="mt-0.5 text-xs text-steel-500">{s.l}</dt>
               </div>
             ))}
           </dl>
-          <div className="hazard-stripe mt-6 h-2.5 w-full" aria-hidden="true" />
-          <div className="mt-4 flex items-center justify-between font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-steel-500">
-            <p>© 2026 ISMS Galangan · Alenkosa</p>
+          <div className="mt-6 flex items-center justify-between text-xs text-steel-400">
+            <p>© 2026 ISMS Galangan</p>
             <p className="flex items-center gap-3">
               <span>ISO 9001</span>
-              <span className="h-3 w-px bg-steel-400" />
+              <span className="h-3 w-px bg-steel-300" />
               <span>ISM Code</span>
-              <span className="h-3 w-px bg-steel-400" />
+              <span className="h-3 w-px bg-steel-300" />
               <span>BKI Class</span>
             </p>
           </div>
@@ -178,7 +160,6 @@ export default function Login() {
 
       {/* Panel kanan - form */}
       <div className="relative flex flex-1 items-center justify-center bg-white p-6">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-ocean-500" />
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -186,28 +167,27 @@ export default function Login() {
           className="w-full max-w-md"
         >
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center bg-navy-900 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ocean-500 text-white">
               <Anchor className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-black uppercase tracking-[-0.02em] text-navy-900">ISMS Galangan</p>
-              <p className="mono-label mt-0.5">{t.auth.tagline}</p>
+              <p className="font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
+              <p className="text-xs text-steel-500">{t.auth.tagline}</p>
             </div>
           </div>
 
-          <p className="mono-label flex items-center gap-2 text-ocean-600"><span className="inline-block h-2 w-2 bg-ocean-500" />{t.auth.continue}</p>
-          <h2 className="display mt-2 text-[40px]">{t.auth.title}</h2>
-          <p className="mt-2 text-sm text-steel-600">{t.auth.subtitle}</p>
+          <h2 className="display text-[28px]">{t.auth.title}</h2>
+          <p className="mt-1.5 text-sm text-steel-500">{t.auth.subtitle}</p>
 
           <motion.form
             key={shake}
             animate={shake > 0 ? { x: [0, -8, 8, -5, 5, 0] } : {}}
             transition={{ duration: 0.35 }}
             onSubmit={submit}
-            className="mt-6 space-y-4 border-2 border-navy-900 bg-white p-6"
+            className="mt-7 space-y-4 rounded-2xl border border-steel-200 bg-white p-6 shadow-md"
           >
             {error && (
-              <div className="flex items-start gap-2 border-l-4 border-ocean-500 bg-ocean-50 px-3 py-2.5 text-sm text-ocean-700">
+              <div className="flex items-start gap-2 rounded-lg bg-ocean-50 px-3 py-2.5 text-sm text-ocean-700 ring-1 ring-inset ring-ocean-600/15">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -255,16 +235,16 @@ export default function Login() {
 
           {demoUsers.length > 0 && (
             <div className="card mt-4 p-5">
-              <p className="mono-label">{t.auth.demoTitle}</p>
+              <p className="text-[13px] font-medium text-steel-500">{t.auth.demoTitle}</p>
               <div className="mt-3 space-y-2">
                 {demoUsers.map((u) => (
                   <button
                     key={u.username}
                     onClick={() => quickLogin(u.username)}
                     disabled={busy !== null}
-                    className="group flex w-full items-center gap-2.5 border border-steel-300 px-3 py-2.5 text-left transition-colors hover:border-navy-900 hover:bg-steel-50 disabled:opacity-60"
+                    className="group flex w-full items-center gap-2.5 rounded-xl border border-steel-200 px-3 py-2.5 text-left transition-[background-color,border-color,transform] duration-150 hover:border-steel-300 hover:bg-steel-50 active:scale-[0.99] disabled:opacity-60"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-navy-900 font-mono text-xs font-bold text-white">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
                       {u.initials}
                     </span>
                     <span className="min-w-0 flex-1">
