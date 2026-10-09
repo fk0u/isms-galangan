@@ -35,13 +35,13 @@ const KLASIFIKASI = ["VIP", "Regular", "New", "Inactive"] as const;
 const REQ_KIND = ["Repair Request", "Technical Assessment"] as const;
 
 const STAGE_COLORS: Record<string, string> = {
-  Lead: "#2e9ad4",
-  Penawaran: "#f59e0b",
-  Negosiasi: "#8b5cf6",
-  Menang: "#22c55e",
-  Terkonversi: "#0d9488",
-  Batal: "#94a3b8",
-  Kalah: "#f43f5e",
+  Lead: "#E61919",
+  Penawaran: "#F04848",
+  Negosiasi: "#474747",
+  Menang: "#262626",
+  Terkonversi: "#262626",
+  Batal: "#8F8F8F",
+  Kalah: "#FF3B3B",
 };
 
 const STAGE_TONE: Record<string, "gray" | "amber" | "violet" | "green" | "teal" | "red"> = {
@@ -213,7 +213,7 @@ export default function CRM() {
   const stageDist = STAGES.map((s) => ({
     name: s,
     value: quotations.filter((q) => q.stage === s).length,
-    color: STAGE_COLORS[s] ?? "#94a3b8",
+    color: STAGE_COLORS[s] ?? "#8F8F8F",
   }));
 
   /* Funnel penjualan: jumlah & nilai quotation per tahap, dari quotation nyata.
@@ -227,7 +227,7 @@ export default function CRM() {
       rawStage: s,
       count: rows.length,
       value: rows.reduce((a, q) => a + num(q.value), 0),
-      color: STAGE_COLORS[s] ?? "#94a3b8",
+      color: STAGE_COLORS[s] ?? "#8F8F8F",
     };
   });
   const funnelMax = crmFunnelReal.reduce((m, f) => Math.max(m, f.count), 0);

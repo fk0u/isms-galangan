@@ -8,13 +8,16 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "probe:render": "vite build --ssr scripts/ssr-probe.tsx --outDir node_modules/.cache/ssr-probe --emptyOutDir --logLevel error && node node_modules/.cache/ssr-probe/ssr-probe.js",
+    "probe:qc-deep-link": "vite build --ssr scripts/qc-deep-link-probe.ts --outDir node_modules/.cache/qc-deep-link-probe --emptyOutDir --logLevel error && node node_modules/.cache/qc-deep-link-probe/qc-deep-link-probe.js",
     "probe:price": "vite build --ssr scripts/price-probe.ts --outDir node_modules/.cache/price-probe --emptyOutDir --logLevel error && node node_modules/.cache/price-probe/price-probe.js",
     "probe:foundation": "vite build --ssr scripts/foundation-probe.ts --outDir node_modules/.cache/foundation-probe --emptyOutDir --logLevel error && node node_modules/.cache/foundation-probe/foundation-probe.js",
     "probe:alert": "vite build --ssr scripts/alert-probe.ts --outDir node_modules/.cache/alert-probe --emptyOutDir --logLevel error && node node_modules/.cache/alert-probe/alert-probe.js",
     "probe:wo": "vite build --ssr scripts/wo-probe.ts --outDir node_modules/.cache/wo-probe --emptyOutDir --logLevel error && node node_modules/.cache/wo-probe/wo-probe.js",
     "probe:table": "vite build --ssr scripts/table-probe.ts --outDir node_modules/.cache/table-probe --emptyOutDir --logLevel error && node node_modules/.cache/table-probe/table-probe.js",
+    "probe:equipment-notif": "vite build --ssr scripts/equipment-notification-probe.ts --outDir node_modules/.cache/equipment-notif-probe --emptyOutDir --logLevel error && node node_modules/.cache/equipment-notif-probe/equipment-notification-probe.js",
     "probe:push": "vite build --ssr scripts/push-probe.ts --outDir node_modules/.cache/push-probe --emptyOutDir --logLevel error && node node_modules/.cache/push-probe/push-probe.js",
     "probe:time": "vite build --ssr scripts/time-probe.ts --outDir node_modules/.cache/time-probe --emptyOutDir --logLevel error && node node_modules/.cache/time-probe/time-probe.js",
+    "probe:drydock-dates": "vite build --ssr scripts/drydock-dates-probe.ts --outDir node_modules/.cache/drydock-dates-probe --emptyOutDir --logLevel error && node node_modules/.cache/drydock-dates-probe/drydock-dates-probe.js",
     "probe:employee": "vite build --ssr scripts/employee-probe.ts --outDir node_modules/.cache/employee-probe --emptyOutDir --logLevel error && node node_modules/.cache/employee-probe/employee-probe.js",
     "probe:risk": "vite build --ssr scripts/risk-auto-probe.ts --outDir node_modules/.cache/risk-auto-probe --emptyOutDir --logLevel error && node node_modules/.cache/risk-auto-probe/risk-auto-probe.js",
     "probe:p8": "vite build --ssr scripts/p8-probe.ts --outDir node_modules/.cache/p8-probe --emptyOutDir --logLevel error && node node_modules/.cache/p8-probe/p8-probe.js",
@@ -27,7 +30,7 @@
     "probe:progress": "vite build --ssr scripts/project-progress-probe.ts --outDir node_modules/.cache/project-progress-probe --emptyOutDir --logLevel error && node node_modules/.cache/project-progress-probe/project-progress-probe.js",
     "probe:wbs": "vite build --ssr scripts/wbs-flow-probe.ts --outDir node_modules/.cache/wbs-flow-probe --emptyOutDir --logLevel error && node node_modules/.cache/wbs-flow-probe/wbs-flow-probe.js",
     "lint": "eslint .",
-    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion"
+    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion && npm run probe:drydock-dates && npm run probe:equipment-notif && npm run probe:qc-deep-link"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -26,13 +26,13 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | agent | selesai | PR #16 |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
 | F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | selesai | PR #14 |
-| F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | | todo | |
+| F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | agent | review | PR #34; branch feat/F3-B-01-alert-preview-3; P2 ekspansi >200 diperbaiki; probe alert 250 dan UI lulus; gate root berhenti di API probe keamanan (`no such table: projects`), area API tidak diubah |
 | F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | agent | selesai | PR #17 |
 | F3-B-03 | Card status gradient + label | P1 | F3-B-proyek.md | | todo | |
 | F3-B-04 | Filter jadi deret chip | P1 | F3-B-proyek.md | | todo | |
 | F3-B-05 | Form proyek baru | P0 | F3-B-proyek.md | agent | selesai | PR #18 |
 | F3-B-06 | Rumus progres proyek | P0 | F3-B-proyek.md | agent | selesai | PR #19 |
-| F3-B-07 | Header & card progres | P1 | F3-B-proyek.md | | todo | |
+| F3-B-07 | Header & card progres | P1 | F3-B-proyek.md | agent | review | branch `feat/F3-B-07-header-progress` |
 | F3-B-08 | Ringkasan: Log Penawaran & Tagihan, milestone | P1 | F3-B-proyek.md | | todo | |
 | F3-B-09 | WBS: progres, material, histori, foto, assign | P0 | F3-B-proyek.md | agent | selesai | PR #20 |
 | F3-B-10 | Gantt mini dengan label bulan | P2 | F3-B-proyek.md | | todo | |
@@ -56,7 +56,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-F-01 | Batas maksimal kapal per dock | P1 | F3-F-drydock.md | | todo | |
 | F3-F-02 | Sederhanakan halaman: Mapping slot area | P0 | F3-F-drydock.md | agent | review | Branch `feat/F3-F-02-drydock-mapping`; P2 status search ID/EN dan P3 SSR EN diperbaiki lokal; `npm run check` 37/37; re-review independen lokal pending; PR #24 masih di e21f8fe, fix belum dipush/merge |
 | F3-F-03 | Waiting list dock | P1 | F3-F-drydock.md | | todo | |
-| F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | | todo | |
+| F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | agent | review | PR #29 OPEN; branch `feat/F3-F-04-drydock-booking-form`; pada head `d9a5ff2`, P1 rollover dan dua P2 sebelumnya tertutup (probe tanggal 21/21, checks 5/5). P2 reschedule baru diperbaiki: modal pindah memakai `DateInput` ISO tanpa batas 0–90; validasi tanggal/bentrok/kapasitas dipertahankan; probe menambah kasus sebelum hari ini dan >90. Root `npm run check` lulus pada SQLite sementara dimigrasi/seed dengan `JWT_SECRET` uji sementara; web production build lulus (warning chunk >500 kB dan warning lint yang sudah ada). Semua checks GitHub lulus 5/5 pada head kode `43f48b8`. Smoke test UI manual ID/EN belum dilakukan karena preview menolak host yang dicoba; `allowedHosts` tidak diubah dan tidak ada screenshot. Setelah head final dilaporkan, pemilik task akan meneruskan re-review read-only Benson via Group; jangan tetapkan reviewer resmi GitHub dan jangan merge ke `main` |
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | todo | |
 | F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | todo | |
 | F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | review | Branch `feat/F3-G-02-material-unit-conversion`; gate penuh dan preview UI lulus |
@@ -65,7 +65,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-G-05 | Pergerakan: 2 grafik tren, kolom Dari/Ke, slow & dead stock | P1 | F3-G-inventori.md | | todo | |
 | F3-G-06 | Sembunyikan surat jalan | P2 | F3-G-inventori.md | | todo | |
 | F3-G-07 | Auto-refresh tanpa tombol Muat ulang | P1 | F3-G-inventori.md | | todo | |
-| F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | | todo | |
+| F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; PR #33 tetap terbuka/tanpa merge; Cubic P2 ekspor umur pakai dan P3 comparator bersama ditangani; P3 notifikasi kini reset pencarian/filter lalu mengatur paginator setelah hasil filter baru; probe regresi lulus; `npm run check` lulus (DB sementara bermigrasi + seed sintetis); UI demo diperiksa |
 | F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | | todo | |
 | F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | | todo | |
 | F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | | todo | |
@@ -77,11 +77,11 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | | todo | |
 | F3-J-03 | RFQ: perbandingan harga & track record, tanpa tender | P1 | F3-J-procurement.md | | todo | |
 | F3-J-04 | Approval service oleh procurement | P0 | F3-J-procurement.md | | todo | |
-| F3-K-01 | Hapus tab Drawing | P1 | F3-K-qc-safety.md | | todo | |
+| F3-K-01 | Hapus tab Drawing | P1 | F3-K-qc-safety.md | agent | review | Branch `feat/F3-K-01-hide-drawing-tab`; gate penuh + build web/API lulus; cek browser dilewati sesuai arahan; menunggu re-review independen Benson |
 | F3-K-02 | Mesin kuesioner & skoring | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-03 | Inspeksi per proyek | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-04 | HSE: kuesioner pekerja | P1 | F3-K-qc-safety.md | | todo | |
-| F3-L-01 | Tabel karyawan & tab | P1 | F3-L-sdm-absensi.md | | todo | |
+| F3-L-01 | Tabel karyawan & tab | P1 | F3-L-sdm-absensi.md | agent | jalan | |
 | F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | todo | |
@@ -89,9 +89,9 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | todo | |
-| F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | | todo | |
+| F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | agent | review | Branch feat/F3-M-01-detail-data-kapal; basis origin/main e984be5; PR #38; root check + build lulus; UI diverifikasi |
 | F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | todo | |
-| F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | | todo | |
+| F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | agent | review | branch feat/F3-M-03-dashboard-attention-categories; `npm run check` hijau; review independen bersih |
 | F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
 | F4-01 | Concurrency atomik | P0 | F4-integritas.md | | todo | |
 | F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | selesai | PR #4 |

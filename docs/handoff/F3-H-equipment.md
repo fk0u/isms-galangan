@@ -20,9 +20,9 @@ P0 · 1 HK · EQP-01, EQP-02
 | Umur ekonomis | Estimasi umur pakai (bulan) | konversi tahun→bulan untuk data lama |
 | — | Keterangan | `note` |
 | Harga perolehan | Harga barang | `MoneyInput` |
-| Tarif pakai, Harga BBM | disembunyikan | field tetap di data; setting `SHOW_EQP_COST_FIELDS=0` |
+| Tarif pakai, Harga BBM | disembunyikan | field tetap di data; default `VITE_SHOW_EQP_COST_FIELDS=0` |
 Tabel memakai kolom yang sama dengan form (Kode, Nama, Merk, Tahun unit, Penanggung jawab, Status, Estimasi utilisasi, Aksi).
-**Kriteria.** [ ] Data lama tetap tampil benar setelah pemetaan.
+**Kriteria.** [x] Data lama tetap tampil benar setelah pemetaan.
 
 ### F3-H-02 — Tab & kartu ringkasan
 P0 · 4 j · EQP-03, EQP-04

@@ -2517,12 +2517,12 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 <div className="h-44 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendShown} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                      <defs><linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0b3a63" stopOpacity={0.3} /><stop offset="95%" stopColor="#0b3a63" stopOpacity={0} /></linearGradient></defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="label" stroke="#8aa2b6" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <defs><linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0A0A0A" stopOpacity={0.3} /><stop offset="95%" stopColor="#0A0A0A" stopOpacity={0} /></linearGradient></defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                      <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Area type="monotone" dataKey="nilai" stroke="#0b3a63" strokeWidth={2.5} fill="url(#invGrad)" />
+                      <Area type="monotone" dataKey="nilai" stroke="#0A0A0A" strokeWidth={2.5} fill="url(#invGrad)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>

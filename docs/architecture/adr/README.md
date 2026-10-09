@@ -17,4 +17,6 @@ Format: konteks → opsi → keputusan → konsekuensi. ADR tidak diedit setelah
 | [0011](0011-rumus-progres-proyek-berbobot.md) | Rumus progres proyek berbobot | Accepted |
 | [0012](0012-pengembangan-dengan-ai-agent-berbasis-kartu-task.md) | Pengembangan dengan AI agent berbasis kartu task | Accepted |
 
+| [0013](0013-design-system-swiss-industrial.md) | Design system "Swiss Industrial" (putih netral + aksen merah) | Accepted |
+
 Template ADR baru: salin [`template.md`](template.md).
