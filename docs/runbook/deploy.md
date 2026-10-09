@@ -54,3 +54,18 @@ Simpan salinan di luar server.
 ## 7. Setelah demo / sebelum data riil
 - `ALLOW_SEED_LOGIN=false`, buat akun riil per peran, restart `api`.
 - Jangan masukkan data riil sebelum audit ulang F5-05 lulus.
+
+## Varian: server yang sudah punya nginx host (dipakai di server pilot)
+Bila port 80/443 sudah dipegang nginx host (banyak situs), jangan jalankan Caddy:
+```bash
+docker compose -p isms --env-file deploy/.env -f docker-compose.yml -f deploy/compose.host-nginx.yml up -d --build api web
+```
+Web hanya terbuka di `127.0.0.1:3110` (`ISMS_WEB_PORT`). Sambungkan domain lewat nginx host + certbot webroot (butuh sudo, sekali):
+```bash
+sudo ISMS_DOMAIN=<domain> ACME_EMAIL=<email> bash deploy/enable-nginx.sh
+```
+Tanpa domain sendiri, pakai `<nama>.<ip-dengan-strip>.sslip.io` (mis. `isms.85-211-245-134.sslip.io`).
+Update versi pada varian ini: `git pull` lalu ulangi perintah `up -d --build api web`.
+
+## Catatan jaringan operator
+Dari jaringan IPv6-only (NAT64), IP v4 server tidak bisa dijangkau langsung; pakai alamat NAT64 `64:ff9b::<ipv4-hex>` untuk SSH.
