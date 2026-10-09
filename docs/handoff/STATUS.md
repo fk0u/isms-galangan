@@ -59,7 +59,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | agent | review | PR #29 OPEN; branch `feat/F3-F-04-drydock-booking-form`; pada head `d9a5ff2`, P1 rollover dan dua P2 sebelumnya tertutup (probe tanggal 21/21, checks 5/5). P2 reschedule baru diperbaiki: modal pindah memakai `DateInput` ISO tanpa batas 0–90; validasi tanggal/bentrok/kapasitas dipertahankan; probe menambah kasus sebelum hari ini dan >90. Root `npm run check` lulus pada SQLite sementara dimigrasi/seed dengan `JWT_SECRET` uji sementara; web production build lulus (warning chunk >500 kB dan warning lint yang sudah ada). Semua checks GitHub lulus 5/5 pada head kode `43f48b8`. Smoke test UI manual ID/EN belum dilakukan karena preview menolak host yang dicoba; `allowedHosts` tidak diubah dan tidak ada screenshot. Setelah head final dilaporkan, pemilik task akan meneruskan re-review read-only Benson via Group; jangan tetapkan reviewer resmi GitHub dan jangan merge ke `main` |
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | todo | |
 | F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | todo | |
-| F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | | todo | |
+| F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | review | Branch `feat/F3-G-02-material-unit-conversion`; gate penuh dan preview UI lulus |
 | F3-G-03 | Barang keluar: eceran & potongan | P0 | F3-G-inventori.md | | todo | |
 | F3-G-04 | BOM terima & keluar barang | P0 | F3-G-inventori.md | | todo | |
 | F3-G-05 | Pergerakan: 2 grafik tren, kolom Dari/Ke, slow & dead stock | P1 | F3-G-inventori.md | | todo | |

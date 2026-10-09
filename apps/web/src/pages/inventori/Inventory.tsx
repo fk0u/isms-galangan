@@ -35,7 +35,7 @@ import {
 } from "recharts";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, ChartTooltip, Modal, Field, FormGrid, toast, EmptyState, ProgressBar, SortTh, toggleSort, sortRows, usePager, useDebouncedValue, ConfirmModal,
-  NumInput, MoneyInput, AsyncButton, SecureImg,
+  NumInput, AsyncButton, SecureImg,
   SearchBox, rowMatches,
   RowAction,
   EntityPicker,
@@ -79,8 +79,15 @@ import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash }
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { stockTrend, itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
+import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMaterialForm";
+import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequiredForEdit } from "../../utils/unitConversion";
 
-const emptyForm = { name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "", stock: "0", minStock: "0", unit: "pcs", cost: "0", volume: "0", batch: "", uom2: "", konversi: "", minWh: "", photoUrl: "", matType: "habis-pakai", eceran: false as boolean | string };
+const emptyForm: MaterialFormValues = {
+  name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "",
+  stock: "0", minStock: "0", unit: "pcs", cost: "0", volume: "0", batch: "",
+  conversionAmount: "", conversionBaseUnit: "", conversionLengthMm: "", conversionWidthMm: "",
+  conversionThicknessMm: "", conversionWeightKg: "", photoUrl: "", matType: "habis-pakai", eceran: false,
+};
 
 /* Form gudang. `capacity` string (input angka) - dikonversi saat submit.
    `aktif` boolean untuk menonaktifkan gudang tanpa menghapusnya (baris
@@ -282,34 +289,37 @@ function batchesOf(it: StoreItem): BatchRow[] {
 
 /* Konversi multi-UOM: konversi = isi UOM2 per 1 satuan utama (cth: 1 batang = 6 meter → konversi 6). */
 function convOf(it: StoreItem): number {
-  const c = Number(it.konversi);
-  return c > 0 ? c : 0;
+  return unitConversionOf(it)?.perUnit ?? 0;
 }
 
 function uom2Of(it: StoreItem): string {
-  return String(it.uom2 ?? "").trim();
+  return unitConversionOf(it)?.baseUnit ?? String(it.uom2 ?? "").trim();
+}
+
+function hasConversion(it: StoreItem): boolean {
+  return uom2Of(it) !== "" && convOf(it) > 0;
 }
 
 function hasUom2(it: StoreItem): boolean {
-  return uom2Of(it) !== "" && convOf(it) > 0;
+  return isEceran(it) && hasConversion(it);
 }
 
 function qtyInUom2(it: StoreItem): number {
   return Number(it.stock || 0) * convOf(it);
 }
 
+/* Minimum per gudang tetap dibaca untuk laporan lama; field inputnya dihapus dari form material. */
+function minWhOf(it: StoreItem, wh?: string): number {
+  const warehouse = wh ?? String(it.warehouse);
+  const map = it.minStockByWarehouse as Record<string, number> | undefined;
+  const value = map && typeof map === "object" ? Number(map[warehouse]) : NaN;
+  return Number.isFinite(value) ? value : Number(it.minStock || 0);
+}
+
 /* Biaya rata-rata: avgCost bila ada, fallback ke cost master. */
 function effCost(it: StoreItem): number {
   const a = Number(it.avgCost);
   return a > 0 ? a : Number(it.cost || 0);
-}
-
-/* Minimum per gudang: minStockByWarehouse[gudang], fallback ke minStock global. */
-function minWhOf(it: StoreItem, wh?: string): number {
-  const w = wh ?? String(it.warehouse);
-  const m = it.minStockByWarehouse as Record<string, number> | undefined;
-  const v = m && typeof m === "object" ? Number(m[w]) : NaN;
-  return Number.isFinite(v) ? v : Number(it.minStock || 0);
 }
 
 function rackText(it: StoreItem): string {
@@ -395,6 +405,8 @@ export default function Inventory() {
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [materialFormStep, setMaterialFormStep] = useState(0);
+  const [conversionEdited, setConversionEdited] = useState(false);
   const [editing, setEditing] = useState<StoreItem | null>(null);
   const [detail, setDetail] = useState<StoreItem | null>(null);
   // Hapus item via ConfirmModal + daftar pemakai (blokir bila dipakai mutasi/PO).
@@ -454,8 +466,6 @@ export default function Inventory() {
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   /* Preset plat roll→meter: panjang × lebar (m). */
-  const [platP, setPlatP] = useState("6");
-  const [platL, setPlatL] = useState("1.5");
   // Kalkulator tonase plat (RawData PERHITUNGAN + TABLE TONASE): P×L×T×7850.
   const [tonP, setTonP] = useState("6010");
   const [tonL, setTonL] = useState("1810");
@@ -888,7 +898,58 @@ if (k === "mattype") return matTypeOf(i);
     ? inventory.filter((i) => reservedOf(i).some((r) => r.project === pickProject))
     : [];
 
-  const setF = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const conversionBaseline = editing ? {
+    category: editing.category,
+    unit: editing.unit,
+    eceran: editing.eceran,
+    conversion: editing.conversion,
+    uom2: editing.uom2,
+    konversi: editing.konversi,
+  } : null;
+
+  const setF = (key: keyof MaterialFormValues, value: string | boolean) => {
+    if (key === "category" && typeof value === "string") {
+      setConversionEdited(true);
+      setForm((current) => ({
+        ...current,
+        category: value,
+        unit: defaultPurchaseUnitForCategory(value, current.unit),
+        conversionAmount: "",
+        conversionBaseUnit: "",
+        conversionLengthMm: "",
+        conversionWidthMm: "",
+        conversionThicknessMm: "",
+        conversionWeightKg: "",
+      }));
+      return;
+    }
+    if (key === "unit" || key === "eceran" || String(key).startsWith("conversion")) setConversionEdited(true);
+    setForm((current) => ({ ...current, [key]: value } as MaterialFormValues));
+  };
+  const closeMaterialForm = () => {
+    setShowAdd(false);
+    setEditing(null);
+    setMaterialFormStep(0);
+    setConversionEdited(false);
+  };
+  const nextMaterialFormStep = () => {
+    if (materialFormStep === 0) {
+      if (!form.name.trim() || !form.sku.trim()) { toast(S.nameSkuRequired, "info"); return; }
+      if (inventory.some((item) => item.sku.toLowerCase() === form.sku.trim().toLowerCase() && item.id !== editing?.id)) {
+        toast(S.skuDupe, "info");
+        return;
+      }
+      if (!editing && form.category === "Mesin" && !form.batch.trim()) { toast(S.mesinBatchRequired, "info"); return; }
+    }
+    if (materialFormStep === 1 && !form.unit.trim()) { toast(S.purchaseUnitRequired, "info"); return; }
+    if (materialFormStep === 2) {
+      const conversion = buildUnitConversion(form.category, form.unit, form);
+      const shouldRequire = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
+      const canKeepExisting = Boolean(editing && !conversionEdited && unitConversionOf(editing));
+      if (shouldRequire && !conversion && !canKeepExisting) { toast(S.conversionRequired, "info"); return; }
+    }
+    setMaterialFormStep((current) => Math.min(current + 1, 3));
+  };
 
   /* Upload foto ke backend (/api/files); mode lokal tetap pakai URL manual. */
   const onPhotoFile = async (f: File | undefined) => {
@@ -938,13 +999,28 @@ if (k === "mattype") return matTypeOf(i);
 
   const openEdit = (i: StoreItem) => {
     setEditing(i);
+    const conversion = unitConversionOf(i);
+    const dims = conversion?.dims;
+    const rule = conversionRuleForCategory(i.category);
+    const legacyLengthMm = rule?.kind === "bar" && conversion?.baseUnit === "meter"
+      ? String(Math.round(conversion.perUnit * 1000))
+      : "";
     setForm({
       name: i.name, category: i.category, sku: i.sku, warehouse: i.warehouse,
       rack: String(i.rack ?? i.location ?? ""), bin: binOf(i), stock: String(i.stock), minStock: String(i.minStock),
       unit: i.unit, cost: String(i.cost), volume: String(i.volume ?? 0), batch: String(i.batch ?? ""),
-      uom2: uom2Of(i), konversi: convOf(i) > 0 ? String(i.konversi) : "",
-      minWh: String(minWhOf(i)), photoUrl: String(i.photoUrl ?? ""), matType: matTypeOf(i), eceran: isEceran(i),
+      conversionAmount: conversion && (rule?.kind === "volume" || rule?.kind === "tonnage" || !rule)
+        ? String(conversion.perUnit)
+        : "",
+      conversionBaseUnit: rule ? "" : conversion?.baseUnit ?? "",
+      conversionLengthMm: String(dims?.lengthMm ?? (rule?.kind === "bar" ? legacyLengthMm : "")),
+      conversionWidthMm: String(dims?.widthMm ?? ""),
+      conversionThicknessMm: String(dims?.thicknessMm ?? ""),
+      conversionWeightKg: String(dims?.weightKg ?? (rule?.kind === "plate" ? conversion?.perUnit ?? "" : "")),
+      photoUrl: String(i.photoUrl ?? ""), matType: matTypeOf(i), eceran: isEceran(i),
     });
+    setConversionEdited(false);
+    setMaterialFormStep(0);
   };
 
   const save = async () => {
@@ -952,30 +1028,25 @@ if (k === "mattype") return matTypeOf(i);
     const dupe = inventory.some((i) => i.sku.toLowerCase() === form.sku.trim().toLowerCase() && i.id !== editing?.id);
     if (dupe) { toast(S.skuDupe, "info"); return; }
     if (!editing && form.category === "Mesin" && !form.batch.trim()) { toast(S.mesinBatchRequired, "info"); return; }
+    if (!form.unit.trim()) { toast(S.purchaseUnitRequired, "info"); return; }
     const volume = Number(form.volume);
     if (form.volume.trim() !== "" && (Number.isNaN(volume) || volume < 0)) { toast(S.volumeInvalid, "info"); return; }
-    const uom2 = form.uom2.trim();
-    const konv = form.konversi.trim() === "" ? 0 : Number(form.konversi);
-    if (Number.isNaN(konv) || konv < 0) { toast(S.convInvalid, "info"); return; }
-    if (uom2 && konv <= 0) { toast(S.uom2NeedConv, "info"); return; }
-    if (!uom2 && konv > 0) { toast(S.convNeedUom2, "info"); return; }
+    const conversionDraft = buildUnitConversion(form.category, form.unit, form);
+    const existingConversion = editing ? unitConversionOf(editing) : null;
+    const canKeepExisting = Boolean(editing && !conversionEdited && existingConversion);
+    const conversion = conversionDraft ?? (canKeepExisting ? existingConversion : null);
+    const conversionRequired = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
+    if (conversionRequired && !conversion) { toast(S.conversionRequired, "info"); return; }
     const numStock = form.stock.trim() === "" ? 0 : Number(form.stock);
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);
     const numCost = parseRupiah(form.cost);
     if (!Number.isFinite(numStock) || numStock < 0) { toast(S.stockInvalid, "info"); return; }
     if (!Number.isFinite(numMin) || numMin < 0) { toast(S.minInvalid, "info"); return; }
     if (!Number.isFinite(numCost) || numCost < 0) { toast(S.costInvalid, "info"); return; }
-    if (form.minWh.trim() !== "" && (!Number.isFinite(Number(form.minWh)) || Number(form.minWh) < 0)) { toast(S.minWhInvalid, "info"); return; }
     const rack = form.rack.trim();
     const bin = form.bin.trim();
     const matType = (MAT_TYPES as readonly string[]).includes(String(form.matType ?? "").trim()) ? String(form.matType).trim() : "habis-pakai";
-    const eceran = (form as Record<string, unknown>).eceran === true || String((form as Record<string, unknown>).eceran ?? "") === "true";
-    if (eceran && (!uom2 || konv <= 0)) { toast(locale === "en" ? "Retail needs UOM2 + conversion" : "Eceran wajib isi satuan eceran + konversi", "info"); return; }
-    if (!eceran && (uom2 || konv > 0)) { toast(locale === "en" ? "Turn on retail to use conversion" : "Aktifkan eceran untuk memakai konversi", "info"); return; }
-    const prevMap = (editing?.minStockByWarehouse as Record<string, number> | undefined) ?? {};
-    const minWhMap = { ...prevMap };
-    if (form.minWh.trim() !== "") minWhMap[form.warehouse] = Number(form.minWh) || 0;
-    if (minWhMap[form.warehouse] !== undefined && minWhMap[form.warehouse] < 0) { toast(S.minWhInvalid, "info"); return; }
+    const minWhMap = (editing?.minStockByWarehouse as Record<string, number> | undefined) ?? {};
     if (editing) {
       /* Stok read-only di form edit - hanya field non-stok yang disimpan. */
       try {
@@ -983,10 +1054,10 @@ if (k === "mattype") return matTypeOf(i);
           name: form.name.trim(), category: form.category, sku: form.sku.trim(), warehouse: form.warehouse,
           rack, bin, location: rack, minStock: numMin, unit: form.unit,
           cost: numCost, volume: volume || 0, batch: form.batch.trim(),
-          uom2: eceran ? uom2 : "", konversi: eceran ? konv : 0, minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), matType, eceran,
+          conversion, uom2: conversion?.baseUnit ?? "", konversi: conversion?.perUnit ?? 0,
+          minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), matType, eceran: form.eceran,
         });
         toast(S.updatedId.replace("{n}", editing.id));
-        setEditing(null);
       } catch (e) {
         toast(e instanceof Error ? e.message : S.saveFail, "info");
         return;
@@ -999,18 +1070,19 @@ if (k === "mattype") return matTypeOf(i);
           name: form.name.trim(), category: form.category, sku: form.sku.trim(), warehouse: form.warehouse,
           rack, bin, stock, minStock: numMin, unit: form.unit,
           cost: numCost, location: rack, volume: volume || 0, batch,
-          uom2: eceran ? uom2 : "", konversi: eceran ? konv : 0, minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), avgCost: 0, matType, eceran,
+          conversion, uom2: conversion?.baseUnit ?? "", konversi: conversion?.perUnit ?? 0,
+          minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), avgCost: 0, matType, eceran: form.eceran,
           batches: batch ? [{ batch, qty: stock, date: todayISO() }] : [],
           reserved: [],
         }, { action: "mendaftarkan material", module: "Inventori" });
         toast(S.materialAdded.replace("{n}", created.id));
-        setShowAdd(false);
       } catch (e) {
         toast(e instanceof Error ? e.message : S.saveFail, "info");
         return;
       }
     }
     setForm(emptyForm);
+    closeMaterialForm();
   };
 
   const consumeReserved = (it: StoreItem, qty: number): Reservation[] => {
@@ -1840,7 +1912,7 @@ if (k === "mattype") return matTypeOf(i);
           <div className="flex items-center gap-2">
             <AsyncButton className="btn-secondary" title={locale === "en" ? "Reload data from backend" : "Muat ulang data dari backend"} onAction={async () => { await resync(); toast(locale === "en" ? "Data refreshed" : "Data dimuat ulang"); }}><RefreshCw className="h-4 w-4" /> {locale === "en" ? "Refresh" : "Muat ulang"}</AsyncButton>
             <button className="btn-secondary" onClick={openPick}><ListChecks className="h-4 w-4" /> {S.pickTitle}</button>
-            <button className="btn-primary-gradient" onClick={() => { setForm(emptyForm); setShowAdd(true); }}><Plus className="h-4 w-4" /> {S.btnNew}</button>
+            <button className="btn-primary-gradient" onClick={() => { setForm(emptyForm); setEditing(null); setMaterialFormStep(0); setConversionEdited(false); setShowAdd(true); }}><Plus className="h-4 w-4" /> {S.btnNew}</button>
           </div>
         }
       />
@@ -2087,8 +2159,8 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                        const badge = katalogBadge(i);
                        const minWh = effectiveMinStock(i);
                        const reserved = reservedQty(i);
-                      const conv = convOf(i);
                       const u2 = uom2Of(i);
+                      const conversion = unitConversionOf(i);
                       return (
                         <tr key={i.id} id={notifRowId(String(i.id))} className={rowHighlightClass({ id: String(i.id), flash, notified: notified.has(String(i.id)), base: "hover:bg-surface" })}>
                           <td className="td">
@@ -2100,7 +2172,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           <td className="td"><Badge tone={matTone(matTypeOf(i))}>{matLabel(matTypeOf(i))}{isEceran(i) ? " · Eceran" : ""}</Badge></td>
                           <td className="td font-semibold text-navy-900">
                             {fmtJumlah(Number(i.stock))} <span className="font-normal text-steel-400">{i.unit}</span>
-                            {hasUom2(i) && <p className="text-xs font-normal text-steel-400">≈ {fmtJumlah(qtyInUom2(i))} {u2} (1 {i.unit} = {fmtJumlah(conv)} {u2})</p>}
+                            {hasConversion(i) && <p className="text-xs font-normal text-steel-400">≈ {fmtJumlah(qtyInUom2(i))} {u2} ({formatUnitConversion(String(i.unit), conversion, locale)})</p>}
                           </td>
                           <td className="td text-steel-600">{fmtJumlah(Number(i.volume ?? 0))}</td>
                           <td className="td font-semibold text-navy-900">{fmtRupiah(Number(i.stock) * effCost(i))}</td>
@@ -3025,116 +3097,21 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         </div>
       </div>
 
-      {/* Modal tambah/ubah material */}
-      <Modal open={showAdd || editing !== null} onClose={() => { setShowAdd(false); setEditing(null); }}
-        title={editing ? S.editTitle.replace("{n}", editing.id) : S.btnNew} subtitle={S.modalSavedSub}
-        wide footer={<><button className="btn-secondary" onClick={() => { setShowAdd(false); setEditing(null); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={save}>{S.saveBtn}</AsyncButton></>}>
-        <div className="space-y-3">
-          <FormGrid>
-            <Field label={S.nameLbl}><input className="input" value={form.name} onChange={(e) => setF("name", e.target.value)} placeholder={S.phName} /></Field>
-            <Field label={S.skuLbl}><input className="input font-mono" value={form.sku} onChange={(e) => setF("sku", e.target.value)} placeholder={S.phSku} /></Field>
-            <Field label={S.catLbl}>
-              <select className="input" value={form.category} onChange={(e) => setF("category", e.target.value)}>
-                {["Baja", "Mesin", "Pipa", "Listrik", "Cat", "Fastener", "Rigging", "Perlindungan", "Lainnya"].map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label={locale === "en" ? "Material type" : "Jenis material"}>
-              <select className="input" value={form.matType} onChange={(e) => setF("matType", e.target.value)}>
-                {[...MAT_TYPES].map((m) => <option key={m} value={m}>{matLabel(m)}</option>)}
-              </select>
-            </Field>
-            <Field label={locale === "en" ? "Sold retail (conversion)?" : "Dijual eceran (konversi)?"} hint={locale === "en" ? "If yes, fill UOM2 + conversion below" : "Jika ya, isi satuan eceran + konversi di bawah"}>
-              <select className="input" value={String((form as Record<string, unknown>).eceran ?? "false")} onChange={(e) => setF("eceran", e.target.value === "true")}>
-                <option value="false">Tidak — satuan tunggal</option>
-                <option value="true">Ya — eceran + konversi</option>
-              </select>
-            </Field>
-            <Field label={S.whLbl}>
-              <select className="input" value={form.warehouse} onChange={(e) => setF("warehouse", e.target.value)}>
-                {["Gudang Baja A", "Gudang Mesin", "Gudang Pipa", "Gudang Listrik", "Gudang B", "Gudang Rig"].map((w) => <option key={w}>{w}</option>)}
-              </select>
-            </Field>
-            {editing ? (
-              <Field label={S.stockNowLbl} hint={S.hintStockNow}>
-                <input className="input bg-steel-50" value={fmtJumlah(Number(editing.stock))} disabled readOnly />
-              </Field>
-            ) : (
-              <Field label={S.stock0Lbl}><NumInput min={0} className="input" value={form.stock} onChange={(e) => setF("stock", e.target.value)} /></Field>
-            )}
-            <Field label={S.minLbl}><NumInput min={0} className="input" value={form.minStock} onChange={(e) => setF("minStock", e.target.value)} /></Field>
-            <Field label={S.unitLbl}>
-              <select className="input" value={form.unit} onChange={(e) => setF("unit", e.target.value)}>
-                {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
-              </select>
-            </Field>
-            <Field label={S.costLbl}><MoneyInput className="input" value={form.cost} onChange={(v) => setF("cost", v)} /></Field>
-            <Field label={S.volLbl} hint={S.hintVol}><NumInput min={0} className="input" value={form.volume} onChange={(e) => setF("volume", e.target.value)} /></Field>
-            <Field label={S.batchLbl} hint={form.category === "Mesin" ? S.hintBatchMesin : S.hintBatchOpt}>
-              <input className="input font-mono" value={form.batch} onChange={(e) => setF("batch", e.target.value)} placeholder={S.phBatch} />
-            </Field>
-            <Field label={S.uom2Lbl} hint={S.hintUom2}>
-              <input className="input" value={form.uom2} onChange={(e) => setF("uom2", e.target.value)} placeholder={S.phUom2} />
-            </Field>
-            <Field label={S.convLbl} hint={S.convHint.replace("{n}", form.unit || S.unitFallback)}>
-              <NumInput min={0} className="input" value={form.konversi} onChange={(e) => setF("konversi", e.target.value)} placeholder={S.phConv} />
-            </Field>
-            <div className="rounded-xl bg-steel-50 p-2.5">
-              <p className="label">{locale === "en" ? "Retail conversion presets" : "Preset konversi eceran"}</p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  className="btn-secondary text-xs"
-                  title={locale === "en" ? "Oil: tons to liters ×1100" : "Oli: Ton ke Liter ×1100"}
-                  onClick={() => { setF("uom2", "liter"); setF("konversi", "1100"); }}
-                >
-                  {locale === "en" ? "Oil: Ton → Liter ×1100" : "Oli: Ton → Liter ×1100"}
-                </button>
-                <span className="flex items-center gap-1 text-xs text-steel-600">
-                  P <input className="input !w-16 !py-1 text-xs" value={platP} onChange={(e) => setPlatP(e.target.value)} aria-label="Panjang (m)" /> × L{" "}
-                  <input className="input !w-16 !py-1 text-xs" value={platL} onChange={(e) => setPlatL(e.target.value)} aria-label="Lebar (m)" />
-                </span>
-                <button
-                  type="button"
-                  className="btn-secondary text-xs"
-                  title={locale === "en" ? "Plate roll to meters via P×L" : "Plat roll ke Meter via P×L"}
-                  onClick={() => {
-                    const p = Number(platP) || 0;
-                    const l = Number(platL) || 0;
-                    if (p <= 0 || l <= 0) { toast(locale === "en" ? "P×L must be positive" : "P×L harus positif", "info"); return; }
-                    setF("uom2", "meter");
-                    setF("konversi", String(Math.round(p * l * 100) / 100));
-                  }}
-                >
-                  {locale === "en" ? "Plate roll → Meter (P×L)" : "Plat roll → Meter (P×L)"}
-                </button>
-              </div>
-            </div>
-            <Field label={S.minWhLbl} hint={S.hintMinWh}>
-              <NumInput min={0} className="input" value={form.minWh} onChange={(e) => setF("minWh", e.target.value)} placeholder={S.phMinWh} />
-            </Field>
-            <Field label={S.photoLbl} hint={S.hintPhoto}>
-              <div className="flex items-center gap-2">
-                <Camera className="h-4 w-4 shrink-0 text-steel-400" />
-                <input className="input font-mono" value={form.photoUrl} onChange={(e) => setF("photoUrl", e.target.value)} placeholder="https://…" />
-                <input ref={photoInputRef} type="file" accept=".png,.jpg,.jpeg,.pdf,.xlsx,.csv" className="hidden" aria-label={S.photoAria}
-                  onChange={(e) => { void onPhotoFile(e.target.files?.[0]); }} />
-                <button type="button" className="btn-secondary shrink-0 text-xs" disabled={uploadingPhoto}
-                  title={isBackendConfigured() ? S.uploadTitle : S.localPhotoUrl}
-                  onClick={() => {
-                    if (!isBackendConfigured()) { toast(S.localPhotoUrl, "info"); return; }
-                    photoInputRef.current?.click();
-                  }}>
-                  <Upload className="h-4 w-4" /> {uploadingPhoto ? S.uploading : S.uploadBtn}
-                </button>
-              </div>
-            </Field>
-          </FormGrid>
-          <FormGrid>
-            <Field label={S.rackLbl} hint={S.hintRack}><input className="input font-mono" value={form.rack} onChange={(e) => setF("rack", e.target.value)} placeholder={S.phRack} /></Field>
-            <Field label={S.binLbl} hint={S.hintBin}><input className="input font-mono" value={form.bin} onChange={(e) => setF("bin", e.target.value)} placeholder={S.phBin} /></Field>
-          </FormGrid>
-        </div>
-      </Modal>
+      <CatalogMaterialForm
+        open={showAdd || editing !== null}
+        editing={editing}
+        form={form}
+        step={materialFormStep}
+        warehouses={warehouses}
+        photoInputRef={photoInputRef}
+        uploadingPhoto={uploadingPhoto}
+        onFieldChange={setF}
+        onClose={closeMaterialForm}
+        onSave={save}
+        onNext={nextMaterialFormStep}
+        onBack={() => setMaterialFormStep((current) => Math.max(current - 1, 0))}
+        onPhotoFile={(file) => { void onPhotoFile(file); }}
+      />
 
       {/* Modal Barang Masuk / Barang Keluar */}
       <Modal open={moveTarget !== null} onClose={closeMove} title={(moveKind === "in" ? S.moveTitleIn : S.moveTitleOut).replace("{n}", moveTarget?.name ?? "")}
@@ -3391,7 +3368,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               [S.dlWh, rackText(freshDetail)],
               [S.binLbl, binOf(freshDetail) || "-"],
               [S.dlQr, qrPayloadOf(freshDetail)],
-              [S.stockLbl, `${fmtJumlah(Number(freshDetail.stock))} ${freshDetail.unit}${hasUom2(freshDetail) ? ` (≈ ${fmtJumlah(qtyInUom2(freshDetail))} ${uom2Of(freshDetail)})` : ""}`],
+              [S.stockLbl, `${fmtJumlah(Number(freshDetail.stock))} ${freshDetail.unit}${hasConversion(freshDetail) ? ` (≈ ${fmtJumlah(qtyInUom2(freshDetail))} ${uom2Of(freshDetail)} · ${formatUnitConversion(String(freshDetail.unit), unitConversionOf(freshDetail), locale)})` : ""}`],
               [S.dlAvail, `${fmtJumlah(availOf(freshDetail))} ${freshDetail.unit}`],
               [S.dlReserv, reservedOf(freshDetail).length > 0 ? reservedOf(freshDetail).map((r) => `${r.project} × ${fmtJumlah(Number(r.qty))}`).join("; ") : "-"],
               [S.volLbl, fmtJumlah(Number(freshDetail.volume ?? 0))],
