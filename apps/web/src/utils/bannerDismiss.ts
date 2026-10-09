@@ -88,13 +88,13 @@ export function restoreAll(map: DismissMap, moduleKey: string): DismissMap {
 }
 
 /** Item yang masih terlihat setelah level ditutup. */
-export function visibleItems(items: ModuleAlertItem[], dismissed: AlertLevel[]): ModuleAlertItem[] {
+export function visibleItems(items: ModuleAlertItem[], dismissed: readonly AlertLevel[]): ModuleAlertItem[] {
   if (dismissed.length === 0) return items;
   const hidden = new Set(dismissed);
   return items.filter((i) => !hidden.has(i.level));
 }
 
 /** Berapa item yang tersembunyi karena level ditutup. */
-export function hiddenCount(items: ModuleAlertItem[], dismissed: AlertLevel[]): number {
+export function hiddenCount(items: ModuleAlertItem[], dismissed: readonly AlertLevel[]): number {
   return items.length - visibleItems(items, dismissed).length;
 }

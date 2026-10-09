@@ -432,26 +432,26 @@ export default function AppShell() {
   }, [location.pathname, backendMode, resync]);
 
   const renderSidebar = (mini: boolean) => (
-    <div className="flex h-full flex-col bg-navy-900 text-white">
-      <div className={`flex items-center gap-2.5 border-b border-white/10 px-5 py-4 ${mini ? "justify-center px-3" : ""}`}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ocean-500 text-white">
+    <div className="flex h-full flex-col border-r-2 border-navy-900 bg-white text-navy-900">
+      <div className={`flex items-center gap-2.5 border-b-2 border-navy-900 px-5 py-4 ${mini ? "justify-center px-3" : ""}`}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center border-b-[3px] border-ocean-500 bg-navy-900 text-white">
           <Anchor className="h-5 w-5" />
         </div>
         {!mini && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold leading-tight">ISMS Galangan</p>
-            <p className="truncate text-[10px] text-steel-300">PT Syukur Bersaudara</p>
+            <p className="truncate text-[15px] font-black uppercase leading-none tracking-[-0.03em]">ISMS Galangan</p>
+            <p className="mono-label mt-1 truncate text-[9.5px]">PT Syukur Bersaudara</p>
           </div>
         )}
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-0 py-3">
         {visibleNavGroups.map((group) => {
           const gOpen = mini ? true : isGroupOpen(group.label);
           return (
           <div key={group.label} className="mb-3">
             {!mini ? (
               <button
-                className="mb-1 flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wider text-steel-300 hover:text-white"
+                className="mb-1 flex w-full items-center gap-1 px-5 py-1 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-steel-500 hover:text-navy-900"
                 onClick={() => toggleGroup(group.label)}
                 aria-expanded={gOpen}
               >
@@ -459,7 +459,7 @@ export default function AppShell() {
                 <ChevronDown className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-300 ${gOpen ? "" : "-rotate-90"}`} />
               </button>
             ) : (
-              <div className="mb-1 border-b border-white/10" aria-hidden />
+              <div className="mb-1 border-b border-steel-300" aria-hidden />
             )}
             <div className={`grid transition-all duration-300 ease-in-out ${gOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
               <ul className="space-y-0.5 overflow-hidden">
@@ -479,12 +479,12 @@ export default function AppShell() {
                       window.scrollTo({ top: 0 });
                     }}
                     className={({ isActive }) =>
-                      `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${mini ? "justify-center" : ""} ${
-                        item.child && !mini ? "ml-4 border-l-2 border-white/15 pl-3" : ""
-                      }${
+                      `flex items-center gap-2.5 border-l-[3px] px-5 py-2 text-[13px] transition-colors ${mini ? "justify-center px-3" : ""} ${
+                        item.child && !mini ? "pl-9" : ""
+                      } ${
                         isActive || activeProjectOrigin === item.to
-                          ? "bg-ocean-500/20 text-white font-semibold"
-                          : "text-steel-300 hover:bg-white/5 hover:text-white"
+                          ? "border-ocean-500 bg-navy-900 font-semibold text-white"
+                          : "border-transparent text-steel-700 hover:border-navy-900 hover:bg-steel-100 hover:text-navy-900"
                       }`
                     }
                   >
@@ -492,7 +492,7 @@ export default function AppShell() {
                     {!mini && <span className="truncate" title={item.label}>{item.label}</span>}
                     {!mini && badge > 0 ? (
                       <span
-                        className="ml-auto rounded-full bg-rose-500/90 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                        className="ml-auto bg-ocean-500 px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white"
                         title={S.shNewNotif.replace("{n}", String(badge))}
                       >
                         {badge > 99 ? "99+" : badge}
@@ -508,15 +508,15 @@ export default function AppShell() {
           );
         })}
       </nav>
-      <div className="border-t border-white/10 p-3">
-        <div className={`flex items-center gap-2.5 rounded-lg bg-white/5 px-3 py-2 ${mini ? "justify-center" : ""}`}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-hero text-xs font-bold text-white">
+      <div className="border-t-2 border-navy-900 p-3">
+        <div className={`flex items-center gap-2.5 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-navy-900 font-mono text-xs font-bold text-white">
             {user?.initials ?? "?"}
           </div>
           {!mini && (
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold">{user?.name ?? "-"}</p>
-              <p className="truncate text-[10px] text-steel-300">{user?.role ?? "-"}</p>
+              <p className="mono-label truncate text-[9.5px]">{user?.role ?? "-"}</p>
             </div>
           )}
         </div>
@@ -525,12 +525,12 @@ export default function AppShell() {
   );
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-white">
       {/* Mobile sidebar */}
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 shadow-xl">{renderSidebar(false)}</div>
+          <div className="absolute inset-y-0 left-0 w-72">{renderSidebar(false)}</div>
         </div>
       )}
 
@@ -540,7 +540,7 @@ export default function AppShell() {
       <div className={`transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-64"}`}>
 
         {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-steel-200 bg-white/85 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b-2 border-navy-900 bg-white px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <button
               className="text-steel-600 lg:hidden"
@@ -558,11 +558,11 @@ export default function AppShell() {
               <PanelLeft className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 text-sm text-steel-500">
-              <span className="font-medium text-navy-800">{S.shGalangan}</span>
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-navy-900">{S.shGalangan}</span>
               <span>/</span>
               <span
                 title={backendError ?? (backendMode === "remote" ? S.shConnectedServer : S.shRunningLocal)}
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${backendMode === "remote" && !backendError ? "bg-emerald-100 text-emerald-700" : "bg-steel-100 text-steel-500"}`}
+                className={`border px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.06em] ${backendMode === "remote" && !backendError ? "border-navy-900 bg-navy-900 text-white" : "border-steel-300 text-steel-500"}`}
               >
                 {backendMode === "remote" && !backendError ? S.shServerBadge : S.shLocalBadge}
               </span>
@@ -585,7 +585,7 @@ export default function AppShell() {
             {query && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setQ("")} />
-                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-xl border border-steel-200 bg-white shadow-lift">
+                <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden border-2 border-navy-900 bg-white">
                   {hits.length === 0 && (
                     <p className="px-4 py-3 text-sm text-steel-400">{t.nav.noResultsFor} “{q}”.</p>
                   )}
@@ -638,7 +638,7 @@ export default function AppShell() {
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute right-0.5 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                  <span className="absolute right-0.5 top-1 flex h-4 w-4 items-center justify-center bg-ocean-500 font-mono text-[9px] font-bold text-white">
                     {Math.min(unreadCount, 99)}
                   </span>
                 )}
@@ -646,7 +646,7 @@ export default function AppShell() {
               {notifOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => { setNotifOpen(false); setBellExpanded(false); setBellMin(false); }} />
-                  <div className="absolute right-0 z-20 mt-2 flex max-h-96 w-80 flex-col overflow-hidden rounded-xl border border-steel-200 bg-white shadow-lift">
+                  <div className="absolute right-0 z-20 mt-2 flex max-h-96 w-80 flex-col overflow-hidden border-2 border-navy-900 bg-white">
                     <div className="flex shrink-0 items-center justify-between border-b border-steel-100 px-4 py-2.5">
                       <p className="text-sm font-semibold text-navy-900">
                         {t.notif.title}{unreadCount > 0 ? ` (${unreadCount} ${t.notif.unread})` : ""}
@@ -724,7 +724,7 @@ export default function AppShell() {
                 onClick={() => setUserOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-steel-100"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-hero text-xs font-bold text-white">
+                <div className="flex h-8 w-8 items-center justify-center bg-navy-900 font-mono text-xs font-bold text-white">
                   {user?.initials ?? "?"}
                 </div>
                 <div className="hidden text-left leading-tight sm:block">
@@ -736,7 +736,7 @@ export default function AppShell() {
               {userOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setUserOpen(false)} />
-                  <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-steel-200 bg-white shadow-lift">
+                  <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden border-2 border-navy-900 bg-white">
                     <div className="border-b border-steel-100 px-4 py-3">
                       <p className="text-sm font-semibold text-navy-900">{user?.name}</p>
                       <p className="text-xs text-steel-500">{user?.email}</p>
@@ -814,7 +814,7 @@ export default function AppShell() {
       {/* Modal profil */}
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)} title={t.nav.profile} subtitle={t.session.demoSession}>
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-hero text-lg font-bold text-white">
+          <div className="flex h-14 w-14 items-center justify-center bg-navy-900 font-mono text-lg font-bold text-white">
             {user?.initials}
           </div>
           <div>

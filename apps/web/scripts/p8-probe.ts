@@ -1,4 +1,4 @@
-/* Probe P8: override status "Terlambat".
+/* Probe P8: override status "Terlambat" dan detail penundaan proyek.
    Sifat: satu kali jalan, hanya menghitung; tidak menulis apa pun.
 
    Aliasan file ini ada karena override status bisa diam-diam tidak
@@ -13,7 +13,7 @@
       ada override.
 
    Jalankan: npm run probe:p8 */
-import { shouldAutoSetLate, shouldClearOverride } from "../src/utils/projectDelay";
+import { projectDelayDetailsOf, shouldAutoSetLate, shouldClearOverride } from "../src/utils/projectDelay";
 
 declare const process: { exit(code: number): never };
 
@@ -89,6 +89,28 @@ cek("progress 100 + override → clear true", shouldClearOverride(p11, TODAY, is
 /* Kasus 12: end kosong + ada override → shouldClearOverride true. */
 const p12 = { status: "Terlambat", end: "", progress: 50, statusOverride: { status: "Dalam Proses", reason: "manual", at: TODAY, by: "Anda" } };
 cek("end kosong + override → clear true", shouldClearOverride(p12, TODAY, isOverdue) === true);
+
+const lateDetails = projectDelayDetailsOf("2026-09-30", [
+  { task: "Pemasangan lambung", end: "2026-09-27", progress: 60 },
+  { task: "Uji mesin", end: "2026-09-29", progress: 40 },
+  { task: "WBS selesai", end: "2026-09-20", progress: 100 },
+], TODAY, true);
+cek("detail terlambat memisahkan WBS penyebab dan target proyek", lateDetails.cause === "Pemasangan lambung" && lateDetails.causeTargetDate === "2026-09-27" && lateDetails.targetDate === "2026-09-30");
+cek("detail terlambat menghitung hari dari target proyek", lateDetails.daysLate === 6);
+cek("detail WBS menghitung hari lewat dari target tugas", lateDetails.causeDaysLate === 9);
+
+const deferredDetails = projectDelayDetailsOf("2026-10-30", [
+  { task: "Persiapan docking", end: "2026-10-15", progress: 20 },
+], TODAY, false);
+cek("detail tertunda memisahkan target WBS dan proyek tanpa hari lewat", deferredDetails.cause === "Persiapan docking" && deferredDetails.causeTargetDate === "2026-10-15" && deferredDetails.targetDate === "2026-10-30" && deferredDetails.daysLate === null && deferredDetails.causeDaysLate === null && deferredDetails.projectDaysRemaining === 24);
+
+const delayedWbsDetails = projectDelayDetailsOf("2027-01-15", [
+  { task: "Pengadaan Material", end: "2026-05", progress: 20 },
+], TODAY, false);
+cek("proyek tertunda menampilkan hari lewat target WBS walau target proyek belum lewat", delayedWbsDetails.cause === "Pengadaan Material" && delayedWbsDetails.causeDaysLate === 128 && delayedWbsDetails.daysLate === null && delayedWbsDetails.targetDate === "2027-01-15");
+
+const noWbsDetails = projectDelayDetailsOf("2026-09-30", [], TODAY, true);
+cek("detail terlambat tanpa WBS memakai target proyek", noWbsDetails.cause === null && noWbsDetails.targetDate === "2026-09-30");
 
 console.log(`p8-probe: ${lulus} lolos, ${gagal} gagal.`);
 if (gagal > 0) process.exit(1);

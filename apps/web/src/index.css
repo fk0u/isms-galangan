@@ -9,13 +9,62 @@
 
 @custom-variant notif-flash-all (&.notif-flash-all);
 
+/* ============ DESIGN SYSTEM: SWISS INDUSTRIAL (ADR-0013) ============
+   Putih netral + tinta + SATU aksen merah. Tanpa radius, bayangan, gradien.
+   Palet default Tailwind yang dipakai halaman dipetakan ulang di sini supaya
+   seluruh aplikasi mengikuti sistem tanpa menyunting tiap halaman:
+   - hijau/emerald/teal  → tinta (status "OK" = hitam, bukan hijau)
+   - amber/orange/yellow → merah muda (peringatan)
+   - red/rose            → merah aksen (bahaya/kritis)
+   - biru/ungu/cyan/slate→ abu netral */
+@theme {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+
+  --color-emerald-50: #F5F5F5; --color-emerald-100: #EBEBEB; --color-emerald-200: #D6D6D6; --color-emerald-300: #A3A3A3;
+  --color-emerald-400: #474747; --color-emerald-500: #1C1C1C; --color-emerald-600: #141414; --color-emerald-700: #0A0A0A; --color-emerald-800: #0A0A0A;
+  --color-green-50: #F5F5F5; --color-green-100: #EBEBEB; --color-green-200: #D6D6D6; --color-green-500: #1C1C1C; --color-green-600: #141414; --color-green-700: #0A0A0A;
+  --color-lime-500: #1C1C1C; --color-lime-600: #141414;
+
+  --color-amber-50: #FFF6F6; --color-amber-100: #FFE9E9; --color-amber-200: #FFCFCF; --color-amber-300: #FFA8A8;
+  --color-amber-400: #FF7A7A; --color-amber-500: #F04848; --color-amber-600: #C41212; --color-amber-700: #A30F0F; --color-amber-800: #820C0C;
+  --color-orange-50: #FFF6F6; --color-orange-100: #FFE9E9; --color-orange-200: #FFCFCF; --color-orange-500: #F04848; --color-orange-600: #C41212; --color-orange-700: #A30F0F;
+  --color-yellow-50: #FFF6F6; --color-yellow-100: #FFE9E9; --color-yellow-400: #FF7A7A; --color-yellow-500: #F04848; --color-yellow-600: #C41212; --color-yellow-700: #A30F0F;
+
+  --color-red-50: #FFF3F3; --color-red-100: #FFE3E3; --color-red-200: #FFC2C2; --color-red-300: #FF8A8A;
+  --color-red-400: #FF3B3B; --color-red-500: #E61919; --color-red-600: #C41212; --color-red-700: #A30F0F; --color-red-800: #820C0C;
+  --color-rose-300: #FF8A8A; --color-rose-800: #820C0C;
+
+  --color-blue-50: #F5F5F5; --color-blue-100: #EBEBEB; --color-blue-200: #D6D6D6; --color-blue-300: #C7C7C7;
+  --color-blue-400: #8F8F8F; --color-blue-500: #474747; --color-blue-600: #262626; --color-blue-700: #1C1C1C; --color-blue-800: #141414;
+  --color-sky-50: #F5F5F5; --color-sky-100: #EBEBEB; --color-sky-500: #474747; --color-sky-600: #262626; --color-sky-700: #1C1C1C;
+  --color-indigo-50: #F5F5F5; --color-indigo-100: #EBEBEB; --color-indigo-500: #474747; --color-indigo-600: #262626; --color-indigo-700: #1C1C1C;
+  --color-cyan-50: #F5F5F5; --color-cyan-100: #EBEBEB; --color-cyan-200: #D6D6D6; --color-cyan-500: #474747; --color-cyan-600: #262626; --color-cyan-700: #1C1C1C;
+  --color-purple-50: #F5F5F5; --color-purple-100: #EBEBEB; --color-purple-500: #474747; --color-purple-600: #262626; --color-purple-700: #1C1C1C;
+  --color-slate-50: #F8F8F8; --color-slate-100: #F1F1F1; --color-slate-200: #E2E2E2; --color-slate-300: #C7C7C7; --color-slate-400: #8F8F8F; --color-slate-500: #666666; --color-slate-600: #474747; --color-slate-700: #262626;
+}
+
 @layer base {
   html {
     @apply antialiased;
   }
   body {
-    @apply bg-surface text-steel-700;
+    @apply bg-white text-steel-700;
     font-family: "Inter", system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11", "tnum";
     -webkit-user-select: text;
     user-select: text;
   }
@@ -24,14 +73,20 @@
     user-select: text;
   }
   h1, h2, h3, h4 {
-    @apply text-navy-900 font-semibold;
+    @apply text-navy-900 font-extrabold;
+    letter-spacing: -0.02em;
   }
+  /* Radius nol di mana pun, termasuk rounded-full (status dot, avatar, spinner):
+     sudut 90° adalah bagian dari identitas sistem. */
+  .rounded-full { border-radius: 0 !important; }
+  ::selection { background: #E61919; color: #fff; }
+  :focus-visible { outline: 2px solid #E61919; outline-offset: 2px; }
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-steel-300 rounded-full;
+    background: #0A0A0A;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -58,64 +113,90 @@
    dengan "Cannot apply unknown utility class `btn`".
    Nilai gaya-nya tidak berubah sama sekali dari versi v3. */
 @utility btn {
-  @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-xl font-medium text-sm
-         transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1;
+  @apply inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 font-mono text-[11.5px] font-semibold uppercase
+         border transition-colors duration-150 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed;
+  letter-spacing: 0.08em;
 }
 
 @layer components {
+  /* Kompartemen: garis 1px, tanpa radius/bayangan. */
   .card {
-    @apply bg-white rounded-2xl border border-steel-200 shadow-soft;
+    @apply bg-white border border-steel-300;
   }
   .btn-primary {
-    @apply btn bg-navy-700 text-white shadow-soft hover:bg-navy-800 hover:-translate-y-0.5 hover:shadow-lift focus:ring-ocean-400;
+    @apply btn bg-navy-900 border-navy-900 text-white hover:bg-ocean-500 hover:border-ocean-500;
   }
   .btn-primary-gradient {
-    @apply btn text-white bg-gradient-hero hover:shadow-glow hover:-translate-y-0.5 focus:ring-ocean-400;
+    @apply btn bg-ocean-500 border-ocean-500 text-white hover:bg-navy-900 hover:border-navy-900;
   }
   .btn-secondary {
-    @apply btn bg-white border border-steel-300 text-steel-700 hover:bg-steel-100 hover:border-steel-400 focus:ring-steel-300;
+    @apply btn bg-white border-navy-900 text-navy-900 hover:bg-navy-900 hover:text-white;
   }
   .btn-danger {
-    @apply btn bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-300;
+    @apply btn bg-white border-ocean-500 text-ocean-600 hover:bg-ocean-500 hover:text-white;
   }
   .input {
-    @apply w-full px-3 py-2 rounded-xl border border-steel-300 bg-white text-sm
-           focus:outline-none focus:ring-2 focus:ring-ocean-400 focus:border-ocean-400;
+    @apply w-full px-3 py-2 border border-steel-400 bg-white text-sm text-navy-900
+           placeholder:text-steel-400 focus:outline-none focus:border-navy-900 focus:ring-0;
+    box-shadow: none;
   }
+  .input:focus { box-shadow: inset 0 -2px 0 #E61919; }
   .label {
-    @apply block text-xs font-medium text-steel-600 mb-1;
+    @apply block font-mono text-[10.5px] font-semibold uppercase text-steel-600 mb-1.5;
+    letter-spacing: 0.08em;
   }
   .th {
-    @apply px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-steel-500;
+    @apply px-3 py-2.5 text-left font-mono text-[10.5px] font-semibold uppercase text-navy-900 border-b-2 border-navy-900;
+    letter-spacing: 0.08em;
   }
   .td {
-    @apply px-3 py-3 text-sm text-steel-700 align-middle;
+    @apply px-3 py-2.5 text-sm text-steel-700 align-middle border-b border-steel-200;
   }
   .tab-active {
-    @apply border-b-2 border-navy-700 text-navy-800 font-semibold;
+    @apply border-b-2 border-ocean-500 text-navy-900 font-semibold;
   }
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/60;
+    @apply bg-white border border-steel-300;
   }
   .gradient-hero {
-    @apply bg-gradient-hero text-white;
+    @apply bg-navy-900 text-white;
   }
   .text-gradient-navy {
-    background: linear-gradient(135deg, #0b3a63, #2e9ad4);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: #0A0A0A;
   }
   .shimmer-line {
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-    background-size: 200% 100%;
+    display: none;
+  }
+
+  /* --- Primitif industri (dipakai komponen & halaman baru) --- */
+  /* Mikro-tipografi: metadata, ID, koordinat. */
+  .mono-label {
+    @apply font-mono text-[10.5px] font-semibold uppercase text-steel-500;
+    letter-spacing: 0.1em;
+  }
+  /* Makro-tipografi: judul struktural. */
+  .display {
+    @apply font-black uppercase text-navy-900;
+    letter-spacing: -0.04em;
+    line-height: 0.92;
+  }
+  /* Garis struktural merah. */
+  .rule-accent { height: 3px; background: #E61919; }
+  .rule-ink { height: 2px; background: #0A0A0A; }
+  /* Grid kompartemen: gap 1px + latar tinta = garis presisi. */
+  .grid-ruled { display: grid; gap: 1px; background: #C7C7C7; border: 1px solid #C7C7C7; }
+  .grid-ruled > * { background: #fff; }
+  /* Pita peringatan (hazard). */
+  .hazard-stripe {
+    background: repeating-linear-gradient(-45deg, #E61919 0 8px, #fff 8px 16px);
   }
 }
 
 @layer utilities {
-  .shadow-soft { box-shadow: 0 1px 2px rgba(11,58,99,0.05), 0 8px 24px -8px rgba(11,58,99,0.12); }
-  .shadow-lift { box-shadow: 0 4px 8px rgba(11,58,99,0.06), 0 20px 40px -16px rgba(11,58,99,0.25); }
-  .card-hover { @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lift; }
+  .shadow-soft { box-shadow: none; }
+  .shadow-lift { box-shadow: none; }
+  /* Hover tanpa melayang: garis menebal ke tinta. */
+  .card-hover { @apply transition-colors duration-150 hover:border-navy-900; }
 
   /* Scrollbar menempel tepat di ujung kanan card: container scroll direntangkan
      melewati padding kanan card induk, sementara jarak isi ke scrollbar tetap
@@ -146,23 +227,20 @@
   /* Hindari chart recharts terpotong / blank saat cetak PDF (html2canvas pagebreak). */
   .recharts-wrapper { break-inside: avoid; page-break-after: auto; page-break-before: auto; }
   .notif-hl {
-    box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.85);
-    background-color: rgba(255, 251, 235, 0.35);
+    box-shadow: inset 3px 0 0 #E61919;
   }
   /* Baris tabel: <tr> tidak menerima background di semua browser, jadi aksen
      pindah ke sel pertama. */
-  tr.notif-hl > td:first-child { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.85); }
-  tr.notif-hl > td { background-color: rgba(255, 251, 235, 0.35); }
+  tr.notif-hl > td:first-child { box-shadow: inset 3px 0 0 #E61919; }
   /* Kedip sesaat baris notifikasi yang diklik dari banner (pengganti
      highlight permanen). Hormati prefers-reduced-motion. */
   @keyframes notif-flash {
-    0%, 100% { outline-color: rgba(245, 158, 11, 0); background-color: transparent; }
-    30%, 60% { outline-color: rgba(245, 158, 11, 0.85); background-color: rgba(255, 251, 235, 0.9); }
+    0%, 100% { outline-color: rgba(230, 25, 25, 0); background-color: transparent; }
+    30%, 60% { outline-color: rgba(230, 25, 25, 0.85); background-color: rgba(255, 243, 243, 0.9); }
   }
   .notif-flash {
-    outline: 2px solid rgba(245, 158, 11, 0.85);
+    outline: 2px solid rgba(230, 25, 25, 0.85);
     outline-offset: -2px;
-    border-radius: 0.5rem;
     animation: notif-flash 0.8s ease-in-out 3;
   }
 
@@ -174,8 +252,8 @@
      warning yang sudah ada tetap ditandai - kelas ini tidak pernah menghapus
      highlight lain, hanya menambah. */
   @keyframes notif-flash-all {
-    0%, 100% { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0); background-color: rgba(255, 251, 235, 0); }
-    25%, 75% { box-shadow: inset 3px 0 0 rgba(245, 158, 11, 0.95); background-color: rgba(255, 251, 235, 0.85); }
+    0%, 100% { box-shadow: inset 3px 0 0 rgba(230, 25, 25, 0); background-color: rgba(255, 243, 243, 0); }
+    25%, 75% { box-shadow: inset 3px 0 0 rgba(230, 25, 25, 0.95); background-color: rgba(255, 243, 243, 0.85); }
   }
   .notif-flash-all {
     position: relative;
@@ -184,25 +262,25 @@
   }
   /* <tr> tidak menerima inset box-shadow di semua browser; pakai outline
      vertikal sebagai pengganti yang aman untuk elemen tabel. */
-  tr.notif-flash-all { box-shadow: none; outline: 2px solid rgba(245, 158, 11, 0.55); outline-offset: -2px; animation: none; }
-  tr.notif-flash-all > td { background-color: rgba(255, 251, 235, 0.85); }
+  tr.notif-flash-all { box-shadow: none; outline: 2px solid rgba(230, 25, 25, 0.55); outline-offset: -2px; animation: none; }
+  tr.notif-flash-all > td { background-color: rgba(255, 243, 243, 0.85); }
 
   @media (prefers-reduced-motion: reduce) {
     .notif-flash,
     .notif-flash-all,
     tr.notif-flash-all {
       animation: none;
-      background-color: rgba(255, 251, 235, 0.9);
+      background-color: rgba(255, 243, 243, 0.9);
     }
     tr.notif-flash-all { background-color: transparent; }
-    tr.notif-flash-all > td { background-color: rgba(255, 251, 235, 0.9); }
+    tr.notif-flash-all > td { background-color: rgba(255, 243, 243, 0.9); }
   }
 }
 
   /* Divider antar baris form detail/view (<dl>): baca cepat, tidak polos.
      Pakai: <dl className="dl-div text-sm">, anak langsung = baris. */
   .dl-div > div {
-    border-bottom: 1px solid #d7e1ea;
+    border-bottom: 1px solid #E2E2E2;
     padding-bottom: 0.625rem;
     margin-bottom: 0.625rem;
   }
@@ -229,7 +307,7 @@
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 1px;
-    color: rgba(11, 58, 99, 0.14);
+    color: rgba(10, 10, 10, 0.12);
     white-space: nowrap;
     margin: 48px;
   }

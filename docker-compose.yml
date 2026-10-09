@@ -24,7 +24,9 @@ services:
     build:
       context: ./apps/web
       args:
-        VITE_API_URL: https://${ISMS_DOMAIN:?ISMS_DOMAIN wajib diisi}
+        # same-origin: frontend memanggil API di origin yang sedang dibuka
+        # (nginx di image web meneruskan /api, /files, /health ke api).
+        VITE_API_URL: same-origin
     restart: unless-stopped
     depends_on:
       api:

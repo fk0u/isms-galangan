@@ -1,0 +1,8 @@
+# Server yang sudah punya nginx host di 80/443: web hanya di loopback,
+# Caddy tidak dijalankan. Pakai bersama docker-compose.yml:
+#   docker compose -p isms --env-file deploy/.env \
+#     -f docker-compose.yml -f deploy/compose.host-nginx.yml up -d --build api web
+services:
+  web:
+    ports:
+      - "127.0.0.1:${ISMS_WEB_PORT:-3110}:80"

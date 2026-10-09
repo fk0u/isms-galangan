@@ -876,11 +876,11 @@ export const inspectionTrend = [
 /* ====== PROCUREMENT ====== */
 
 export const spendByCategory = [
-  { name: "Baja", value: 38, color: "#0b3a63" },
-  { name: "Mesin", value: 26, color: "#2e9ad4" },
-  { name: "Cat & Coating", value: 14, color: "#f59e0b" },
-  { name: "Listrik", value: 12, color: "#8b5cf6" },
-  { name: "Lainnya", value: 10, color: "#22c55e" },
+  { name: "Baja", value: 38, color: "#0A0A0A" },
+  { name: "Mesin", value: 26, color: "#E61919" },
+  { name: "Cat & Coating", value: 14, color: "#F04848" },
+  { name: "Listrik", value: 12, color: "#474747" },
+  { name: "Lainnya", value: 10, color: "#262626" },
 ];
 
 export const procurementTrend = [
