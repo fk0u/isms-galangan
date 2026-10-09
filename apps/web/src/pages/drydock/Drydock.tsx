@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ID_MON as MONTH_ID } from "../../utils/monthAxis";
 import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench, User, Eye, ArrowLeftRight } from "lucide-react";
-import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, ProgressBar, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
+import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
   NumInput, MoneyInput, FlowStrip,
   RowAction, rowMatches,
 } from "../../components/ui";
@@ -20,7 +20,6 @@ import { getSetting } from "../../utils/settings";
 import { sameName } from "../../utils/names";
 import { sbDsNumber, maxSeq } from "../../utils/sb";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
-import FacilityMap, { facilityRowsFor } from "../../components/FacilityMap";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { exportExcel } from "../../utils/export";
@@ -86,6 +85,11 @@ function slotStatus(s: StoreItem, projects: StoreItem[]): string {
   return "Terjadwal";
 }
 
+/* Status internal tetap canonical; pencarian juga menerima label locale aktif. */
+export function mappingStatusSearchText(status: string, label: string): string {
+  return `${status} ${label}`;
+}
+
 function slotDays(s: StoreItem): number {
   return Math.max(0, Number(s.to || 0) - Number(s.from || 0));
 }
@@ -107,6 +111,21 @@ export default function Drydock() {
   const picOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
   const { locale } = useT();
   const S = n_dry[locale];
+  const mappingSteps = [
+    { value: "Masuk", label: S.posMasuk },
+    { value: "Berjalan", label: S.mapStatusRunning },
+    { value: "Keluar", label: S.posKeluar },
+  ] as const;
+  const mappingStepLabel = (value: string): string =>
+    mappingSteps.find((step) => step.value === value)?.label ?? "";
+  const mappingStatusLabel = (status: string): string => {
+    if (status === "Semua") return S.mapAll;
+    if (status === "Terjadwal") return S.mapStatusScheduled;
+    if (status === "Berjalan") return S.mapStatusRunning;
+    if (status === "Selesai") return S.mapStatusComplete;
+    if (status === "Maintenance") return S.mapStatusMaintenance;
+    return status;
+  };
   const modAlert = useModuleAlert("drydock");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -169,15 +188,6 @@ export default function Drydock() {
     ...drydocks.map((d) => String(d.area ?? "").trim()).filter(Boolean),
     ...dockSlots.map((s) => String(s.area ?? "").trim()).filter(Boolean),
   ])].sort((a, b) => a.localeCompare(b));
-
-  /* Baris siap gambar untuk Peta Fasilitas. Dibaca dari store (bukan seed)
-     supaya kapal yang baru ditambahkan atau dock yang ubah dimensi langsung
-     muncul di peta tanpa perlu seed baru. */
-  const facilityMapData = facilityRowsFor(
-    drydocks as unknown as Record<string, unknown>[],
-    dockSlots as unknown as Record<string, unknown>[],
-    (data.vessels ?? []) as unknown as Record<string, unknown>[],
-  );
 
   const saveArea = async () => {
     if (!areaModal) return;
@@ -328,9 +338,6 @@ export default function Drydock() {
     }
   };
 
-  const dockCostTotal = (dockId: string): number =>
-    dockSlots.filter((s) => s.dockId === dockId).reduce((sum, s) => sum + slotCost(s), 0);
-
   const exportAnnualPlan = () => {
     void exportExcel(
       [["Slot", "Fasilitas", "Kapal", "Mulai", "Selesai", "Hari", "Tarif/Hari (Rp)", "Biaya Dock (Rp)", "Listrik (kWh)", "Air (m³)"],
@@ -340,13 +347,8 @@ export default function Drydock() {
     ).then(() => toast(S.tAnnualExported)).catch(() => toast(S.saveFail, "info"));
   };
 
-  const coverageByDock = drydocks.map((d) => ({
-    dock: d,
-    pct: Math.round((coveredDays(d.id, dockSlots) / DAYS) * 100),
-  }));
   const totalCovered = drydocks.reduce((s, d) => s + coveredDays(d.id, dockSlots), 0);
   const util = drydocks.length ? Math.round((totalCovered / (drydocks.length * DAYS)) * 100) : 0;
-  const busiest = coverageByDock.length ? coverageByDock.reduce((a, b) => (b.pct > a.pct ? b : a)) : null;
 
   const overlap = (dockId: string, from: number, to: number, ignore?: string) =>
     dockSlots.some((o) => o.dockId === dockId && o.id !== ignore && from < o.to && o.from < to);
@@ -403,15 +405,18 @@ export default function Drydock() {
     /* Pencarian teks (A2). Disini, bukan di masing-masing tabel, karena kedua
        tabel modul ini membaca `filteredSlots` yang sama - satu kotak pencarian
        untuk keduanya, bukan dua. */
-    if (slotQ !== "" && !rowMatches(
-      {
-        area: String(slotAreaOf(s)), slot: String(s.slot ?? s.id ?? ""),
-        status: String(slotStatus(s, data.projects)),
-        project: String(data.projects.find((p) => String(p.id) === String(s.projectId ?? ""))?.vessel ?? s.projectId ?? ""),
-      } as unknown as Record<string, unknown>,
-      slotQ,
-      ["area", "slot", "status", "project"],
-    )) return false;
+    if (slotQ !== "") {
+      const status = slotStatus(s, data.projects);
+      if (!rowMatches(
+        {
+          area: String(slotAreaOf(s)), slot: String(s.slot ?? s.id ?? ""),
+          status: mappingStatusSearchText(status, mappingStatusLabel(status)),
+          project: String(data.projects.find((p) => String(p.id) === String(s.projectId ?? ""))?.vessel ?? s.projectId ?? ""),
+        } as unknown as Record<string, unknown>,
+        slotQ,
+        ["area", "slot", "status", "project"],
+      )) return false;
+    }
     return true;
   });
   const activeByArea = useMemo(() => {
@@ -667,24 +672,11 @@ export default function Drydock() {
         </div>
       )}
 
-      {/* Satu kotak untuk kedua tabel modul ini (Slot per Area dan Fasilitas):
-          keduanya membaca `filteredSlots` yang sama, jadi dua kotak search
-          akan berarti mengetik dua kali untuk hasil yang sama. */}
+      {/* Satu pencarian dipakai daftar slot aktif dan mapping area agar filter
+          yang sama berlaku konsisten pada kedua tampilan. */}
       <div className="mb-3 flex justify-end">
         <SearchBox value={slotQ} onChange={setSlotQ} className="w-full max-w-xs" placeholder={locale === "en" ? "Search slots, projects, status..." : "Cari slot, proyek, status..."} ariaLabel={locale === "en" ? "Search dock slots" : "Cari slot drydock"} />
       </div>
-
-      {/* Peta fasilitas: satu skala panjang untuk semua baris, jadi drydock
-          120 m terlihat benar-benar lebih panjang dari slipway 80 m. Kapal
-          yang tidak muat dapat outline merah plus daftar alasannya - fasilitas
-          tidak diperbesar supaya accommodate. */}
-      <Card className="mb-4 p-5">
-        <h3 className="mb-1 text-sm font-semibold text-navy-900">Peta Fasilitas</h3>
-        <p className="mb-3 text-xs text-steel-500">
-          Panjang fasilitas dan kapal digambar pada skala yang sama. Pita merah menandai kapal yang melebihi ukuran fasilitas.
-        </p>
-        <FacilityMap {...facilityMapData} />
-      </Card>
 
       {criticalConflicts.length > 0 && (
         <div className="mb-4 rounded-lg border-2 border-rose-600 bg-rose-50 p-3 text-sm text-rose-800">
@@ -697,152 +689,30 @@ export default function Drydock() {
         </div>
       )}
 
-
-        <Card className="p-5">
-          <h3 className="mb-3 text-sm font-semibold text-navy-900">{S.utilTitle}</h3>
-          <div className="space-y-3">
-            {coverageByDock.map(({ dock, pct }) => (
-              <div key={dock.id}>
-                <div className="mb-1 flex justify-between text-sm">
-                  <span className="text-steel-600">{dock.name}</span>
-                  <span className="font-semibold text-navy-900">{pct}%</span>
-                </div>
-                <ProgressBar value={pct} tone={pct > 80 ? "red" : pct > 60 ? "amber" : "green"} />
-                <p className="mt-1 text-xs text-steel-500">{S.dockCost.replace("{a}", fmtRupiah(dockCostTotal(dock.id)))}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-steel-400">
-            {busiest ? S.busiestNow.replace("{a}", busiest.dock.name).replace("{b}", String(busiest.pct)) : S.noUtil} {S.utilNote.replace("{n}", String(DAYS))}
-          </p>
-        </Card>
-
       <div className="mt-5 grid grid-cols-1 gap-5">
-        {/* ==== PETA AREA (GRAFIK) ====
-            Item 6 revisi 2 Oktober. Tabel "Slot per Area" di bawahnya
-            menjawab "slot mana saja", tapi tidak menjawab pertanyaan yang
-            biasa ditanya_admin drydock: area mana yang sudah penuh, berapa
-            kapal yang menumpuk di sana, dan mana yang longgar. Kartu ini
-            menjawabnya lewat(isian per area, bukan baris per slot). */}
-        <Card>
-          <CardHeader
-            title={locale === "en" ? "Area capacity map" : "Peta Kapasitas Area"}
-            subtitle={locale === "en"
-              ? "One block per area, scaled by slot count. Fill = share of slots currently occupied."
-              : "Satu blok per area, discalakan menurut jumlah slot. Isian = porsi slot yang sedang terisi."}
-          />
-          {(() => {
-            const groups = new Map<string, StoreItem[]>();
-            for (const s of filteredSlots) {
-              const key = slotAreaOf(s) || S.noArea;
-              if (!groups.has(key)) groups.set(key, []);
-              groups.get(key)!.push(s);
-            }
-            /* Area tanpa slot pun dihitung, kalau tidak area yang kosong lenyap
-               dari peta - padahal justru itu yang perlu terlihat. */
-            for (const d of drydocks) {
-              const key = String(d.area ?? "").trim() || S.noArea;
-              if (!groups.has(key)) groups.set(key, []);
-            }
-            const entries = [...groups.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
-            const maxSlots = Math.max(1, ...entries.map(([, sl]) => sl.length));
-            if (entries.length === 0) {
-              return <p className="px-5 pb-5 text-xs text-steel-400">{S.emptySlots}</p>;
-            }
-            return (
-              <div className="grid grid-cols-1 gap-3 px-5 pb-5 sm:grid-cols-2 xl:grid-cols-3">
-                {entries.map(([area, slots]) => {
-                  const vessels = Array.from(new Set(slots.map((s) => String(s.vessel ?? "-")))).filter((v) => v !== "-");
-                  const occupied = slots.filter((s) => isActiveSlot(s)).length;
-                  const conflicts = slots.filter((s) => conflict.some((c) => c.id === s.id)).length;
-                  const fill = slots.length === 0 ? 0 : Math.round((occupied / slots.length) * 100);
-                  /* Lebar blok diskalakan jumlah slot supaya area besar langsung
-                     terlihat lebih besar - itu poin "grafis"nya; tabel tidak
-                     pernah bisa menunjukkan itu. */
-                  const scale = Math.round((slots.length / maxSlots) * 100);
-                  return (
-                    <div key={area} className="rounded-xl border border-steel-100 bg-surface p-3">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-navy-900" title={area}>{area}</p>
-                        <span className="shrink-0 text-xs text-steel-500">{locale === "en" ? `${slots.length} slots` : `${slots.length} slot`}</span>
-                      </div>
-                      <div className="mt-2 h-16 w-full overflow-hidden rounded-lg bg-steel-50 p-1" title={locale === "en" ? `Scale: ${scale}% of the largest area` : `Skala: ${scale}% dari area terbesar`}>
-                        <div
-                          className={`h-full rounded-md ${fill > 80 ? "bg-rose-400" : fill > 50 ? "bg-amber-400" : "bg-ocean-400"}`}
-                          style={{ width: `${Math.max(8, scale)}%` }}
-                        />
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-                        <Badge tone={occupied > 0 ? "blue" : "gray"}>{locale === "en" ? `${occupied} occupied` : `${occupied} terisi`}</Badge>
-                        <Badge tone="teal">{locale === "en" ? `${vessels.length} vessels` : `${vessels.length} kapal`}</Badge>
-                        {conflicts > 0 && <Badge tone="red">{locale === "en" ? `${conflicts} conflict` : `${conflicts} bentrok`}</Badge>}
-                      </div>
-                      {vessels.length > 0 && (
-                        <p className="mt-1 truncate text-[11px] text-steel-500" title={vessels.join(", ")}>{vessels.join(" · ")}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </Card>
-        <Card>
-          <CardHeader title="Slot per Area" subtitle="Grup Area · Slot · Status · Kapal · Masuk–Keluar (ikut filter bar di bawah)" />
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 bg-surface">
-                <tr><th className="th">Area</th><th className="th">Slot</th><th className="th">Status</th><th className="th">Kapal</th><th className="th">Masuk–Keluar</th></tr>
-              </thead>
-              <tbody className="divide-y divide-steel-100">
-                {(() => {
-                  const groups = new Map<string, StoreItem[]>();
-                  for (const s of filteredSlots) {
-                    const key = slotAreaOf(s) || S.noArea;
-                    if (!groups.has(key)) groups.set(key, []);
-                    groups.get(key)!.push(s);
-                  }
-                  const entries = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-                  if (entries.length === 0) return <tr><td colSpan={5} className="td text-center text-steel-400">{S.emptySlots}</td></tr>;
-                  return entries.flatMap(([area, slots]) =>
-                    slots.map((s, i) => (
-                      <tr key={s.id} className="hover:bg-surface">
-                        {i === 0 ? <td className="td font-semibold text-navy-900" rowSpan={slots.length}>{area}</td> : null}
-                        <td className="td font-mono text-xs text-steel-600">{String(s.id)}</td>
-                        <td className="td"><StatusBadge status={slotStatus(s, data.projects)} /></td>
-                        <td className="td text-steel-600">{String(s.vessel ?? "-")}</td>
-                        <td className="td text-steel-600">{fmtRentang(dayToISO(Number(s.from)), dayToISO(Number(s.to)))}</td>
-                      </tr>
-                    ))
-                  );
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </Card>
         <Card>
           <CardHeader title={S.cardSlots} subtitle={S.cardSlotsSub} action={
             <div className="flex flex-wrap items-center gap-1.5">
               <select className="input text-xs" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} aria-label={S.filterAreaAria}>
-                <option value="Semua">{S.areaLabel}: Semua ({dockSlots.filter((s) => isActiveSlot(s)).length} aktif)</option>
-                {areaOptions.map((a) => <option key={a} value={a}>{a} ({activeByArea.get(a) ?? 0} aktif)</option>)}
+                <option value="Semua">{S.mapAreaPrefix.replace("{a}", S.mapAll)} ({S.mapActiveCount.replace("{n}", String(dockSlots.filter((s) => isActiveSlot(s)).length))})</option>
+                {areaOptions.map((a) => <option key={a} value={a}>{a} ({S.mapActiveCount.replace("{n}", String(activeByArea.get(a) ?? 0))})</option>)}
               </select>
               <select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
-                <option value="Semua">Positioning: Semua</option>
-                <option value="Masuk">↓ {S.posMasuk} (Terjadwal)</option>
-                <option value="Berjalan">● Berjalan (docking)</option>
-                <option value="Keluar">↑ {S.posKeluar} (Selesai)</option>
+                <option value="Semua">{S.mapPositionPrefix.replace("{a}", S.mapAll)}</option>
+                <option value="Masuk">↓ {S.posMasuk} ({S.mapStatusScheduled})</option>
+                <option value="Berjalan">● {S.mapStatusRunning}</option>
+                <option value="Keluar">↑ {S.posKeluar} ({S.mapStatusComplete})</option>
               </select>
               <select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
-                {STATUS_FILTERS.map((s) => <option key={s}>{s}</option>)}
+                {STATUS_FILTERS.map((s) => <option key={s} value={s}>{mappingStatusLabel(s)}</option>)}
               </select>
               <label className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface px-2 py-1 text-xs text-steel-600">
                 <input type="checkbox" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
-                Aktif saja
+                {S.mapActiveOnly}
               </label>
               {(areaFilter !== "Semua" || posFilter !== "Semua" || statusFilter !== "Semua" || showActiveOnly) && (
                 <button className="btn-secondary px-2 py-1 text-xs" onClick={() => { setAreaFilter("Semua"); setPosFilter("Semua"); setStatusFilter("Semua"); setShowActiveOnly(false); }}>
-                  Reset
+                  {S.mapReset}
                 </button>
               )}
             </div>
@@ -872,7 +742,7 @@ export default function Drydock() {
                           ? <Badge tone="gray">{S.maintBadge}</Badge>
                           : <Badge tone={s.priority === "Kritis" ? "red" : s.priority === "Tinggi" ? "amber" : "gray"}>{s.priority ?? "Normal"}</Badge>}
                       </td>
-                      <td className="td"><StatusBadge status={st} /></td>
+                      <td className="td"><StatusBadge status={st} label={mappingStatusLabel(st)} /></td>
                       <td className="td text-xs text-steel-600">{createdAtOf(s) !== null ? fmtTanggal(createdAtOf(s)) : <span className="text-steel-400">-</span>}</td>
                       <td className="td text-xs text-steel-600">{lastTouchedAt(s) !== null ? fmtTanggal(lastTouchedAt(s)) : <span className="text-steel-400">-</span>}</td>
                       <td className="td">
@@ -901,24 +771,27 @@ export default function Drydock() {
       <Card className="mt-5">
         <CardHeader
           title={S.mappingTitle}
-          subtitle={`${S.mappingSub} · Masuk (Terjadwal) → Berjalan → Keluar (Selesai)`}
-          action={<Badge tone="navy">{filteredSlots.length} slot{showActiveOnly ? " aktif" : ""}</Badge>}
+          subtitle={`${S.mappingSub} · ${S.posMasuk} (${S.mapStatusScheduled}) → ${S.mapStatusRunning} → ${S.posKeluar} (${S.mapStatusComplete})`}
+          action={<Badge tone="navy">{(showActiveOnly ? S.mapCountActive : S.mapCountSlots).replace("{n}", String(filteredSlots.length))}</Badge>}
         />
         <div className="px-4 pb-2">
           <FlowStrip
-            steps={["Masuk", "Berjalan", "Keluar"]}
-            current={posFilter === "Semua" ? "" : posFilter}
-            onSelect={(step) => setPosFilter((cur) => (cur === step ? "Semua" : step))}
-            ariaLabel="Alur positioning docking"
+            steps={mappingSteps.map((step) => step.label)}
+            current={mappingStepLabel(posFilter)}
+            onSelect={(step) => {
+              const selected = mappingSteps.find((option) => option.label === step);
+              if (selected) setPosFilter((cur) => (cur === selected.value ? "Semua" : selected.value));
+            }}
+            ariaLabel={S.mapFlowAria}
           />
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-steel-500">
-            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-steel-400" /> Terjadwal = ↓ Masuk</span>
-            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ocean-500" /> Berjalan = docking</span>
-            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Selesai = ↑ Keluar</span>
-            {areaFilter !== "Semua" && <Badge tone="teal">Area: {areaFilter}</Badge>}
-            {posFilter !== "Semua" && <Badge tone="navy">Positioning: {posFilter}</Badge>}
-            {statusFilter !== "Semua" && <Badge tone="slate">Status: {statusFilter}</Badge>}
-            {showActiveOnly && <Badge tone="blue">Slot aktif saja</Badge>}
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-steel-400" /> {S.mapLegendScheduled}</span>
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-ocean-500" /> {S.mapLegendRunning}</span>
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {S.mapLegendComplete}</span>
+            {areaFilter !== "Semua" && <Badge tone="teal">{S.mapAreaPrefix.replace("{a}", areaFilter)}</Badge>}
+            {posFilter !== "Semua" && <Badge tone="navy">{S.mapPositionPrefix.replace("{a}", mappingStepLabel(posFilter))}</Badge>}
+            {statusFilter !== "Semua" && <Badge tone="slate">{S.mapStatusPrefix.replace("{a}", mappingStatusLabel(statusFilter))}</Badge>}
+            {showActiveOnly && <Badge tone="blue">{S.mapActiveOnly}</Badge>}
           </div>
         </div>
         <div className="space-y-4 p-4 pt-2">
@@ -933,8 +806,8 @@ export default function Drydock() {
             if (entries.length === 0) return (
               <div className="rounded-xl border border-dashed border-steel-300 bg-surface p-6 text-center">
                 <p className="text-sm font-medium text-steel-600">{S.emptySlots}</p>
-                <p className="mt-1 text-xs text-steel-400">Coba ubah filter area / positioning / nonaktifkan &quot;Aktif saja&quot;.</p>
-                <button className="btn-secondary mt-2 text-xs" onClick={() => { setAreaFilter("Semua"); setPosFilter("Semua"); setStatusFilter("Semua"); setShowActiveOnly(false); }}>Tampilkan semua slot</button>
+                <p className="mt-1 text-xs text-steel-400">{S.mapEmptyHint}</p>
+                <button className="btn-secondary mt-2 text-xs" onClick={() => { setAreaFilter("Semua"); setPosFilter("Semua"); setStatusFilter("Semua"); setShowActiveOnly(false); }}>{S.mapShowAll}</button>
               </div>
             );
             return entries.map(([area, slots]) => {
@@ -946,10 +819,10 @@ export default function Drydock() {
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-navy-900">{area}</p>
                   <span className="flex flex-wrap gap-1">
-                    <Badge tone="gray">↓ {nMasuk} masuk</Badge>
-                    <Badge tone="blue">● {nJalan} berjalan</Badge>
-                    <Badge tone="green">↑ {nKeluar} keluar</Badge>
-                    <Badge tone="navy">{slots.length} slot</Badge>
+                    <Badge tone="gray">{S.mapCountIn.replace("{n}", String(nMasuk))}</Badge>
+                    <Badge tone="blue">{S.mapCountRunning.replace("{n}", String(nJalan))}</Badge>
+                    <Badge tone="green">{S.mapCountOut.replace("{n}", String(nKeluar))}</Badge>
+                    <Badge tone="navy">{S.mapCountSlots.replace("{n}", String(slots.length))}</Badge>
                   </span>
                 </div>
                 <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-steel-100">
@@ -967,16 +840,16 @@ export default function Drydock() {
                       key={s.id}
                       onClick={() => openSlot(s)}
                       className={`rounded-lg border bg-white px-3 py-2 text-left transition-colors hover:border-ocean-400 ${st === "Berjalan" ? "border-ocean-400" : "border-steel-200"}`}
-                      title={`${s.vessel} · ${s.project} · ${st}`}
+                      title={`${s.vessel} · ${s.project} · ${mappingStatusLabel(st)}`}
                     >
                       <p className="truncate text-sm font-semibold text-navy-900">{s.vessel}</p>
                       <p className="font-mono text-[11px] text-steel-500">{s.id} · {drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId}</p>
                       <p className="mt-1 text-[11px] text-steel-500">{fmtRentang(dayToISO(Number(s.from)), dayToISO(Number(s.to)))}</p>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
-                        <StatusBadge status={st} />
-                        {st === "Terjadwal" && <Badge tone="gray">↓ Masuk</Badge>}
-                        {st === "Berjalan" && <Badge tone="blue">● Docking</Badge>}
-                        {st === "Selesai" && <Badge tone="green">↑ Keluar</Badge>}
+                        <StatusBadge status={st} label={mappingStatusLabel(st)} />
+                        {st === "Terjadwal" && <Badge tone="gray">↓ {S.posMasuk}</Badge>}
+                        {st === "Berjalan" && <Badge tone="blue">{S.mapBadgeDocking}</Badge>}
+                        {st === "Selesai" && <Badge tone="green">↑ {S.posKeluar}</Badge>}
                       </span>
                     </button>
                     );
@@ -1132,7 +1005,7 @@ export default function Drydock() {
             <div className="flex justify-between"><dt className="text-steel-500">{S.colPriority}</dt><dd className="font-medium">{sel.priority ?? "Normal"}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblRate}</dt><dd className="font-medium">{S.perDay.replace("{a}", fmtRupiah(Number(sel.ratePerDay || 0)))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblCost}</dt><dd className="font-semibold text-navy-900">{S.durationDays.replace("{n}", String(slotDays(sel)))} × {fmtRupiah(Number(sel.ratePerDay || 0))} = {fmtRupiah(slotCost(sel))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects)} /></dd></div>
+            <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects)} label={mappingStatusLabel(slotStatus(sel, data.projects))} /></dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblConflict}</dt><dd>{conflict.some((c) => c.id === sel.id) ? <Badge tone="red">{S.conflictBadge}</Badge> : <Badge tone="green">{S.safeBadge}</Badge>}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblRecorded}</dt><dd className="font-medium">{fmtJumlah(Number(sel.powerKwh || 0))} kWh · {fmtJumlah(Number(sel.waterM3 || 0))} m³</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">Tagihan konsumsi</dt><dd className="font-medium text-right">{fmtJumlah(Number(sel.powerKwh || 0))} kWh × {fmtRupiah(tarifKwh)} + {fmtJumlah(Number(sel.waterM3 || 0))} m³ × {fmtRupiah(tarifAir)} = {fmtRupiah(utilCostOf(sel))}</dd></div>
