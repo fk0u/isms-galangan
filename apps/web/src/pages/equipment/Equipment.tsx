@@ -53,6 +53,7 @@ import { SearchSelect } from "../../components/SearchSelect";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
+import { findEquipmentNotificationTarget } from "../../utils/equipmentNotifications";
 import { exportExcel } from "../../utils/export";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
@@ -291,6 +292,7 @@ export default function EquipmentPage() {
     0,
   );
 const [eqQ, setEqQ] = useState("");
+const [pendingNotifIds, setPendingNotifIds] = useState<string[] | null>(null);
 const [utilQ, setUtilQ] = useState("");
   /* Enam tabel Equipment yang belum punya filter. Tabel Heatmap (hari x jam)
      sengaja tidak diberi search: bukan daftar, dan "cari" tidak punya
@@ -673,21 +675,20 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
   const regPager = usePager(regFiltered.length);
   const pickNotifIds = (ids: string[]): void => {
     if (ids.length === 0) return;
-    const idx = regSorted.findIndex((e) => ids.includes(String(e.id)));
-    if (idx >= 0) {
-      if (tab === "Register") { flashPick(flash, ids, idx, regPager.go, regPager.size); return; }
+    const target = findEquipmentNotificationTarget(regSorted, ids, regPager.size);
+    if (target) {
+      if (tab === "Register") { flashPick(flash, ids, target.index, regPager.go, regPager.size); return; }
       setTab("Register");
-      window.setTimeout(() => flashPick(flash, ids, idx, regPager.go, regPager.size), 250);
+      window.setTimeout(() => flashPick(flash, ids, target.index, regPager.go, regPager.size), 250);
       return;
     }
     const found = equipment.find((e) => ids.includes(String(e.id)));
     if (!found) { flashPick(flash, ids, -1, () => {}, 100); return; }
-    const fullSorted = sortRows(equipment, sort, equipmentSortValue);
-    const fullIdx = fullSorted.findIndex((e) => ids.includes(String(e.id)));
     setTab("Register");
+    setEqQ("");
     setEqStatus("Semua");
     setEqCat("Semua");
-    window.setTimeout(() => flashPick(flash, ids, fullIdx, regPager.go, regPager.size), 250);
+    setPendingNotifIds([...ids]);
   };
   const pickNotif = (rowId: string) => pickNotifIds([rowId]);
   useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds);
@@ -695,6 +696,16 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     regPager.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eqQ, eqStatus, eqCat, tab]);
+  useEffect(() => {
+    if (!pendingNotifIds) return;
+    /* Filter/search state is cleared in the same event as this pending target.
+       Resolve from this post-update render; regPager.go now clamps against the
+       unfiltered result count, and this effect runs after the reset effect. */
+    const target = findEquipmentNotificationTarget(regSorted, pendingNotifIds, regPager.size);
+    setPendingNotifIds(null);
+    flashPick(flash, pendingNotifIds, target?.index ?? -1, regPager.go, regPager.size);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingNotifIds]);
 
   /* ==== UBAH / HAPUS EQUIPMENT (tab Register) ====
    Satu form dipakai untuk create & update supaya aturan validasi kode/serial/
