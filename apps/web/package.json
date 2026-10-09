@@ -21,12 +21,13 @@
     "probe:cache": "vite build --ssr scripts/auth-cache-probe.ts --outDir node_modules/.cache/auth-cache-probe --emptyOutDir --logLevel error && node node_modules/.cache/auth-cache-probe/auth-cache-probe.js",
     "probe:shared-components": "vite build --ssr scripts/shared-components-probe.tsx --outDir node_modules/.cache/shared-components-probe --emptyOutDir --logLevel error && node node_modules/.cache/shared-components-probe/shared-components-probe.js",
     "probe:api-base": "vite build --ssr scripts/api-base-probe.ts --outDir node_modules/.cache/api-base-probe --emptyOutDir --logLevel error && node node_modules/.cache/api-base-probe/api-base-probe.js",
+    "probe:unit-conversion": "vite build --ssr scripts/unit-conversion-probe.ts --outDir node_modules/.cache/unit-conversion-probe --emptyOutDir --logLevel error && node node_modules/.cache/unit-conversion-probe/unit-conversion-probe.js",
     "probe:money": "vite build --ssr scripts/money-probe.ts --outDir node_modules/.cache/money-probe --emptyOutDir --logLevel error && node node_modules/.cache/money-probe/money-probe.js",
     "probe:project-add": "vite build --ssr scripts/project-add-probe.tsx --outDir node_modules/.cache/project-add-probe --emptyOutDir --logLevel error && node node_modules/.cache/project-add-probe/project-add-probe.js",
     "probe:progress": "vite build --ssr scripts/project-progress-probe.ts --outDir node_modules/.cache/project-progress-probe --emptyOutDir --logLevel error && node node_modules/.cache/project-progress-probe/project-progress-probe.js",
     "probe:wbs": "vite build --ssr scripts/wbs-flow-probe.ts --outDir node_modules/.cache/wbs-flow-probe --emptyOutDir --logLevel error && node node_modules/.cache/wbs-flow-probe/wbs-flow-probe.js",
     "lint": "eslint .",
-    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base"
+    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
