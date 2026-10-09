@@ -58,6 +58,12 @@ export function splitHighlight(highlight: string): string[] {
   )];
 }
 
+/** Tolak tab deep-link yang tidak dikenal oleh halaman tujuan. */
+export function allowlistedDeepLinkTab(tab: string, allowedTabs?: readonly string[]): string {
+  if (tab === "" || !allowedTabs) return tab;
+  return allowedTabs.includes(tab) ? tab : "";
+}
+
 /**
  * Jalankan resolve(ids) setelah tab deep-link terpasang.
  *
@@ -71,23 +77,25 @@ export function useDeepLinkTarget(
   setTab: (next: string) => void,
   resolve: (ids: string[]) => void,
   deps: unknown[] = [],
+  allowedTabs?: readonly string[],
 ): void {
   const doneKey = useRef<string>("");
   const resolveRef = useRef(resolve);
   resolveRef.current = resolve;
 
   useEffect(() => {
+    const targetTab = allowlistedDeepLinkTab(tab, allowedTabs);
     // Tab saja TANPA highlight juga sah: kartu Dashboard mengirim
     // ?tab=Kontrak Even ketika tidak ada baris yang bisa disorot (mis. semua
     // invoice sudah lunas). Dulu `if (!highlight) return` membuat klik pada
     // kartu bernomor "0" tidak melakukan apa-apa sama sekali - bahkan tab
     // tujuannya tidak dibuka.
-    if (!tab && !highlight) return;
-    const key = `${tab}|${highlight}`;
+    if (!targetTab && !highlight) return;
+    const key = `${targetTab}|${highlight}`;
     if (doneKey.current === key) return;
     doneKey.current = key;
 
-    if (tab) setTab(tab);
+    if (targetTab) setTab(targetTab);
     // Tick berikutnya sudah memakai tab baru, jadi resolve melihat state
     // yang benar dan tidak menimpanya kembali.
     const ids = splitHighlight(highlight);
