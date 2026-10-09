@@ -77,7 +77,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | | todo | |
 | F3-J-03 | RFQ: perbandingan harga & track record, tanpa tender | P1 | F3-J-procurement.md | | todo | |
 | F3-J-04 | Approval service oleh procurement | P0 | F3-J-procurement.md | | todo | |
-| F3-K-01 | Hapus tab Drawing | P1 | F3-K-qc-safety.md | agent | review | Branch `feat/F3-K-01-hide-drawing-tab`; check/build/UI lulus |
+| F3-K-01 | Hapus tab Drawing | P1 | F3-K-qc-safety.md | agent | review | Branch `feat/F3-K-01-hide-drawing-tab`; gate penuh + build web/API lulus; cek browser dilewati sesuai arahan; menunggu re-review independen Benson |
 | F3-K-02 | Mesin kuesioner & skoring | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-03 | Inspeksi per proyek | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-04 | HSE: kuesioner pekerja | P1 | F3-K-qc-safety.md | | todo | |
