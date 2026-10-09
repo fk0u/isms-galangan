@@ -21,10 +21,10 @@ import {
 } from "../utils/bannerDismiss";
 import { fmtTanggal } from "../utils/format";
 import {
+  bannerDisplay,
   buildModuleAlertItemsFor,
   countByLevel,
   groupByLevel,
-  sortByLevel,
   type AlertLevel,
   type ModuleAlertKey,
   type ModuleAlertItem,
@@ -140,7 +140,7 @@ export function flashPick(
   else flash.pick(list[0] as string, index, goToPage, size);
 }
 
-const RENDER_CAP = 200;
+const EMPTY_DISMISSED_LEVELS: readonly AlertLevel[] = [];
 
 /** Isi `{n}`/`{kritis}` pada kunci kamus. */
 function fill(tpl: string, vars: Record<string, string | number>): string {
@@ -250,25 +250,23 @@ export function AlertBannerView({
   dismiss?: BannerDismiss;
 }) {
   const { t } = useT();
-  const [min, setMin] = useState(false);
-  /* Buka/tutup per level, bukan satu sakelar global: tiga group dengan jumlah
-     berbeda tidak ikut buka-tutup bersama - membuka `info` yang panjang
-     sambil tetap menutup `kritis` yang pendek. */
-  const [openLevels, setOpenLevels] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState(false);
 
-  const dismissed = dismiss === undefined ? [] : [...dismiss.dismissed];
+  const dismissed = dismiss?.dismissed ?? EMPTY_DISMISSED_LEVELS;
   /* Level yang ditutup dihitung dari `items` (kondisi nyata), bukan dari
      tampilan: kalau kondisinya sudah selesai, tidak ada yang perlu
      "dibuka kembali". */
-  const shown = useMemo(() => visibleItems(items, dismissed), [items, dismissed.join(",")]);
+  const shown = useMemo(() => visibleItems(items, dismissed), [items, dismissed]);
   const hidden = items.length - shown.length;
+  const display = useMemo(() => bannerDisplay(shown, expanded), [shown, expanded]);
+  const visible = display.items;
 
-  /* Cap bawaan groupByLevel (5 item) tidak lagi dipakai di sini: tiap
-     kategori tertutup sampai diklik, jadi yang dirender sudah daftar penuh.
-     Cap utilitarian tetap ada karena alert-probe mengujinya langsung. */
+  /* Group hanya mengelompokkan tampilan; kuota tiga item diterapkan sebelum
+     pengelompokan supaya total preview tidak bertambah per severity. */
   const groups = useMemo(() => groupByLevel(shown, shown.length), [shown]);
   const counts = useMemo(() => countByLevel(shown), [shown]);
   const worst = groups[0];
+  const remaining = display.remaining;
 
   if (items.length === 0) return null;
 
@@ -307,103 +305,67 @@ export function AlertBannerView({
             {fill(t.notif.summaryCounts, counts)}
           </p>
           <p className="text-[11px] text-steel-500">{t.notif.jumpHint}</p>
-          {!min && (
-            <div className="mt-2 space-y-2">
-              {groups.map((g) => {
-                const st = LEVEL_STYLE[g.level];
-                const isOpen = openLevels[g.level] === true;
-                return (
-                  <div key={g.level} className="rounded-lg border border-steel-100">
-                    {/* Baris kategori = satu tombol penuh. Tertutup sampai
-                        diklik: chip + jumlah saja yang terlihat, tanpa daftar
-                        item. Dulunya `<ul>` selalu dirender dengan 5 item
-                        pertama, jadi "buka" hanya menukar pratinjau dengan
-                        daftar penuh - kelihatan selalu terbuka. */}
-                    <div className="flex items-center gap-1 pr-2">
+          <div className="mt-2 space-y-2">
+            {groups.map((g) => {
+              const groupItems = visible.filter((item) => item.level === g.level);
+              if (groupItems.length === 0) return null;
+              const st = LEVEL_STYLE[g.level];
+              return (
+                <div key={g.level} className="rounded-lg border border-steel-100 px-2.5 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${st.chip}`}>
+                      {t.notif[st.labelKey]}
+                    </span>
+                    <span className="min-w-0 truncate text-[11px] text-steel-500">
+                      {g.total} · {t.notif.title.toLowerCase()}
+                    </span>
+                    {dismiss !== undefined && (
                       <button
                         type="button"
-                        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors hover:bg-steel-50"
-                        aria-expanded={isOpen}
-                        onClick={() => setOpenLevels((prev) => ({ ...prev, [g.level]: !prev[g.level] }))}
+                        className="ml-auto shrink-0 rounded p-0.5 text-steel-400 hover:bg-steel-100 hover:text-steel-700"
+                        aria-label={fill(t.notif.dismissLevel, { level: t.notif[st.labelKey] })}
+                        title={fill(t.notif.dismissLevel, { level: t.notif[st.labelKey] })}
+                        onClick={() => dismiss.dismiss(g.level)}
                       >
-                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${st.chip}`}>
-                          {t.notif[st.labelKey]}
-                        </span>
-                        <span className="min-w-0 truncate text-[11px] text-steel-500">
-                          {g.total} · {t.notif.title.toLowerCase()}
-                        </span>
-                        <ChevronDown
-                          className={`ml-auto h-3.5 w-3.5 shrink-0 text-steel-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                          aria-hidden="true"
-                        />
+                        <X className="h-3.5 w-3.5" />
                       </button>
-                      {dismiss !== undefined && (
-                        <button
-                          type="button"
-                          className="shrink-0 rounded p-0.5 text-steel-400 hover:bg-steel-100 hover:text-steel-700"
-                          aria-label={fill(t.notif.dismissLevel, { level: t.notif[st.labelKey] })}
-                          title={fill(t.notif.dismissLevel, { level: t.notif[st.labelKey] })}
-                          onClick={() => dismiss.dismiss(g.level)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                    {isOpen && (
-                      <div className="px-2.5 pb-2">
-                        <ul className="space-y-1">
-                          {sortByLevel(shown.filter((i) => i.level === g.level)).slice(0, RENDER_CAP).map((a) => (
-                            <AlertRow key={a.id} item={a} style={st} onPick={onPick} />
-                          ))}
-                        </ul>
-                        <button
-                          type="button"
-                          className="mt-1 text-[11px] font-semibold text-ocean-600 hover:underline"
-                          onClick={() => setOpenLevels((prev) => ({ ...prev, [g.level]: false }))}
-                        >
-                          {t.notif.showLess}
-                        </button>
-                      </div>
                     )}
                   </div>
-                );
-              })}
-              {shown.length > RENDER_CAP && (
-                <p className="text-[11px] text-steel-500">
-                  {fill(t.notif.cappedNote ?? `Menampilkan ${RENDER_CAP} pertama - saring tabel untuk sisanya.`, { n: RENDER_CAP })}
-                </p>
-              )}
-              {dismiss !== undefined && hidden > 0 && (
-                <p className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-steel-500">
-                  <span>{fill(t.notif.dismissedNote, { n: hidden })}</span>
-                  {dismissed.map((lvl) => (
-                    <button
-                      key={lvl}
-                      className="font-semibold text-ocean-600 hover:underline"
-                      onClick={() => dismiss.restore(lvl)}
-                    >
-                      {fill(t.notif.restoreLevel, { level: t.notif[LEVEL_STYLE[lvl].labelKey] })}
-                    </button>
-                  ))}
-                </p>
-              )}
-            </div>
-          )}
+                  <ul className="mt-2 space-y-1">
+                    {groupItems.map((item) => (
+                      <AlertRow key={item.id} item={item} style={st} onPick={onPick} />
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+            {dismiss !== undefined && hidden > 0 && (
+              <p className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-steel-500">
+                <span>{fill(t.notif.dismissedNote, { n: hidden })}</span>
+                {dismissed.map((lvl) => (
+                  <button
+                    key={lvl}
+                    className="font-semibold text-ocean-600 hover:underline"
+                    onClick={() => dismiss.restore(lvl)}
+                  >
+                    {fill(t.notif.restoreLevel, { level: t.notif[LEVEL_STYLE[lvl].labelKey] })}
+                  </button>
+                ))}
+              </p>
+            )}
+            {remaining > 0 && (
+              <button
+                type="button"
+                className="flex min-h-10 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-ocean-600 hover:bg-steel-100"
+                onClick={() => setExpanded((value) => !value)}
+                aria-expanded={expanded}
+              >
+                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {expanded ? t.notif.hideAll : fill(t.notif.showAllCount, { n: remaining })}
+              </button>
+            )}
+          </div>
         </div>
-        <button
-          type="button"
-          className="flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-steel-600 hover:bg-steel-100"
-          onClick={() => setMin((v) => !v)}
-          aria-expanded={!min}
-        >
-          {min ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          {/* Tombol ini menutup/membuka SELURUH banner, bukan satu kategori.
-              Client meminta labelnya "Tampilkan semua" - bukan "Perkecil" -
-              karena yang mereka cari adalah jalan membuka semua notifikasi.
-              Dalam mode ini seluruh kategori sudah tertutup sampai diklik, jadi
-              "Tampilkan semua" memang menggambarkan aksinya dengan benar. */}
-          {min ? t.notif.showAll : t.notif.showLess}
-        </button>
       </div>
     </div>
   );
@@ -470,7 +432,6 @@ export function useModuleAlert(key: ModuleAlertKey): {
       saveModSeen(key, ids);
       notifyModSeen();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, items]);
 
   return { active, items, dismiss };

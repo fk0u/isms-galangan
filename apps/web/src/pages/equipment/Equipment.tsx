@@ -2466,8 +2466,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                                   <span
                                     className="flex h-7 items-center justify-center rounded text-[10px] font-semibold"
                                     style={{
-                                      background: v === 0 ? "#f1f5f9" : `rgba(11,58,99,${0.12 + (v / heatMax) * 0.78})`,
-                                      color: v === 0 ? "#cbd5e1" : v / heatMax > 0.55 ? "#ffffff" : "#0b3a63",
+                                      background: v === 0 ? "#F1F1F1" : `rgba(11,58,99,${0.12 + (v / heatMax) * 0.78})`,
+                                      color: v === 0 ? "#C7C7C7" : v / heatMax > 0.55 ? "#ffffff" : "#0A0A0A",
                                     }}
                                     title={`${row.day} ${h}:00 · ${v}`}
                                   >
@@ -2537,12 +2537,12 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                   <div className="h-52 p-4 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={hoursChart} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                        <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2e9ad4" stopOpacity={0.35} /><stop offset="95%" stopColor="#2e9ad4" stopOpacity={0} /></linearGradient></defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                        <XAxis dataKey="label" stroke="#8aa2b6" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                        <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}rb`} />
+                        <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#E61919" stopOpacity={0.35} /><stop offset="95%" stopColor="#E61919" stopOpacity={0} /></linearGradient></defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                        <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                        <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}rb`} />
                         <Tooltip content={<ChartTooltip formatter={(v) => `${fmtJumlah(Number(v))} jam`} />} />
-                        <Area type="monotone" dataKey="jam" stroke="#2e9ad4" strokeWidth={2.5} fill="url(#eqGrad)" />
+                        <Area type="monotone" dataKey="jam" stroke="#E61919" strokeWidth={2.5} fill="url(#eqGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>

@@ -26,8 +26,8 @@ export async function exportExcel(data: unknown[][], filename: string, sheetName
       if (typeof raw === "string") raw = sanitizeCell(raw);
       widths[cIdx] = Math.max(widths[cIdx] ?? 10, Math.min(String(raw ?? "").length + 2, 45));
       // Baris 0 = judul (besar, navy), baris 1 = header (tebal + fill).
-      if (r === 0) return { value: raw, fontWeight: "bold" as const, fontSize: 14, color: "#0B3A63" };
-      if (r === 1) return { value: raw, fontWeight: "bold" as const, backgroundColor: "#E9EFF4" };
+      if (r === 0) return { value: raw, fontWeight: "bold" as const, fontSize: 14, color: "#0A0A0A" };
+      if (r === 1) return { value: raw, fontWeight: "bold" as const, backgroundColor: "#EBEBEB" };
       return raw ?? null;
     })
   );
@@ -66,7 +66,7 @@ export async function exportExcelSheets(sheets: ExcelSheet[], filename: string):
         let raw = normalizeCell(c);
         if (typeof raw === "string") raw = sanitizeCell(raw);
         widths[cIdx] = Math.max(widths[cIdx] ?? 10, Math.min(String(raw ?? "").length + 2, 45));
-        if (r === 0) return { value: raw ?? "", fontWeight: "bold" as const, backgroundColor: "#E9EFF4" };
+        if (r === 0) return { value: raw ?? "", fontWeight: "bold" as const, backgroundColor: "#EBEBEB" };
         return raw ?? "";
       })
     );

@@ -243,7 +243,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       mv.style.width = "100%";
       mv.style.height = "340px";
       mv.style.display = "block";
-      mv.style.background = "#f8fafc";
+      mv.style.background = "#FFFFFF";
       const onLoad = () => setModelLoading(false);
       const onError = () => {
         setModelLoading(false);
