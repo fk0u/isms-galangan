@@ -65,7 +65,7 @@ const SKILL_BY_DEPT: Record<string, string[]> = {
   Support: ["Administrasi", "K3", "Logistik"],
 };
 
-const DEPT_COLORS = ["#0b3a63", "#2e9ad4", "#0d9488", "#8b5cf6", "#f59e0b", "#f43f5e", "#64748b"];
+const DEPT_COLORS = ["#0A0A0A", "#E61919", "#262626", "#474747", "#F04848", "#FF3B3B", "#666666"];
 
 interface EmpCert {
   name: string;

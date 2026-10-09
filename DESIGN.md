@@ -1,80 +1,101 @@
-# DESIGN.md — Design System & Aturan UI
+# DESIGN.md — Design System "Swiss Industrial"
 
-Sumber kebenaran visual: `apps/web/tailwind.config.js` (token), `apps/web/src/index.css` (kelas dasar), `apps/web/src/components/ui.tsx` (komponen). Dokumen ini menjelaskan **cara memakainya**. Jangan membuat token/komponen baru bila yang ada sudah cukup.
+Sumber kebenaran visual: `apps/web/tailwind.config.js` (token), `apps/web/src/index.css` (tema, kelas dasar, primitif), `apps/web/src/components/ui.tsx` (komponen). Keputusan: [ADR-0013](docs/architecture/adr/0013-design-system-swiss-industrial.md).
 
 ## Karakter
-Aplikasi kerja harian untuk galangan: **tenang, padat informasi, cepat dibaca di tablet bengkel**. Navy maritim sebagai warna merek, steel netral untuk teks & garis, ocean untuk aksen interaktif. Hindari dekorasi yang tidak membawa informasi.
+Manual teknik galangan, bukan aplikasi konsumen: **putih netral, tinta hitam, satu aksen merah**. Struktur terlihat dari garis, bukan dari bayangan. Tipografi adalah dekorasi utama: judul tebal raksasa huruf kapital, metadata monospace kecil berjarak lebar. Tidak ada radius, gradien, bayangan lembut, atau blur.
 
-## Token
+Aturan emas: **merah hanya untuk hal yang butuh perhatian atau aksi utama.** Bila semua merah, tidak ada yang merah.
 
-### Warna
-| Token | Hex | Pemakaian |
+## Token warna
+
+| Peran | Token Tailwind | Hex | Pemakaian |
+|---|---|---|---|
+| Latar halaman | `bg-white` | `#FFFFFF` | Semua halaman |
+| Panel sekunder / hover | `bg-surface`, `bg-steel-50/100` | `#F7F7F7` / `#F8F8F8` / `#F1F1F1` | Footer modal, hover baris, panel info |
+| Tinta (teks utama, garis struktural, tombol utama) | `navy-900` / `ink` | `#0A0A0A` | Judul, border tebal, tombol primer, item nav aktif |
+| Tinta sekunder | `navy-700/800`, `steel-700` | `#1C1C1C` / `#141414` / `#262626` | Teks badan |
+| Abu teks | `steel-600/500/400` | `#474747` / `#666666` / `#8F8F8F` | Label, metadata, placeholder |
+| Garis | `steel-300/200` | `#C7C7C7` / `#E2E2E2` | Border kartu, divider tabel |
+| **Aksen** | `ocean-500` / `accent` / `rose-500` | **`#E61919`** | CTA utama, penanda aktif, peringatan & bahaya |
+| Aksen gelap / terang | `ocean-600/700`, `ocean-300/100/50` | `#C41212` `#A30F0F` / `#FF8A8A` `#FFE3E3` `#FFF3F3` | Hover, teks di latar terang, latar peringatan |
+
+Kompatibilitas: nama token lama tetap ada supaya halaman tidak perlu ditulis ulang — `navy` = tinta, `steel` = abu, `ocean`/`rose` = merah, `teal`/`violet` = netral gelap. Palet default Tailwind dipetakan ulang di `@theme` (`index.css`): hijau/emerald → tinta, amber/oranye/kuning → merah muda, biru/ungu/cyan/slate → abu. **Untuk kode baru, pakai nama semantik: `ink`, `accent`, `steel-*`, `surface`.**
+
+### Status → visual
+| Arti | Badge (`StatusBadge`) | Contoh status |
 |---|---|---|
-| `navy-900` | `#0b3a63` | Judul, teks penting |
-| `navy-700` | `#12598f` | Tombol utama |
-| `navy-600/800` | `#166aa5` / `#0e4a7d` | Hover/aktif |
-| `steel-700` | `#3d5468` | Teks badan (default `body`) |
-| `steel-500/600` | `#5a7a94` / `#52697c` | Teks sekunder, label |
-| `steel-200/300` | `#d7e1ea` / `#bcccd8` | Border, divider |
-| `steel-100` | `#e9eff4` | Latar hover |
-| `surface` | `#f4f7fb` | Latar halaman |
-| `ocean-400/500` | `#5cb1de` / `#2e9ad4` | Fokus, link, aksen |
-| `teal-*` | — | Status sukses/selesai |
-| `rose-*` | — | Bahaya, kritis, **Perhatian khusus** (MON-03) |
-| `amber`/`orange` (Tailwind default) | — | Peringatan, tertunda |
-| `violet-*` | — | Kategori/aksen sekunder |
+| Selesai / OK | Tinta solid, teks putih | Selesai, Disetujui, Lunas, Tersedia |
+| Berjalan | Garis tinta, teks tinta | Dalam Proses, Dikirim, Terpakai |
+| Peringatan | Garis merah, teks merah | Diajukan, Menunggu, Menipis, Tertunda |
+| Bahaya | Merah solid, teks putih | Terlambat, Kritis, Ditolak, Kedaluwarsa |
+| Netral | Abu | Draft, Batal, Ditutup |
+Jangan pernah menyampaikan status lewat warna saja — badge selalu berisi teks.
 
-Status → warna (konsisten di `StatusBadge`, `i18n/status.ts`):
-Selesai/Disetujui = teal · Dalam proses/Berjalan = ocean · Tertunda/Menunggu = amber · Terlambat/Kritis/Ditolak = rose · Draft/Batal = steel.
+## Tipografi
+| Peran | Kelas | Spesifikasi |
+|---|---|---|
+| Makro (judul halaman, angka hero) | `.display` | Inter Black 900, HURUF KAPITAL, tracking −0.04em, leading 0.92, `clamp()` untuk ukuran |
+| Judul kartu/modal | `font-extrabold uppercase` | Inter 800, 13–18px |
+| Badan | default | Inter 400/500, 14px |
+| Mikro (label, metadata, nav, tombol, header tabel) | `.mono-label`, `.label`, `.th`, `.btn` | JetBrains Mono 600, 10–11.5px, HURUF KAPITAL, tracking 0.06–0.12em |
+| Angka | `tabular-nums` | Wajib di tabel & KPI |
+Font dimuat dari Google Fonts di `apps/web/index.html`.
 
-### Tipografi
-- `font-sans` **Inter** — semua teks UI. `font-display` **Sora** — judul halaman & angka KPI. `font-mono` **JetBrains Mono** — kode, nomor dokumen bila perlu.
-- Skala: judul halaman `text-xl font-semibold`, judul card `text-sm font-semibold`, teks `text-sm`, label `text-xs font-medium` (`.label`), header tabel `.th` (11px uppercase).
-- Angka di tabel: rata kanan, `tabular-nums`.
+## Bentuk, garis, ruang
+- **Radius 0 di mana pun** (termasuk `rounded-full` — status dot & avatar berbentuk kotak).
+- **Tanpa bayangan dan gradien.** Kedalaman = garis: `border` 1px `steel-300` untuk kompartemen biasa, `border-2 navy-900` untuk struktur utama (sidebar, top bar, header halaman, modal, form login).
+- **Bar aksen**: 3px merah di atas kartu/modal penting (`.rule-accent`, bar atas `KpiCard`), 3px kiri untuk baris yang ditandai (`notif-hl`).
+- Spasi kelipatan 4px. Padding kartu `p-4`/`p-5`.
 
-### Bentuk & elevasi
-- Radius: card `rounded-2xl`, tombol & input `rounded-xl`, badge `rounded-full`.
-- Shadow: `shadow-soft` (default card), `shadow-lift` (hover/aksi), `shadow-glow` (CTA gradient). Jangan menumpuk shadow lain.
-- Spasi: kelipatan 4px (Tailwind). Padding card `p-4`/`p-5`; jarak antar section `gap-4`/`gap-6`.
-
-## Kelas dasar (`index.css`)
-`.card`, `.btn-primary`, `.btn-primary-gradient`, `.btn-secondary`, `.btn-danger`, `.input`, `.label`, `.th`. Gunakan ini, bukan menulis ulang utility panjang.
+## Primitif (`index.css`)
+| Kelas | Fungsi |
+|---|---|
+| `.card` | Kompartemen putih bergaris 1px |
+| `.btn-primary` | Hitam → merah saat hover (aksi utama per layar, maks 1) |
+| `.btn-primary-gradient` | Merah → hitam saat hover (CTA paling penting, mis. "Proyek baru", "Sign in") |
+| `.btn-secondary` | Garis tinta, terbalik saat hover |
+| `.btn-danger` | Garis merah, merah solid saat hover |
+| `.input` | Garis abu, fokus = garis tinta + garis bawah merah 2px |
+| `.label`, `.mono-label` | Mikro-tipografi |
+| `.th`, `.td` | Header tabel bergaris tinta 2px; sel bergaris abu |
+| `.display` | Makro-tipografi |
+| `.rule-accent`, `.rule-ink` | Garis struktural 3px merah / 2px tinta |
+| `.grid-ruled` | Grid dengan garis 1px presisi (gap 1px + latar garis) |
+| `.hazard-stripe` | Pita peringatan diagonal merah-putih — hemat, hanya dekorasi struktural |
 
 ## Komponen (`components/ui.tsx`)
-| Kebutuhan | Pakai |
+| Komponen | Tampilan |
 |---|---|
-| Kerangka halaman | `PageHeader`, `Card`, `CardHeader`, `Tabs` |
-| Angka ringkas | `KpiCard` (revisi PRJ-04: varian gradient tanpa sparkline) |
-| Status | `Badge`, `StatusBadge` |
-| Form | `Field`, `FormGrid`, `MoneyInput` (**wajib untuk rupiah**), `NumInput`, `TimeInput` (24 jam), `EntityPicker`/`SearchSelect` (pilihan data), `FileUploadButton` |
-| Tabel | `SortTh`, `SearchBox`, `usePager` + `<Pager>` (F3-A-03), `RowAction` |
-| Dialog | `Modal`, `ConfirmModal` |
-| Feedback | `toast()` + `Toaster`, `EmptyState`, `Skeleton`, `AsyncButton` |
-| Grafik | Recharts + `ChartTooltip`, `Donut`, `RadialGauge`, `ProgressBar` |
-| Animasi masuk | `Stagger`, `StaggerItem` (framer-motion) |
-Komponen bersama baru (F3-A-04): `SearchSelect`, `DateInput`, `PhotoUploader`, `ChangeHistory`, `StatusChips`, `Pager` — letakkan di `components/`, satu file per komponen.
+| `PageHeader` | Kicker mono `■ ISMS / MODUL`, judul `.display`, garis tinta 2px di bawah; aksi membungkus di mobile |
+| `KpiCard` | Bar atas 3px (merah untuk nada `rose`/`amber`), label mono, angka Inter Black 30px; **tanpa grafik** (revisi klien PRJ-04) |
+| `Card` + `CardHeader` | Judul huruf kapital tebal, subjudul mono, garis bawah |
+| `Badge` / `StatusBadge` | Kotak mono huruf kapital, lihat tabel status |
+| `Tabs` | Tab mono huruf kapital; aktif = blok tinta + bar merah bawah |
+| `Modal` | Border tinta 2px, bar merah atas, judul huruf kapital, footer abu |
+| `ProgressBar` | Batang 6px tanpa radius; merah untuk nada peringatan |
+| `EmptyState` | `[ JUDUL ]` mono |
+| `Avatar` | Kotak tinta, inisial mono |
+| Komponen bersama F3-A-04 | `SearchSelect`, `DateInput`, `TimeInput24`, `PhotoUploader`, `ChangeHistory`, `StatusChips` — ikuti primitif di atas |
+
+## Shell
+- **Sidebar** putih, garis kanan tinta 2px. Grup = label mono. Item aktif = blok tinta, teks putih, bar kiri merah 3px. Badge notifikasi = kotak merah.
+- **Top bar** putih solid, garis bawah tinta 2px, breadcrumb mono.
+- **Login** = poster Swiss: tipografi makro "COMMAND YOUR SHIPYARD.", tanda registrasi (+) di sudut, grid statistik bergaris, pita hazard; form di kompartemen bergaris tinta.
+
+## Grafik (Recharts)
+Seri utama tinta `#0A0A0A`, seri pembanding merah `#E61919`, seri lain abu (`#8F8F8F`, `#474747`) dan merah muda `#FF8A8A`. Garis lurus (`type="linear"`), tanpa isian gradien tebal, grid abu `#E2E2E2`.
 
 ## Pola halaman
-- **Daftar:** `PageHeader` (judul + aksi utama) → baris KPI (maks 4) → banner peringatan (maks 3 item, PRJ-01) → toolbar (search, filter chip) → tabel → `Pager`.
-- **Tabel:** kolom pertama **No** (PRJ-02); aksi di kolom terakhir sebagai tombol "Detail" + menu `RowAction`; default 25 baris; data terbaru di atas kecuali dinyatakan lain (SDM: data baru di bawah, HR-01).
-- **Detail:** header entitas + status + aksi → `Tabs`. Tombol **Kembali** kembali ke halaman asal (MON-04).
-- **Form:** `Modal` untuk ≤ 8 field; lebih dari itu bertahap (step) atau halaman. Field wajib bertanda `*`. Pilihan data dari koleksi lain **selalu** `SearchSelect`, bukan teks bebas. Tanggal pakai `DateInput`.
-- **Filter:** deretan chip yang muncul dengan animasi slide (PRJ-05, SUB-03), bukan popup.
-- **Sidebar:** menu aktif disorot (MON-05).
+Sama seperti sebelumnya (tabel kolom No pertama, 25 baris, aksi di kolom terakhir, filter chip, tombol Kembali ke asal, menu aktif tersorot), dengan bahasa visual di atas.
 
 ## Gerak
-framer-motion sudah terpasang. Durasi 150–250ms, easing `easeOut`. Animasi hanya untuk: masuk/keluar panel & modal, chip filter, perubahan tab. Hormati `prefers-reduced-motion`. Jangan menganimasikan angka tabel.
+150–200ms, `easeOut`, hanya untuk masuk/keluar panel/modal dan perubahan tab. Tidak ada efek melayang (hover = garis menebal/warna terbalik). Hormati `prefers-reduced-motion`.
 
-## Bahasa & copy
-- Indonesia baku tapi ringkas; istilah domain tetap (BoQ, WBS, PO, NCR). EN wajib tersedia.
-- Tombol = kata kerja ("Simpan", "Ajukan", "Setujui"). Pesan error menjelaskan apa yang harus dilakukan.
-- Semua string di `src/i18n/` — dilarang hardcode.
-
-## Aksesibilitas & responsif
-- Kontras teks ≥ 4.5:1 (steel-500 ke bawah hanya untuk teks sekunder di latar putih).
-- Target sentuh ≥ 40px untuk aksi di tablet. Fokus terlihat (`focus:ring-ocean-400`).
-- Breakpoint: tabel lebar boleh scroll horizontal di dalam card; layout tidak boleh scroll horizontal di level halaman. Uji di 768px (tablet) dan 390px.
-- Ikon dari `lucide-react`, selalu dengan label atau `aria-label`.
+## Aksesibilitas
+- Kontras: tinta di putih 19:1; merah `#E61919` di putih 4.6:1 (lolos AA untuk teks normal); teks putih di merah 4.6:1. Teks merah kecil (< 12px) pakai `ocean-600` `#C41212`.
+- Fokus: outline merah 2px offset 2px di semua elemen fokus (`:focus-visible`).
+- Target sentuh ≥ 40px; tidak ada scroll horizontal tingkat halaman di 375px (diverifikasi 20 halaman).
 
 ## Dokumen PDF
-Dirender di server (`services/api/src/pdf/`). Kop surat dari pengaturan perusahaan; font Noto Sans (R-02). Tata letak tabel memakai blok yang ada di `pdf/blocks.ts`.
+Dirender di server (`services/api/src/pdf/`), belum mengikuti sistem ini — tindak lanjut terpisah.

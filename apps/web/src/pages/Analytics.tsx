@@ -257,7 +257,7 @@ export default function Analytics() {
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
     value: data.projects.filter((p) => p.type === t).length,
-    color: ["#0b3a63", "#2e9ad4", "#22c55e"][i],
+    color: ["#0A0A0A", "#E61919", "#262626"][i],
   }));
 
   /* === SERI GRAFIK RENTANG BULAN ===
@@ -405,7 +405,7 @@ export default function Analytics() {
       const k = String(p.type ?? "-").trim() || "-";
       m.set(k, (m.get(k) ?? 0) + 1);
     }
-    const C = ["#0b3a63", "#2e9ad4", "#22c55e", "#f59e0b", "#8b5cf6"];
+    const C = ["#0A0A0A", "#E61919", "#262626", "#F04848", "#474747"];
     return [...m.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([name, value], i) => ({ name, value, color: C[i % C.length] }));
@@ -424,7 +424,7 @@ export default function Analytics() {
       const b = branchOfProject.get(String(i.project ?? "")) ?? "-";
       m.set(b, (m.get(b) ?? 0) + numOf(i.amount));
     }
-    const C = ["#0b3a63", "#2e9ad4", "#0d9488", "#f59e0b", "#8b5cf6", "#f43f5e"];
+    const C = ["#0A0A0A", "#E61919", "#262626", "#F04848", "#474747", "#FF3B3B"];
     return [...m.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([name, value], i) => ({ name, value, color: C[i % C.length] }));
@@ -926,13 +926,13 @@ const exportPdfReport = async () => {
                 <div id="chart-rev" className="h-60 p-4 pt-0 sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={revDisp} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="bln" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="bln" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="revenue" name={S.legendRevenue} fill="#0b3a63" radius={[4, 4, 0, 0]} isAnimationActive />
-                      <Bar dataKey="cost" name={S.legendCost} fill="#8cc9e8" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Bar dataKey="revenue" name={S.legendRevenue} fill="#0A0A0A" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Bar dataKey="cost" name={S.legendCost} fill="#FF8A8A" radius={[4, 4, 0, 0]} isAnimationActive />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -967,24 +967,24 @@ const exportPdfReport = async () => {
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={marDisp} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" />
-                      <XAxis dataKey="bln" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis domain={[15, 35]} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" />
+                      <XAxis dataKey="bln" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis domain={[15, 35]} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `${v}%`} />} />
-                      <Line type="monotone" dataKey="margin" name={S.legendMargin} stroke="#0d9488" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
+                      <Line type="monotone" dataKey="margin" name={S.legendMargin} stroke="#262626" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={inspDisp} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" />
-                      <XAxis dataKey="bln" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" />
+                      <XAxis dataKey="bln" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Area type="monotone" dataKey="inspeksi" name={S.legendInspection} stroke="#2e9ad4" fill="#8cc9e8" fillOpacity={0.4} isAnimationActive />
-                      <Line type="monotone" dataKey="lulus" name={S.legendPassed} stroke="#1f9d55" strokeWidth={2} dot={false} isAnimationActive />
+                      <Area type="monotone" dataKey="inspeksi" name={S.legendInspection} stroke="#E61919" fill="#FF8A8A" fillOpacity={0.4} isAnimationActive />
+                      <Line type="monotone" dataKey="lulus" name={S.legendPassed} stroke="#262626" strokeWidth={2} dot={false} isAnimationActive />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1068,14 +1068,14 @@ const exportPdfReport = async () => {
                 <div id="chart-real" className="h-64 p-4 pt-0 sm:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={monthlyReal} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="bln" tick={{ fontSize: 11 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} stroke="#8aa2b6" axisLine={false} tickLine={false} unit=" M" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="bln" tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} unit=" M" />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="revenue" name={locale === "en" ? "Revenue" : "Pendapatan"} fill="#0b3a63" radius={[4, 4, 0, 0]} isAnimationActive />
-                      <Bar dataKey="ap" name="AP" fill="#8cc9e8" radius={[4, 4, 0, 0]} isAnimationActive />
-                      <Line type="monotone" dataKey="cash" name={locale === "en" ? "Cash in" : "Kas masuk"} stroke="#0d9488" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
+                      <Bar dataKey="revenue" name={locale === "en" ? "Revenue" : "Pendapatan"} fill="#0A0A0A" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Bar dataKey="ap" name="AP" fill="#FF8A8A" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Line type="monotone" dataKey="cash" name={locale === "en" ? "Cash in" : "Kas masuk"} stroke="#262626" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1138,12 +1138,12 @@ const exportPdfReport = async () => {
                 <div className="h-64 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={variance} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" />
-                      <XAxis dataKey="n" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" />
+                      <XAxis dataKey="n" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => S.millionSuffix.replace("{n}", String(v))} />} />
-                      <ReferenceLine y={0} stroke="#dc2626" />
-                      <Bar dataKey="v" fill="#2e9ad4" radius={[4, 4, 0, 0]} />
+                      <ReferenceLine y={0} stroke="#C41212" />
+                      <Bar dataKey="v" fill="#E61919" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1155,14 +1155,14 @@ const exportPdfReport = async () => {
                 <div className="h-64 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={pareto} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="kiri" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="kanan" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="kiri" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis yAxisId="kanan" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v, n) => (n === "kum" ? `${v}%` : `${v} kejadian`)} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar yAxisId="kiri" dataKey="count" name={S.legendIncidents} fill="#0b3a63" radius={[4, 4, 0, 0]} />
-                      <Line yAxisId="kanan" type="monotone" dataKey="kum" name={S.legendCumulative} stroke="#e11d48" strokeWidth={2} dot={{ r: 3 }} />
+                      <Bar yAxisId="kiri" dataKey="count" name={S.legendIncidents} fill="#0A0A0A" radius={[4, 4, 0, 0]} />
+                      <Line yAxisId="kanan" type="monotone" dataKey="kum" name={S.legendCumulative} stroke="#E61919" strokeWidth={2} dot={{ r: 3 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1397,15 +1397,15 @@ const exportPdfReport = async () => {
               <div id="chart-forecast" className="h-60 p-4 pt-0 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={forecastAdj} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" />
-                    <XAxis dataKey="name" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                    <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" />
+                    <XAxis dataKey="name" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                    <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Area type="monotone" dataKey="high" name={S.limitTop} stroke="none" fill="#8cc9e8" fillOpacity={0.35} connectNulls />
+                    <Area type="monotone" dataKey="high" name={S.limitTop} stroke="none" fill="#FF8A8A" fillOpacity={0.35} connectNulls />
                     <Area type="monotone" dataKey="low" name={S.limitBottom} stroke="none" fill="#ffffff" fillOpacity={0.9} connectNulls />
-                    <Line type="monotone" dataKey="actual" name={S.legendActual} stroke="#dc2626" strokeWidth={2} connectNulls dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="forecast" name={S.legendForecast} stroke="#2e9ad4" strokeDasharray="6 3" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="actual" name={S.legendActual} stroke="#C41212" strokeWidth={2} connectNulls dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="forecast" name={S.legendForecast} stroke="#E61919" strokeDasharray="6 3" strokeWidth={2} dot={{ r: 4 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -1451,11 +1451,11 @@ const exportPdfReport = async () => {
                 <div id="chart-profittype" className="h-60 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={profitByType} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Bar dataKey="profit" name={S.profitLabel} fill="#0b3a63" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="profit" name={S.profitLabel} fill="#0A0A0A" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1465,11 +1465,11 @@ const exportPdfReport = async () => {
                 <div id="chart-profitbranch" className="h-60 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={profitByBranch} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Bar dataKey="profit" name={S.profitLabel} fill="#2e9ad4" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="profit" name={S.profitLabel} fill="#E61919" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

@@ -24,7 +24,7 @@ docs/
 |---|---|
 | [overview.md](architecture/overview.md) | Arsitektur sekarang vs target |
 | [security-plan.md](architecture/security-plan.md) | Perbaikan temuan audit K/T/S/R |
-| [adr/](architecture/adr/README.md) | 12 Architecture Decision Records + template |
+| [adr/](architecture/adr/README.md) | 13 Architecture Decision Records + template |
 
 ## Planning
 | Dokumen | Isi |

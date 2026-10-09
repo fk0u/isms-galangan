@@ -38,7 +38,7 @@ const ncrTone: Record<string, "red" | "amber" | "blue" | "green"> = {
 
 const NCR_FLOW = ["Terbuka", "Dalam Perbaikan", "Tertutup"];
 const ROOT_CAUSES = ["Manusia", "Metode", "Material", "Mesin", "Lingkungan"];
-const NCR_COLORS = ["#f59e0b", "#2e9ad4", "#8b5cf6", "#0d9488", "#f43f5e", "#64748b"];
+const NCR_COLORS = ["#F04848", "#E61919", "#474747", "#262626", "#FF3B3B", "#666666"];
 const HOLD_TYPES = ["Hold", "Witness", "Review"];
 const NDE_METHODS = ["UT", "RT", "MT", "PT"];
 const DRAW_FLOW = ["Diajukan", "Disetujui", "Distribusi"];
@@ -1289,12 +1289,12 @@ export default function QCSafety() {
                   <div className="h-44 p-4 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={itpChart} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                        <XAxis dataKey="label" stroke="#8aa2b6" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                        <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                        <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                        <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="inspeksi" name="Inspeksi" fill="#8cc9e8" radius={[4, 4, 0, 0]} barSize={18} />
-                        <Line type="monotone" dataKey="lulus" name="Lulus" stroke="#1f9d55" strokeWidth={2.5} dot={{ r: 3 }} />
+                        <Bar dataKey="inspeksi" name="Inspeksi" fill="#FF8A8A" radius={[4, 4, 0, 0]} barSize={18} />
+                        <Line type="monotone" dataKey="lulus" name="Lulus" stroke="#262626" strokeWidth={2.5} dot={{ r: 3 }} />
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>
