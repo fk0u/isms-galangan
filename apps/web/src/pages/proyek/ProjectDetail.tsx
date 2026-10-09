@@ -137,7 +137,7 @@ export default function ProjectDetail() {
   useModuleSync(PD_COLS);
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
-  const [tab, setTab] = useState(() => tabParams.get("tab") ?? "Ringkasan");
+  const [tab, setTab] = useState(() => tabParams.get("tab") || "Ringkasan");
   useEffect(() => {
     const wanted = tabParams.get("tab");
     if (wanted) setTab(wanted);

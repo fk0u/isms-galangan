@@ -335,7 +335,7 @@ export default function Procurement() {
 
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
-  const [tab, setTab] = useState(() => tabParams.get("tab") ?? "PR");
+  const [tab, setTab] = useState(() => tabParams.get("tab") || "PR");
   useEffect(() => {
     const wanted = tabParams.get("tab");
     if (wanted) setTab(wanted);

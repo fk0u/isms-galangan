@@ -599,23 +599,27 @@ const payload = {
                 {["Mechanical", "Hydraulic", "Electrical", "Insulation", "Paint", "Rigging", "Piping"].map((c) => <option key={c} value={c}>{spCatLabel(c)}</option>)}
               </select>
             </Field>
-            <Field label={S.statusLabel}>
-              <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as "Akan" | "Sedang" | "Selesai" })}>
-                {["Akan", "Sedang", "Selesai"].map((s) => <option key={s}>{s}</option>)}
-              </select>
-            </Field>
+            {/* Mode inventori: status, biaya, dan tanggal pakai dihitung dari
+                hasil pemenuhan stok, jadi tidak ditawarkan sebagai input. */}
+            {!fromInventory && (
+              <Field label={S.statusLabel}>
+                <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as "Akan" | "Sedang" | "Selesai" })}>
+                  {["Akan", "Sedang", "Selesai"].map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </Field>
+            )}
           </FormGrid>
           <FormGrid>
-            <Field label={S.spsCost}><MoneyInput className="input" value={form.cost} onChange={(v) => setForm({ ...form, cost: v })} /></Field>
+            {!fromInventory && <Field label={S.spsCost}><MoneyInput className="input" value={form.cost} onChange={(v) => setForm({ ...form, cost: v })} /></Field>}
             <Field label={S.spsNotes}><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={S.spsNotesPh} /></Field>
           </FormGrid>
           <FormGrid>
             <Field label={S.spsTech}><input className="input" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} placeholder={S.spsTechPh} /></Field>
-            <Field label={S.spsUsedDate}><input type="date" className="input" value={form.usedDate} onChange={(e) => setForm({ ...form, usedDate: e.target.value })} /></Field>
+            {!fromInventory && <Field label={S.spsUsedDate}><input type="date" className="input" value={form.usedDate} onChange={(e) => setForm({ ...form, usedDate: e.target.value })} /></Field>}
           </FormGrid>
           <Field label={S.spsWarranty}><input type="date" className="input" value={form.warrantyUntil} onChange={(e) => setForm({ ...form, warrantyUntil: e.target.value })} /></Field>
           {/* D13: referensi opsional ke PO yang sudah Disetujui. */}
-          {projectId && (() => {
+          {projectId && !fromInventory && (() => {
             const pos = (data.purchaseOrders ?? []).filter((po) => String(po.project ?? "") === projectId && String(po.status ?? "") === "Disetujui");
             if (pos.length === 0) return null;
             return (

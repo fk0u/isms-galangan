@@ -392,7 +392,7 @@ export default function Inventory() {
   const pdfDoc = usePdfDoc();
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
-  const [tab, setTab] = useState(() => tabParams.get("tab") ?? "Katalog");
+  const [tab, setTab] = useState(() => tabParams.get("tab") || "Katalog");
   useEffect(() => {
     const wanted = tabParams.get("tab");
     if (wanted) setTab(wanted);

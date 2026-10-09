@@ -75,6 +75,18 @@ export default function DemoGuide() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  /* Fokus pindah ke panel saat dibuka (panel ada sebelum FAB di DOM, jadi Tab
+     dari FAB akan melewatinya) dan kembali ke elemen asal saat ditutup. */
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => panelRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(raf);
+      if (prev && document.contains(prev)) prev.focus();
+    };
+  }, [open]);
+
   /* Klik di luar panel menutupnya (tombol pemicu dikecualikan). */
   useEffect(() => {
     if (!open) return;
@@ -125,9 +137,10 @@ export default function DemoGuide() {
             ref={panelRef}
             role="dialog"
             aria-label={T.title}
+            tabIndex={-1}
             {...panelMotion}
             style={{ transformOrigin: "bottom right" }}
-            className="pointer-events-auto flex max-h-[min(78vh,640px)] w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift sm:w-[380px]"
+            className="pointer-events-auto flex max-h-[min(78vh,640px)] outline-none w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift sm:w-[380px]"
           >
             <div className="flex items-start justify-between gap-3 border-b border-steel-100 px-4 py-3.5">
               <div className="min-w-0">

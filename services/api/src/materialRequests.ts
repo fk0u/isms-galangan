@@ -93,11 +93,12 @@ export async function requestMaterial(input: MaterialRequestInput): Promise<Mate
       /* Kurangi stok dengan syarat stok belum berubah sejak dibaca: pada MySQL
          dua permintaan bersamaan tidak bisa sama-sama lolos. */
       const nextItem = { ...item, stock: stock - issued };
-      await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
+      const res = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
         JSON.stringify(nextItem), now, row.id, row.updated_at,
       ]);
-      const check = await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [row.id]);
-      if (check[0]?.updated_at !== now) {
+      /* Pakai jumlah baris terubah, bukan membaca ulang updated_at: dua
+         permintaan di milidetik yang sama punya `now` identik. */
+      if (res.changes !== 1) {
         throw new MaterialError(409, "Stok berubah oleh permintaan lain — coba lagi", "STALE");
       }
       movementId = newId("M");

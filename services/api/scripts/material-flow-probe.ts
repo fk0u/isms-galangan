@@ -61,17 +61,18 @@ async function main(): Promise<void> {
   const missing = await call(dir, { itemId: "STK-TIDAK-ADA", qty: 1 });
   assert("item tidak ada → 404", missing.statusCode === 404, missing.body);
 
+  // Viewer wajib ada di seed: tanpa itu aturan 403 tidak teruji sama sekali.
   const viewer = await tokenFor("viewer");
-  if (viewer) {
-    const denied = await call(viewer, { itemId, qty: 1 });
-    assert("viewer tidak boleh meminta barang → 403", denied.statusCode === 403, denied.body);
-  }
+  if (!viewer) throw new Error("Butuh akun viewer hasil seed (npm run seed)");
+  const denied = await call(viewer, { itemId, qty: 1 });
+  assert("viewer tidak boleh meminta barang → 403", denied.statusCode === 403, denied.body);
 
   // Bersihkan data uji.
   await exec("DELETE FROM movements WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM requisitions WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM spareparts WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
+  await exec("DELETE FROM audit_log WHERE action = 'material_request' AND diff LIKE ?", [`%${itemId}%`]);
 
   console.log(`\n${passed}/${total} pemeriksaan alur material lolos.`);
   await app.close();

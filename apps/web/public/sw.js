@@ -30,8 +30,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put("/", copy));
+          // Hanya shell yang sukses; halaman error 5xx tidak boleh jadi fallback offline.
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(VERSION).then((c) => c.put("/", copy));
+          }
           return res;
         })
         .catch(() => caches.match("/").then((r) => r || Response.error())),
