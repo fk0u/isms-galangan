@@ -145,7 +145,6 @@ export const en: Dict = {
     dueLabel: "Due",
     moreHidden: "+{n} more",
     persistsNote: "This notification stays until the condition is resolved.",
-    cappedNote: "Showing first 200 - filter the table for the rest.",
     jumpHint: "click to jump to its row",
     empty: "No notifications",
     emptyHint: "Nothing matches the filter - all clear.",

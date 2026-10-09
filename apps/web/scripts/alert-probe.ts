@@ -14,6 +14,7 @@
 
    Jalankan: npm run probe:alert */
 import {
+  bannerDisplay,
   bannerPreview,
   BANNER_PREVIEW_LIMIT,
   buildModuleAlertItemsFor,
@@ -289,6 +290,27 @@ const levelOf = (items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG
     preview.map((item) => item.id).join(","),
   );
   assert(bannerPreview(items.slice(0, 2)).length === 2, "daftar pendek tidak menambah item kosong");
+}
+
+/* ---- ekspansi >200 alert harus menampilkan tepat semua yang dijanjikan ---- */
+{
+  const items: ModuleAlertItem[] = Array.from({ length: 250 }, (_, i) => ({
+    id: `bulk-${i}`,
+    rowId: `bulk-${i}`,
+    label: `alert ${i}`,
+    detail: "",
+    level: "info",
+  }));
+  const collapsed = bannerDisplay(items, false);
+  const expanded = bannerDisplay(items, true);
+  assert(collapsed.items.length === 3, "250 alert: mode ringkas menampilkan tiga item");
+  assert(collapsed.remaining === 247, "250 alert: label Tampilkan semua menjanjikan 247 item", String(collapsed.remaining));
+  assert(expanded.items.length === 250, "250 alert: ekspansi menampilkan semua item, bukan terhenti di 200", String(expanded.items.length));
+  assert(expanded.remaining === 247, "250 alert: jumlah pada label tetap konsisten saat expanded", String(expanded.remaining));
+  assert(
+    new Set(expanded.items.map((item) => item.id)).size === 250,
+    "250 alert: ekspansi tidak menggandakan atau menghilangkan item",
+  );
 }
 
 /* ---- since/due rusak dibuang, bukan ditampilkan salah ---- */

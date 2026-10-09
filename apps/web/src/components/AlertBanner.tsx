@@ -21,11 +21,10 @@ import {
 } from "../utils/bannerDismiss";
 import { fmtTanggal } from "../utils/format";
 import {
-  bannerPreview,
+  bannerDisplay,
   buildModuleAlertItemsFor,
   countByLevel,
   groupByLevel,
-  sortByLevel,
   type AlertLevel,
   type ModuleAlertKey,
   type ModuleAlertItem,
@@ -141,7 +140,6 @@ export function flashPick(
   else flash.pick(list[0] as string, index, goToPage, size);
 }
 
-const RENDER_CAP = 200;
 const EMPTY_DISMISSED_LEVELS: readonly AlertLevel[] = [];
 
 /** Isi `{n}`/`{kritis}` pada kunci kamus. */
@@ -260,19 +258,15 @@ export function AlertBannerView({
      "dibuka kembali". */
   const shown = useMemo(() => visibleItems(items, dismissed), [items, dismissed]);
   const hidden = items.length - shown.length;
-  const preview = useMemo(() => bannerPreview(shown), [shown]);
-  const ordered = useMemo(() => sortByLevel(shown), [shown]);
-  const visible = useMemo(
-    () => expanded ? ordered.slice(0, RENDER_CAP) : preview,
-    [expanded, ordered, preview],
-  );
+  const display = useMemo(() => bannerDisplay(shown, expanded), [shown, expanded]);
+  const visible = display.items;
 
   /* Group hanya mengelompokkan tampilan; kuota tiga item diterapkan sebelum
      pengelompokan supaya total preview tidak bertambah per severity. */
   const groups = useMemo(() => groupByLevel(shown, shown.length), [shown]);
   const counts = useMemo(() => countByLevel(shown), [shown]);
   const worst = groups[0];
-  const remaining = shown.length - preview.length;
+  const remaining = display.remaining;
 
   if (items.length === 0) return null;
 
@@ -345,11 +339,6 @@ export function AlertBannerView({
                 </div>
               );
             })}
-            {expanded && shown.length > RENDER_CAP && (
-              <p className="text-[11px] text-steel-500">
-                {fill(t.notif.cappedNote ?? `Menampilkan ${RENDER_CAP} pertama - saring tabel untuk sisanya.`, { n: RENDER_CAP })}
-              </p>
-            )}
             {dismiss !== undefined && hidden > 0 && (
               <p className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px] text-steel-500">
                 <span>{fill(t.notif.dismissedNote, { n: hidden })}</span>

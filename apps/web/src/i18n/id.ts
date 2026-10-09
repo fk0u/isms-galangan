@@ -146,7 +146,6 @@ export const id: Dict = {
     dueLabel: "Tenggat",
     moreHidden: "+{n} lainnya",
     persistsNote: "Notifikasi ini akan tetap muncul sampai kondisi sudah selesai.",
-    cappedNote: "Menampilkan 200 pertama - saring tabel untuk sisanya.",
     jumpHint: "klik untuk lompat ke barisnya",
     empty: "Tidak ada notifikasi",
     emptyHint: "Tidak ada yang cocok dengan filter - semua aman.",
