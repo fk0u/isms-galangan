@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -332,7 +333,13 @@ export default function Procurement() {
     return maxSeq(nums, /^(\d+)\//) + 1;
   };
 
-  const [tab, setTab] = useState("PR");
+  /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
+  const [tabParams] = useSearchParams();
+  const [tab, setTab] = useState(() => tabParams.get("tab") ?? "PR");
+  useEffect(() => {
+    const wanted = tabParams.get("tab");
+    if (wanted) setTab(wanted);
+  }, [tabParams]);
   const [pq, setPq] = useState("");
   const [pStatus, setPStatus] = useState("Semua");
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });

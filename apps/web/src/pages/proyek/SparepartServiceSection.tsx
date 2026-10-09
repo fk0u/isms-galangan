@@ -9,6 +9,9 @@ import { Plus, Wrench, Package, Box, RotateCcw, FileDown } from "lucide-react";
 import { exportExcel, fmtRupiah } from "../../utils/export";
 import { parseRupiah } from "../../utils/format";
 import type { ServiceRecord, Sparepart } from "../../data";
+import { SearchSelect } from "../../components/SearchSelect";
+import { useMaterialRequest } from "../../data/useMaterialRequest";
+import { useAuth } from "../../auth/auth";
 
 export type SparepartServiceView = "3d" | "service" | "sparepart" | "all";
 
@@ -36,11 +39,13 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
   const { locale } = useT();
   const S = n_prj[locale];
   const { data, add, update, remove, log } = useStore();
+  const requestMaterial = useMaterialRequest();
+  const { user } = useAuth();
   const [spTab, setSpTab] = useState("Semua");
   const [showAdd, setShowAdd] = useState(false);
   const [editSp, setEditSp] = useState<SpExt | null>(null);
   const [delSp, setDelSp] = useState<SpExt | null>(null);
-  const [form, setForm] = useState({ name: "", partNumber: "", category: "Mechanical", status: "Akan" as "Akan" | "Sedang" | "Selesai", cost: "", notes: "", technician: "", usedDate: "", warrantyUntil: "", poRef: "" });
+  const [form, setForm] = useState({ name: "", partNumber: "", category: "Mechanical", status: "Akan" as "Akan" | "Sedang" | "Selesai", cost: "", notes: "", technician: "", usedDate: "", warrantyUntil: "", poRef: "", invItemId: "", qty: "1" });
 
   const [showAddSvc, setShowAddSvc] = useState(false);
   const [editSvc, setEditSvc] = useState<SvcExt | null>(null);
@@ -83,6 +88,8 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       usedDate: String(sp.usedDate ?? ""),
       warrantyUntil: String(sp.warrantyUntil ?? ""),
       poRef: String(sp.poRef ?? ""),
+      invItemId: String((sp as { inventoryItemId?: unknown }).inventoryItemId ?? ""),
+      qty: String((sp as { qty?: unknown }).qty ?? "1"),
     });
   };
 
@@ -103,7 +110,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
     });
   };
 
-  const EMPTY_SP = { name: "", partNumber: "", category: "Mechanical", status: "Akan" as "Akan" | "Sedang" | "Selesai", cost: "", notes: "", technician: "", usedDate: "", warrantyUntil: "", poRef: "" };
+  const EMPTY_SP = { name: "", partNumber: "", category: "Mechanical", status: "Akan" as "Akan" | "Sedang" | "Selesai", cost: "", notes: "", technician: "", usedDate: "", warrantyUntil: "", poRef: "", invItemId: "", qty: "1" };
   const EMPTY_SVC = { type: "Repair" as ServiceRecord["type"], description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled" as ServiceRecord["status"], boqRef: "" };
 
   /* Tombol "Tambah" harus membuka form KOSONG. Versi lama memakai state form
@@ -268,7 +275,60 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
     };
   }, [modelSrc, show3d, modelKey, vesselId]);
 
+  /* PRJ-27/PRJ-30: sparepart BARU untuk proyek wajib diambil dari inventori.
+     Server memutuskan barang keluar vs Purchase Request (alur material). */
+  const fromInventory = !editSp && !!projectId;
+  const invOptions = useMemo(
+    () => (data.inventory ?? []).map((i) => ({
+      value: String(i.id),
+      label: String(i.name ?? i.id),
+      subLabel: S.spsStockLabel.replace("{stock}", String(Number(i.stock ?? 0))).replace("{unit}", String(i.unit ?? "pcs")),
+    })),
+    [data.inventory, S.spsStockLabel],
+  );
+  const pickedInv = (data.inventory ?? []).find((i) => String(i.id) === form.invItemId);
+  const pickedStock = Math.max(0, Number(pickedInv?.stock ?? 0) || 0);
+  const pickedUnit = String(pickedInv?.unit ?? "pcs");
+  const wantQty = Number(form.qty);
+  const stockHint = !pickedInv || !(wantQty > 0)
+    ? null
+    : pickedStock >= wantQty
+      ? { tone: "ok" as const, text: S.spsStockOk.replace("{stock}", String(pickedStock)).replace("{unit}", pickedUnit) }
+      : pickedStock > 0
+        ? { tone: "warn" as const, text: S.spsStockShort.replace("{stock}", String(pickedStock)).replace(/\{unit\}/g, pickedUnit).replace("{short}", String(wantQty - pickedStock)) }
+        : { tone: "warn" as const, text: S.spsStockNone.replace("{qty}", String(wantQty)).replace("{unit}", pickedUnit) };
+
+  const saveFromInventory = async () => {
+    if (!projectId) return;
+    if (!form.invItemId) { toast(S.spsPickInv, "info"); return; }
+    if (!(wantQty > 0)) { toast(S.spsQtyInvalid, "info"); return; }
+    try {
+      const res = await requestMaterial({
+        projectId, itemId: form.invItemId, qty: wantQty, purpose: "sparepart", actor: user?.name ?? "Pengguna",
+        sparepart: {
+          category: form.category,
+          technician: form.technician.trim() || "-",
+          notes: form.notes.trim(),
+          warrantyUntil: form.warrantyUntil || "-",
+        },
+      });
+      toast(
+        res.status === "Dari stok"
+          ? S.spsReqDone.replace("{item}", res.itemName).replace("{n}", String(res.issued))
+          : res.status === "Sebagian"
+            ? S.spsReqPartial.replace("{issued}", String(res.issued)).replace("{short}", String(res.shortage)).replace("{pr}", res.requisitionId ?? "-")
+            : S.spsReqPo.replace("{pr}", res.requisitionId ?? "-"),
+        res.status === "Dari stok" ? "success" : "info",
+      );
+      setShowAdd(false);
+      setForm(EMPTY_SP);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : S.saveFail, "info");
+    }
+  };
+
   const saveSparepart = async () => {
+    if (fromInventory) { await saveFromInventory(); return; }
     if (!form.name.trim()) { toast(S.spsToastSpName, "info"); return; }
     /* Halaman Kapal mengirim vesselId tanpa projectId. Versi lama menolak, jadi
        tombol "Tambah" di tab Service/Sparepart kapal SELALU gagal. Cukup salah
@@ -504,8 +564,35 @@ const payload = {
         title={editSp ? (locale === "en" ? `Edit sparepart ${editSp.id}` : `Ubah sparepart ${editSp.id}`) : S.spsSpModal}
         footer={<><button className="btn-secondary" onClick={() => { setShowAdd(false); setEditSp(null); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveSparepart}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
+          {fromInventory ? (
+            <>
+              <p className="rounded-lg bg-surface px-3 py-2 text-[13px] text-steel-600">{S.spsFlowHint}</p>
+              <FormGrid>
+                <Field label={S.spsFromInv}>
+                  <SearchSelect
+                    value={form.invItemId}
+                    onChange={(v) => setForm({ ...form, invItemId: v })}
+                    options={invOptions}
+                    placeholder={S.spsFromInvPh}
+                    ariaLabel={S.spsFromInv}
+                  />
+                </Field>
+                <Field label={S.spsQty}>
+                  <input type="number" min={1} className="input" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} />
+                </Field>
+              </FormGrid>
+              {stockHint && (
+                <p className={`rounded-lg px-3 py-2 text-[13px] ring-1 ring-inset ${stockHint.tone === "ok" ? "bg-emerald-50 text-emerald-700 ring-emerald-600/15" : "bg-amber-50 text-amber-700 ring-amber-600/20"}`}>
+                  {stockHint.text}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
           <Field label={S.spsSpName}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.spsSpNamePh} /></Field>
           <Field label={S.spsPartNo}><input className="input" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} /></Field>
+            </>
+          )}
           <FormGrid>
             <Field label={S.boqCategory}>
               <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>

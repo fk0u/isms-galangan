@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../auth/auth";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
 import {
   Card,
@@ -29,7 +29,8 @@ import {
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useBusy } from "../../components/ui";
-import BoQSection from "./BoQSection";
+import BoqDocsSection from "./BoqDocsSection";
+import { useMaterialRequest } from "../../data/useMaterialRequest";
 import ReportSection from "./ReportSection";
 import SparepartServiceSection from "./SparepartServiceSection";
 import { useStore } from "../../data/store";
@@ -115,6 +116,7 @@ export default function ProjectDetail() {
   const S = n_prj[locale];
   const { id } = useParams();
   const { data, update, add, remove, wbsFor, setWbs, teamFor, setTeam, log } = useStore();
+  const requestMaterial = useMaterialRequest();
   /* D3: inventory diakses supaya material WBS bisa terhubung ke stok.
      Saat save WBS task dengan material terpilih, stok berkurang dan
      movement dicatat otomatis. */
@@ -133,7 +135,13 @@ export default function ProjectDetail() {
   const project = data.projects.find((p) => p.id === id) ?? data.projects[0];
   /* Fetch per-batch halaman (pengganti resync penuh): proyek + dokumen. */
   useModuleSync(PD_COLS);
-  const [tab, setTab] = useState("Ringkasan");
+  /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
+  const [tabParams] = useSearchParams();
+  const [tab, setTab] = useState(() => tabParams.get("tab") ?? "Ringkasan");
+  useEffect(() => {
+    const wanted = tabParams.get("tab");
+    if (wanted) setTab(wanted);
+  }, [tabParams]);
 
   const [showScope, setShowScope] = useState(false);
   const [scopeVal, setScopeVal] = useState({ service: "", lokasi: "", deskripsi: "" });
@@ -956,46 +964,18 @@ const createWarranty = async (wbsTask?: string) => {
     try {
       await setWbs(pid, updated);
       await update("projects", pid, { progress: calcProjectProgress(updated, projectBoq) });
-      /* D3 & F3-D: material terpilih → kurangi stok inventory + catat movement.
-         Bila stok tidak cukup, keluarkan yang ada dan buat requisition (PR) untuk kekurangannya. */
+      /* D3 & F3-D-01: material terpilih → alur permintaan material (server
+         transaksional bila tersambung): stok cukup = barang keluar, kurang =
+         keluar sebagian + PR, habis = PR. Stok tidak pernah minus. */
       if (wbsUpdateForm.material) {
         const invItem = invList.find((inv) => String(inv.name ?? "") === wbsUpdateForm.material);
         if (invItem) {
-          const curStock = Number(invItem.stock ?? 0);
-          if (curStock >= qtyNum) {
-            await update("inventory", String(invItem.id), { stock: curStock - qtyNum });
-            await add("movements", {
-              item: String(invItem.name ?? ""), itemId: String(invItem.id),
-              type: "Pengeluaran", qty: qtyNum, by: sessionName ? `${sessionName} (WBS: ${wbsTaskUpdate})` : `WBS: ${wbsTaskUpdate}`,
-              date: todayISO(), tone: "out",
-              ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
-            }, { action: "pemakaian material WBS", module: "Proyek" });
-          } else {
-            // Alur F3-D bila stok kurang:
-            const available = Math.max(0, curStock);
-            const diff = qtyNum - available;
-            if (available > 0) {
-              await update("inventory", String(invItem.id), { stock: 0 });
-              await add("movements", {
-                item: String(invItem.name ?? ""), itemId: String(invItem.id),
-                type: "Pengeluaran", qty: available, by: sessionName ? `${sessionName} (WBS: ${wbsTaskUpdate})` : `WBS: ${wbsTaskUpdate}`,
-                date: todayISO(), tone: "out",
-                ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
-              }, { action: "pemakaian sebagian material WBS", module: "Proyek" });
-            }
-            await add("requisitions", {
-              projectId: pid,
-              item: String(invItem.name ?? ""),
-              itemId: String(invItem.id),
-              qty: diff,
-              unit: String(invItem.unit ?? "pcs"),
-              status: "Diajukan",
-              date: todayISO(),
-              requestedBy: sessionName || "WBS",
-              note: `Permintaan material WBS: ${wbsTaskUpdate} (stok tersedia ${available}, butuh ${qtyNum})`,
-              ref: { projectId: pid, wbsId: wbsTaskUpdate, wbsTask: wbsTaskUpdate },
-            }, { action: "permintaan material WBS kekurangan stok", module: "Proyek" });
-            toast(S.detMaterialStockLess.replace("{stock}", String(available)).replace("{diff}", String(diff)), "info");
+          const res = await requestMaterial({
+            projectId: pid, itemId: String(invItem.id), qty: qtyNum, purpose: "wbs",
+            wbsTask: wbsTaskUpdate, actor: sessionName || "WBS",
+          });
+          if (res.shortage > 0) {
+            toast(S.detMaterialStockLess.replace("{stock}", String(res.issued)).replace("{diff}", String(res.shortage)), "info");
           }
         }
       }
@@ -2191,7 +2171,7 @@ const createWarranty = async (wbsTask?: string) => {
             </Card>
             </div>
           )}
-          {tab === "BoQ" && <BoQSection projectId={pid} />}
+          {tab === "BoQ" && <BoqDocsSection projectId={pid} />}
           {tab === "Dokumen & Laporan" && <div className="report-print mt-6" style={{ breakInside: "auto" }}><ReportSection projectId={pid} /></div>}
           {tab === "3D Viewer" && getSetting(data, "SHOW_3D_PROJECT", 0) === 1 && <SparepartServiceSection projectId={pid} view="3d" />}
           {tab === "Service" && <SparepartServiceSection projectId={pid} view="service" />}
