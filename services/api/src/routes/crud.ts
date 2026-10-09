@@ -235,6 +235,99 @@ function toJson(row: Row): { id: string; branch: string; data: unknown; updated_
   return { id: row.id, branch: row.branch, data, updated_at: row.updated_at };
 }
 
+const DRYDOCK_DAY_MS = 86_400_000;
+interface DrydockRange { start: number; end: number }
+
+function drydockDay(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const time = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 10) !== value) return null;
+  return Math.floor(time / DRYDOCK_DAY_MS);
+}
+
+function witaTodayDay(): number {
+  const parts = new Map(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  return drydockDay(`${parts.get("year")}-${parts.get("month")}-${parts.get("day")}`) ?? Math.floor(Date.now() / DRYDOCK_DAY_MS);
+}
+
+function drydockDateError(data: Record<string, unknown>): string | null {
+  const hasStart = typeof data.startDate === "string" && data.startDate.trim() !== "";
+  const hasEnd = typeof data.endDate === "string" && data.endDate.trim() !== "";
+  if (!hasStart && !hasEnd) return null;
+  if (!hasStart || !hasEnd) return "Tanggal mulai dan tanggal selesai harus diisi bersama";
+  const start = drydockDay(data.startDate);
+  const end = drydockDay(data.endDate);
+  if (start === null || end === null) return "Tanggal drydock harus memakai format YYYY-MM-DD yang valid";
+  if (end < start) return "Tanggal selesai harus sama dengan atau setelah tanggal mulai";
+  return null;
+}
+
+/* Data lama hanya punya indeks hari relatif, jadi rentangnya dipetakan dari
+   hari WITA saat ini; booking baru memakai tanggal ISO yang stabil. */
+function drydockRange(data: Record<string, unknown>, today: number): DrydockRange | null {
+  const start = drydockDay(data.startDate);
+  const end = drydockDay(data.endDate);
+  if (start !== null && end !== null) return { start, end: end + 1 };
+  const from = Number(data.from);
+  const to = Number(data.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return null;
+  return { start: today + from, end: today + to };
+}
+
+function normalizeDrydockOffsets(data: Record<string, unknown>): Record<string, unknown> {
+  const start = drydockDay(data.startDate);
+  const end = drydockDay(data.endDate);
+  if (start === null || end === null) return data;
+  const today = witaTodayDay();
+  return { ...data, from: start - today, to: end - today + 1 };
+}
+
+async function drydockOverlapError(
+  data: Record<string, unknown>,
+  branch: string,
+  selfId: string | null,
+): Promise<string | null> {
+  const dockId = String(data.dockId ?? "").trim();
+  const today = witaTodayDay();
+  const requested = drydockRange(data, today);
+  if (!dockId || !requested) return null;
+  const rows = await q<Row>("SELECT id, branch, data, updated_at FROM dockSlots WHERE branch = ?", [branch]);
+  for (const row of rows) {
+    if (row.id === selfId) continue;
+    const parsed = toJson(row).data;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) continue;
+    const existing = parsed as Record<string, unknown>;
+    if (String(existing.dockId ?? "").trim() !== dockId) continue;
+    const occupied = drydockRange(existing, today);
+    if (occupied && requested.start < occupied.end && occupied.start < requested.end) {
+      return `Rentang tanggal bertumpang tindih dengan slot ${row.id} pada fasilitas ${dockId}`;
+    }
+  }
+  return null;
+}
+
+async function persistDrydockWithOverlap(
+  data: Record<string, unknown>,
+  branch: string,
+  selfId: string | null,
+  persist: () => Promise<void>,
+): Promise<string | null> {
+  return withTx(async () => {
+    const dockId = String(data.dockId ?? "").trim();
+    /* SQLite memakai BEGIN IMMEDIATE dari withTx; MySQL mengunci baris fasilitas
+       agar dua booking serentak pada dock yang sama diperiksa berurutan. */
+    if (getDialect() === "mysql" && dockId !== "") {
+      await q<{ id: string }>("SELECT id FROM drydocks WHERE id = ? FOR UPDATE", [dockId]);
+    }
+    const overlapError = await drydockOverlapError(data, branch, selfId);
+    if (overlapError) return overlapError;
+    await persist();
+    return null;
+  });
+}
+
 function newId(table: string): string {
   const prefix = PREFIX[table] ?? "X";
   return `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
@@ -358,6 +451,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
+    const drydockDateValidation = table === "dockSlots" ? drydockDateError(rowData) : null;
+    if (drydockDateValidation) return reply.status(422).send(fail(drydockDateValidation, "UNPROCESSABLE"));
+    if (table === "dockSlots") rowData = normalizeDrydockOffsets(rowData);
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {
       const fieldError = await checkUniqueField(
@@ -367,7 +463,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const refError = await checkRefs(table, rowData as Record<string, unknown>);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
-    await persistWithAudit(table, () => exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
+    const persist = () => persistWithAudit(table, () => exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
       id, branch, JSON.stringify(rowData), now,
     ]), {
       actor: requestActor(req),
@@ -377,6 +473,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       diff: { branch, data: rowData },
       ip: requestIp(req),
     });
+    if (table === "dockSlots") {
+      const overlapError = await persistDrydockWithOverlap(rowData, branch, null, persist);
+      if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
+    } else {
+      await persist();
+    }
     return reply.status(201).send(ok({ id, branch, data: rowData, updated_at: now }));
   });
 
@@ -405,7 +507,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
         return {};
       }
     })();
-    const merged = parsed.data.data ? { ...oldData, ...parsed.data.data } : oldData;
+    let merged = parsed.data.data ? { ...oldData, ...parsed.data.data } : oldData;
     // ADR-0003 Jalur A: PATCH tidak boleh mengubah branch kecuali direktur/developer
     const requestedBranch = parsed.data.branch !== undefined ? parsed.data.branch.trim() : undefined;
     if (requestedBranch !== undefined && requestedBranch !== current.branch) {
@@ -423,6 +525,11 @@ export function registerCrud(app: FastifyInstance, table: string): void {
        jadi tidak valid - padahal POST kekotak yang sama ditolak 422. */
     const domainError = assertDomain(table, merged);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
+    const changedDates = parsed.data.data !== undefined && (
+      Object.hasOwn(parsed.data.data, "startDate") || Object.hasOwn(parsed.data.data, "endDate")
+    );
+    const drydockDateValidation = table === "dockSlots" && changedDates ? drydockDateError(merged) : null;
+    if (drydockDateValidation) return reply.status(422).send(fail(drydockDateValidation, "UNPROCESSABLE"));
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {
       const fieldError = await checkUniqueField(
@@ -434,7 +541,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchLock) return reply.status(409).send(fail(patchLock, "LOCKED"));
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
-    await persistWithAudit(table, () => exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
+    const changedRange = table === "dockSlots" && (
+      (parsed.data.data !== undefined && ["dockId", "from", "to", "startDate", "endDate"]
+        .some((field) => Object.hasOwn(parsed.data.data as Record<string, unknown>, field))) ||
+      branch !== current.branch
+    );
+    if (changedRange) merged = normalizeDrydockOffsets(merged);
+    const persist = () => persistWithAudit(table, () => exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
       branch, JSON.stringify(merged), now, id,
     ]), {
       actor: requestActor(req),
@@ -447,6 +560,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       },
       ip: requestIp(req),
     });
+    if (changedRange) {
+      const overlapError = await persistDrydockWithOverlap(merged, branch, id, persist);
+      if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
+    } else {
+      await persist();
+    }
     return ok({ id, branch, data: merged, updated_at: now });
   });
 

@@ -47,10 +47,45 @@ const STATUS_FILTERS = ["Semua", "Terjadwal", "Berjalan", "Selesai", "Maintenanc
 const UNDOCK_ITEMS = ["Lambung bersih", "Katup laut tertutup", "Anoda terpasang", "Propeller terpasang", "Sea trial siap"];
 const MONTH_NAMES = MONTH_ID;
 
+function drydockTodayISO(): string {
+  const parts = new Map(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  return `${parts.get("year")}-${parts.get("month")}-${parts.get("day")}`;
+}
+
 function dayToISO(day: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + day);
-  return d.toISOString().slice(0, 10);
+  const today = isoDayNumber(drydockTodayISO());
+  return today === null ? "" : new Date((today + day) * 86_400_000).toISOString().slice(0, 10);
+}
+
+function isoDayNumber(value: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const time = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 10) !== value) return null;
+  return Math.floor(time / 86_400_000);
+}
+
+function isCalendarDate(value: unknown): value is string {
+  return typeof value === "string" && isoDayNumber(value) !== null;
+}
+
+/* Form memakai tanggal inklusif; indeks hari lama tetap disimpan eksklusif agar
+   perhitungan Gantt, kapasitas, dan biaya yang sudah ada tetap kompatibel. */
+function bookingDateOffsets(startDate: string, endDate: string): { from: number; to: number } | null {
+  const start = isoDayNumber(startDate);
+  const end = isoDayNumber(endDate);
+  const today = isoDayNumber(drydockTodayISO());
+  if (start === null || end === null || today === null || end < start) return null;
+  return { from: start - today, to: end - today + 1 };
+}
+
+function newBookingForm() {
+  const startDate = drydockTodayISO();
+  return {
+    dockId: "DD-1", project: "", priority: "Normal", ratePerDay: "0",
+    dsRef: "", vessel2: "", startDate, endDate: dayToISO(29), area: "",
+  };
 }
 
 function dockLengthM(capacity: unknown): number | null {
@@ -138,7 +173,8 @@ export default function Drydock() {
   const [selected, setSelected] = useState<string | null>(null);
 
   const [showBook, setShowBook] = useState(false);
-  const [bookForm, setBookForm] = useState({ dockId: "DD-1", project: "", from: "1", to: "30", priority: "Normal", ratePerDay: "0", dsRef: "", vessel2: "", startDate: "", area: "" });
+  const [bookForm, setBookForm] = useState(() => newBookingForm());
+  const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate);
   const [bookError, setBookError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<StoreItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<StoreItem | null>(null);
@@ -188,6 +224,10 @@ export default function Drydock() {
     ...drydocks.map((d) => String(d.area ?? "").trim()).filter(Boolean),
     ...dockSlots.map((s) => String(s.area ?? "").trim()).filter(Boolean),
   ])].sort((a, b) => a.localeCompare(b));
+  const bookingAreaOptions = [...new Set([
+    ...areaOptions,
+    ...drydocks.map((d) => String(d.name ?? "").trim()).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b)).map((area) => ({ value: area, label: area }));
 
   const saveArea = async () => {
     if (!areaModal) return;
@@ -468,12 +508,11 @@ export default function Drydock() {
   const saveBooking = async () => {
     const proj = data.projects.find((p) => p.id === bookForm.project);
     if (!proj) { setBookError(S.tPickProject); return; }
-    const from = Number(bookForm.from);
-    const to = Number(bookForm.to);
-    /* from=0 diizinkan: slot langsung Berjalan (hari ini). */
-    if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from || from < 0 || to > DAYS) { setBookError(S.rangeInvalid.replace("{n}", String(DAYS))); return; }
+    const dateRange = bookingDateOffsets(bookForm.startDate, bookForm.endDate);
+    if (!dateRange) { setBookError(S.bookingDatesInvalid); return; }
+    const { from, to } = dateRange;
     if (overlap(bookForm.dockId, from, to)) {
-      const msg = S.tOverlapReject.replace("{a}", String(from)).replace("{b}", String(to)).replace("{c}", selDock?.name ?? bookForm.dockId);
+      const msg = S.tOverlapReject.replace("{a}", fmtTanggal(bookForm.startDate)).replace("{b}", fmtTanggal(bookForm.endDate)).replace("{c}", selDock?.name ?? bookForm.dockId);
       setBookError(msg);
       toast(msg, "info");
       return;
@@ -495,7 +534,7 @@ export default function Drydock() {
       const created = await add("dockSlots", {
         dockId: bookForm.dockId, project: proj.id, vessel: vesselFull, from, to,
         priority: bookForm.priority, ratePerDay, dsRef,
-        startDate: bookForm.startDate || undefined,
+        startDate: bookForm.startDate, endDate: bookForm.endDate,
         area: bookForm.area.trim(),
         color: SLOT_COLORS[dockSlots.length % SLOT_COLORS.length],
       }, { action: "membooking slot", target: `${bookForm.dockId} · ${vesselFull} · ${bookForm.priority}`, module: "Drydock" });
@@ -514,11 +553,13 @@ export default function Drydock() {
       }
       await update("dockSlots", created.id, { prevVesselStatus: prevMap });
       toast(S.tBooked.replace("{a}", created.id).replace("{b}", bookForm.priority).replace("{c}", dsRef));
-      setBookForm({ dockId: "DD-1", project: "", from: "1", to: "30", priority: "Normal", ratePerDay: "0", dsRef: "", vessel2: "", startDate: "", area: "" });
+      setBookForm(newBookingForm());
       setShowBook(false);
       setBookError(null);
     } catch (e) {
-      toast(e instanceof Error ? e.message : S.saveFail, "info");
+      const message = e instanceof Error ? e.message : S.saveFail;
+      setBookError(message);
+      toast(message, "info");
     }
   };
 
@@ -593,7 +634,10 @@ export default function Drydock() {
       return;
     }
     try {
-      await update("dockSlots", moveTarget.id, { dockId: moveForm.dockId, from, to, area: moveForm.area.trim() });
+      await update("dockSlots", moveTarget.id, {
+        dockId: moveForm.dockId, from, to,
+        startDate: dayToISO(from), endDate: dayToISO(to - 1), area: moveForm.area.trim(),
+      });
       log("memindah slot", `${moveTarget.id} → ${moveForm.dockId} hari ${from}-${to}`, "Drydock");
       toast(S.tMoved.replace("{a}", String(moveTarget.id)).replace("{b}", String(from)).replace("{c}", String(to)));
       setMoveTarget(null);
@@ -1085,13 +1129,29 @@ export default function Drydock() {
               </select>
             </Field>
             <Field label={S.colProject}>
-              <select className="input" value={bookForm.project} onChange={(e) => setBookForm({ ...bookForm, project: e.target.value })}>
+              <select className="input" value={bookForm.project} onChange={(e) => {
+                const projectId = e.target.value;
+                const project = projectOptions.find((p) => p.id === projectId);
+                setBookForm((current) => {
+                  const start = String(project?.start ?? "");
+                  const end = String(project?.end ?? "");
+                  return {
+                    ...current,
+                    project: projectId,
+                    ...(isCalendarDate(start) ? { startDate: start } : {}),
+                    ...(isCalendarDate(end) ? { endDate: end } : {}),
+                  };
+                });
+              }}>
                 <option value="">{S.optPickProject}</option>
                 {projectOptions.filter((p) => p.status !== "Selesai").map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
               </select>
+              {selProj && <p className="mt-1 text-xs text-steel-500">{S.projectSchedule
+                .replace("{a}", isCalendarDate(String(selProj.start ?? "")) ? fmtTanggal(String(selProj.start)) : "-")
+                .replace("{b}", isCalendarDate(String(selProj.end ?? "")) ? fmtTanggal(String(selProj.end)) : "-")}</p>}
             </Field>
-            <Field label={S.lblStartAt}><NumInput min={0} max={90} className="input" value={bookForm.from} onChange={(e) => setBookForm({ ...bookForm, from: e.target.value })} /></Field>
-            <Field label={S.lblEndAt}><NumInput min={1} max={90} className="input" value={bookForm.to} onChange={(e) => setBookForm({ ...bookForm, to: e.target.value })} /></Field>
+            <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={bookForm.startDate} onChange={(startDate) => setBookForm((current) => ({ ...current, startDate }))} /></Field>
+            <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={bookForm.endDate} onChange={(endDate) => setBookForm((current) => ({ ...current, endDate }))} /></Field>
             <Field label={S.colPriority}>
               <select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
                 {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
@@ -1106,15 +1166,20 @@ export default function Drydock() {
             <Field label={S.lblPartner} hint={S.hintPartner}>
               <input className="input" value={bookForm.vessel2} onChange={(e) => setBookForm({ ...bookForm, vessel2: e.target.value })} placeholder={S.phPartner} />
             </Field>
-            <Field label={S.lblCalDate} hint={S.hintCalDate}>
-              <DateInput locale={locale} ariaLabel={S.lblCalDate} value={bookForm.startDate} onChange={(startDate) => setBookForm({ ...bookForm, startDate })} />
-            </Field>
             <Field label={S.areaLabel}>
-              <input className="input" value={bookForm.area} onChange={(e) => setBookForm({ ...bookForm, area: e.target.value })} placeholder={S.areaPh} />
+              <SharedSearchSelect
+                value={bookForm.area}
+                onChange={(area) => setBookForm((current) => ({ ...current, area }))}
+                options={bookingAreaOptions}
+                placeholder={S.areaPh}
+                ariaLabel={S.areaLabel}
+                emptyText={S.areaEmpty}
+                allowCustom
+              />
             </Field>
           </FormGrid>
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
-            {S.costEstimate.replace("{a}", String(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)))).replace("{b}", fmtRupiah(parseRupiah(bookForm.ratePerDay))).replace("{c}", fmtRupiah(Math.max(0, Number(bookForm.to || 0) - Number(bookForm.from || 0)) * parseRupiah(bookForm.ratePerDay)))}
+            {S.costEstimate.replace("{a}", String(bookingDays ? bookingDays.to - bookingDays.from : 0)).replace("{b}", fmtRupiah(parseRupiah(bookForm.ratePerDay))).replace("{c}", fmtRupiah((bookingDays ? bookingDays.to - bookingDays.from : 0) * parseRupiah(bookForm.ratePerDay)))}
           </p>
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
             {S.capInfo.replace("{a}", selDock?.capacity ?? "-")}

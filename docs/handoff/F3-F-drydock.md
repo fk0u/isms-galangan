@@ -23,6 +23,12 @@ Ganti "Rencana docking tahunan" dengan **Waiting list**: daftar booking berstatu
 P0 · 4 j · DRY-04 · Bergantung: F3-A-04 (`DateInput`, `SearchSelect`)
 **Langkah.** Ganti field "mulai ke/selesai ke" dengan `DateInput` tanggal mulai & selesai. Area = `SearchSelect` slot/area. Pilih proyek ⇒ tampilkan jadwal proyek dan isi otomatis tanggal mulai/selesai dari jadwal proyek (tetap bisa diubah). Validasi bentrok slot di server (overlap tanggal di slot sama → 409).
 
+**Kriteria.** [x] Form memakai `DateInput` untuk kedua tanggal dan auto-fill jadwal proyek yang tetap dapat diedit. [x] Area memakai `SearchSelect` dengan opsi fasilitas/area yang ada dan input area baru. [x] POST/PATCH rentang yang bertumpang tindih pada fasilitas dan cabang yang sama ditolak server dengan 409, termasuk perubahan branch dan create serentak; data lama berbasis indeks hari tetap ikut diperiksa.
+
+**Implementasi.** `startDate`/`endDate` disimpan inklusif sebagai tanggal ISO, sedangkan `from`/`to` half-open dinormalisasi server memakai hari WITA agar konsisten untuk Gantt, kapasitas, dan biaya. Pemeriksaan overlap serta penyimpanan diserialisasi per fasilitas dalam transaksi. Probe integrasi drydock menjadi bagian `npm run check`.
+
+**Verifikasi.** Build API/web, migrasi, seed, dan root `npm run check` lulus pada SQLite terisolasi; probe drydock lulus 11/11, termasuk bentrok POST/PATCH, branch-only PATCH, data legacy, konsistensi indeks tanggal, dan create serentak. Smoke test UI manual ID/EN **belum dilakukan** karena login browser belum selesai; tidak ada screenshot atau hasil manual yang diklaim.
+
 ### F3-F-05 — Jadwalkan maintenance
 P1 · 2 j · DRY-05
 "Blokir maintenance" → "Jadwalkan maintenance" (semua label i18n). Field: area/slot, tanggal mulai, tanggal selesai (`DateInput`), alasan/deskripsi **paling bawah**. Slot dalam maintenance tidak bisa dibooking.
