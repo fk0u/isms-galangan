@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, type ComponentType } from "react";
-import { NavLink, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, Outlet, Link, matchPath, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Anchor,
@@ -400,6 +400,13 @@ export default function AppShell() {
      saat modal/dropdown terbuka, atau tab tersembunyi - resync menimpa draft
      tabel. Throttle via ref timestamp. */
   const location = useLocation();
+  const projectDetailRoute = matchPath({ path: "/proyek/:id", end: true }, location.pathname) !== null
+    && matchPath({ path: "/proyek/monitoring", end: true }, location.pathname) === null;
+  const stateFrom = (location.state as { from?: unknown } | null)?.from;
+  const requestedNavOrigin = typeof stateFrom === "string" ? stateFrom.split(/[?#]/, 1)[0] : "/proyek";
+  const activeProjectOrigin = projectDetailRoute
+    ? navGroups.flatMap((group) => group.items).find((item) => item.to === requestedNavOrigin)?.to ?? "/proyek"
+    : null;
   const lastResyncRef = useRef(0);
   const lastPathRef = useRef("");
   const qRef = useRef(q);
@@ -475,7 +482,7 @@ export default function AppShell() {
                       `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${mini ? "justify-center" : ""} ${
                         item.child && !mini ? "ml-4 border-l-2 border-white/15 pl-3" : ""
                       }${
-                        isActive
+                        isActive || activeProjectOrigin === item.to
                           ? "bg-ocean-500/20 text-white font-semibold"
                           : "text-steel-300 hover:bg-white/5 hover:text-white"
                       }`

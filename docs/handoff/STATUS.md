@@ -52,7 +52,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-E-02 | Tampilan per peran | P0 | F3-E-monitoring.md | | todo | |
 | F3-E-03 | Label "Perhatian khusus" | P1 | F3-E-monitoring.md | | todo | |
 | F3-E-04 | Tombol Kembali ke asal | P0 | F3-E-monitoring.md | | todo | |
-| F3-E-05 | Highlight menu aktif di sidebar | P1 | F3-E-monitoring.md | | todo | |
+| F3-E-05 | Highlight menu aktif di sidebar | P1 | F3-E-monitoring.md | agent | review | Branch `feat/F3-E-05-sidebar-active`; root `npm run check` lulus; uji visual Dashboard, Monitoring, detail proyek, dan submenu Roles & Access |
 | F3-F-01 | Batas maksimal kapal per dock | P1 | F3-F-drydock.md | | todo | |
 | F3-F-02 | Sederhanakan halaman: Mapping slot area | P0 | F3-F-drydock.md | agent | review | Branch `feat/F3-F-02-drydock-mapping`; P2 status search ID/EN dan P3 SSR EN diperbaiki lokal; `npm run check` 37/37; re-review independen lokal pending; PR #24 masih di e21f8fe, fix belum dipush/merge |
 | F3-F-03 | Waiting list dock | P1 | F3-F-drydock.md | | todo | |
