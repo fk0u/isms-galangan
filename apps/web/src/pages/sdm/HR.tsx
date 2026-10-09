@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Award, BadgeCheck, Download, Eye, Lock, Network, Plus, Users, Pencil, Trash2, Printer } from "lucide-react";
 import {
@@ -353,7 +353,10 @@ export default function HR() {
       .forEach((l) => m.set(String(l.employeeId), (m.get(String(l.employeeId)) ?? 0) + Number(l.days || 0)));
     return m;
   }, [data.leaves]);
-  const saldoCuti = (empId: string) => jatahCuti - (leaveUsed.get(empId) ?? 0);
+  const saldoCuti = useCallback(
+    (empId: string) => jatahCuti - (leaveUsed.get(empId) ?? 0),
+    [jatahCuti, leaveUsed],
+  );
 
   const contractDays = (e: StoreItem): number | null => daysUntil(String(e.contractEnd ?? "") || null);
 
@@ -368,22 +371,40 @@ export default function HR() {
       }),
     [scopedEmployees, dept, q, contractSoonOnly],
   );
-  const sortedEmps = useMemo(() => sortRows(list, sort, (row, k) => {
-    const e = row as StoreItem;
-    switch (k) {
-      case "name": return String(e.name ?? "");
-      case "nik": return empNik(e);
-      case "role": return String(e.role ?? "");
-      case "branch": return String(e.branch ?? "");
-      case "contract": return String(e.contractEnd ?? "");
-      case "saldo": return Number(saldoCuti(String(e.id)));
-      case "status": return String(e.status ?? "");
-      case "createdAt": return createdAtOf(e) ?? "";
-      case "updatedAt": return lastTouchedAt(e) ?? "";
-      default: return "";
+  const sortedEmps = useMemo(() => {
+    if (!sort.key) {
+      return [...list].sort((a, b) => {
+        const createdA = createdAtOf(a);
+        const createdB = createdAtOf(b);
+        const idA = String(a.id);
+        const idB = String(b.id);
+        const byId = idA < idB ? -1 : idA > idB ? 1 : 0;
+
+        /* Baris lama tanpa createdAt ditempatkan lebih dulu; tie-break ID yang
+           tetap mencegah updated_at mengubah posisi saat record diedit. */
+        if (createdA === null || createdB === null) {
+          if (createdA === null && createdB === null) return byId;
+          return createdA === null ? -1 : 1;
+        }
+        return createdA.localeCompare(createdB) || byId;
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [list, sort]);
+
+    return sortRows(list, sort, (row, k) => {
+      const e = row as StoreItem;
+      switch (k) {
+        case "name": return String(e.name ?? "");
+        case "nik": return empNik(e);
+        case "role": return String(e.role ?? "");
+        case "branch": return String(e.branch ?? "");
+        case "contract": return String(e.contractEnd ?? "");
+        case "saldo": return Number(saldoCuti(String(e.id)));
+        case "status": return String(e.status ?? "");
+        case "updatedAt": return lastTouchedAt(e) ?? "";
+        default: return "";
+      }
+    });
+  }, [list, sort, saldoCuti]);
   const empPager = usePager(list.length);
   useEffect(() => {
     empPager.reset();
@@ -1338,7 +1359,7 @@ const finishTraining = async (t: StoreItem) => {
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={["Karyawan", "Cuti & Izin", "Mutasi", "Org Chart", "Training", "Surat & Impor"]} active={tab} onChange={setTab} labels={{ Karyawan: S.tabKaryawan, "Cuti & Izin": S.tabCuti, Mutasi: S.tabMutasi, "Org Chart": S.tabOrg, Training: S.tabTraining, "Surat & Impor": S.tabSurat }} />
+        <Tabs tabs={["Karyawan", "Cuti & Izin", "Training", "Surat & Impor"]} active={tab} onChange={setTab} labels={{ Karyawan: S.tabKaryawan, "Cuti & Izin": S.tabCuti, Training: S.tabTraining, "Surat & Impor": S.tabSurat }} />
         <div className="p-4">
           {tab === "Karyawan" && (
             <div>
@@ -1395,8 +1416,7 @@ const finishTraining = async (t: StoreItem) => {
                           <SortTh label={S.thKontrak} sortKey="contract" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.thSaldo} sortKey="saldo" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.dlStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                          <SortTh label={S.hrColLastUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <th className="th">{S.thAksi}</th>
                         </tr>
                       </thead>
@@ -1433,7 +1453,6 @@ const finishTraining = async (t: StoreItem) => {
                             </td>
                             <td className="td font-semibold text-navy-900">{S.daysN.replace("{n}", String(saldoCuti(e.id)))}</td>
                             <td className="td"><StatusBadge status={String(e.status)} /></td>
-                            <td className="td text-xs text-steel-600">{createdAtOf(e) !== null ? fmtTanggal(createdAtOf(e)) : <span className="text-steel-400">-</span>}</td>
                             <td className="td text-xs text-steel-600">{lastTouchedAt(e) !== null ? fmtTanggal(lastTouchedAt(e)) : <span className="text-steel-400">-</span>}</td>
                             <td className="td">
                               <div className="flex items-center gap-2 whitespace-nowrap">

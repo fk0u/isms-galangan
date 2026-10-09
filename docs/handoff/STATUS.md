@@ -81,7 +81,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-K-02 | Mesin kuesioner & skoring | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-03 | Inspeksi per proyek | P0 | F3-K-qc-safety.md | | todo | |
 | F3-K-04 | HSE: kuesioner pekerja | P1 | F3-K-qc-safety.md | | todo | |
-| F3-L-01 | Tabel karyawan & tab | P1 | F3-L-sdm-absensi.md | | todo | |
+| F3-L-01 | Tabel karyawan & tab | P1 | F3-L-sdm-absensi.md | agent | jalan | |
 | F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | todo | |

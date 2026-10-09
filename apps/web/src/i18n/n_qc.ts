@@ -305,7 +305,7 @@ export const n_qc = {
     tIncOk: "Insiden {n} dicatat",
     tJadwalHapus: "Jadwal tidak bisa dihapus",
     hrTitle: "SDM & Karyawan",
-    hrSub: "Data karyawan, cuti, mutasi, struktur organisasi, dan training",
+    hrSub: "Data karyawan, cuti, training, dan surat",
     btnTambahKaryawan: "Tambah Karyawan",
     btnAjukanCuti: "Ajukan Cuti",
     btnCatatMutasi: "Catat Mutasi",
@@ -556,6 +556,7 @@ export const n_qc = {
     tCertAdd: "Sertifikat ditambahkan",
     tDocJudul: "Judul dokumen wajib diisi",
     tDocOk: "Dokumen {n} ditambahkan",
+    hrColLastUpdated: "Terakhir diupdate",
   },
   en: {
     pageTitle: "Quality Control & Safety",
@@ -862,7 +863,7 @@ export const n_qc = {
     tIncOk: "Incident {n} logged",
     tJadwalHapus: "Schedule could not be deleted",
     hrTitle: "HR & Employees",
-    hrSub: "Employee data, leave, transfers, org structure, and training",
+    hrSub: "Employee data, leave, training, and letters",
     btnTambahKaryawan: "Add Employee",
     btnAjukanCuti: "Request Leave",
     btnCatatMutasi: "Log Transfer",
@@ -1113,5 +1114,6 @@ export const n_qc = {
     tCertAdd: "Certificate added",
     tDocJudul: "Document title is required",
     tDocOk: "Document {n} added",
+    hrColLastUpdated: "Last updated",
   },
 };
