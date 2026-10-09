@@ -36,7 +36,9 @@ export function registerMaterialRequestRoutes(app: FastifyInstance): void {
     try {
       const result = await requestMaterial({ ...parsed.data, projectId: id, actor: requestActor(req) });
       await writeAudit({
-        actor: requestActor(req), action: "material_request", table: "movements",
+        actor: requestActor(req), action: "material_request",
+        // Tanpa barang keluar (stok habis) yang tercipta hanya PR.
+        table: result.movementId ? "movements" : "requisitions",
         rowId: result.movementId ?? result.requisitionId ?? "-", diff: { projectId: id, ...result }, ip: requestIp(req),
       });
       return reply.status(201).send(ok(result));

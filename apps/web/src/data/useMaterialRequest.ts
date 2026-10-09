@@ -78,7 +78,7 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
       await update("inventory", String(item.id), { stock: stock - issued });
       const mv = await add("movements", {
         item: itemName, itemId: String(item.id), type: "Pengeluaran", qty: issued, unit,
-        by: args.wbsTask ? `${actor} (WBS: ${args.wbsTask})` : actor, date: today, tone: "out", ref,
+        by: args.wbsTask ? `${actor} (WBS: ${args.wbsTask})` : actor, date: today, tone: "out", ref, note: args.note ?? "",
       }, { action: "pengeluaran material proyek", module: "Inventori" });
       movementId = String(mv.id);
     }
