@@ -652,13 +652,13 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     if (eqCat !== "Semua" && String(e.category ?? "") !== eqCat) return false;
     return rowMatches(e, eqQ, ["id", "name", "code", "brand", "model", "unitYear", "pic", "category", "status", "lastHours", "rate"]);
   });
-  const regSorted = useMemo(() => sortRows(regFiltered, sort, (e, k) => {
+  const equipmentSortValue = (e: StoreItem, k: string): string | number | null | undefined => {
     if (k === "code") return String(e.code ?? "");
     if (k === "brand") return equipmentBrandOf(e);
     if (k === "unitYear") return Number(e.unitYear ?? 0);
     if (k === "pic") return String(e.pic ?? "");
     if (k === "name") return String(e.name ?? "");
-    if (k === "utilisasi") return (e.utilManual === true) ? Number(e.util || 0) : autoUtilOf(e);
+    if (k === "utilisasi") return dispUtil(e);
     if (k === "jam") return Number(e.lastHours || 0);
     if (k === "tarif") return Number(e.rate || 0);
     if (k === "nilaibuku") return Number(depreciationOf(e)?.book ?? -1);
@@ -668,7 +668,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     if (k === "createdAt") return createdAtOf(e) ?? "";
     if (k === "updatedAt") return lastTouchedAt(e) ?? "";
     return String(e.name ?? "");
-  }), [regFiltered, sort, bookings, today]);
+  };
+  const regSorted = sortRows(regFiltered, sort, equipmentSortValue);
   const regPager = usePager(regFiltered.length);
   const pickNotifIds = (ids: string[]): void => {
     if (ids.length === 0) return;
@@ -681,21 +682,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     }
     const found = equipment.find((e) => ids.includes(String(e.id)));
     if (!found) { flashPick(flash, ids, -1, () => {}, 100); return; }
-    const fullSorted = sortRows(equipment, sort, (e, k) => {
-      if (k === "code") return String(e.code ?? "");
-      if (k === "brand") return equipmentBrandOf(e);
-      if (k === "unitYear") return Number(e.unitYear ?? 0);
-      if (k === "pic") return String(e.pic ?? "");
-      if (k === "name") return String(e.name ?? "");
-      if (k === "utilisasi") return Number(e.util || 0);
-      if (k === "jam") return Number(e.lastHours || 0);
-      if (k === "tarif") return Number(e.rate || 0);
-      if (k === "nilaibuku") return Number(depreciationOf(e)?.book ?? -1);
-      if (k === "kategori") return String(e.category ?? "");
-      if (k === "model") return String(e.model ?? "");
-      if (k === "status") return String(e.status ?? "");
-      return String(e.name ?? "");
-    });
+    const fullSorted = sortRows(equipment, sort, equipmentSortValue);
     const fullIdx = fullSorted.findIndex((e) => ids.includes(String(e.id)));
     setTab("Register");
     setEqStatus("Semua");
@@ -775,7 +762,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
         rate: Math.round(rate),
         fuelPrice: Math.round(fuelPrice),
         acquisitionCost: Math.round(acquisitionCost),
-        usefulLife: original?.usefulLife ?? 0,
+        usefulLife: usefulLifeMonths / 12,
         usefulLifeMonths,
         note: form.note.trim(),
       });
@@ -828,7 +815,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
       status: "Tersedia", util, utilManual: true, nextService: "-", lastHours: 0,
       model: form.brand.trim() || "-", brand: form.brand.trim() || "-",
       unitYear, acquisitionYear, pic: form.pic.trim(), rate, fuelPrice, acquisitionCost,
-      usefulLife: 0, usefulLifeMonths, note: form.note.trim(),
+      usefulLife: usefulLifeMonths / 12, usefulLifeMonths, note: form.note.trim(),
     }, { action: "mendaftarkan equipment", module: "Equipment" });
     toast(S.eqAdded.replace("{a}", created.id));
     setShowAdd(false);
@@ -1587,7 +1574,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
           const dep = depreciationOf(e);
           const st = statsByEquip(e.name);
           const fuelCost = st.fuel * Number(e.fuelPrice || 0);
-          return [e.code, e.name, e.category, Number(e.acquisitionCost || 0), Number(e.usefulLife || 0), dep ? Math.round(dep.annual) : 0, dep ? Math.round(dep.book) : 0, Number(e.fuelPrice || 0), st.fuel, Math.round(fuelCost)];
+          const usefulLifeYears = equipmentUsefulLifeMonthsOf(e) / 12;
+          return [e.code, e.name, e.category, Number(e.acquisitionCost || 0), usefulLifeYears, dep ? Math.round(dep.annual) : 0, dep ? Math.round(dep.book) : 0, Number(e.fuelPrice || 0), st.fuel, Math.round(fuelCost)];
         })],
       `Register-Aset-Equipment-${today}`,
       "Register",

@@ -65,7 +65,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-G-05 | Pergerakan: 2 grafik tren, kolom Dari/Ke, slow & dead stock | P1 | F3-G-inventori.md | | todo | |
 | F3-G-06 | Sembunyikan surat jalan | P2 | F3-G-inventori.md | | todo | |
 | F3-G-07 | Auto-refresh tanpa tombol Muat ulang | P1 | F3-G-inventori.md | | todo | |
-| F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; gate `npm run check` lulus |
+| F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; PR #33 tetap terbuka/tanpa merge; Cubic P2 ekspor umur pakai dan P3 comparator bersama ditangani; `npm run check` lulus (DB migrasi + seed sintetis sementara); UI demo diperiksa |
 | F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | | todo | |
 | F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | | todo | |
 | F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | | todo | |
