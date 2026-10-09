@@ -26,7 +26,21 @@ import { exportExcel } from "../../utils/export";
 import { findUsages } from "../../utils/usages";
 import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
-import { bookingDateOffsets, dateBasedSlotStatus, dayToISO, intervalsOverlap, isCalendarDate, slotDateOffsets, slotDateRange, witaTodayISO } from "../../utils/drydockBookingDates";
+import {
+  bookingDateDefaults,
+  bookingDateOffsets,
+  dateBasedSlotStatus,
+  dayToISO,
+  emptyBookingDateEdits,
+  intervalsOverlap,
+  isCalendarDate,
+  markBookingDateEdited,
+  markProjectScheduleDatesEdited,
+  refreshUntouchedBookingDates,
+  slotDateOffsets,
+  slotDateRange,
+  witaTodayISO,
+} from "../../utils/drydockBookingDates";
 
 const DAYS = 90;
 const FREE_WINDOW = 7;
@@ -48,11 +62,10 @@ const STATUS_FILTERS = ["Semua", "Terjadwal", "Berjalan", "Selesai", "Maintenanc
 const UNDOCK_ITEMS = ["Lambung bersih", "Katup laut tertutup", "Anoda terpasang", "Propeller terpasang", "Sea trial siap"];
 const MONTH_NAMES = MONTH_ID;
 
-function newBookingForm() {
-  const startDate = witaTodayISO();
+function newBookingForm(today: string = witaTodayISO()) {
   return {
     dockId: "DD-1", project: "", priority: "Normal", ratePerDay: "0",
-    dsRef: "", vessel2: "", startDate, endDate: dayToISO(29), area: "",
+    dsRef: "", vessel2: "", ...bookingDateDefaults(today), area: "",
   };
 }
 
@@ -159,8 +172,19 @@ export default function Drydock() {
 
   const [showBook, setShowBook] = useState(false);
   const [bookForm, setBookForm] = useState(() => newBookingForm());
-  const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate, todayWita);
+  const [bookingDateEdited, setBookingDateEdited] = useState(emptyBookingDateEdits);
   const [bookError, setBookError] = useState<string | null>(null);
+  const openBooking = () => {
+    const today = witaTodayISO();
+    setTodayWita(today);
+    setBookForm((current) => ({
+      ...current,
+      ...refreshUntouchedBookingDates(current, bookingDateEdited, today),
+    }));
+    setShowBook(true);
+    setBookError(null);
+  };
+  const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate, todayWita);
   const [deleting, setDeleting] = useState<StoreItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<StoreItem | null>(null);
   const [moveForm, setMoveForm] = useState({ dockId: "DD-1", from: "", to: "", area: "" });
@@ -561,6 +585,7 @@ export default function Drydock() {
       await update("dockSlots", created.id, { prevVesselStatus: prevMap });
       toast(S.tBooked.replace("{a}", created.id).replace("{b}", bookForm.priority).replace("{c}", dsRef));
       setBookForm(newBookingForm());
+      setBookingDateEdited(emptyBookingDateEdits());
       setShowBook(false);
       setBookError(null);
     } catch (e) {
@@ -687,7 +712,7 @@ export default function Drydock() {
         actions={
           <div className="flex gap-2">
             <button className="btn-secondary" onClick={() => setShowMaint(true)}><Wrench className="h-4 w-4" /> {S.btnMaintBlock}</button>
-            <button className="btn-primary-gradient" onClick={() => { setShowBook(true); setBookError(null); }}><Plus className="h-4 w-4" /> {S.btnBookSlot}</button>
+            <button className="btn-primary-gradient" onClick={openBooking}><Plus className="h-4 w-4" /> {S.btnBookSlot}</button>
           </div>
         }
       />
@@ -1148,14 +1173,17 @@ export default function Drydock() {
               <select className="input" value={bookForm.project} onChange={(e) => {
                 const projectId = e.target.value;
                 const project = projectOptions.find((p) => p.id === projectId);
+                const start = String(project?.start ?? "");
+                const end = String(project?.end ?? "");
+                const hasStartDate = isCalendarDate(start);
+                const hasEndDate = isCalendarDate(end);
+                setBookingDateEdited((current) => markProjectScheduleDatesEdited(current, start, end));
                 setBookForm((current) => {
-                  const start = String(project?.start ?? "");
-                  const end = String(project?.end ?? "");
                   return {
                     ...current,
                     project: projectId,
-                    ...(isCalendarDate(start) ? { startDate: start } : {}),
-                    ...(isCalendarDate(end) ? { endDate: end } : {}),
+                    ...(hasStartDate ? { startDate: start } : {}),
+                    ...(hasEndDate ? { endDate: end } : {}),
                   };
                 });
               }}>
@@ -1166,8 +1194,14 @@ export default function Drydock() {
                 .replace("{a}", isCalendarDate(String(selProj.start ?? "")) ? fmtTanggal(String(selProj.start)) : "-")
                 .replace("{b}", isCalendarDate(String(selProj.end ?? "")) ? fmtTanggal(String(selProj.end)) : "-")}</p>}
             </Field>
-            <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={bookForm.startDate} onChange={(startDate) => setBookForm((current) => ({ ...current, startDate }))} /></Field>
-            <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={bookForm.endDate} onChange={(endDate) => setBookForm((current) => ({ ...current, endDate }))} /></Field>
+            <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={bookForm.startDate} onChange={(startDate) => {
+              setBookingDateEdited((current) => markBookingDateEdited(current, "startDate"));
+              setBookForm((current) => ({ ...current, startDate }));
+            }} /></Field>
+            <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={bookForm.endDate} onChange={(endDate) => {
+              setBookingDateEdited((current) => markBookingDateEdited(current, "endDate"));
+              setBookForm((current) => ({ ...current, endDate }));
+            }} /></Field>
             <Field label={S.colPriority}>
               <select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
                 {PRIORITIES.map((p) => <option key={p}>{p}</option>)}

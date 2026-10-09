@@ -1,7 +1,12 @@
 import {
+  bookingDateDefaults,
   bookingDateOffsets,
   dateBasedSlotStatus,
+  emptyBookingDateEdits,
   intervalsOverlap,
+  markBookingDateEdited,
+  markProjectScheduleDatesEdited,
+  refreshUntouchedBookingDates,
   slotDateOffsets,
   slotDateRange,
   witaTodayISO,
@@ -26,6 +31,63 @@ check(
   witaTodayISO(new Date("2026-10-08T16:30:00.000Z")) === "2026-10-09",
   "tanggal aplikasi mengikuti WITA meski UTC masih hari sebelumnya",
   witaTodayISO(new Date("2026-10-08T16:30:00.000Z")),
+);
+
+const staleModalDefaults = bookingDateDefaults("2026-10-09");
+equal(
+  staleModalDefaults,
+  { startDate: "2026-10-09", endDate: "2026-11-07" },
+  "default modal sebelum rollover memakai tanggal WITA saat itu",
+);
+equal(
+  refreshUntouchedBookingDates(staleModalDefaults, { startDate: false, endDate: false }, "2026-10-10"),
+  { startDate: "2026-10-10", endDate: "2026-11-08" },
+  "modal yang dibuka setelah rollover memperbarui kedua tanggal yang belum diedit",
+);
+equal(
+  refreshUntouchedBookingDates(
+    { startDate: "2026-10-20", endDate: staleModalDefaults.endDate },
+    { startDate: true, endDate: false },
+    "2026-10-10",
+  ),
+  { startDate: "2026-10-20", endDate: "2026-11-08" },
+  "modal mempertahankan tanggal mulai yang diedit dan hanya memperbarui tanggal akhir default",
+);
+equal(
+  refreshUntouchedBookingDates(
+    { startDate: staleModalDefaults.startDate, endDate: "2026-10-25" },
+    { startDate: false, endDate: true },
+    "2026-10-10",
+  ),
+  { startDate: "2026-10-10", endDate: "2026-10-25" },
+  "modal mempertahankan tanggal akhir yang diedit dan hanya memperbarui tanggal mulai default",
+);
+const untouchedDateEdits = emptyBookingDateEdits();
+const manuallyEditedStart = markBookingDateEdited(untouchedDateEdits, "startDate");
+equal(
+  manuallyEditedStart,
+  { startDate: true, endDate: false },
+  "perubahan manual menandai hanya field tanggal yang diubah",
+);
+const projectFilledDates = markProjectScheduleDatesEdited(manuallyEditedStart, "2026-10-20", "2026-10-30");
+equal(
+  projectFilledDates,
+  { startDate: true, endDate: true },
+  "auto-fill jadwal proyek menandai field tanggal valid sebagai telah diubah",
+);
+equal(
+  refreshUntouchedBookingDates({ startDate: "2026-10-20", endDate: "2026-10-30" }, projectFilledDates, "2026-10-10"),
+  { startDate: "2026-10-20", endDate: "2026-10-30" },
+  "tanggal manual dan auto-fill tetap dipertahankan setelah modal ditutup lalu dibuka kembali",
+);
+equal(
+  refreshUntouchedBookingDates(
+    { startDate: "2026-10-20", endDate: "2026-10-30" },
+    emptyBookingDateEdits(),
+    "2026-10-10",
+  ),
+  { startDate: "2026-10-10", endDate: "2026-11-08" },
+  "reset setelah save membuat pembukaan modal baru memakai default WITA terbaru",
 );
 
 const savedBooking = {

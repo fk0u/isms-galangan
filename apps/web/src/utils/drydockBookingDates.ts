@@ -37,6 +37,53 @@ export function dayToISO(day: number, today: string = witaTodayISO()): string {
   return new Date((todayDay + day) * DAY_MS).toISOString().slice(0, 10);
 }
 
+export interface BookingDateValues {
+  startDate: string;
+  endDate: string;
+}
+
+export interface BookingDateEdits {
+  startDate: boolean;
+  endDate: boolean;
+}
+
+export type BookingDateField = keyof BookingDateEdits;
+
+export function emptyBookingDateEdits(): BookingDateEdits {
+  return { startDate: false, endDate: false };
+}
+
+export function markBookingDateEdited(current: BookingDateEdits, field: BookingDateField): BookingDateEdits {
+  return { ...current, [field]: true };
+}
+
+export function markProjectScheduleDatesEdited(
+  current: BookingDateEdits,
+  startDate: unknown,
+  endDate: unknown,
+): BookingDateEdits {
+  return {
+    startDate: current.startDate || isCalendarDate(startDate),
+    endDate: current.endDate || isCalendarDate(endDate),
+  };
+}
+
+export function bookingDateDefaults(today: string = witaTodayISO()): BookingDateValues {
+  return { startDate: today, endDate: dayToISO(29, today) };
+}
+
+export function refreshUntouchedBookingDates(
+  current: BookingDateValues,
+  edited: BookingDateEdits,
+  today: string = witaTodayISO(),
+): BookingDateValues {
+  const defaults = bookingDateDefaults(today);
+  return {
+    startDate: edited.startDate ? current.startDate : defaults.startDate,
+    endDate: edited.endDate ? current.endDate : defaults.endDate,
+  };
+}
+
 /** Rentang tanggal akhir-inklusif dikonversi ke offset akhir-eksklusif relatif ke hari WITA. */
 export function bookingDateOffsets(
   startDate: unknown,
