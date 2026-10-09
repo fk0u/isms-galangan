@@ -93,6 +93,14 @@ export function hasUnitConversionDraft(draft: UnitConversionDraft): boolean {
   ].some((value) => String(value ?? "").trim() !== "");
 }
 
+export function unitConversionRequired(
+  category: unknown,
+  eceran: boolean,
+  draft: UnitConversionDraft,
+): boolean {
+  return eceran || conversionRuleForCategory(category) !== null || hasUnitConversionDraft(draft);
+}
+
 /** Membuat skema baru tanpa membuang nilai fisik yang diperlukan untuk tahap potong berikutnya. */
 export function buildUnitConversion(
   category: unknown,

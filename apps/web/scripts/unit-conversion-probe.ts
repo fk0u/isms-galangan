@@ -6,6 +6,7 @@ import {
   hasUnitConversionDraft,
   purchaseUnitsForCategory,
   unitConversionOf,
+  unitConversionRequired,
 } from "../src/utils/unitConversion";
 
 declare const process: { exit(code: number): never };
@@ -63,6 +64,9 @@ assert("Konversi kategori bebas menyimpan satuan dasar yang diberikan", buildUni
 })?.perUnit === 100);
 assert("Draft kosong tidak dianggap sebagai konversi", !hasUnitConversionDraft({}));
 assert("Draft generik terdeteksi", hasUnitConversionDraft({ conversionBaseUnit: "meter" }));
+assert("Kategori Cat tetap mewajibkan konversi saat edit", unitConversionRequired("Cat", false, {}));
+assert("Material eceran mewajibkan konversi", unitConversionRequired("Baja", true, {}));
+assert("Kategori umum tanpa eceran tidak mewajibkan konversi", !unitConversionRequired("Baja", false, {}));
 
 const roundTrip = unitConversionOf({ conversion: plate });
 assert("Konversi baru dapat dibaca kembali dengan dimensi", roundTrip?.perUnit === 706.5

@@ -9,6 +9,7 @@ import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
+import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
 export const DEFAULT_BRANCH = "Samarinda";
@@ -358,6 +359,10 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
+    if (table === "inventory") {
+      const conversionError = inventoryConversionError(rowData);
+      if (conversionError) return reply.status(422).send(fail(conversionError, "UNPROCESSABLE"));
+    }
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {
       const fieldError = await checkUniqueField(
@@ -423,6 +428,10 @@ export function registerCrud(app: FastifyInstance, table: string): void {
        jadi tidak valid - padahal POST kekotak yang sama ditolak 422. */
     const domainError = assertDomain(table, merged);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
+    if (table === "inventory") {
+      const conversionError = inventoryConversionError(merged, oldData);
+      if (conversionError) return reply.status(422).send(fail(conversionError, "UNPROCESSABLE"));
+    }
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {
       const fieldError = await checkUniqueField(

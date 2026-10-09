@@ -80,7 +80,7 @@ import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLi
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { stockTrend, itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
 import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMaterialForm";
-import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, hasUnitConversionDraft, unitConversionOf } from "../../utils/unitConversion";
+import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequired } from "../../utils/unitConversion";
 
 const emptyForm: MaterialFormValues = {
   name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "",
@@ -935,7 +935,7 @@ if (k === "mattype") return matTypeOf(i);
     if (materialFormStep === 1 && !form.unit.trim()) { toast(S.purchaseUnitRequired, "info"); return; }
     if (materialFormStep === 2) {
       const conversion = buildUnitConversion(form.category, form.unit, form);
-      const shouldRequire = form.eceran || (!editing && Boolean(conversionRuleForCategory(form.category))) || hasUnitConversionDraft(form);
+      const shouldRequire = unitConversionRequired(form.category, form.eceran, form);
       const canKeepExisting = Boolean(editing && !conversionEdited && unitConversionOf(editing));
       if (shouldRequire && !conversion && !canKeepExisting) { toast(S.conversionRequired, "info"); return; }
     }
@@ -1026,10 +1026,7 @@ if (k === "mattype") return matTypeOf(i);
     const existingConversion = editing ? unitConversionOf(editing) : null;
     const canKeepExisting = Boolean(editing && !conversionEdited && existingConversion);
     const conversion = conversionDraft ?? (canKeepExisting ? existingConversion : null);
-    const hasDraft = hasUnitConversionDraft(form);
-    const conversionRequired = form.eceran
-      || (!editing && Boolean(conversionRuleForCategory(form.category)))
-      || hasDraft;
+    const conversionRequired = unitConversionRequired(form.category, form.eceran, form);
     if (conversionRequired && !conversion) { toast(S.conversionRequired, "info"); return; }
     const numStock = form.stock.trim() === "" ? 0 : Number(form.stock);
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);

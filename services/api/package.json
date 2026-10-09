@@ -33,10 +33,11 @@
     "probe:users": "tsx --env-file-if-exists=.env scripts/user-hierarchy-probe.ts",
     "probe:token": "tsx --env-file-if-exists=.env scripts/token-revocation-probe.ts",
     "probe:branch": "tsx --env-file-if-exists=.env scripts/branch-scope-probe.ts",
+    "probe:inventory-conversion": "tsx scripts/inventory-conversion-probe.ts",
     "probe:boq": "tsx --env-file-if-exists=.env scripts/boq-docs-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint .",
-    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration"
+    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
