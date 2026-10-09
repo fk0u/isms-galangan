@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useAuth, hasPermission } from "../auth/auth";
 import { useStore } from "../data/store";
+import DemoGuide from "../components/DemoGuide";
 import { Badge, Modal, Field, Toaster, toast } from "../components/ui";
 import { apiFetch } from "../services/http";
 import { computeAlerts } from "../utils/alerts";
@@ -808,6 +809,8 @@ export default function AppShell() {
 
         <main className="p-4 lg:p-6">
           <Outlet />
+          {/* Panduan demo presentasi (Shift + D). Matikan dengan VITE_DEMO_GUIDE=false. */}
+          {import.meta.env.VITE_DEMO_GUIDE !== "false" && <DemoGuide />}
         </main>
       </div>
 

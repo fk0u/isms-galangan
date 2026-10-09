@@ -1061,19 +1061,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
      Ditulis per koleksi yang berubah saja (bandingkan identitas referensi),
      dengan debounce supaya tidak menulis 6 MB tiap ketikan. */
   const prevDataRef = useRef<StoreShape | null>(null);
+  /* Koleksi berubah yang belum ditulis. Debounce membatalkan timer lama, jadi
+     tanpa akumulasi ini perubahan beruntun (inventori → movement → PR dalam
+     <700 ms) hanya menulis koleksi dari perubahan terakhir dan sisanya hilang
+     saat reload. */
+  const pendingPersistRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const prev = prevDataRef.current;
     prevDataRef.current = data;
     if (prev === null) return; // boot, bukan perubahan
     const cur = data as unknown as Record<string, unknown>;
     const old = prev as unknown as Record<string, unknown>;
-    const changed: string[] = [];
+    const pending = pendingPersistRef.current;
     for (const k of Object.keys(cur)) {
-      if (cur[k] !== old[k]) changed.push(k);
+      if (cur[k] !== old[k]) pending.add(k);
     }
-    if (changed.length === 0) return;
+    if (pending.size === 0) return;
     const t = window.setTimeout(() => {
-      void persistCollections(cur, changed);
+      const cols = [...pending];
+      pending.clear();
+      void persistCollections(cur, cols);
     }, 700);
     return () => window.clearTimeout(t);
   }, [data]);

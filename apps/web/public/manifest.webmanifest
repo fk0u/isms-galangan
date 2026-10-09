@@ -1,0 +1,26 @@
+{
+  "name": "ISMS Galangan — Integrated Shipyard Management System",
+  "short_name": "ISMS Galangan",
+  "description": "Sistem manajemen galangan kapal: proyek, BoQ, drydock, inventori, procurement, QC, SDM, dan keuangan.",
+  "lang": "id",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#FAFAFA",
+  "theme_color": "#FFFFFF",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard" },
+    { "name": "Manajemen Proyek", "url": "/proyek" },
+    { "name": "Monitoring Proyek", "url": "/proyek/monitoring" },
+    { "name": "Inventori", "url": "/inventori" }
+  ]
+}

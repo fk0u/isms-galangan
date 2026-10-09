@@ -97,15 +97,21 @@ const PRESET: Record<string, { name: string; unit: string; price: number }[]> = 
 };
 interface Props {
   projectId: string;
+  /** Surat BoQ (ADR-0006). Bila diisi, hanya item surat ini yang tampil dan
+      item baru otomatis tertaut ke surat ini. */
+  docId?: string;
+  /** Surat Disetujui/Digantikan: semua aksi ubah disembunyikan (server juga
+      menolak dengan 409 LOCKED). */
+  locked?: boolean;
 }
 
-export default function BoQSection({ projectId }: Props) {
+export default function BoQSection({ projectId, docId, locked = false }: Props) {
   const busy = useBusy();
   const { locale } = useT();
   const S = n_prj[locale];
   const { data, update, add, remove, log } = useStore();
   const { user } = useAuth();
-  const items = ((data.boq ?? []) as BoQExt[]).filter((b) => b.projectId === projectId);
+  const items = ((data.boq ?? []) as BoQExt[]).filter((b) => b.projectId === projectId && (!docId || b.boqDocId === docId));
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", quantity: "", unit: "pcs", unitPrice: "", category: "Mechanical", status: "Draft" as BoQItem["status"], fileUrl: "" });
   const [q, setQ] = useState("");
@@ -180,6 +186,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
       category: form.category,
       status: "Draft",
       requestedBy: "Anda",
+      ...(docId ? { boqDocId: docId } : {}),
       ...(form.fileUrl.trim() ? { fileUrl: form.fileUrl.trim() } : {}),
     }, { action: "menambahkan BoQ item", module: "BoQ" });
     toast(S.boqToastAdded);
@@ -266,6 +273,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
       category: presetCat,
       status: "Draft",
       requestedBy: "Anda",
+      ...(docId ? { boqDocId: docId } : {}),
     }, { action: "mengimpor BoQ preset", module: "BoQ" });
     toast(S.boqToastPresetAdd.replace("{a}", item.name));
   };
@@ -285,7 +293,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
           <h3 className="text-sm font-semibold text-navy-900 flex items-center gap-2"><FileDown className="h-4 w-4" /> {S.boqTitle.replace("{n}", String(items.length))}</h3>
           <div className="flex gap-2">
             <AsyncButton className="btn-secondary text-xs" onAction={handleExport}><FileDown className="h-3.5 w-3.5" /> {S.exportExcelBtn}</AsyncButton>
-            <button className="btn-primary text-xs" onClick={() => setShowAdd(true)}><Plus className="h-3.5 w-3.5" /> {S.boqAddBtn}</button>
+            {!locked && <button className="btn-primary text-xs" onClick={() => setShowAdd(true)}><Plus className="h-3.5 w-3.5" /> {S.boqAddBtn}</button>}
           </div>
         </div>
 
@@ -308,7 +316,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
           <span className="ml-auto text-xs text-steel-500">{S.boqCount.replace("{a}", String(filtered.length)).replace("{b}", String(items.length))}</span>
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface p-2.5">
+        {!locked && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface p-2.5">
           <span className="text-xs font-semibold text-navy-900">{S.boqPresetLead}</span>
           <select className="input w-auto py-1.5 text-sm" aria-label={S.boqPresetCatAria} value={presetCat} onChange={(e) => { setPresetCat(e.target.value); setPresetIdx("0"); }}>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -317,7 +325,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
             {(PRESET[presetCat] ?? []).map((p, i) => <option key={p.name} value={String(i)}>{p.name} · {p.unit} · {fmtRupiah(p.price)}</option>)}
           </select>
           <AsyncButton className="btn-secondary text-xs" onAction={importPreset}><Plus className="h-3.5 w-3.5" /> {S.boqPresetAdd}</AsyncButton>
-        </div>
+        </div>}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <div className="rounded-lg bg-surface p-3 text-center">
@@ -414,6 +422,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
                     <td className="td text-xs text-steel-600">{lastTouchedAt(b as unknown as Record<string, unknown>) !== null ? fmtTanggal(lastTouchedAt(b as unknown as Record<string, unknown>)) : <span className="text-steel-400">-</span>}</td>
                     <td className="td">
                       <div className="flex flex-wrap gap-1">
+                        {!locked && <>
                         {nextStatus(b.status).map((ns) => (
                           <button
                             key={ns}
@@ -451,6 +460,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
                         {b.status === "Draft" && (
                           <RowAction icon={Trash2} tone="danger" label={locale === "en" ? "Delete" : "Hapus"} ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${b.name}`} onClick={() => setDelBoq(b)} />
                         )}
+                        </>}
                         <button
                           className="rounded bg-steel-100 px-2 py-0.5 text-xs font-semibold text-steel-600 transition-colors hover:bg-steel-200"
                           onClick={() => setLogFor(b)}

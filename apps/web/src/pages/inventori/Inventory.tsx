@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { rebindLegacyMonthSeries } from "../../utils/monthAxis";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus,
   Package,
@@ -390,7 +390,13 @@ export default function Inventory() {
   const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
   const pdfDoc = usePdfDoc();
-  const [tab, setTab] = useState("Katalog");
+  /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
+  const [tabParams] = useSearchParams();
+  const [tab, setTab] = useState(() => tabParams.get("tab") || "Katalog");
+  useEffect(() => {
+    const wanted = tabParams.get("tab");
+    if (wanted) setTab(wanted);
+  }, [tabParams]);
   const [bomProject, setBomProject] = useState("Semua proyek");
   const [q, setQ] = useState("");
   const [showScan, setShowScan] = useState(false);

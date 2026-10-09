@@ -42,12 +42,12 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | todo | |
 | F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
 | F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | selesai | PR #22 merged ke main via squash commit `33816fc`; re-review PENGUJI dan semua checks lulus |
-| F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | | todo | |
+| F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | todo | |
 | F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | | todo | |
-| F3-D-01 | Tambah sparepart dari inventori | P0 | F3-D-service-sparepart.md | | todo | |
+| F3-D-01 | Tambah sparepart dari inventori | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-D-02 | Service: dari WBS, teknisi, biaya BoQ, approval | P0 | F3-D-service-sparepart.md | | todo | |
-| F3-D-03 | Probe alur material | P1 | F3-D-service-sparepart.md | | todo | |
+| F3-D-03 | Probe alur material | P1 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo (`probe:material` 10/10) |
 | F3-E-01 | Feed update pekerjaan dengan foto | P0 | F3-E-monitoring.md | | todo | |
 | F3-E-02 | Tampilan per peran | P0 | F3-E-monitoring.md | | todo | |
 | F3-E-03 | Label "Perhatian khusus" | P1 | F3-E-monitoring.md | | todo | |
@@ -73,7 +73,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-I-03 | Update progres WO dengan foto & histori | P0 | F3-I-subkon.md | | todo | |
 | F3-I-04 | SPK terkunci kecuali procurement | P0 | F3-I-subkon.md | | todo | |
 | F3-I-05 | Termin: tabel, skema, pajak | P0 | F3-I-subkon.md | | todo | |
-| F3-J-01 | Material request sebagai penghubung | P0 | F3-J-procurement.md | | todo | |
+| F3-J-01 | Material request sebagai penghubung | P0 | F3-J-procurement.md | Claude | sebagian | endpoint `POST /api/projects/:id/material-requests`; UI daftar MR terpisah belum |
 | F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | | todo | |
 | F3-J-03 | RFQ: perbandingan harga & track record, tanpa tender | P1 | F3-J-procurement.md | | todo | |
 | F3-J-04 | Approval service oleh procurement | P0 | F3-J-procurement.md | | todo | |

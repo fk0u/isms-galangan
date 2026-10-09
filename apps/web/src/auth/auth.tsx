@@ -39,7 +39,12 @@ export function hasPermission(
   collection: string,
   action: PermissionAction = "r",
 ): boolean {
-  if (!permissions) return false;
+  if (!permissions) {
+    /* Mode demo offline (tanpa backend, data seed di browser): tidak ada server
+       yang mengirim peta izin, jadi aksi tidak dibatasi agar seluruh alur bisa
+       diperagakan. Saat tersambung server, izin SELALU dari API (ADR-0004). */
+    return !isBackendConfigured() && import.meta.env.VITE_DEMO_MODE === "true";
+  }
   const acts = permissions[collection];
   return Boolean(acts && acts.includes(action));
 }

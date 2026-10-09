@@ -46,6 +46,14 @@ window.addEventListener("unhandledrejection", (e) => {
   if (e.reason instanceof ApiError) e.preventDefault();
 });
 
+/* PWA: aplikasi bisa dipasang di Android, iOS, Windows, macOS. Hanya di build
+   produksi — di dev, service worker menahan modul lama dan membingungkan HMR. */
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  });
+}
+
 /**
  * Bungkus satu rute dengan ErrorBoundary yang ME-RESET setiap lokasi berubah.
  *
