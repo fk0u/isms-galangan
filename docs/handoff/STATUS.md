@@ -21,7 +21,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F2-06 | Scope cabang di server | P0/P1 | F2-keamanan.md | agent | selesai | PR #11 |
 | F2-07 | Login mengirim cabang & cache offline aman | P0 | F2-keamanan.md | agent | selesai | PR #12 |
 | F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | agent | selesai | PR #13 |
-| F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | agent | review | PR #23 · seluruh mutasi di DB/uploads temp + finally; regression sukses/error/sumber hilang lulus; tanpa sumber T02–T05 tetap severity K non-N/A dan gate fail-closed; kredensial fixture acak tiap run; build + migrate/seed + root `npm run check` exit 0; menunggu push/head baru, GitGuardian + seluruh checks, dan re-review Benson; belum merge |
+| F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | agent | selesai | PR #23 merged (0d067ed); riwayat di-squash atas izin owner, GitGuardian + semua check hijau |
 | F3-A-01 | Hapus filter cabang di top bar | P0 | F3-A-lintas-modul.md | agent | selesai | PR #15 |
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | agent | selesai | PR #16 |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
@@ -100,7 +100,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F4-05 | File upload terkontrol | P1 | F4-integritas.md | | todo | |
 | F4-06 | Kinerja frontend | P1 | F4-integritas.md | | todo | |
 | F4-07 | Lain-lain audit | P1 | F4-integritas.md | | todo | |
-| F5-01 | Docker & deploy | P0 | F5-demo.md | agent | review | compose + Caddy TLS + runbook; SQLite volume untuk pilot |
+| F5-01 | Docker & deploy | P0 | F5-demo.md | agent | selesai | PR #25; pilot di isms.85-211-245-134.sslip.io (nginx host varian) |
 | F5-02 | Backup & restore teruji | P0 | F5-demo.md | | todo | |
 | F5-03 | Data demo yang bercerita | P0 | F5-demo.md | | todo | |
 | F5-04 | Skenario demo per modul | P0 | F5-demo.md | | todo | |
