@@ -21,7 +21,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F2-06 | Scope cabang di server | P0/P1 | F2-keamanan.md | agent | selesai | PR #11 |
 | F2-07 | Login mengirim cabang & cache offline aman | P0 | F2-keamanan.md | agent | selesai | PR #12 |
 | F2-08 | Audit trail wajib & terbatas | P1 | F2-keamanan.md | agent | selesai | PR #13 |
-| F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | | todo | |
+| F2-09 | Security probe jadi gate CI | P0 | F2-keamanan.md | agent | review | PR #23 · seluruh mutasi di DB/uploads temp + finally; regression sukses/error/sumber hilang lulus; tanpa sumber T02–T05 tetap severity K non-N/A dan gate fail-closed; kredensial fixture acak tiap run; build + migrate/seed + root `npm run check` exit 0; menunggu push/head baru, GitGuardian + seluruh checks, dan re-review Benson; belum merge |
 | F3-A-01 | Hapus filter cabang di top bar | P0 | F3-A-lintas-modul.md | agent | selesai | PR #15 |
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | agent | selesai | PR #16 |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
@@ -41,7 +41,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-13 | Tab Tim terhubung SDM | P1 | F3-B-proyek.md | | todo | |
 | F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | todo | |
 | F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
-| F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | review | PR #22; commit `6554095`; re-review PENGUJI lulus; api & GitGuardian lulus, web & reviewer otomatis masih berjalan; menunggu seluruh checks dan keputusan merge OWNER |
+| F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | selesai | PR #22 merged ke main via squash commit `33816fc`; re-review PENGUJI dan semua checks lulus |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | | todo | |
 | F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | todo | |
 | F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | | todo | |

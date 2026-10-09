@@ -13,716 +13,863 @@ import { migrate } from "../src/migrate.js";
 import { runSeed } from "../src/seed.js";
 import { closeDb, exec, getDialect, q } from "../src/db.js";
 import { SEED_ACCOUNTS, signToken } from "../src/auth.js";
+import { COLLECTIONS, DEFAULT_BRANCH } from "../src/routes/crud.js";
+
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+function probePassword(purpose: string): string {
+  return `isms-security-probe-${purpose}-${crypto.randomUUID()}`;
+}
 
 function getSeedPass(username: string): string {
-  const account = SEED_ACCOUNTS.find((a) => a.username === username);
-  if (!account) return "probeDummyPass";
+  const account = SEED_ACCOUNTS.find((item) => item.username === username);
+  if (!account) return probePassword("unknown-seed");
   const envKey = `SEED_PASSWORD_${account.role.toUpperCase()}`;
-  return process.env[envKey] ?? ["probe", "dummy", "pass"].join("");
+  return process.env[envKey] ?? probePassword(`seed-${account.role}`);
 }
 
 interface ProbeResult {
   id: string;
+  severity: SecuritySeverity;
   test: string;
   expected: string;
   observed: string;
   vulnerable: boolean;
+  notApplicableReason?: string;
 }
+
+type SecuritySeverity = "K" | "T" | "S" | "R";
 
 const results: ProbeResult[] = [];
 
-function record(id: string, test: string, expected: string, observed: string, vulnerable: boolean): void {
-  results.push({ id, test, expected, observed, vulnerable });
-  const status = vulnerable ? "\x1b[31mVULN\x1b[0m" : "\x1b[32mOK  \x1b[0m";
-  console.log(`[${status}] ${id.padEnd(14)} ${test.padEnd(50)} -> ${observed}`);
+function record(
+  id: string,
+  test: string,
+  expected: string,
+  observed: string,
+  vulnerable: boolean,
+  severity: SecuritySeverity = "T",
+  notApplicableReason?: string,
+): void {
+  results.push({
+    id,
+    severity,
+    test,
+    expected,
+    observed,
+    vulnerable,
+    ...(notApplicableReason === undefined ? {} : { notApplicableReason }),
+  });
+  const status = notApplicableReason !== undefined
+    ? "\x1b[90mN/A \x1b[0m"
+    : vulnerable ? "\x1b[31mVULN\x1b[0m" : "\x1b[32mOK  \x1b[0m";
+  const note = notApplicableReason === undefined ? "" : ` | N/A: ${notApplicableReason}`;
+  console.log(`[${status}][${severity}] ${id.padEnd(14)} ${test.padEnd(50)} -> ${observed}${note}`);
+}
+
+async function isSingleActiveBranchConfig(): Promise<boolean> {
+  if (DEFAULT_BRANCH !== "Samarinda") return false;
+
+  const [projects, employees] = await Promise.all([
+    q<{ id: string }>("SELECT id FROM projects LIMIT 1"),
+    q<{ id: string }>("SELECT id FROM employees LIMIT 1"),
+  ]);
+  if (projects.length === 0 || employees.length === 0) return false;
+
+  // Evaluasi data dasar sebelum probe membuat fixture Balikpapan-nya sendiri.
+  // Semua koleksi harus benar-benar berada di cabang default agar T02–T05
+  // hanya menjadi N/A pada konfigurasi satu cabang yang diterima di ADR-0003.
+  for (const table of [...COLLECTIONS, "pdfDocs"]) {
+    const rows = await q<{ branch: unknown }>(`SELECT DISTINCT branch FROM ${table}`);
+    if (rows.some((row) => String(row.branch ?? "").trim() !== DEFAULT_BRANCH)) return false;
+  }
+  return true;
 }
 
 async function main(): Promise<void> {
-  const isReportMode = process.argv.includes("--report") || !process.argv.includes("--fail-on-vuln");
-
-  console.log("=== ISMS Security Probe (baseline + F2-08 audit) ===\n");
-
-  // Pastikan migrasi & seed dev telah diterapkan di database
-  await migrate();
-  await runSeed();
-
-  const app = buildApp();
-  await app.ready();
-
-  async function login(username: string, password: string): Promise<{ status: number; body: any }> {
-    const res = await app.inject({
-      method: "POST",
-      url: "/api/auth/login",
-      payload: { username, password },
-      headers: { "content-type": "application/json" },
-    });
-    let data: any = {};
-    try {
-      data = JSON.parse(res.body);
-    } catch {
-      data = {};
-    }
-    return { status: res.statusCode, body: data };
+  const isReportMode = process.argv.includes("--report");
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "isms-security-probe-"));
+  const envKeys = new Set([
+    "DB_DIALECT", "SQLITE_PATH", "MYSQL_URL", "UPLOADS_DIR", "NODE_ENV",
+    "JWT_SECRET", "WEB_ORIGINS", "HOST", "PORT", "ALLOW_SEED_LOGIN",
+  ]);
+  for (const account of SEED_ACCOUNTS) {
+    envKeys.add(`SEED_PASSWORD_${account.role.toUpperCase()}`);
   }
+  const originalEnv = new Map<string, string | undefined>();
+  for (const key of envKeys) originalEnv.set(key, process.env[key]);
+  let closeApp: (() => Promise<void>) | undefined;
+  let sourceSingleActiveBranch = false;
 
-  // 1. T00: Login akun seed direktur
-  const loginDir = await login("direktur@galangan.com", getSeedPass("direktur@galangan.com"));
-  record("T00", "Login akun seed direktur (NODE_ENV default)", "403/401", `HTTP ${loginDir.status}`, loginDir.status === 200);
+  try {
+    // Read only the caller's existing data to preserve the Jalur A/B decision.
+    // Every migration, seed, audit row, and upload below uses the temporary DB.
+    const sourceSqlitePath = process.env.SQLITE_PATH ?? "./data/isms.db";
+    const sourceDbExists = getDialect() === "mysql" || fs.existsSync(
+      path.isAbsolute(sourceSqlitePath) ? sourceSqlitePath : path.resolve(process.cwd(), sourceSqlitePath),
+    );
+    if (sourceDbExists) {
+      try {
+        sourceSingleActiveBranch = await isSingleActiveBranchConfig();
+      } catch {
+        sourceSingleActiveBranch = false;
+        console.warn("[security-probe] Source branch mode could not be verified; T02–T05 remain applicable.");
+      } finally {
+        await closeDb();
+      }
+    }
 
-  // Token mandiri untuk pengujian otorisasi & peran berikutnya (menggunakan akun DB nyata F2-04)
-  const seedUsersInDb = await q<{ id: string; username: string; role: string; token_version: number }>(
-    "SELECT id, username, role, token_version FROM users WHERE username IN ('direktur@galangan.com', 'manager@galangan.com', 'demo@galangan.com')",
-  );
-  const dirUserDb = seedUsersInDb.find((u) => u.username === "direktur@galangan.com") ?? { id: "probe-dir", username: "probe.dir", role: "direktur", token_version: 0 };
-  const mgrUserDb = seedUsersInDb.find((u) => u.username === "manager@galangan.com") ?? { id: "probe-mgr", username: "probe.mgr", role: "manager", token_version: 0 };
-  const viewUserDb = seedUsersInDb.find((u) => u.username === "demo@galangan.com") ?? { id: "probe-view", username: "probe.view", role: "viewer", token_version: 0 };
+    // The probe must never migrate, seed, upload to, or audit the caller's DB.
+    process.env.DB_DIALECT = "sqlite";
+    process.env.SQLITE_PATH = path.join(tempDir, "probe.sqlite");
+    process.env.UPLOADS_DIR = path.join(tempDir, "uploads");
+    process.env.NODE_ENV = "test";
+    process.env.JWT_SECRET = crypto.randomBytes(32).toString("hex");
+    process.env.WEB_ORIGINS = "http://localhost:5173";
+    process.env.HOST = "localhost";
+    process.env.PORT = "3000";
+    process.env.ALLOW_SEED_LOGIN = "false";
+    delete process.env.MYSQL_URL;
+    const syntheticSeedPass = `security-probe-${crypto.randomUUID()}`;
+    for (const account of SEED_ACCOUNTS) {
+      process.env[`SEED_PASSWORD_${account.role.toUpperCase()}`] = `${syntheticSeedPass}-${account.role}`;
+    }
 
-  const dirToken = signToken({ id: dirUserDb.id, username: dirUserDb.username, role: dirUserDb.role, branch: "SEMUA", v: dirUserDb.token_version });
-  const mgrToken = signToken({ id: mgrUserDb.id, username: mgrUserDb.username, role: mgrUserDb.role, branch: "SEMUA", v: mgrUserDb.token_version });
-  let viewToken = signToken({ id: viewUserDb.id, username: viewUserDb.username, role: viewUserDb.role, branch: "SEMUA", v: viewUserDb.token_version });
+    console.log("=== ISMS Security Probe (baseline + F2-08 audit) ===\n");
+    console.log("DB, upload files, audit rows, JWT, and seed credentials are isolated to this temporary run.");
 
-  // 2. T01: Respons login menyertakan claim branch
-  const probeBranchUser = `tester.${crypto.randomUUID().slice(0, 5)}`;
-  const probeBranchPass = ["probe", "branch", "pass"].join("");
-  await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: probeBranchUser, name: "Branch Tester", role: "proyek", password: probeBranchPass },
-  });
-  const loginBranch = await login(probeBranchUser, probeBranchPass);
-  const userObj = loginBranch.body?.data?.user ?? {};
-  const hasBranch = "branch" in userObj && Boolean(userObj.branch);
-  record("T01", "Respons login menyertakan claim branch", "ada", hasBranch ? "ada" : "tidak ada", !hasBranch);
+    // Migrasikan dan seed database probe sementara yang terisolasi
+    await migrate();
+    await runSeed();
 
-  // Setup user cabang untuk pengujian isolasi: Balikpapan vs Samarinda
-  const ownBranch = "Balikpapan";
-  const otherBranch = "Samarinda";
+    const app = buildApp();
+    closeApp = () => app.close();
+    await app.ready();
+    if (process.argv.includes("--test-fail-after-setup")) {
+      throw new Error("intentional security-probe cleanup verification failure");
+    }
 
-  // Cari proyek Samarinda
-  const projRes = await app.inject({
-    method: "GET",
-    url: "/api/projects?limit=500",
-    headers: { authorization: `Bearer ${dirToken}` },
-  });
-  const projData = JSON.parse(projRes.body)?.data?.rows ?? [];
-  const foreignProject = projData.find((p: any) => p.branch === otherBranch) ?? projData[0] ?? { id: "PRJ-SAM-01", branch: otherBranch };
+    async function login(username: string, password: string): Promise<{ status: number; body: any }> {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/auth/login",
+        payload: { username, password },
+        headers: { "content-type": "application/json" },
+      });
+      let data: any = {};
+      try {
+        data = JSON.parse(res.body);
+      } catch {
+        data = {};
+      }
+      return { status: res.statusCode, body: data };
+    }
 
-  const empId = `EMP-AUD${crypto.randomUUID().slice(0, 5).toUpperCase()}`;
-  await app.inject({
-    method: "POST",
-    url: "/api/employees",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { id: empId, branch: ownBranch, data: { name: "Auditor Cabang", branch: ownBranch } },
-  });
+    // 1. T00: Login akun seed direktur
+    const loginDir = await login("direktur@galangan.com", getSeedPass("direktur@galangan.com"));
+    record("T00", "Login akun seed direktur (NODE_ENV default)", "403/401", `HTTP ${loginDir.status}`, loginDir.status === 200, "K");
 
-  const uname = `auditor.${crypto.randomUUID().slice(0, 6)}`;
-  const auditorPass = "probe-auditor-pass";
-  const userCreateRes = await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: uname, name: "Auditor", role: "proyek", password: auditorPass, employeeId: empId },
-  });
-  const createdUserId = JSON.parse(userCreateRes.body)?.data?.id ?? "";
+    // Token mandiri untuk pengujian otorisasi & peran berikutnya (menggunakan akun DB nyata F2-04)
+    const seedUsersInDb = await q<{ id: string; username: string; role: string; token_version: number }>(
+      "SELECT id, username, role, token_version FROM users WHERE username IN ('direktur@galangan.com', 'manager@galangan.com', 'demo@galangan.com')",
+    );
+    const dirUserDb = seedUsersInDb.find((u) => u.username === "direktur@galangan.com") ?? { id: "probe-dir", username: "probe.dir", role: "direktur", token_version: 0 };
+    const mgrUserDb = seedUsersInDb.find((u) => u.username === "manager@galangan.com") ?? { id: "probe-mgr", username: "probe.mgr", role: "manager", token_version: 0 };
+    const viewUserDb = seedUsersInDb.find((u) => u.username === "demo@galangan.com") ?? { id: "probe-view", username: "probe.view", role: "viewer", token_version: 0 };
 
-  const loginAuditor = await login(uname, auditorPass);
-  const branchToken = loginAuditor.body?.data?.token ?? "";
+    const dirToken = signToken({ id: dirUserDb.id, username: dirUserDb.username, role: dirUserDb.role, branch: "SEMUA", v: dirUserDb.token_version });
+    const mgrToken = signToken({ id: mgrUserDb.id, username: mgrUserDb.username, role: mgrUserDb.role, branch: "SEMUA", v: mgrUserDb.token_version });
+    let viewToken = signToken({ id: viewUserDb.id, username: viewUserDb.username, role: viewUserDb.role, branch: "SEMUA", v: viewUserDb.token_version });
 
-  // 3. T02: User Balikpapan GET proyek Samarinda
-  const t02 = await app.inject({
-    method: "GET",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${branchToken}` },
-  });
-  record("T02", `User ${ownBranch} GET proyek ${otherBranch} (${foreignProject.id})`, "403/404", `HTTP ${t02.statusCode}`, t02.statusCode === 200);
+    // 2. T01: Respons login menyertakan claim branch
+    const probeBranchUser = `tester.${crypto.randomUUID().slice(0, 5)}`;
+    const probeBranchPass = probePassword("branch");
+    await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { username: probeBranchUser, name: "Branch Tester", role: "proyek", password: probeBranchPass },
+    });
+    const loginBranch = await login(probeBranchUser, probeBranchPass);
+    const userObj = loginBranch.body?.data?.user ?? {};
+    const hasBranch = "branch" in userObj && Boolean(userObj.branch);
+    record("T01", "Respons login menyertakan claim branch", "ada", hasBranch ? "ada" : "tidak ada", !hasBranch);
 
-  // 4. T03: User Balikpapan list ?branch=Samarinda
-  const t03 = await app.inject({
-    method: "GET",
-    url: `/api/projects?branch=${otherBranch}&limit=5`,
-    headers: { authorization: `Bearer ${branchToken}` },
-  });
-  const t03Total = JSON.parse(t03.body)?.data?.total ?? 0;
-  record("T03", `User ${ownBranch} list ?branch=${otherBranch}`, "403/kosong", `HTTP ${t03.statusCode}, total=${t03Total}`, t03.statusCode === 200 && t03Total > 0);
+    // Tentukan mode dari data dasar sebelum fixture pengujian menambahkan cabang.
+    const ownBranch = "Balikpapan";
+    const otherBranch = DEFAULT_BRANCH;
+    const singleActiveBranch = sourceSingleActiveBranch;
+    const branchIsolationNotApplicableReason = singleActiveBranch
+      ? `ADR-0003 Jalur A: data dasar hanya memiliki cabang aktif ${DEFAULT_BRANCH}; isolasi lintas-cabang menunggu Jalur B`
+      : undefined;
+    console.log(`Konfigurasi scope cabang: ${singleActiveBranch ? `Jalur A (${DEFAULT_BRANCH})` : "lintas-cabang berlaku"}`);
 
-  // 5. T04: User cabang baca WBS proyek cabang lain
-  const t04 = await app.inject({
-    method: "GET",
-    url: `/api/projects/${foreignProject.id}/wbs`,
-    headers: { authorization: `Bearer ${branchToken}` },
-  });
-  record("T04", "User cabang baca WBS proyek cabang lain", "403", `HTTP ${t04.statusCode}`, t04.statusCode === 200);
+    // Gunakan proyek sintetis agar probe tidak mengubah data seed yang sudah ada.
+    const foreignProject = { id: `PRJ-SEC-${crypto.randomUUID().slice(0, 8)}`, branch: otherBranch };
+    await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      foreignProject.id,
+      foreignProject.branch,
+      JSON.stringify({ vessel: "F2-09 synthetic probe", client: "F2-09 synthetic probe" }),
+      new Date().toISOString(),
+    ]);
 
-  // 6. T05: User cabang PATCH proyek cabang lain
-  const t05 = await app.inject({
-    method: "PATCH",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
-    payload: { data: { auditProbe: "x" } },
-  });
-  record("T05", "User cabang PATCH proyek cabang lain", "403", `HTTP ${t05.statusCode}`, t05.statusCode === 200);
+    const empId = `EMP-AUD${crypto.randomUUID().slice(0, 5).toUpperCase()}`;
+    await app.inject({
+      method: "POST",
+      url: "/api/employees",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { id: empId, branch: ownBranch, data: { name: "Auditor Cabang", branch: ownBranch } },
+    });
 
-  // 7. T06: User cabang memindahkan proyek ke cabangnya
-  const t06 = await app.inject({
-    method: "PATCH",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
-    payload: { branch: ownBranch },
-  });
-  record("T06", "User cabang memindahkan proyek ke cabangnya", "403", `HTTP ${t06.statusCode}`, t06.statusCode === 200);
+    const uname = `auditor.${crypto.randomUUID().slice(0, 6)}`;
+    const auditorPass = probePassword("auditor");
+    const userCreateRes = await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { username: uname, name: "Auditor", role: "proyek", password: auditorPass, employeeId: empId },
+    });
+    const createdUserId = JSON.parse(userCreateRes.body)?.data?.id ?? "";
 
-  // Kembalikan branch proyek
-  await app.inject({
-    method: "PATCH",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { branch: otherBranch },
-  });
+    const loginAuditor = await login(uname, auditorPass);
+    const branchToken = loginAuditor.body?.data?.token ?? "";
 
-  // 8. T07: User cabang membuat data atas nama cabang lain
-  const t07 = await app.inject({
-    method: "POST",
-    url: "/api/projects",
-    headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
-    payload: { branch: otherBranch, data: { vessel: "AUDIT", client: "AUDIT" } },
-  });
-  record("T07", "User cabang membuat data atas nama cabang lain", "403", `HTTP ${t07.statusCode}`, t07.statusCode === 201);
-
-  // 9-12. T08: Viewer membaca koleksi sensitif
-  for (const col of ["payroll", "employees", "journals", "invoices"]) {
-    const t08 = await app.inject({
+    // 3. T02: User Balikpapan GET proyek Samarinda
+    const t02 = await app.inject({
       method: "GET",
-      url: `/api/${col}?limit=1`,
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${branchToken}` },
+    });
+    record("T02", `User ${ownBranch} GET proyek ${otherBranch} (${foreignProject.id})`, "403/404", `HTTP ${t02.statusCode}`, t02.statusCode === 200, "K", branchIsolationNotApplicableReason);
+
+    // 4. T03: User Balikpapan list ?branch=Samarinda
+    const t03 = await app.inject({
+      method: "GET",
+      url: `/api/projects?branch=${otherBranch}&limit=5`,
+      headers: { authorization: `Bearer ${branchToken}` },
+    });
+    const t03Total = JSON.parse(t03.body)?.data?.total ?? 0;
+    record("T03", `User ${ownBranch} list ?branch=${otherBranch}`, "403/kosong", `HTTP ${t03.statusCode}, total=${t03Total}`, t03.statusCode === 200 && t03Total > 0, "K", branchIsolationNotApplicableReason);
+
+    // 5. T04: User cabang baca WBS proyek cabang lain
+    const t04 = await app.inject({
+      method: "GET",
+      url: `/api/projects/${foreignProject.id}/wbs`,
+      headers: { authorization: `Bearer ${branchToken}` },
+    });
+    record("T04", "User cabang baca WBS proyek cabang lain", "403", `HTTP ${t04.statusCode}`, t04.statusCode === 200, "K", branchIsolationNotApplicableReason);
+
+    // 6. T05: User cabang PATCH proyek cabang lain
+    const t05 = await app.inject({
+      method: "PATCH",
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
+      payload: { data: { auditProbe: "x" } },
+    });
+    record("T05", "User cabang PATCH proyek cabang lain", "403", `HTTP ${t05.statusCode}`, t05.statusCode === 200, "K", branchIsolationNotApplicableReason);
+
+    // 7. T06: User cabang memindahkan proyek ke cabangnya
+    const t06 = await app.inject({
+      method: "PATCH",
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
+      payload: { branch: ownBranch },
+    });
+    record("T06", "User cabang memindahkan proyek ke cabangnya", "403", `HTTP ${t06.statusCode}`, t06.statusCode === 200, "K");
+
+    // Kembalikan branch proyek
+    await app.inject({
+      method: "PATCH",
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { branch: otherBranch },
+    });
+
+    // 8. T07: Jalur A menerima create dan memaksa cabang non-default ke Samarinda.
+    const t07 = await app.inject({
+      method: "POST",
+      url: "/api/projects",
+      headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
+      payload: { branch: ownBranch, data: { vessel: "AUDIT", client: "AUDIT" } },
+    });
+    const t07Data = JSON.parse(t07.body)?.data ?? {};
+    const t07ProjectId = typeof t07Data.id === "string" ? t07Data.id : "";
+    record(
+      "T07",
+      "Peran proyek create dengan cabang luar dipaksa ke default",
+      `201; branch=${DEFAULT_BRANCH}`,
+      `HTTP ${t07.statusCode}, branch=${String(t07Data.branch ?? "(tidak ada)")}`,
+      t07.statusCode !== 201 || t07Data.branch !== DEFAULT_BRANCH,
+      "K",
+    );
+
+    // 9-12. T08: Viewer membaca koleksi sensitif
+    for (const col of ["payroll", "employees", "journals", "invoices"]) {
+      const t08 = await app.inject({
+        method: "GET",
+        url: `/api/${col}?limit=1`,
+        headers: { authorization: `Bearer ${viewToken}` },
+      });
+      const tot = JSON.parse(t08.body)?.data?.total ?? 0;
+      record(`T08-${col}`, `Viewer membaca /api/${col}`, "403", `HTTP ${t08.statusCode}, total=${tot}`, t08.statusCode === 200 && tot > 0, "K");
+    }
+
+    // 13. T09: Viewer membaca audit log
+    const t09 = await app.inject({
+      method: "GET",
+      url: "/api/audit?limit=3",
       headers: { authorization: `Bearer ${viewToken}` },
     });
-    const tot = JSON.parse(t08.body)?.data?.total ?? 0;
-    record(`T08-${col}`, `Viewer membaca /api/${col}`, "403", `HTTP ${t08.statusCode}, total=${tot}`, t08.statusCode === 200 && tot > 0);
-  }
+    record("T09", "Viewer membaca audit log", "403", `HTTP ${t09.statusCode}`, t09.statusCode === 200, "K");
 
-  // 13. T09: Viewer membaca audit log
-  const t09 = await app.inject({
-    method: "GET",
-    url: "/api/audit?limit=3",
-    headers: { authorization: `Bearer ${viewToken}` },
-  });
-  record("T09", "Viewer membaca audit log", "403", `HTTP ${t09.statusCode}`, t09.statusCode === 200);
-
-  // 14. T10: Viewer membuat activity atas nama orang lain
-  const t10 = await app.inject({
-    method: "POST",
-    url: "/api/activities",
-    headers: { authorization: `Bearer ${viewToken}`, "content-type": "application/json" },
-    payload: { data: { text: "palsu", user: "Direktur Utama" } },
-  });
-  const actId = JSON.parse(t10.body)?.data?.id ?? "";
-  record("T10", "Viewer membuat activity atas nama orang lain", "403", `HTTP ${t10.statusCode}`, t10.statusCode === 201);
-
-  // 15. T11: Viewer menghapus activity
-  const t11 = await app.inject({
-    method: "DELETE",
-    url: `/api/activities/${actId || "ACT-NOPE"}`,
-    headers: { authorization: `Bearer ${viewToken}` },
-  });
-  record("T11", "Viewer menghapus activity", "403", `HTTP ${t11.statusCode}`, t11.statusCode === 200);
-
-  // 16-19. Manager eskalasi peran
-  const usersRes = await app.inject({
-    method: "GET",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${mgrToken}` },
-  });
-  const userList = JSON.parse(usersRes.body)?.data?.users ?? [];
-  const mgrUser = userList.find((u: any) => u.username === "manager@galangan.com") ?? { id: "USR-MGR" };
-  const direkturUser = userList.find((u: any) => u.username === "direktur@galangan.com") ?? { id: "USR-DIR" };
-
-  // 16. T12: Manager menaikkan perannya sendiri ke direktur
-  const t12 = await app.inject({
-    method: "PATCH",
-    url: `/api/users/${mgrUser.id}`,
-    headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
-    payload: { role: "direktur" },
-  });
-  record("T12", "Manager menaikkan perannya sendiri ke direktur", "403", `HTTP ${t12.statusCode}`, t12.statusCode === 200);
-
-  // Kembalikan role manager
-  await app.inject({
-    method: "PATCH",
-    url: `/api/users/${mgrUser.id}`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { role: "manager" },
-  });
-
-  // 17. T13: Manager membuat akun ber-peran developer
-  const probeEscalatePass = "probe-escalate-pass";
-  const t13 = await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
-    payload: { username: `esc.${crypto.randomUUID().slice(0, 5)}`, name: "x", role: "developer", password: probeEscalatePass },
-  });
-  record("T13", "Manager membuat akun ber-peran developer", "403", `HTTP ${t13.statusCode}`, t13.statusCode === 201);
-
-  // 18. T14: Manager reset password Direktur tanpa password lama
-  // Gunakan user direktur sementara agar akun seed tidak dimutasi permanen
-  const tempDirUname = `temp.dir.${crypto.randomUUID().slice(0, 5)}`;
-  const tempDirPass = ["temp", "dir", "pass"].join("");
-  const tempDirRes = await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: tempDirUname, name: "Temp Dir", role: "direktur", password: tempDirPass },
-  });
-  const tempDirId = JSON.parse(tempDirRes.body)?.data?.id ?? "";
-
-  const probeTakeoverPass = "probe-takeover-pass";
-  const t14 = await app.inject({
-    method: "POST",
-    url: `/api/users/${tempDirId}/password`,
-    headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
-    payload: { newPassword: probeTakeoverPass },
-  });
-  record("T14", "Manager reset password Direktur tanpa password lama", "403", `HTTP ${t14.statusCode}`, t14.statusCode === 200);
-
-  // 19. T15: Login Direktur dengan password hasil reset
-  const t15Login = await login(tempDirUname, probeTakeoverPass);
-  record("T15", "Login Direktur dengan password hasil reset", "401", `HTTP ${t15Login.status}`, t15Login.status === 200);
-
-  // 20. T16: Token lama tetap memakai peran lama
-  await app.inject({
-    method: "PATCH",
-    url: `/api/users/${createdUserId}`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { role: "viewer" },
-  });
-  const t16 = await app.inject({
-    method: "PATCH",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
-    payload: { data: { auditProbe2: "y" } },
-  });
-  record("T16", "Token lama tetap memakai peran lama", "403", `HTTP ${t16.statusCode}`, t16.statusCode === 200);
-
-  // 21. T17: Token akun nonaktif masih diterima
-  await app.inject({
-    method: "DELETE",
-    url: `/api/users/${createdUserId}`,
-    headers: { authorization: `Bearer ${dirToken}` },
-  });
-  const t17 = await app.inject({
-    method: "GET",
-    url: "/api/payroll?limit=1",
-    headers: { authorization: `Bearer ${branchToken}` },
-  });
-  record("T17", "Token akun nonaktif masih diterima", "401", `HTTP ${t17.statusCode}`, t17.statusCode === 200);
-
-  // 22. T18: Token tetap berlaku setelah logout
-  await app.inject({
-    method: "DELETE",
-    url: "/api/auth/logout",
-    headers: { authorization: `Bearer ${viewToken}` },
-  });
-  const t18 = await app.inject({
-    method: "GET",
-    url: "/api/employees?limit=1",
-    headers: { authorization: `Bearer ${viewToken}` },
-  });
-  record("T18", "Token tetap berlaku setelah logout", "401", `HTTP ${t18.statusCode}`, t18.statusCode === 200);
-
-  // Perbarui viewToken untuk skenario pengujian berikutnya yang membutuhkan token viewer valid
-  const updatedViewUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
-    "SELECT id, username, role, token_version FROM users WHERE id = ?",
-    [viewUserDb.id],
-  );
-  viewToken = signToken({
-    id: viewUserDb.id,
-    username: viewUserDb.username,
-    role: viewUserDb.role,
-    branch: "SEMUA",
-    v: updatedViewUsers[0]?.token_version ?? 1,
-  });
-
-  // 23. T19: PATCH tanpa baseUpdatedAt diterima
-  const t19 = await app.inject({
-    method: "PATCH",
-    url: `/api/projects/${foreignProject.id}`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { data: { x: 1 } },
-  });
-  record("T19", "PATCH tanpa baseUpdatedAt diterima", "409/428", `HTTP ${t19.statusCode}`, t19.statusCode === 200);
-
-  // 24. T20: Timing attack: user tak ada vs ada
-  const measureLogin = async (uname: string): Promise<number> => {
-    const start = performance.now();
-    await login(uname, "wrong-password-x");
-    return performance.now() - start;
-  };
-  const timesNobody: number[] = [];
-  const timesExisting: number[] = [];
-  for (let i = 0; i < 5; i++) {
-    timesNobody.push(await measureLogin(`nobody.${i}@example.com`));
-    timesExisting.push(await measureLogin("direktur@galangan.com"));
-  }
-  timesNobody.sort((a, b) => a - b);
-  timesExisting.sort((a, b) => a - b);
-  const medianNobody = timesNobody[2];
-  const medianExisting = timesExisting[2];
-  const isTimingSkewed = medianExisting > medianNobody * 3;
-  record(
-    "T20",
-    "Waktu login: user tak ada vs ada (median)",
-    "setara",
-    `${medianNobody.toFixed(0)} ms vs ${medianExisting.toFixed(0)} ms`,
-    isTimingSkewed,
-  );
-
-  // 25-30. Upload & file traversal
-  // Siapkan dummy PNG 1x1
-  const boundary = "----auditprobe";
-  const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  const dummyPayload = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n`),
-    pngHeader,
-    Buffer.alloc(32),
-    Buffer.from(`\r\n--${boundary}--\r\n`),
-  ]);
-
-  // 25. T21: Viewer dapat upload file
-  const t21 = await app.inject({
-    method: "POST",
-    url: "/api/files",
-    headers: {
-      authorization: `Bearer ${viewToken}`,
-      "content-type": `multipart/form-data; boundary=${boundary}`,
-    },
-    payload: dummyPayload,
-  });
-  record("T21", "Viewer dapat upload file", "403", `HTTP ${t21.statusCode}`, t21.statusCode === 201);
-
-  // Probe audit terpisah dari uji akses viewer: lakukan upload dengan akun direktur yang berizin.
-  const t21AllowedUpload = await app.inject({
-    method: "POST",
-    url: "/api/files",
-    headers: {
-      authorization: `Bearer ${dirToken}`,
-      "content-type": `multipart/form-data; boundary=${boundary}`,
-    },
-    payload: dummyPayload,
-  });
-  const fileUrl = JSON.parse(t21AllowedUpload.body)?.data?.url ?? "";
-  const t21Audit = await app.inject({
-    method: "GET",
-    url: `/api/audit?table=files&rowId=${encodeURIComponent(fileUrl)}&limit=5`,
-    headers: { authorization: `Bearer ${dirToken}` },
-  });
-  const t21AuditRows = (JSON.parse(t21Audit.body) as {
-    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
-  }).data?.rows ?? [];
-  const uploadVisible = t21AuditRows.some((row) => row.table_name === "files" && row.row_id === fileUrl);
-  record(
-    "F2-08-UPLOAD",
-    "Upload file tercatat di sumber halaman Audit",
-    "HTTP 201 + jejak audit",
-    `upload=${t21AllowedUpload.statusCode}, audit=${uploadVisible ? "ada" : "tidak ada"}`,
-    t21AllowedUpload.statusCode !== 201 || t21Audit.statusCode !== 200 || !uploadVisible,
-  );
-
-  // 26. T22: GET /files tanpa token
-  const t22 = await app.inject({
-    method: "GET",
-    url: fileUrl || "/files/dummy.png",
-  });
-  record("T22", "GET /files tanpa token", "401", `HTTP ${t22.statusCode}`, t22.statusCode === 200);
-
-  // 27-30. T23: Bypass auth file via variasi path
-  const baseFile = fileUrl || "/files/dummy.png";
-  const altPaths = [
-    baseFile.replace("/files/", "/%66iles/"),
-    baseFile.replace("/files/", "//files/"),
-    baseFile.replace("/files/", "/files/./"),
-    baseFile.replace("/files/", "/FILES/"),
-  ];
-  for (let idx = 0; idx < altPaths.length; idx++) {
-    const alt = altPaths[idx];
-    const t23 = await app.inject({ method: "GET", url: alt });
-    record(`T23-${idx + 1}`, `Bypass auth file via '${alt.slice(0, 14)}...'`, "401/404", `HTTP ${t23.statusCode}`, t23.statusCode === 200);
-  }
-
-  // 31. T24: CORS untuk origin asing
-  const t24 = await app.inject({
-    method: "GET",
-    url: "/health",
-    headers: { origin: "https://evil.example" },
-  });
-  const acao = (t24.headers["access-control-allow-origin"] as string) ?? "-";
-  const isCorsVuln = acao === "*" || acao === "https://evil.example";
-  record("T24", "CORS untuk origin asing", "tanpa header", acao, isCorsVuln);
-
-  // 32. T25: Expose-Headers pada respons aktual
-  const t25 = await app.inject({ method: "GET", url: "/health" });
-  const exposeHeader = t25.headers["access-control-expose-headers"] as string | undefined;
-  record("T25", "Expose-Headers pada respons aktual", "ada", exposeHeader ?? "(tidak ada)", !exposeHeader);
-
-  // 33. T26: Header keamanan HTTP
-  const secHeaders = ["strict-transport-security", "x-frame-options", "content-security-policy", "x-content-type-options"];
-  const missingHeaders = secHeaders.filter((h) => !(h in t25.headers));
-  record("T26", "Header keamanan HTTP", "ada", missingHeaders.length === 0 ? "lengkap" : `tidak ada: ${missingHeaders.join(", ")}`, missingHeaders.length > 0);
-
-  // 34. T27: /health publik membuka versi & dialect
-  const healthBody = t25.body;
-  const revealsDialect = healthBody.includes('"dialect"');
-  record("T27", "/health publik membuka versi & dialect", "minimal", healthBody.slice(0, 80), revealsDialect);
-
-  // 35. T28: Render PDF id tidak ada
-  const t28 = await app.inject({
-    method: "POST",
-    url: "/api/pdf/render",
-    headers: { authorization: `Bearer ${viewToken}`, "content-type": "application/json" },
-    payload: { kind: "kwitansi", id: "NOPE-404" },
-  });
-  // 36. Q2 Matrix test: Finance & HR perizinan (ADR-0004 & F2-05)
-  const finUname = `finance.${crypto.randomUUID().slice(0, 6)}`;
-  const finPass = ["probe", "fin", "pass"].join("");
-  await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: finUname, name: "Finance Probe", role: "finance", password: finPass },
-  });
-  const loginFin = await login(finUname, finPass);
-  const finToken = loginFin.body?.data?.token ?? "";
-
-  const finJournals = await app.inject({
-    method: "GET",
-    url: "/api/journals?limit=1",
-    headers: { authorization: `Bearer ${finToken}` },
-  });
-  const finPayroll = await app.inject({
-    method: "GET",
-    url: "/api/payroll?limit=1",
-    headers: { authorization: `Bearer ${finToken}` },
-  });
-  record(
-    "Q2-Finance",
-    "Finance boleh baca jurnal (200), tolak payroll (403)",
-    "200 & 403",
-    `journals=${finJournals.statusCode}, payroll=${finPayroll.statusCode}`,
-    finJournals.statusCode !== 200 || finPayroll.statusCode !== 403,
-  );
-
-  const hrUname = `hr.${crypto.randomUUID().slice(0, 6)}`;
-  const hrPass = ["probe", "hr", "pass"].join("");
-  await app.inject({
-    method: "POST",
-    url: "/api/users",
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { username: hrUname, name: "HR Probe", role: "hr", password: hrPass },
-  });
-  const loginHr = await login(hrUname, hrPass);
-  const hrToken = loginHr.body?.data?.token ?? "";
-
-  const hrPayroll = await app.inject({
-    method: "GET",
-    url: "/api/payroll?limit=1",
-    headers: { authorization: `Bearer ${hrToken}` },
-  });
-  const hrJournals = await app.inject({
-    method: "GET",
-    url: "/api/journals?limit=1",
-    headers: { authorization: `Bearer ${hrToken}` },
-  });
-  record(
-    "Q2-HR",
-    "HR boleh baca payroll (200), tolak jurnal (403)",
-    "200 & 403",
-    `payroll=${hrPayroll.statusCode}, journals=${hrJournals.statusCode}`,
-    hrPayroll.statusCode !== 200 || hrJournals.statusCode !== 403,
-  );
-
-  // F2-08: PUT WBS dan team harus tampak pada sumber audit yang dipakai halaman Audit.
-  const f208ProjectId = `PRJ-F208-${crypto.randomUUID().slice(0, 8)}`;
-  const f208EmployeeId = `EMP-F208-${crypto.randomUUID().slice(0, 8)}`;
-  const f208Now = new Date().toISOString();
-  await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
-    f208ProjectId,
-    "Samarinda",
-    JSON.stringify({ vessel: "F2-08 synthetic probe", client: "F2-08 synthetic probe" }),
-    f208Now,
-  ]);
-  await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
-    f208EmployeeId,
-    "Samarinda",
-    JSON.stringify({ name: "F2-08 synthetic probe" }),
-    f208Now,
-  ]);
-  const f208Wbs = await app.inject({
-    method: "PUT",
-    url: `/api/projects/${f208ProjectId}/wbs`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { wbs: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
-  });
-  const f208WbsAudit = await app.inject({
-    method: "GET",
-    url: `/api/audit?table=wbs_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
-    headers: { authorization: `Bearer ${dirToken}` },
-  });
-  const f208WbsRows = (JSON.parse(f208WbsAudit.body) as {
-    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
-  }).data?.rows ?? [];
-  const wbsVisible = f208WbsRows.some((row) => row.table_name === "wbs_by_project" && row.row_id === f208ProjectId);
-  record(
-    "F2-08-WBS",
-    "PUT WBS tercatat di sumber halaman Audit",
-    "HTTP 200 + jejak audit",
-    `PUT=${f208Wbs.statusCode}, audit=${wbsVisible ? "ada" : "tidak ada"}`,
-    f208Wbs.statusCode !== 200 || f208WbsAudit.statusCode !== 200 || !wbsVisible,
-  );
-  const concurrentWbs = await Promise.all([
-    app.inject({
-      method: "PUT",
-      url: `/api/projects/${f208ProjectId}/wbs`,
-      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-      payload: { wbs: [{ id: "F2-08-WBS-A" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
-    }),
-    app.inject({
-      method: "PUT",
-      url: `/api/projects/${f208ProjectId}/wbs`,
-      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-      payload: { wbs: [{ id: "F2-08-WBS-B" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
-    }),
-  ]);
-  const concurrentWbsStatuses = concurrentWbs.map((res) => res.statusCode).sort((a, b) => a - b);
-  record(
-    "F2-08-WBS-RACE",
-    "PUT WBS bersamaan tidak mengaudit snapshot lama",
-    "satu HTTP 200 dan satu HTTP 409",
-    `HTTP ${concurrentWbsStatuses.join("/")}`,
-    concurrentWbsStatuses[0] !== 200 || concurrentWbsStatuses[1] !== 409,
-  );
-
-  const f208Team = await app.inject({
-    method: "PUT",
-    url: `/api/projects/${f208ProjectId}/team`,
-    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-    payload: { memberIds: [f208EmployeeId] },
-  });
-  const f208TeamAudit = await app.inject({
-    method: "GET",
-    url: `/api/audit?table=team_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
-    headers: { authorization: `Bearer ${dirToken}` },
-  });
-  const f208TeamRows = (JSON.parse(f208TeamAudit.body) as {
-    data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
-  }).data?.rows ?? [];
-  const teamVisible = f208TeamRows.some((row) => row.table_name === "team_by_project" && row.row_id === f208ProjectId);
-  record(
-    "F2-08-TEAM",
-    "PUT team tercatat di sumber halaman Audit",
-    "HTTP 200 + jejak audit",
-    `PUT=${f208Team.statusCode}, audit=${teamVisible ? "ada" : "tidak ada"}`,
-    f208Team.statusCode !== 200 || f208TeamAudit.statusCode !== 200 || !teamVisible,
-  );
-  const concurrentTeam = await Promise.all([
-    app.inject({
-      method: "PUT",
-      url: `/api/projects/${f208ProjectId}/team`,
-      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-      payload: { memberIds: [], baseData: [f208EmployeeId] },
-    }),
-    app.inject({
-      method: "PUT",
-      url: `/api/projects/${f208ProjectId}/team`,
-      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-      payload: { memberIds: [f208EmployeeId, f208EmployeeId], baseData: [f208EmployeeId] },
-    }),
-  ]);
-  const concurrentTeamStatuses = concurrentTeam.map((res) => res.statusCode).sort((a, b) => a - b);
-  record(
-    "F2-08-TEAM-RACE",
-    "PUT team bersamaan tidak mengaudit snapshot lama",
-    "satu HTTP 200 dan satu HTTP 409",
-    `HTTP ${concurrentTeamStatuses.join("/")}`,
-    concurrentTeamStatuses[0] !== 200 || concurrentTeamStatuses[1] !== 409,
-  );
-
-  // F2-08: kegagalan insert audit harus menggagalkan PATCH dan membatalkan perubahan invoice.
-  const f208InvoiceId = `INV-F208-${crypto.randomUUID().slice(0, 8)}`;
-  await exec("INSERT INTO invoices (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
-    f208InvoiceId,
-    "Samarinda",
-    JSON.stringify({ client: "F2-08 synthetic probe", amount: 100 }),
-    f208Now,
-  ]);
-  const triggerName = `f208_audit_fail_${crypto.randomUUID().replace(/-/g, "")}`;
-  if (getDialect() === "mysql") {
-    await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'F2-08 probe'`);
-  } else {
-    await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'F2-08 probe'); END`);
-  }
-  let f208InvoicePatchStatus = 0;
-  try {
-    const f208InvoicePatch = await app.inject({
-      method: "PATCH",
-      url: `/api/invoices/${f208InvoiceId}`,
-      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
-      payload: { data: { amount: 200 } },
+    // 14. T10: Viewer membuat activity atas nama orang lain
+    const t10 = await app.inject({
+      method: "POST",
+      url: "/api/activities",
+      headers: { authorization: `Bearer ${viewToken}`, "content-type": "application/json" },
+      payload: { data: { text: "palsu", user: "Direktur Utama" } },
     });
-    f208InvoicePatchStatus = f208InvoicePatch.statusCode;
+    const actId = JSON.parse(t10.body)?.data?.id ?? "";
+    record("T10", "Viewer membuat activity atas nama orang lain", "403", `HTTP ${t10.statusCode}`, t10.statusCode === 201, "K");
+
+    // 15. T11: Viewer menghapus activity
+    const t11 = await app.inject({
+      method: "DELETE",
+      url: `/api/activities/${actId || "ACT-NOPE"}`,
+      headers: { authorization: `Bearer ${viewToken}` },
+    });
+    record("T11", "Viewer menghapus activity", "403", `HTTP ${t11.statusCode}`, t11.statusCode === 200, "K");
+
+    // 16-19. Manager eskalasi peran
+    const usersRes = await app.inject({
+      method: "GET",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${mgrToken}` },
+    });
+    const userList = JSON.parse(usersRes.body)?.data?.users ?? [];
+    const mgrUser = userList.find((u: any) => u.username === "manager@galangan.com") ?? { id: "USR-MGR" };
+    const direkturUser = userList.find((u: any) => u.username === "direktur@galangan.com") ?? { id: "USR-DIR" };
+
+    // 16. T12: Manager menaikkan perannya sendiri ke direktur
+    const t12 = await app.inject({
+      method: "PATCH",
+      url: `/api/users/${mgrUser.id}`,
+      headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
+      payload: { role: "direktur" },
+    });
+    record("T12", "Manager menaikkan perannya sendiri ke direktur", "403", `HTTP ${t12.statusCode}`, t12.statusCode === 200, "K");
+
+    // Kembalikan role manager
+    await app.inject({
+      method: "PATCH",
+      url: `/api/users/${mgrUser.id}`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { role: "manager" },
+    });
+
+    // 17. T13: Manager membuat akun ber-peran developer
+    const probeEscalatePass = probePassword("escalate");
+    const t13 = await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
+      payload: { username: `esc.${crypto.randomUUID().slice(0, 5)}`, name: "x", role: "developer", password: probeEscalatePass },
+    });
+    record("T13", "Manager membuat akun ber-peran developer", "403", `HTTP ${t13.statusCode}`, t13.statusCode === 201, "K");
+
+    // 18. T14: Manager reset password Direktur tanpa password lama
+    // Gunakan user direktur sementara agar akun seed tidak dimutasi permanen
+    const tempDirUname = `temp.dir.${crypto.randomUUID().slice(0, 5)}`;
+    const tempDirPass = probePassword("temp-director");
+    const tempDirRes = await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { username: tempDirUname, name: "Temp Dir", role: "direktur", password: tempDirPass },
+    });
+    const tempDirId = JSON.parse(tempDirRes.body)?.data?.id ?? "";
+
+    const probeTakeoverPass = probePassword("takeover");
+    const t14 = await app.inject({
+      method: "POST",
+      url: `/api/users/${tempDirId}/password`,
+      headers: { authorization: `Bearer ${mgrToken}`, "content-type": "application/json" },
+      payload: { newPassword: probeTakeoverPass },
+    });
+    record("T14", "Manager reset password Direktur tanpa password lama", "403", `HTTP ${t14.statusCode}`, t14.statusCode === 200, "K");
+
+    // 19. T15: Login Direktur dengan password hasil reset
+    const t15Login = await login(tempDirUname, probeTakeoverPass);
+    record("T15", "Login Direktur dengan password hasil reset", "401", `HTTP ${t15Login.status}`, t15Login.status === 200, "K");
+
+    // 20. T16: Token lama tetap memakai peran lama
+    await app.inject({
+      method: "PATCH",
+      url: `/api/users/${createdUserId}`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { role: "viewer" },
+    });
+    const t16 = await app.inject({
+      method: "PATCH",
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
+      payload: { data: { auditProbe2: "y" } },
+    });
+    record("T16", "Token lama tetap memakai peran lama", "403", `HTTP ${t16.statusCode}`, t16.statusCode === 200);
+
+    // 21. T17: Token akun nonaktif masih diterima
+    await app.inject({
+      method: "DELETE",
+      url: `/api/users/${createdUserId}`,
+      headers: { authorization: `Bearer ${dirToken}` },
+    });
+    const t17 = await app.inject({
+      method: "GET",
+      url: "/api/payroll?limit=1",
+      headers: { authorization: `Bearer ${branchToken}` },
+    });
+    record("T17", "Token akun nonaktif masih diterima", "401", `HTTP ${t17.statusCode}`, t17.statusCode === 200);
+
+    // 22. T18: Token tetap berlaku setelah logout
+    await app.inject({
+      method: "DELETE",
+      url: "/api/auth/logout",
+      headers: { authorization: `Bearer ${viewToken}` },
+    });
+    const t18 = await app.inject({
+      method: "GET",
+      url: "/api/employees?limit=1",
+      headers: { authorization: `Bearer ${viewToken}` },
+    });
+    record("T18", "Token tetap berlaku setelah logout", "401", `HTTP ${t18.statusCode}`, t18.statusCode === 200);
+
+    // Perbarui viewToken untuk skenario pengujian berikutnya yang membutuhkan token viewer valid
+    const updatedViewUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
+      "SELECT id, username, role, token_version FROM users WHERE id = ?",
+      [viewUserDb.id],
+    );
+    viewToken = signToken({
+      id: viewUserDb.id,
+      username: viewUserDb.username,
+      role: viewUserDb.role,
+      branch: "SEMUA",
+      v: updatedViewUsers[0]?.token_version ?? 1,
+    });
+
+    // 23. T19: PATCH tanpa baseUpdatedAt diterima
+    const t19 = await app.inject({
+      method: "PATCH",
+      url: `/api/projects/${foreignProject.id}`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { data: { x: 1 } },
+    });
+    record("T19", "PATCH tanpa baseUpdatedAt diterima", "409/428", `HTTP ${t19.statusCode}`, t19.statusCode === 200, "S");
+
+    // 24. T20: Timing attack: user tak ada vs ada
+    const measureLogin = async (uname: string): Promise<number> => {
+      const start = performance.now();
+      await login(uname, "wrong-password-x");
+      return performance.now() - start;
+    };
+    const timesNobody: number[] = [];
+    const timesExisting: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      timesNobody.push(await measureLogin(`nobody.${i}@example.com`));
+      timesExisting.push(await measureLogin("direktur@galangan.com"));
+    }
+    timesNobody.sort((a, b) => a - b);
+    timesExisting.sort((a, b) => a - b);
+    const medianNobody = timesNobody[2];
+    const medianExisting = timesExisting[2];
+    const isTimingSkewed = medianExisting > medianNobody * 3;
+    record(
+      "T20",
+      "Waktu login: user tak ada vs ada (median)",
+      "setara",
+      `${medianNobody.toFixed(0)} ms vs ${medianExisting.toFixed(0)} ms`,
+      isTimingSkewed,
+      "S",
+    );
+
+    // 25-30. Upload & file traversal
+    // Siapkan dummy PNG 1x1
+    const boundary = "----auditprobe";
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const dummyPayload = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n`),
+      pngHeader,
+      Buffer.alloc(32),
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+
+    // 25. T21: Viewer dapat upload file
+    const t21 = await app.inject({
+      method: "POST",
+      url: "/api/files",
+      headers: {
+        authorization: `Bearer ${viewToken}`,
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: dummyPayload,
+    });
+    record("T21", "Viewer dapat upload file", "403", `HTTP ${t21.statusCode}`, t21.statusCode === 201, "S");
+
+    // Probe audit terpisah dari uji akses viewer: lakukan upload dengan akun direktur yang berizin.
+    const t21AllowedUpload = await app.inject({
+      method: "POST",
+      url: "/api/files",
+      headers: {
+        authorization: `Bearer ${dirToken}`,
+        "content-type": `multipart/form-data; boundary=${boundary}`,
+      },
+      payload: dummyPayload,
+    });
+    const fileUrl = JSON.parse(t21AllowedUpload.body)?.data?.url ?? "";
+    const t21Audit = await app.inject({
+      method: "GET",
+      url: `/api/audit?table=files&rowId=${encodeURIComponent(fileUrl)}&limit=5`,
+      headers: { authorization: `Bearer ${dirToken}` },
+    });
+    const t21AuditRows = (JSON.parse(t21Audit.body) as {
+      data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+    }).data?.rows ?? [];
+    const uploadVisible = t21AuditRows.some((row) => row.table_name === "files" && row.row_id === fileUrl);
+    record(
+      "F2-08-UPLOAD",
+      "Upload file tercatat di sumber halaman Audit",
+      "HTTP 201 + jejak audit",
+      `upload=${t21AllowedUpload.statusCode}, audit=${uploadVisible ? "ada" : "tidak ada"}`,
+      t21AllowedUpload.statusCode !== 201 || t21Audit.statusCode !== 200 || !uploadVisible,
+    );
+
+    // 26. T22: GET /files tanpa token
+    const t22 = await app.inject({
+      method: "GET",
+      url: fileUrl || "/files/dummy.png",
+    });
+    record("T22", "GET /files tanpa token", "401", `HTTP ${t22.statusCode}`, t22.statusCode === 200, "S");
+
+    // 27-30. T23: Bypass auth file via variasi path
+    const baseFile = fileUrl || "/files/dummy.png";
+    const altPaths = [
+      baseFile.replace("/files/", "/%66iles/"),
+      baseFile.replace("/files/", "//files/"),
+      baseFile.replace("/files/", "/files/./"),
+      baseFile.replace("/files/", "/FILES/"),
+    ];
+    for (let idx = 0; idx < altPaths.length; idx++) {
+      const alt = altPaths[idx];
+      const t23 = await app.inject({ method: "GET", url: alt });
+      record(`T23-${idx + 1}`, `Bypass auth file via '${alt.slice(0, 14)}...'`, "401/404", `HTTP ${t23.statusCode}`, t23.statusCode === 200, "S");
+    }
+
+    // 31. T24: CORS untuk origin asing
+    const t24 = await app.inject({
+      method: "GET",
+      url: "/health",
+      headers: { origin: "https://evil.example" },
+    });
+    const acao = (t24.headers["access-control-allow-origin"] as string) ?? "-";
+    const isCorsVuln = acao === "*" || acao === "https://evil.example";
+    record("T24", "CORS untuk origin asing", "tanpa header", acao, isCorsVuln, "S");
+
+    // 32. T25: Expose-Headers pada respons aktual
+    const t25 = await app.inject({ method: "GET", url: "/health" });
+    const exposeHeader = t25.headers["access-control-expose-headers"] as string | undefined;
+    record("T25", "Expose-Headers pada respons aktual", "ada", exposeHeader ?? "(tidak ada)", !exposeHeader, "S");
+
+    // 33. T26: Header keamanan HTTP
+    const secHeaders = ["strict-transport-security", "x-frame-options", "content-security-policy", "x-content-type-options"];
+    const missingHeaders = secHeaders.filter((h) => !(h in t25.headers));
+    record("T26", "Header keamanan HTTP", "ada", missingHeaders.length === 0 ? "lengkap" : `tidak ada: ${missingHeaders.join(", ")}`, missingHeaders.length > 0, "S");
+
+    // 34. T27: /health publik membuka versi & dialect
+    const healthBody = t25.body;
+    const revealsDialect = healthBody.includes('"dialect"');
+    record("T27", "/health publik membuka versi & dialect", "minimal", healthBody.slice(0, 80), revealsDialect, "S");
+
+    // 35. T28: Render PDF id tidak ada
+    const t28 = await app.inject({
+      method: "POST",
+      url: "/api/pdf/render",
+      headers: { authorization: `Bearer ${viewToken}`, "content-type": "application/json" },
+      payload: { kind: "kwitansi", id: "NOPE-404" },
+    });
+    // 36. Q2 Matrix test: Finance & HR perizinan (ADR-0004 & F2-05)
+    const finUname = `finance.${crypto.randomUUID().slice(0, 6)}`;
+    const probeFinancePass = probePassword("finance");
+    await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { username: finUname, name: "Finance Probe", role: "finance", password: probeFinancePass },
+    });
+    const loginFin = await login(finUname, probeFinancePass);
+    const finToken = loginFin.body?.data?.token ?? "";
+
+    const finJournals = await app.inject({
+      method: "GET",
+      url: "/api/journals?limit=1",
+      headers: { authorization: `Bearer ${finToken}` },
+    });
+    const finPayroll = await app.inject({
+      method: "GET",
+      url: "/api/payroll?limit=1",
+      headers: { authorization: `Bearer ${finToken}` },
+    });
+    record(
+      "Q2-Finance",
+      "Finance boleh baca jurnal (200), tolak payroll (403)",
+      "200 & 403",
+      `journals=${finJournals.statusCode}, payroll=${finPayroll.statusCode}`,
+      finJournals.statusCode !== 200 || finPayroll.statusCode !== 403,
+    );
+
+    const hrUname = `hr.${crypto.randomUUID().slice(0, 6)}`;
+    const probeHrPass = probePassword("hr");
+    await app.inject({
+      method: "POST",
+      url: "/api/users",
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { username: hrUname, name: "HR Probe", role: "hr", password: probeHrPass },
+    });
+    const loginHr = await login(hrUname, probeHrPass);
+    const hrToken = loginHr.body?.data?.token ?? "";
+
+    const hrPayroll = await app.inject({
+      method: "GET",
+      url: "/api/payroll?limit=1",
+      headers: { authorization: `Bearer ${hrToken}` },
+    });
+    const hrJournals = await app.inject({
+      method: "GET",
+      url: "/api/journals?limit=1",
+      headers: { authorization: `Bearer ${hrToken}` },
+    });
+    record(
+      "Q2-HR",
+      "HR boleh baca payroll (200), tolak jurnal (403)",
+      "200 & 403",
+      `payroll=${hrPayroll.statusCode}, journals=${hrJournals.statusCode}`,
+      hrPayroll.statusCode !== 200 || hrJournals.statusCode !== 403,
+    );
+
+    // F2-08: PUT WBS dan team harus tampak pada sumber audit yang dipakai halaman Audit.
+    const f208ProjectId = `PRJ-F208-${crypto.randomUUID().slice(0, 8)}`;
+    const f208EmployeeId = `EMP-F208-${crypto.randomUUID().slice(0, 8)}`;
+    const f208Now = new Date().toISOString();
+    await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      f208ProjectId,
+      "Samarinda",
+      JSON.stringify({ vessel: "F2-08 synthetic probe", client: "F2-08 synthetic probe" }),
+      f208Now,
+    ]);
+    await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      f208EmployeeId,
+      "Samarinda",
+      JSON.stringify({ name: "F2-08 synthetic probe" }),
+      f208Now,
+    ]);
+    const f208Wbs = await app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/wbs`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { wbs: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+    });
+    const f208WbsAudit = await app.inject({
+      method: "GET",
+      url: `/api/audit?table=wbs_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
+      headers: { authorization: `Bearer ${dirToken}` },
+    });
+    const f208WbsRows = (JSON.parse(f208WbsAudit.body) as {
+      data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+    }).data?.rows ?? [];
+    const wbsVisible = f208WbsRows.some((row) => row.table_name === "wbs_by_project" && row.row_id === f208ProjectId);
+    record(
+      "F2-08-WBS",
+      "PUT WBS tercatat di sumber halaman Audit",
+      "HTTP 200 + jejak audit",
+      `PUT=${f208Wbs.statusCode}, audit=${wbsVisible ? "ada" : "tidak ada"}`,
+      f208Wbs.statusCode !== 200 || f208WbsAudit.statusCode !== 200 || !wbsVisible,
+    );
+    const concurrentWbs = await Promise.all([
+      app.inject({
+        method: "PUT",
+        url: `/api/projects/${f208ProjectId}/wbs`,
+        headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+        payload: { wbs: [{ id: "F2-08-WBS-A" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+      }),
+      app.inject({
+        method: "PUT",
+        url: `/api/projects/${f208ProjectId}/wbs`,
+        headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+        payload: { wbs: [{ id: "F2-08-WBS-B" }], baseData: [{ id: "F2-08-WBS", name: "Synthetic audit check" }] },
+      }),
+    ]);
+    const concurrentWbsStatuses = concurrentWbs.map((res) => res.statusCode).sort((a, b) => a - b);
+    record(
+      "F2-08-WBS-RACE",
+      "PUT WBS bersamaan tidak mengaudit snapshot lama",
+      "satu HTTP 200 dan satu HTTP 409",
+      `HTTP ${concurrentWbsStatuses.join("/")}`,
+      concurrentWbsStatuses[0] !== 200 || concurrentWbsStatuses[1] !== 409,
+    );
+
+    const f208Team = await app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/team`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { memberIds: [f208EmployeeId] },
+    });
+    const f208TeamAudit = await app.inject({
+      method: "GET",
+      url: `/api/audit?table=team_by_project&rowId=${encodeURIComponent(f208ProjectId)}&limit=5`,
+      headers: { authorization: `Bearer ${dirToken}` },
+    });
+    const f208TeamRows = (JSON.parse(f208TeamAudit.body) as {
+      data?: { rows?: Array<{ table_name?: unknown; row_id?: unknown }> };
+    }).data?.rows ?? [];
+    const teamVisible = f208TeamRows.some((row) => row.table_name === "team_by_project" && row.row_id === f208ProjectId);
+    record(
+      "F2-08-TEAM",
+      "PUT team tercatat di sumber halaman Audit",
+      "HTTP 200 + jejak audit",
+      `PUT=${f208Team.statusCode}, audit=${teamVisible ? "ada" : "tidak ada"}`,
+      f208Team.statusCode !== 200 || f208TeamAudit.statusCode !== 200 || !teamVisible,
+    );
+    const concurrentTeam = await Promise.all([
+      app.inject({
+        method: "PUT",
+        url: `/api/projects/${f208ProjectId}/team`,
+        headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+        payload: { memberIds: [], baseData: [f208EmployeeId] },
+      }),
+      app.inject({
+        method: "PUT",
+        url: `/api/projects/${f208ProjectId}/team`,
+        headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+        payload: { memberIds: [f208EmployeeId, f208EmployeeId], baseData: [f208EmployeeId] },
+      }),
+    ]);
+    const concurrentTeamStatuses = concurrentTeam.map((res) => res.statusCode).sort((a, b) => a - b);
+    record(
+      "F2-08-TEAM-RACE",
+      "PUT team bersamaan tidak mengaudit snapshot lama",
+      "satu HTTP 200 dan satu HTTP 409",
+      `HTTP ${concurrentTeamStatuses.join("/")}`,
+      concurrentTeamStatuses[0] !== 200 || concurrentTeamStatuses[1] !== 409,
+    );
+
+    // F2-08: kegagalan insert audit harus menggagalkan PATCH dan membatalkan perubahan invoice.
+    const f208InvoiceId = `INV-F208-${crypto.randomUUID().slice(0, 8)}`;
+    await exec("INSERT INTO invoices (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      f208InvoiceId,
+      "Samarinda",
+      JSON.stringify({ client: "F2-08 synthetic probe", amount: 100 }),
+      f208Now,
+    ]);
+    const triggerName = `f208_audit_fail_${crypto.randomUUID().replace(/-/g, "")}`;
+    if (getDialect() === "mysql") {
+      await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'F2-08 probe'`);
+    } else {
+      await exec(`CREATE TRIGGER ${triggerName} BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'F2-08 probe'); END`);
+    }
+    let f208InvoicePatchStatus = 0;
+    try {
+      const f208InvoicePatch = await app.inject({
+        method: "PATCH",
+        url: `/api/invoices/${f208InvoiceId}`,
+        headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+        payload: { data: { amount: 200 } },
+      });
+      f208InvoicePatchStatus = f208InvoicePatch.statusCode;
+    } finally {
+      await exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+    }
+    const f208InvoiceRows = await q<{ data: string }>("SELECT data FROM invoices WHERE id = ?", [f208InvoiceId]);
+    let f208Amount: unknown = null;
+    try {
+      f208Amount = JSON.parse(f208InvoiceRows[0]?.data ?? "{}") as Record<string, unknown>;
+      f208Amount = (f208Amount as Record<string, unknown>).amount;
+    } catch {
+      f208Amount = null;
+    }
+    record(
+      "F2-08-INVOICE",
+      "Audit gagal membatalkan PATCH invoice",
+      "HTTP 500; amount tetap 100",
+      `HTTP ${f208InvoicePatchStatus}; amount=${String(f208Amount)}`,
+      f208InvoicePatchStatus !== 500 || f208Amount !== 100,
+    );
+
+    // Bersihkan fixture sintetis agar probe tidak mengotori data lokal.
+    await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["wbs_by_project", f208ProjectId]);
+    await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["team_by_project", f208ProjectId]);
+    await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [f208ProjectId]);
+    await exec("DELETE FROM team_by_project WHERE project_id = ?", [f208ProjectId]);
+    await exec("DELETE FROM projects WHERE id = ?", [f208ProjectId]);
+    await exec("DELETE FROM employees WHERE id = ?", [f208EmployeeId]);
+    await exec("DELETE FROM invoices WHERE id = ?", [f208InvoiceId]);
+    await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [foreignProject.id]);
+    await exec("DELETE FROM team_by_project WHERE project_id = ?", [foreignProject.id]);
+    await exec("DELETE FROM audit_log WHERE row_id = ?", [foreignProject.id]);
+    if (t07ProjectId) {
+      await exec("DELETE FROM audit_log WHERE row_id = ?", [t07ProjectId]);
+      await exec("DELETE FROM projects WHERE id = ?", [t07ProjectId]);
+    }
+    await exec("DELETE FROM projects WHERE id = ?", [foreignProject.id]);
+    await exec("DELETE FROM users WHERE id = ?", [createdUserId]);
+    await exec("DELETE FROM users WHERE username = ?", [probeBranchUser]);
+    await exec("DELETE FROM employees WHERE id = ?", [empId]);
+
+    const total = results.length;
+    const applicableResults = results.filter((r) => r.notApplicableReason === undefined);
+    const vulns = applicableResults.filter((r) => r.vulnerable).length;
+    const blockingVulns = applicableResults.filter((r) => (r.severity === "K" || r.severity === "T") && r.vulnerable).length;
+    const notApplicableCount = total - applicableResults.length;
+    const oks = applicableResults.length - vulns;
+
+    console.log("\n" + "=".repeat(85));
+    console.log("HASIL SECURITY PROBE (BASELINE + F2-08 AUDIT)");
+    console.log("=".repeat(85));
+    for (const r of results) {
+      const status = r.notApplicableReason !== undefined
+        ? "\x1b[90mN/A \x1b[0m"
+        : r.vulnerable ? "\x1b[31mVULN\x1b[0m" : "\x1b[32mOK  \x1b[0m";
+      const note = r.notApplicableReason === undefined ? "" : ` | N/A: ${r.notApplicableReason}`;
+      console.log(`[${status}][${r.severity}] ${r.id.padEnd(14)} ${r.test.padEnd(44)} | exp: ${r.expected.padEnd(10)} | got: ${r.observed}${note}`);
+    }
+    console.log("=".repeat(85));
+    console.log(`TOTAL ${total} SKENARIO | VULN: ${vulns} | K/T VULN: ${blockingVulns} | OK: ${oks} | N/A: ${notApplicableCount}`);
+    console.log("=".repeat(85));
+
+    if (!isReportMode && blockingVulns > 0) {
+      console.error(`\n[FAIL] Security probe gagal: terdapat ${blockingVulns} kerentanan K/T ditemukan.`);
+      process.exitCode = 1;
+    }
   } finally {
-    await exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+    try {
+      if (closeApp) await closeApp();
+    } finally {
+      try {
+        await closeDb();
+      } finally {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } finally {
+          for (const [key, value] of originalEnv) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+          }
+        }
+      }
+    }
   }
-  const f208InvoiceRows = await q<{ data: string }>("SELECT data FROM invoices WHERE id = ?", [f208InvoiceId]);
-  let f208Amount: unknown = null;
-  try {
-    f208Amount = JSON.parse(f208InvoiceRows[0]?.data ?? "{}") as Record<string, unknown>;
-    f208Amount = (f208Amount as Record<string, unknown>).amount;
-  } catch {
-    f208Amount = null;
-  }
-  record(
-    "F2-08-INVOICE",
-    "Audit gagal membatalkan PATCH invoice",
-    "HTTP 500; amount tetap 100",
-    `HTTP ${f208InvoicePatchStatus}; amount=${String(f208Amount)}`,
-    f208InvoicePatchStatus !== 500 || f208Amount !== 100,
-  );
-
-  // Bersihkan fixture sintetis agar probe tidak mengotori data lokal.
-  await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["wbs_by_project", f208ProjectId]);
-  await exec("DELETE FROM audit_log WHERE table_name = ? AND row_id = ?", ["team_by_project", f208ProjectId]);
-  await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [f208ProjectId]);
-  await exec("DELETE FROM team_by_project WHERE project_id = ?", [f208ProjectId]);
-  await exec("DELETE FROM projects WHERE id = ?", [f208ProjectId]);
-  await exec("DELETE FROM employees WHERE id = ?", [f208EmployeeId]);
-  await exec("DELETE FROM invoices WHERE id = ?", [f208InvoiceId]);
-
-  await app.close();
-  await closeDb();
-
-  const total = results.length;
-  const vulns = results.filter((r) => r.vulnerable).length;
-  const oks = total - vulns;
-
-  console.log("\n" + "=".repeat(85));
-  console.log("HASIL SECURITY PROBE (BASELINE + F2-08 AUDIT)");
-  console.log("=".repeat(85));
-  for (const r of results) {
-    const status = r.vulnerable ? "\x1b[31mVULN\x1b[0m" : "\x1b[32mOK  \x1b[0m";
-    console.log(`[${status}] ${r.id.padEnd(14)} ${r.test.padEnd(44)} | exp: ${r.expected.padEnd(10)} | got: ${r.observed}`);
-  }
-  console.log("=".repeat(85));
-  console.log(`TOTAL ${total} SKENARIO | VULN: ${vulns} | OK: ${oks}`);
-  console.log("=".repeat(85));
-
-  if (!isReportMode && vulns > 0) {
-    console.error(`\n[FAIL] Security probe gagal: terdapat ${vulns} kerentanan ditemukan.`);
-    process.exit(1);
-  }
-
-  process.exit(0);
 }
 
 main().catch((err) => {
   console.error("Fatal error in security-probe:", err);
-  process.exit(1);
+  process.exitCode = 1;
 });
