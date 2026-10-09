@@ -82,6 +82,34 @@ const DASH_ALERT_KEYS: ModuleAlertKey[] = [
   "dokumen",
 ];
 
+/* Urutan chip mengikuti kategori utama yang diminta pada kartu F3-M-03. */
+const DASH_ALERT_CATEGORY_ORDER: ModuleAlertKey[] = [
+  "proyek",
+  "inventori",
+  "keuangan",
+  "sdm",
+  "equipment",
+  "qc",
+  "drydock",
+  "crm",
+  "procurement",
+  "subkontraktor",
+  "kapal",
+  "payroll",
+  "dokumen",
+];
+const DASH_ALERT_CATEGORY_STORAGE_KEY = "isms.dashboard.attention.category";
+
+function loadAttentionCategory(): ModuleAlertKey | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = window.localStorage.getItem(DASH_ALERT_CATEGORY_STORAGE_KEY);
+    return DASH_ALERT_CATEGORY_ORDER.find((key) => key === saved) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /* Label modul untuk chip pengelompokan di kartu. */
 const DASH_ALERT_LABEL: Record<ModuleAlertKey, { id: string; en: string }> = {
   proyek: { id: "Proyek", en: "Projects" },
@@ -219,6 +247,7 @@ export default function Dashboard() {
   const projects = branchProjects;
   const activities = data.activities;
   const [range, setRange] = useState<(typeof RANGES)[number]>("12B");
+  const [selectedAttentionCategory, setSelectedAttentionCategory] = useState<ModuleAlertKey | null>(loadAttentionCategory);
   const [targets, setTargets] = useState<Record<string, BranchTarget>>(() => loadTargets());
   const [showTarget, setShowTarget] = useState(false);
   const [tgtRev, setTgtRev] = useState("");
@@ -480,11 +509,18 @@ const exportSummary = async () => {
     return out;
   }, [data]);
 
+  const selectedAttentionItems = useMemo(
+    () => selectedAttentionCategory
+      ? attentionItems.filter(({ key }) => key === selectedAttentionCategory)
+      : [],
+    [attentionItems, selectedAttentionCategory],
+  );
+
   /* Group per tingkat, cap PER TINGKAT. Cap global dulu disembunyikan semua
      alert `info` begitu ada 12 `kritis` - padahal yang paling butuh dilihat
      justru yang kritis itu. */
   const attentionGroups = useMemo(() => {
-    const items = attentionItems.map(({ key, item }) => ({ key, item }));
+    const items = selectedAttentionItems.map(({ key, item }) => ({ key, item }));
     return groupByLevel(
       items.map((x) => x.item),
       DASH_ALERT_CAP,
@@ -492,9 +528,9 @@ const exportSummary = async () => {
       ...g,
       entries: items.filter((x) => x.item.level === g.level),
     }));
-  }, [attentionItems]);
+  }, [selectedAttentionItems]);
 
-  const attentionCount = useMemo(() => countByLevel(attentionItems.map((x) => x.item)), [attentionItems]);
+  const attentionCount = useMemo(() => countByLevel(selectedAttentionItems.map((x) => x.item)), [selectedAttentionItems]);
 
   /* Banner "Perlu perhatian" mengirim SATU id. Modul tujuan membuka tab/
      filter yang memuat baris itu lalu kedipkan - tidak perlu tab di URL
@@ -502,6 +538,17 @@ const exportSummary = async () => {
   const goAttentionItem = (key: ModuleAlertKey, rowId: string) => {
     const q = `?alert=${encodeURIComponent(key)}&highlight=${encodeURIComponent(rowId)}`;
     navigate(`${MODULE_ALERT_TO[key]}${q}`);
+  };
+
+  const toggleAttentionCategory = (key: ModuleAlertKey) => {
+    const next = selectedAttentionCategory === key ? null : key;
+    setSelectedAttentionCategory(next);
+    try {
+      if (next) window.localStorage.setItem(DASH_ALERT_CATEGORY_STORAGE_KEY, next);
+      else window.localStorage.removeItem(DASH_ALERT_CATEGORY_STORAGE_KEY);
+    } catch {
+      /* Tetap izinkan filter dipakai jika penyimpanan browser dinonaktifkan. */
+    }
   };
 
   /* PDF sudah dibuat server dari baris DB (lihat exportSummary), jadi tidak
@@ -730,9 +777,8 @@ const exportSummary = async () => {
         </Card>
       </StaggerItem>
 
-      {/* PERLU PERHATIAN - klik item untuk ke modul + tab + baris yang DIPAKAI,
-          atau klik header untuk membuka daftar lengkap di /notifikasi pada tab
-          "Perlu Perhatian" dengan semua baris alert disorot. */}
+      {/* PERLU PERHATIAN - pilih kategori sebelum melihat laporan; pilihan terakhir
+          disimpan di perangkat, dan item tetap menuju modul + tab + baris terkait. */}
       <StaggerItem>
         <Card className="p-4">
           <div className="mb-3 flex items-center gap-2 px-1">
@@ -743,15 +789,46 @@ const exportSummary = async () => {
               className="flex cursor-pointer items-center gap-2 rounded-lg px-1 py-0.5 text-left hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
             >
               <AlertTriangle className="h-4 w-4 text-rose-500" />
-              <h3 className="text-sm font-semibold text-navy-900 underline-offset-2 hover:underline">{S.needAttention.replace("{n}", String(attentionItems.length))} <span className="text-[11px] font-normal text-steel-400">&rarr; Notifikasi</span></h3>
+              <h3 className="text-sm font-semibold text-navy-900 underline-offset-2 hover:underline">
+                {S.needAttention}
+                {selectedAttentionCategory && (
+                  <span className="ml-1 text-xs font-medium text-steel-500">
+                    {S.attentionSelectedCount.replace("{n}", String(selectedAttentionItems.length))}
+                  </span>
+                )}
+                <span className="ml-1 text-[11px] font-normal text-steel-400">&rarr; Notifikasi</span>
+              </h3>
             </button>
             <span className="text-xs text-steel-400">{S.autoThreshold}</span>
             <button type="button" onClick={goNotifikasi} className="btn-secondary ml-auto px-2 py-1 text-[11px]">{S.seeAll}</button>
           </div>
-          {attentionItems.length === 0 && (
+          <div className="mb-3 flex flex-wrap gap-2 px-1" role="group" aria-label={S.attentionCategoryLabel}>
+            {DASH_ALERT_CATEGORY_ORDER.map((key) => {
+              const selected = selectedAttentionCategory === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleAttentionCategory(key)}
+                  className={`min-h-10 rounded-full border px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
+                    selected
+                      ? "border-navy-700 bg-navy-700 text-white"
+                      : "border-steel-200 bg-white text-steel-600 hover:bg-steel-50"
+                  }`}
+                >
+                  {DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}
+                </button>
+              );
+            })}
+          </div>
+          {!selectedAttentionCategory && (
+            <p className="px-1 text-sm text-steel-400">{S.attentionSelectCategory}</p>
+          )}
+          {selectedAttentionCategory && selectedAttentionItems.length === 0 && (
             <p className="px-1 text-sm text-steel-400">{S.allThresholdsSafe}</p>
           )}
-          {attentionItems.length > 0 && (
+          {selectedAttentionCategory && selectedAttentionItems.length > 0 && (
             <div className="space-y-4">
               {/* Ringkasan per tingkat tetap tampil walau tiap grup sudah
                   di-cap, jadi pengguna tahu ada yang belum terlihat. */}
@@ -806,7 +883,7 @@ const exportSummary = async () => {
               ))}
             </div>
           )}
-          {attentionItems.length > DASH_ALERT_CAP && (
+          {selectedAttentionCategory && selectedAttentionItems.length > DASH_ALERT_CAP && (
             <p className="mt-3 px-1 text-xs text-steel-400">
               {locale === "en"
                 ? `Showing up to ${DASH_ALERT_CAP} per level - see all in Notifications.`

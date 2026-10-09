@@ -91,7 +91,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | todo | |
 | F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | | todo | |
 | F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | todo | |
-| F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | | todo | |
+| F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | agent | review | branch feat/F3-M-03-dashboard-attention-categories; `npm run check` hijau; review independen bersih |
 | F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
 | F4-01 | Concurrency atomik | P0 | F4-integritas.md | | todo | |
 | F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | selesai | PR #4 |
