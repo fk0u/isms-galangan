@@ -59,7 +59,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | | todo | |
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | todo | |
 | F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | todo | |
-| F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | jalan | Branch `feat/F3-G-02-material-unit-conversion` |
+| F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | review | Branch `feat/F3-G-02-material-unit-conversion`; gate penuh dan preview UI lulus |
 | F3-G-03 | Barang keluar: eceran & potongan | P0 | F3-G-inventori.md | | todo | |
 | F3-G-04 | BOM terima & keluar barang | P0 | F3-G-inventori.md | | todo | |
 | F3-G-05 | Pergerakan: 2 grafik tren, kolom Dari/Ke, slow & dead stock | P1 | F3-G-inventori.md | | todo | |
