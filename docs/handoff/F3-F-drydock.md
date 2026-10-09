@@ -13,7 +13,7 @@ P1 · 4 j · DRY-01
 ### F3-F-02 — Sederhanakan halaman: Mapping slot area
 P0 · 1 HK · DRY-02
 **Langkah.** Hapus section: Peta kapasitas, Utilisasi per fasilitas, Peta kapasitas area, Slot per area; hapus juga komponen, utilitas, kunci i18n, dan probe facility yang hanya dipakai oleh section tersebut. Pertahankan **Mapping slot area**: setiap slot bisa diklik → panel detail berisi isi "Slot docking aktif" untuk slot tersebut (kapal, proyek, tanggal, progres).
-**Kriteria.** [x] Section terhapus tidak meninggalkan import/i18n mati (lint). [x] Klik slot membuka detail.
+**Kriteria.** [x] Section terhapus tidak meninggalkan import/i18n mati (lint). [x] Klik slot membuka detail. [x] Pencarian status menerima nilai kanonis dan label locale; probe SSR memeriksa render EN.
 
 ### F3-F-03 — Waiting list dock
 P1 · 4 j · DRY-03

@@ -85,6 +85,11 @@ function slotStatus(s: StoreItem, projects: StoreItem[]): string {
   return "Terjadwal";
 }
 
+/* Status internal tetap canonical; pencarian juga menerima label locale aktif. */
+export function mappingStatusSearchText(status: string, label: string): string {
+  return `${status} ${label}`;
+}
+
 function slotDays(s: StoreItem): number {
   return Math.max(0, Number(s.to || 0) - Number(s.from || 0));
 }
@@ -400,15 +405,18 @@ export default function Drydock() {
     /* Pencarian teks (A2). Disini, bukan di masing-masing tabel, karena kedua
        tabel modul ini membaca `filteredSlots` yang sama - satu kotak pencarian
        untuk keduanya, bukan dua. */
-    if (slotQ !== "" && !rowMatches(
-      {
-        area: String(slotAreaOf(s)), slot: String(s.slot ?? s.id ?? ""),
-        status: String(slotStatus(s, data.projects)),
-        project: String(data.projects.find((p) => String(p.id) === String(s.projectId ?? ""))?.vessel ?? s.projectId ?? ""),
-      } as unknown as Record<string, unknown>,
-      slotQ,
-      ["area", "slot", "status", "project"],
-    )) return false;
+    if (slotQ !== "") {
+      const status = slotStatus(s, data.projects);
+      if (!rowMatches(
+        {
+          area: String(slotAreaOf(s)), slot: String(s.slot ?? s.id ?? ""),
+          status: mappingStatusSearchText(status, mappingStatusLabel(status)),
+          project: String(data.projects.find((p) => String(p.id) === String(s.projectId ?? ""))?.vessel ?? s.projectId ?? ""),
+        } as unknown as Record<string, unknown>,
+        slotQ,
+        ["area", "slot", "status", "project"],
+      )) return false;
+    }
     return true;
   });
   const activeByArea = useMemo(() => {

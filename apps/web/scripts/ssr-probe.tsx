@@ -17,6 +17,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "../src/i18n/LanguageContext";
 import { StoreProvider, applyPulled } from "../src/data/store";
 import { projects, vessels, inventory, employees, quotations } from "../src/data/index";
+import { rowMatches } from "../src/components/ui";
 import { todayISO } from "../src/utils/format";
 import { isPdfHead, renderPdfFrom } from "../src/services/pdfClient";
 
@@ -39,7 +40,7 @@ import CRM from "../src/pages/crm/CRM";
 import QuotationDetail from "../src/pages/crm/QuotationDetail";
 import Procurement from "../src/pages/procurement/Procurement";
 import QCSafety from "../src/pages/qc/QCSafety";
-import Drydock from "../src/pages/drydock/Drydock";
+import Drydock, { mappingStatusSearchText } from "../src/pages/drydock/Drydock";
 import Subcontractor from "../src/pages/subkontraktor/Subcontractor";
 import Vessels from "../src/pages/kapal/Vessels";
 import VesselDetail from "../src/pages/kapal/VesselDetail";
@@ -566,12 +567,74 @@ try {
   }
 }
 
+/* Status internal tetap searchable; label EN yang ditampilkan juga harus match. */
+{
+  const cases = [
+    { status: "Terjadwal", label: "Scheduled" },
+    { status: "Berjalan", label: "In progress" },
+    { status: "Selesai", label: "Completed" },
+  ];
+  const problems: string[] = [];
+  for (const { status, label } of cases) {
+    const row = { status: mappingStatusSearchText(status, label) };
+    if (!rowMatches(row, label, ["status"])) problems.push(`label EN "${label}" tidak cocok`);
+    if (!rowMatches(row, status, ["status"])) problems.push(`status kanonis "${status}" tidak cocok`);
+  }
+
+  if (problems.length === 0) {
+    console.log("PASS  pencarian status Drydock menerima status kanonis dan label EN");
+    pass += 1;
+  } else {
+    console.log(`FAIL  pencarian status Drydock: ${problems.join("; ")}`);
+    failures.push("pencarian status Drydock");
+  }
+}
+
+/* Pastikan Drydock juga benar-benar dirender dengan locale EN, bukan hanya ID
+   yang menjadi default shim SSR. Nilai status internal tetap diuji terpisah. */
+{
+  const previousLocale = localStorage.getItem("isms.locale");
+  const problems: string[] = [];
+  try {
+    localStorage.setItem("isms.locale", "en");
+    const html = renderToString(
+      <LanguageProvider>
+        <StoreProvider>
+          <MemoryRouter initialEntries={["/drydock"]}>
+            <Routes>
+              <Route path="/drydock" element={<Drydock />} />
+            </Routes>
+          </MemoryRouter>
+        </StoreProvider>
+      </LanguageProvider>,
+    );
+    for (const text of ["Slot Mapping per Area", "Search slots, projects, status...", "Scheduled", "In progress", "Completed"]) {
+      if (!html.includes(text)) problems.push(`teks EN "${text}" tidak ada di HTML`);
+    }
+  } catch (e) {
+    const err = e as Error;
+    problems.push(`SSR locale EN gagal: ${err.message}`);
+  } finally {
+    if (previousLocale === null) localStorage.removeItem("isms.locale");
+    else localStorage.setItem("isms.locale", previousLocale);
+  }
+
+  if (problems.length === 0) {
+    console.log("PASS  Drydock SSR locale EN: mapping, pencarian, dan status terlokalisasi");
+    pass += 1;
+  } else {
+    console.log(`FAIL  Drydock SSR locale EN: ${problems.join("; ")}`);
+    failures.push("Drydock SSR locale EN");
+  }
+}
+
 /* Pemeriksaan di luar loop PAGES: (1) ringkasan portofolio tanpa area cetak
    DOM, (2) penggabungan tarikan, (3) saldo historikal as-of, (4) kesetaraan
    sel tabel, (5) mapping slot area drydock, (6) magic bytes PDF, (7) jalur klien
-   PDF. Naikkan kalau menambah pemeriksaan baru di sini, supaya penyebut tidak
+   PDF, (8) pencarian status ID/EN, dan (9) output Drydock locale EN. Naikkan
+   kalau menambah pemeriksaan di sini, supaya penyebut tidak
    diam-diam salah. */
-const EXTRA_CHECKS = 7;
+const EXTRA_CHECKS = 9;
 
 console.log(`\n${pass}/${PAGES.length + EXTRA_CHECKS} pemeriksaan lolos.`);
 if (failures.length > 0) {
