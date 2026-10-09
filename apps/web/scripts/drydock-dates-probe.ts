@@ -111,6 +111,16 @@ equal(
   { startDate: "2026-10-10", endDate: "2026-10-12" },
   "tanggal tampilan tetap tanggal ISO yang tersimpan",
 );
+const rescheduleBeyondPlan = bookingDateOffsets("2027-01-15", "2027-01-20", "2026-10-10");
+check(
+  rescheduleBeyondPlan !== null && rescheduleBeyondPlan.from >= 90 && rescheduleBeyondPlan.to > 90,
+  "rentang reschedule tanggal ISO di luar horizon 90 hari tetap menghasilkan offset valid",
+);
+equal(
+  bookingDateOffsets("2026-10-07", "2026-10-09", "2026-10-10"),
+  { from: -3, to: 0 },
+  "reschedule tanggal ISO sebelum hari ini mempertahankan offset negatif",
+);
 
 const statusBooking = { startDate: "2026-10-10", endDate: "2026-10-12", from: -99, to: -96 };
 check(dateBasedSlotStatus(statusBooking, false, "2026-10-09") === "Terjadwal", "status sebelum mulai mengikuti ISO meski offset stale menyatakan selesai");

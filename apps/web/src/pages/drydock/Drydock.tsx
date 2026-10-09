@@ -187,8 +187,9 @@ export default function Drydock() {
   const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate, todayWita);
   const [deleting, setDeleting] = useState<StoreItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<StoreItem | null>(null);
-  const [moveForm, setMoveForm] = useState({ dockId: "DD-1", from: "", to: "", area: "" });
+  const [moveForm, setMoveForm] = useState({ dockId: "DD-1", startDate: "", endDate: "", area: "" });
   const [moveError, setMoveError] = useState<string | null>(null);
+  const moveDateRange = bookingDateOffsets(moveForm.startDate, moveForm.endDate, todayWita);
   const [wide, setWide] = useState(false);
   const [statusFilter, setStatusFilter] = useState("Semua");
   const [areaFilter, setAreaFilter] = useState("Semua");
@@ -640,19 +641,19 @@ export default function Drydock() {
      validasi sama dengan booking baru (abaikan slot sendiri). */
   const openMove = (s: StoreItem) => {
     setMoveTarget(s);
-    const offsets = slotOffsetsForView(s);
-    setMoveForm({ dockId: String(s.dockId ?? "DD-1"), from: String(offsets?.from ?? ""), to: String(offsets?.to ?? ""), area: String(s.area ?? "") });
+    const dates = slotDateRangeForView(s);
+    setMoveForm({ dockId: String(s.dockId ?? "DD-1"), startDate: dates?.startDate ?? "", endDate: dates?.endDate ?? "", area: String(s.area ?? "") });
     setMoveError(null);
   };
 
   const saveMove = async () => {
     if (!moveTarget) return;
-    const from = Number(moveForm.from);
-    const to = Number(moveForm.to);
-    if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from || from < 0 || to > DAYS) {
-      setMoveError(S.rangeInvalid.replace("{n}", String(DAYS)));
+    const dateRange = moveDateRange;
+    if (!dateRange) {
+      setMoveError(S.bookingDatesInvalid);
       return;
     }
+    const { from, to } = dateRange;
     if (overlap(moveForm.dockId, from, to, String(moveTarget.id))) {
       const dock = drydocks.find((d) => d.id === moveForm.dockId);
       setMoveError(S.tMoveOverlap.replace("{a}", dock?.name ?? moveForm.dockId));
@@ -669,10 +670,10 @@ export default function Drydock() {
     try {
       await update("dockSlots", moveTarget.id, {
         dockId: moveForm.dockId, from, to,
-        startDate: dayToISO(from, todayWita), endDate: dayToISO(to - 1, todayWita), area: moveForm.area.trim(),
+        startDate: moveForm.startDate, endDate: moveForm.endDate, area: moveForm.area.trim(),
       });
-      log("memindah slot", `${moveTarget.id} → ${moveForm.dockId} hari ${from}-${to}`, "Drydock");
-      toast(S.tMoved.replace("{a}", String(moveTarget.id)).replace("{b}", String(from)).replace("{c}", String(to)));
+      log("memindah slot", `${moveTarget.id} → ${moveForm.dockId} ${moveForm.startDate}–${moveForm.endDate}`, "Drydock");
+      toast(S.tMoved.replace("{a}", String(moveTarget.id)).replace("{b}", fmtTanggal(moveForm.startDate)).replace("{c}", fmtTanggal(moveForm.endDate)));
       setMoveTarget(null);
       setMoveError(null);
     } catch (e) {
@@ -1152,10 +1153,10 @@ export default function Drydock() {
             <input className="input" value={moveForm.area} onChange={(e) => setMoveForm({ ...moveForm, area: e.target.value })} placeholder={S.areaPh} />
           </Field>
           <FormGrid>
-            <Field label={S.lblStartDay.replace("{n}", String(DAYS))}><NumInput min={0} max={DAYS} className="input" value={moveForm.from} onChange={(e) => setMoveForm({ ...moveForm, from: e.target.value })} /></Field>
-            <Field label={S.lblEndDay.replace("{n}", String(DAYS))}><NumInput min={1} max={DAYS} className="input" value={moveForm.to} onChange={(e) => setMoveForm({ ...moveForm, to: e.target.value })} /></Field>
+            <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={moveForm.startDate} onChange={(startDate) => setMoveForm((current) => ({ ...current, startDate }))} /></Field>
+            <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={moveForm.endDate} onChange={(endDate) => setMoveForm((current) => ({ ...current, endDate }))} /></Field>
           </FormGrid>
-          <p className="text-xs text-steel-500">{S.moveHint.replace("{a}", Number(moveForm.to) > Number(moveForm.from) ? S.durationDays.replace("{n}", String(Number(moveForm.to) - Number(moveForm.from))) : "-")}</p>
+          <p className="text-xs text-steel-500">{S.moveHint.replace("{a}", moveDateRange ? S.durationDays.replace("{n}", String(moveDateRange.to - moveDateRange.from)) : "-")}</p>
         </div>
       </Modal>
 
