@@ -1002,14 +1002,14 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 <div className="h-52 p-4 pt-0 sm:h-60">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={evalChart} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#8aa2b6" axisLine={false} tickLine={false} interval={0} />
-                      <YAxis domain={[0, 100]} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#8F8F8F" axisLine={false} tickLine={false} interval={0} />
+                      <YAxis domain={[0, 100]} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<EvalTooltip />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => v === "rating" ? (locale === "en" ? "Actual rating (0-100)" : "Rating aktual (0-100)") : `K3 (skor konversi grade)`} />
-                      <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "Target 80", position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
-                      <Bar dataKey="rating" name="rating" fill="#0b3a63" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating} (subcontractors.rating), K3 ${pl.k3} (grade ${pl.k3Grade})`); }} style={{ cursor: "pointer" }} />
-                      <Bar dataKey="k3" name="k3" fill="#f59e0b" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating}, K3 ${pl.k3} (grade ${pl.k3Grade} → A+95/A90/B+82/B78/C65)`); }} style={{ cursor: "pointer" }} />
+                      <ReferenceLine y={80} stroke="#E61919" strokeDasharray="5 5" label={{ value: "Target 80", position: "insideTopRight", fontSize: 10, fill: "#E61919" }} />
+                      <Bar dataKey="rating" name="rating" fill="#0A0A0A" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating} (subcontractors.rating), K3 ${pl.k3} (grade ${pl.k3Grade})`); }} style={{ cursor: "pointer" }} />
+                      <Bar dataKey="k3" name="k3" fill="#F04848" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating}, K3 ${pl.k3} (grade ${pl.k3Grade} → A+95/A90/B+82/B78/C65)`); }} style={{ cursor: "pointer" }} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

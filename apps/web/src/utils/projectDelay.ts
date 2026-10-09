@@ -32,6 +32,56 @@ export function delayDaysOf(end: unknown, today: string, isLate: boolean): numbe
   return Math.max(0, -d);
 }
 
+export interface DelayWbsItem {
+  task?: unknown;
+  end?: unknown;
+  progress?: unknown;
+  status?: unknown;
+}
+
+export interface ProjectDelayDetails {
+  cause: string | null;
+  targetDate: string | null;
+  causeTargetDate: string | null;
+  daysLate: number | null;
+  causeDaysLate: number | null;
+  projectDaysRemaining: number | null;
+}
+
+/** Sumber bersama detail penundaan: target proyek, hari lewat target, dan WBS penyebab. */
+export function projectDelayDetailsOf(
+  projectEnd: unknown,
+  wbs: readonly DelayWbsItem[],
+  today: string,
+  isLate: boolean,
+): ProjectDelayDetails {
+  const projectEndValue = String(projectEnd ?? "").trim();
+  const projectDaysRemaining = endInDays(projectEndValue, today);
+  const unfinished = wbs.flatMap((item, index) => {
+    const task = String(item.task ?? "").trim();
+    const targetDate = String(item.end ?? "").trim();
+    const daysRemaining = endInDays(targetDate, today);
+    if (!task || daysRemaining === null || String(item.status ?? "") === "Selesai" || Number(item.progress ?? 0) >= 100) return [];
+    return [{ task, targetDate, daysRemaining, index }];
+  });
+  const overdue = unfinished.filter((item) => item.daysRemaining < 0);
+  const candidates = overdue.length > 0 ? overdue : isLate ? [] : unfinished;
+  candidates.sort((a, b) => a.daysRemaining - b.daysRemaining || a.index - b.index);
+  const cause = candidates[0] ?? null;
+  const daysLate = isLate || (projectDaysRemaining !== null && projectDaysRemaining < 0)
+    ? delayDaysOf(projectEndValue, today, true)
+    : null;
+
+  return {
+    cause: cause?.task ?? null,
+    targetDate: projectDaysRemaining === null ? null : projectEndValue,
+    causeTargetDate: cause?.targetDate ?? null,
+    daysLate,
+    causeDaysLate: cause && cause.daysRemaining < 0 ? -cause.daysRemaining : null,
+    projectDaysRemaining,
+  };
+}
+
 /* Override status "Terlambat" (P8).
  *
  * Sebelumnya status "Terlambat" ditulis otomatis oleh dua useEffect

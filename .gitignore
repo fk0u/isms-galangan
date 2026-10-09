@@ -37,3 +37,4 @@ ai-prompts/
 
 # Secret deploy
 deploy/.env
+.claude/

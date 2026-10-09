@@ -50,12 +50,12 @@ const SLOT_COLORS = ["bg-ocean-500", "bg-navy-700", "bg-amber-500", "bg-teal-500
 /* Warna bar gantt HARUS inline style: class dari data (s.color) tidak
    di-generate Tailwind (build hanya scan source) sehingga background hilang. */
 const SLOT_HEX: Record<string, string> = {
-  "bg-ocean-500": "#2e9ad4",
-  "bg-navy-700": "#12598f",
-  "bg-amber-500": "#f59e0b",
-  "bg-teal-500": "#0d9488",
-  "bg-violet-500": "#8b5cf6",
-  "bg-steel-400": "#8aa2b6",
+  "bg-ocean-500": "#E61919",
+  "bg-navy-700": "#1C1C1C",
+  "bg-amber-500": "#F04848",
+  "bg-teal-500": "#262626",
+  "bg-violet-500": "#474747",
+  "bg-steel-400": "#8F8F8F",
 };
 const PRIORITIES = ["Normal", "Tinggi", "Kritis"];
 const STATUS_FILTERS = ["Semua", "Terjadwal", "Berjalan", "Selesai", "Maintenance"];
@@ -1000,7 +1000,7 @@ export default function Drydock() {
                     </div>
                     <div className="relative h-16 flex-1 rounded-lg bg-steel-50 border border-steel-100"
                       style={{
-                        backgroundImage: "repeating-linear-gradient(to right, #e9eff4 0, #e9eff4 1px, transparent 1px, transparent calc(100%/13))",
+                        backgroundImage: "repeating-linear-gradient(to right, #EBEBEB 0, #EBEBEB 1px, transparent 1px, transparent calc(100%/13))",
                       }}
                     >
                       {slots.map((s) => {
@@ -1015,7 +1015,7 @@ export default function Drydock() {
                         const isConf = conflict.some((c) => c.id === s.id);
                         const isCrit = isConf && overlapsKritis(s);
                         const isMaint = s.project === "MAINT";
-                        const barBg = isMaint ? "#8aa2b6" : isConf ? "#f43f5e" : (SLOT_HEX[String(s.color)] ?? "#2e9ad4");
+                        const barBg = isMaint ? "#8F8F8F" : isConf ? "#FF3B3B" : (SLOT_HEX[String(s.color)] ?? "#E61919");
                         return (
                           <div
                             key={s.id}

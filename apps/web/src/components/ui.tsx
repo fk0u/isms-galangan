@@ -19,8 +19,6 @@ import {
   Upload as UploadIcon,
 } from "lucide-react";
 import {
-  Area,
-  AreaChart,
   ResponsiveContainer,
   Tooltip,
   PieChart,
@@ -103,10 +101,10 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between px-5 pt-5 pb-4">
-      <div>
-        <h3 className="text-[15px] font-semibold text-navy-900 tracking-tight">{title}</h3>
-        {subtitle && <p className="text-xs text-steel-500 mt-0.5">{subtitle}</p>}
+    <div className="flex items-start justify-between gap-3 border-b border-steel-200 px-5 pt-4 pb-3">
+      <div className="min-w-0">
+        <h3 className="text-[13px] font-extrabold uppercase tracking-[-0.01em] text-navy-900">{title}</h3>
+        {subtitle && <p className="mono-label mt-1 normal-case tracking-[0.04em]">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -123,8 +121,8 @@ export function GlowCard({
   className?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${gradient} text-white shadow-soft ${className}`}>
-      <div className="absolute inset-0 shimmer-line" />
+    <div className={`relative overflow-hidden ${gradient} text-white ${className}`}>
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-ocean-500" />
       <div className="relative p-5">{children}</div>
     </div>
   );
@@ -132,16 +130,22 @@ export function GlowCard({
 
 /* ============ B A D G E / P I L L ============ */
 
+/* Nada badge dalam sistem industri: hanya tinta, abu, dan merah.
+   - OK/selesai   → tinta solid (green, teal)
+   - berjalan     → garis tinta (blue, navy, cyan, violet)
+   - peringatan   → garis merah (amber)
+   - bahaya       → merah solid (red)
+   - netral       → abu (gray) */
 const toneMap: Record<string, string> = {
-  green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  amber: "bg-amber-50 text-amber-700 border-amber-200",
-  red: "bg-rose-50 text-rose-600 border-rose-200",
-  blue: "bg-blue-50 text-blue-700 border-blue-200",
-  gray: "bg-steel-100 text-steel-600 border-steel-200",
-  navy: "bg-navy-50 text-navy-700 border-navy-200",
-  violet: "bg-violet-50 text-violet-700 border-violet-200",
-  cyan: "bg-cyan-50 text-cyan-700 border-cyan-200",
-  teal: "bg-teal-50 text-teal-500 border-teal-100",
+  green: "bg-navy-900 text-white border-navy-900",
+  teal: "bg-navy-900 text-white border-navy-900",
+  amber: "bg-white text-ocean-600 border-ocean-500",
+  red: "bg-ocean-500 text-white border-ocean-500",
+  blue: "bg-white text-navy-900 border-navy-900",
+  navy: "bg-white text-navy-900 border-navy-900",
+  violet: "bg-white text-navy-900 border-navy-900",
+  cyan: "bg-white text-navy-900 border-navy-900",
+  gray: "bg-steel-100 text-steel-600 border-steel-300",
 };
 
 export function Badge({
@@ -166,7 +170,7 @@ export function Badge({
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${toneClass} ${className}`}
+      className={`inline-flex items-center gap-1 border px-1.5 py-[3px] font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.06em] whitespace-nowrap ${toneClass} ${className}`}
     >
       {children}
     </span>
@@ -242,23 +246,16 @@ function StatusText({ value }: { value: string }) {
 
 /* ============ K P I   C A R D   ( P R E M I U M ) ============ */
 
+/* Penanda nada KPI = bar atas 3px. Merah hanya untuk nada perhatian. */
 const gradientChip: Record<string, string> = {
-  navy: "bg-gradient-hero",
-  teal: "bg-gradient-teal",
-  rose: "bg-gradient-rose",
-  violet: "bg-gradient-violet",
-  amber: "bg-gradient-amber",
-  ocean: "bg-gradient-hero",
+  navy: "bg-navy-900",
+  teal: "bg-navy-900",
+  rose: "bg-ocean-500",
+  violet: "bg-steel-400",
+  amber: "bg-ocean-500",
+  ocean: "bg-navy-900",
 };
 
-const sparkChipColor: Record<string, string> = {
-  navy: "#0b3a63",
-  teal: "#0d9488",
-  rose: "#e11d48",
-  violet: "#8b5cf6",
-  amber: "#d97706",
-  ocean: "#2e9ad4",
-};
 
 export function KpiCard({
   label,
@@ -279,23 +276,21 @@ export function KpiCard({
   spark?: { name: string; v: number }[];
   chip?: keyof typeof gradientChip;
 }) {
-  const gid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const color = sparkChipColor[chip] ?? "#2e9ad4";
-  const showSpark = !!spark && spark.length > 1;
+  /* `spark` sengaja tidak dirender lagi: revisi klien PRJ-04 menghapus
+     grafik di kartu, dan sistem industri memakai angka besar, bukan dekorasi.
+     Prop dipertahankan agar pemanggil lama tetap valid. */
+  void spark;
   return (
-    <Card className="card-hover relative overflow-hidden p-4">
+    <Card className="card-hover relative overflow-hidden p-4 pt-5">
+      <div className={`absolute inset-x-0 top-0 h-[3px] ${gradientChip[chip] ?? "bg-navy-900"}`} />
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-steel-500 truncate" title={label}>{label}</p>
-          <p className="mt-1 text-[26px] font-bold tracking-tight text-navy-900 break-words" title={value}>{value}</p>
+          <p className="mono-label truncate" title={label}>{label}</p>
+          <p className="mt-2 text-[30px] font-black leading-none tracking-[-0.04em] text-navy-900 break-words tabular-nums" title={value}>{value}</p>
           {delta ? (
             <p
-              className={`mt-1 flex items-center gap-1 text-xs font-semibold ${
-                deltaDirection === "up"
-                  ? "text-emerald-600"
-                  : deltaDirection === "down"
-                  ? "text-rose-600"
-                  : "text-steel-500"
+              className={`mt-2 flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.04em] ${
+                deltaDirection === "down" ? "text-ocean-600" : "text-steel-600"
               }`}
             >
               {deltaDirection === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
@@ -304,30 +299,15 @@ export function KpiCard({
               {delta}
             </p>
           ) : (
-            hint && <p className="mt-1 text-[11px] text-steel-400 truncate">{hint}</p>
+            hint && <p className="mt-2 font-mono text-[11px] text-steel-500 truncate">{hint}</p>
           )}
         </div>
         {icon && (
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-soft ${gradientChip[chip]}`}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-navy-900 text-navy-900">
             {icon}
           </div>
         )}
       </div>
-      {showSpark && (
-        <div className="mt-2 -mb-1 h-10">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={spark} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`spark-${gid}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="v" stroke={color} strokeWidth={2} fill={`url(#spark-${gid})`} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
     </Card>
   );
 }
@@ -336,7 +316,7 @@ export function KpiCard({
 
 export function Donut({
   data,
-  colors = ["#0b3a63", "#2e9ad4", "#8cc9e8", "#d97706", "#1f9d55"],
+  colors = ["#0A0A0A", "#E61919", "#8F8F8F", "#FF8A8A", "#474747"],
   size = 140,
   thickness = 18,
   centerLabel,
@@ -374,7 +354,7 @@ export function RadialGauge({
   value,
   label,
   max = 100,
-  color = "#2e9ad4",
+  color = "#E61919",
   size = 120,
 }: {
   value: number;
@@ -390,7 +370,7 @@ export function RadialGauge({
   return (
     <div className="flex flex-col items-center" style={{ width: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e9eff4" strokeWidth={10} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#EBEBEB" strokeWidth={10} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -461,10 +441,10 @@ export function Avatar({
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  const palette = ["bg-navy-700", "bg-ocean-500", "bg-teal-500", "bg-violet-500", "bg-rose-500", "bg-steel-600"];
+  const palette = ["bg-navy-900", "bg-steel-600", "bg-navy-700", "bg-ocean-500", "bg-steel-500", "bg-navy-800"];
   const idx = name.length % palette.length;
   return (
-    <div className={`flex items-center justify-center rounded-full text-xs font-bold text-white ${palette[idx]} ${className}`}>
+    <div className={`flex items-center justify-center font-mono text-[11px] font-bold text-white ${palette[idx]} ${className}`}>
       {init}
     </div>
   );
@@ -484,21 +464,25 @@ export function PageHeader({
   gradient?: boolean;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        {icon && (
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-hero text-white shadow-soft">
-            {icon}
+    <div className="mb-6 border-b-2 border-navy-900 pb-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex min-w-0 items-end gap-3">
+          {icon && (
+            <div className="hidden h-12 w-12 shrink-0 items-center justify-center bg-navy-900 text-white sm:flex">
+              {icon}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="mono-label flex items-center gap-2">
+              <span className="inline-block h-2 w-2 bg-ocean-500" aria-hidden="true" />
+              ISMS / {gradient ? "Ringkasan" : "Modul"}
+            </p>
+            <h1 className="display mt-1.5 text-[clamp(1.75rem,3.2vw,2.75rem)]">{title}</h1>
+            {subtitle && <p className="mt-2 max-w-3xl text-sm text-steel-600">{subtitle}</p>}
           </div>
-        )}
-        <div>
-          <h1 className={`text-[26px] font-bold tracking-tight ${gradient ? "text-gradient-navy" : "text-navy-900"}`}>
-            {title}
-          </h1>
-          {subtitle && <p className="text-sm text-steel-500 mt-0.5">{subtitle}</p>}
         </div>
+        {actions && <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto [&>div]:flex-wrap">{actions}</div>}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
   );
 }
@@ -515,23 +499,23 @@ export function ProgressBar({
   showLabel?: boolean;
 }) {
   const map = {
-    navy: "bg-gradient-hero",
-    green: "bg-emerald-500",
-    amber: "bg-amber-500",
-    red: "bg-rose-500",
-    ocean: "bg-ocean-500",
-    teal: "bg-gradient-teal",
+    navy: "bg-navy-900",
+    green: "bg-navy-900",
+    amber: "bg-ocean-400",
+    red: "bg-ocean-500",
+    ocean: "bg-navy-900",
+    teal: "bg-navy-900",
   };
   return (
     <div className={`w-full ${className}`}>
-      <div className="h-2 w-full rounded-full bg-steel-100">
+      <div className="h-1.5 w-full bg-steel-200">
         <div
-          className={`h-2 rounded-full ${map[tone]}`}
+          className={`h-1.5 ${map[tone]}`}
           style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
         />
       </div>
       {showLabel && (
-        <p className="mt-1 text-right text-[11px] font-medium text-steel-500">{Math.round(value)}%</p>
+        <p className="mt-1 text-right font-mono text-[10.5px] font-semibold text-steel-600 tabular-nums">{Math.round(value)}%</p>
       )}
     </div>
   );
@@ -555,7 +539,7 @@ export function Tabs({
     el?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }, [active]);
   return (
-    <div ref={listRef} className="flex gap-1 border-b border-steel-200 overflow-x-auto" role="tablist" aria-label="Navigasi tab">
+    <div ref={listRef} className="flex gap-0 border-b-2 border-navy-900 overflow-x-auto" role="tablist" aria-label="Navigasi tab">
       {tabs.map((t) => (
         <button
           key={t}
@@ -563,13 +547,13 @@ export function Tabs({
           role="tab"
           aria-selected={active === t}
           onClick={() => onChange(t)}
-          className={`relative whitespace-nowrap px-3 py-3 text-sm font-medium transition-colors ${
-            active === t ? "text-navy-800" : "text-steel-500 hover:text-navy-700"
+          className={`relative whitespace-nowrap px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+            active === t ? "bg-navy-900 text-white" : "text-steel-500 hover:bg-steel-100 hover:text-navy-900"
           }`}
         >
           {labels?.[t] ?? t}
           {active === t && (
-            <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-gradient-hero" />
+            <span className="absolute inset-x-0 -bottom-[2px] h-[3px] bg-ocean-500" />
           )}
         </button>
       ))}
@@ -589,8 +573,8 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       {icon && <div className="mb-3 text-steel-300">{icon}</div>}
-      <h3 className="text-sm font-semibold text-steel-600">{title}</h3>
-      {subtitle && <p className="mt-1 text-sm text-steel-400">{subtitle}</p>}
+      <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-steel-600">[ {title} ]</h3>
+      {subtitle && <p className="mt-2 text-sm text-steel-500">{subtitle}</p>}
     </div>
   );
 }
@@ -752,7 +736,7 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-navy-900/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-navy-900/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -764,7 +748,7 @@ export function Modal({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
-            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-lift sm:rounded-2xl ${
+            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden border-2 border-navy-900 bg-white ${
               wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             initial={{ opacity: 0, y: 32, scale: 0.98 }}
@@ -772,22 +756,23 @@ export function Modal({
             exit={{ opacity: 0, y: 24, scale: 0.98 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <div className="flex items-start justify-between gap-3 border-b border-steel-100 px-5 py-4">
-              <div>
-                <h3 className="text-base font-bold text-navy-900">{title}</h3>
-                {subtitle && <p className="mt-0.5 text-xs text-steel-500">{subtitle}</p>}
+            <div className="h-1 bg-ocean-500" aria-hidden="true" />
+            <div className="flex items-start justify-between gap-3 border-b-2 border-navy-900 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-black uppercase leading-tight tracking-[-0.02em] text-navy-900">{title}</h3>
+                {subtitle && <p className="mono-label mt-1 normal-case tracking-[0.04em]">{subtitle}</p>}
               </div>
               <button
                 onClick={onClose}
                 aria-label="Tutup"
-                className="rounded-lg p-1.5 text-steel-400 hover:bg-steel-100 hover:text-steel-700"
+                className="border border-navy-900 p-1 text-navy-900 hover:bg-navy-900 hover:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="overflow-y-auto px-5 py-4">{children}</div>
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-steel-100 bg-surface px-5 py-3">
+              <div className="flex items-center justify-end gap-2 border-t border-steel-300 bg-steel-50 px-5 py-3">
                 {footer}
               </div>
             )}

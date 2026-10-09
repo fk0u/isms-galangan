@@ -14,6 +14,9 @@
 
    Jalankan: npm run probe:alert */
 import {
+  bannerDisplay,
+  bannerPreview,
+  BANNER_PREVIEW_LIMIT,
   buildModuleAlertItemsFor,
   countByLevel,
   badgeCount,
@@ -206,6 +209,11 @@ const levelOf = (items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG
   });
   const keys = ["proyek", "drydock", "inventori", "equipment", "subkontraktor", "qc", "crm", "procurement", "keuangan", "sdm", "payroll", "kapal", "dokumen"] as const;
 
+  for (const k of keys) {
+    const preview = bannerPreview(buildModuleAlertItemsFor(data, k));
+    assert(preview.length <= BANNER_PREVIEW_LIMIT, `${k}: preview banner maksimal tiga item`, String(preview.length));
+  }
+
   const bad: string[] = [];
   let total = 0;
   for (const k of keys) {
@@ -262,6 +270,47 @@ const levelOf = (items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG
   assert(ALERT_LEVEL_RANK.kritis < ALERT_LEVEL_RANK.perhatian && ALERT_LEVEL_RANK.perhatian < ALERT_LEVEL_RANK.info, "rank urut benar");
   assert(sortByLevel(items).length === items.length, "sort tidak mengubah jumlah");
   assert(sortByLevel([]).length === 0, "sort array kosong aman");
+}
+
+/* ---- preview banner global: tiga item lintas severity, bukan per group ---- */
+{
+  const items: ModuleAlertItem[] = [
+    { id: "info-1", rowId: "info-1", label: "info 1", detail: "", level: "info" },
+    { id: "perhatian-2", rowId: "perhatian-2", label: "perhatian 2", detail: "", level: "perhatian", due: "2026-02-02" },
+    { id: "kritis-2", rowId: "kritis-2", label: "kritis 2", detail: "", level: "kritis", due: "2026-02-02" },
+    { id: "info-2", rowId: "info-2", label: "info 2", detail: "", level: "info" },
+    { id: "perhatian-1", rowId: "perhatian-1", label: "perhatian 1", detail: "", level: "perhatian", due: "2026-02-01" },
+    { id: "kritis-1", rowId: "kritis-1", label: "kritis 1", detail: "", level: "kritis", due: "2026-02-01" },
+  ];
+  const preview = bannerPreview(items);
+  assert(preview.length === BANNER_PREVIEW_LIMIT, "preview banner total tepat tiga dari daftar lebih panjang", String(preview.length));
+  assert(
+    preview.map((item) => item.id).join(",") === "kritis-1,kritis-2,perhatian-1",
+    "preview global mendahulukan kritis, lalu perhatian, lalu info",
+    preview.map((item) => item.id).join(","),
+  );
+  assert(bannerPreview(items.slice(0, 2)).length === 2, "daftar pendek tidak menambah item kosong");
+}
+
+/* ---- ekspansi >200 alert harus menampilkan tepat semua yang dijanjikan ---- */
+{
+  const items: ModuleAlertItem[] = Array.from({ length: 250 }, (_, i) => ({
+    id: `bulk-${i}`,
+    rowId: `bulk-${i}`,
+    label: `alert ${i}`,
+    detail: "",
+    level: "info",
+  }));
+  const collapsed = bannerDisplay(items, false);
+  const expanded = bannerDisplay(items, true);
+  assert(collapsed.items.length === 3, "250 alert: mode ringkas menampilkan tiga item");
+  assert(collapsed.remaining === 247, "250 alert: label Tampilkan semua menjanjikan 247 item", String(collapsed.remaining));
+  assert(expanded.items.length === 250, "250 alert: ekspansi menampilkan semua item, bukan terhenti di 200", String(expanded.items.length));
+  assert(expanded.remaining === 247, "250 alert: jumlah pada label tetap konsisten saat expanded", String(expanded.remaining));
+  assert(
+    new Set(expanded.items.map((item) => item.id)).size === 250,
+    "250 alert: ekspansi tidak menggandakan atau menghilangkan item",
+  );
 }
 
 /* ---- since/due rusak dibuang, bukan ditampilkan salah ---- */

@@ -49,10 +49,11 @@ import {
   type EquipmentCostSummary,
 } from "../../utils/projectCost";
 import { employeeOptions, isKnownEmployee } from "../../utils/employeeOptions";
-import { EntityPicker } from "../../components/ui";
+import { SearchSelect } from "../../components/SearchSelect";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
+import { findEquipmentNotificationTarget } from "../../utils/equipmentNotifications";
 import { exportExcel } from "../../utils/export";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
@@ -61,6 +62,22 @@ import { n_eqp } from "../../i18n/n_eqp";
 const BOOK_PRIORITIES = ["Normal", "Tinggi", "Kritis"];
 const TARGET_HOURS = 176;
 const EQ_CATS = ["Pengangkat", "Pengelasan", "Tenaga", "Transportasi", "Pengecatan", "Lainnya"];
+/* Vite hanya mengekspos env berawalan VITE_; field biaya tetap tersimpan dan
+   hanya dirender bila flag opt-in bernilai 1 (default/0 = tersembunyi). */
+const SHOW_EQP_COST_FIELDS = import.meta.env.VITE_SHOW_EQP_COST_FIELDS === "1";
+
+function equipmentBrandOf(e: StoreItem): string {
+  const brand = String(e.brand ?? "").trim();
+  return brand && brand !== "-" ? brand : String(e.model ?? "").trim();
+}
+
+function equipmentUsefulLifeMonthsOf(e: StoreItem): number {
+  if (e.usefulLifeMonths !== undefined && e.usefulLifeMonths !== null && String(e.usefulLifeMonths).trim() !== "") {
+    return Number(e.usefulLifeMonths) || 0;
+  }
+  const legacyYears = Number(e.usefulLife || 0);
+  return Number.isFinite(legacyYears) && legacyYears > 0 ? legacyYears * 12 : 0;
+}
 
 /* Tarif harian teknisi untuk hitung biaya tenaga servis.
    DEFAULT ini hanya fallback - angka bisnis sebenarnya ada di settings
@@ -195,7 +212,8 @@ function isCalExpired(eqId: string, calibrations: StoreItem[], today: string): b
 
 function depreciationOf(e: StoreItem): { annual: number; book: number } | null {
   const cost = Number(e.acquisitionCost || 0);
-  const life = Number(e.usefulLife || 0);
+  const hasMonthValue = e.usefulLifeMonths !== undefined && e.usefulLifeMonths !== null && String(e.usefulLifeMonths).trim() !== "";
+  const life = hasMonthValue ? Number(e.usefulLifeMonths) / 12 : Number(e.usefulLife || 0);
   if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(life) || life <= 0) return null;
   const annual = cost / life;
   return { annual, book: Math.max(0, cost - annual) };
@@ -274,6 +292,7 @@ export default function EquipmentPage() {
     0,
   );
 const [eqQ, setEqQ] = useState("");
+const [pendingNotifIds, setPendingNotifIds] = useState<string[] | null>(null);
 const [utilQ, setUtilQ] = useState("");
   /* Enam tabel Equipment yang belum punya filter. Tabel Heatmap (hari x jam)
      sengaja tidak diberi search: bukan daftar, dan "cari" tidak punya
@@ -302,8 +321,12 @@ const [utilQ, setUtilQ] = useState("");
      tampilan, jadi angka HPP per proyek harus dibaca dari tabel angka yang
      tidak bisa ditelusuri. */
   const [costDetailFor, setCostDetailFor] = useState<string | null>(null);
-  const picOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
-  const [form, setForm] = useState({ name: "", category: "Pengangkat", categoryCustom: "", code: "", serial: "", branch: "Samarinda", model: "", pic: "", util: "50", rate: "", fuelPrice: "0", acquisitionCost: "", usefulLife: "" });
+  const picOptions = useMemo(
+    () => employeeOptions(data.employees).map(({ value, label, hint }) => ({ value, label, subLabel: hint })),
+    [data.employees],
+  );
+  const [form, setForm] = useState({ name: "", category: "Pengangkat", categoryCustom: "", code: "", branch: "Samarinda", brand: "", unitYear: "", acquisitionYear: "", pic: "", util: "50", rate: "", fuelPrice: "0", acquisitionCost: "", usefulLifeMonths: "", note: "" });
+  const [utilTouched, setUtilTouched] = useState(false);
   const [showService, setShowService] = useState(false);
 
 
@@ -629,10 +652,15 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
   const regFiltered = equipment.filter((e) => {
     if (eqStatus !== "Semua" && String(e.status ?? "") !== eqStatus) return false;
     if (eqCat !== "Semua" && String(e.category ?? "") !== eqCat) return false;
-    return rowMatches(e, eqQ, ["id", "name", "code", "model", "category", "status", "lastHours", "rate"]);
+    return rowMatches(e, eqQ, ["id", "name", "code", "brand", "model", "unitYear", "pic", "category", "status", "lastHours", "rate"]);
   });
-  const regSorted = useMemo(() => sortRows(regFiltered, sort, (e, k) => {
-    if (k === "utilisasi") return (e.utilManual === true) ? Number(e.util || 0) : autoUtilOf(e);
+  const equipmentSortValue = (e: StoreItem, k: string): string | number | null | undefined => {
+    if (k === "code") return String(e.code ?? "");
+    if (k === "brand") return equipmentBrandOf(e);
+    if (k === "unitYear") return Number(e.unitYear ?? 0);
+    if (k === "pic") return String(e.pic ?? "");
+    if (k === "name") return String(e.name ?? "");
+    if (k === "utilisasi") return dispUtil(e);
     if (k === "jam") return Number(e.lastHours || 0);
     if (k === "tarif") return Number(e.rate || 0);
     if (k === "nilaibuku") return Number(depreciationOf(e)?.book ?? -1);
@@ -642,34 +670,25 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     if (k === "createdAt") return createdAtOf(e) ?? "";
     if (k === "updatedAt") return lastTouchedAt(e) ?? "";
     return String(e.name ?? "");
-  }), [regFiltered, sort, bookings, today]);
+  };
+  const regSorted = sortRows(regFiltered, sort, equipmentSortValue);
   const regPager = usePager(regFiltered.length);
   const pickNotifIds = (ids: string[]): void => {
     if (ids.length === 0) return;
-    const idx = regSorted.findIndex((e) => ids.includes(String(e.id)));
-    if (idx >= 0) {
-      if (tab === "Register") { flashPick(flash, ids, idx, regPager.go, regPager.size); return; }
+    const target = findEquipmentNotificationTarget(regSorted, ids, regPager.size);
+    if (target) {
+      if (tab === "Register") { flashPick(flash, ids, target.index, regPager.go, regPager.size); return; }
       setTab("Register");
-      window.setTimeout(() => flashPick(flash, ids, idx, regPager.go, regPager.size), 250);
+      window.setTimeout(() => flashPick(flash, ids, target.index, regPager.go, regPager.size), 250);
       return;
     }
     const found = equipment.find((e) => ids.includes(String(e.id)));
     if (!found) { flashPick(flash, ids, -1, () => {}, 100); return; }
-    const fullSorted = sortRows(equipment, sort, (e, k) => {
-      if (k === "utilisasi") return Number(e.util || 0);
-      if (k === "jam") return Number(e.lastHours || 0);
-      if (k === "tarif") return Number(e.rate || 0);
-      if (k === "nilaibuku") return Number(depreciationOf(e)?.book ?? -1);
-      if (k === "kategori") return String(e.category ?? "");
-      if (k === "model") return String(e.model ?? "");
-      if (k === "status") return String(e.status ?? "");
-      return String(e.name ?? "");
-    });
-    const fullIdx = fullSorted.findIndex((e) => ids.includes(String(e.id)));
     setTab("Register");
+    setEqQ("");
     setEqStatus("Semua");
     setEqCat("Semua");
-    window.setTimeout(() => flashPick(flash, ids, fullIdx, regPager.go, regPager.size), 250);
+    setPendingNotifIds([...ids]);
   };
   const pickNotif = (rowId: string) => pickNotifIds([rowId]);
   useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds);
@@ -677,6 +696,16 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     regPager.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eqQ, eqStatus, eqCat, tab]);
+  useEffect(() => {
+    if (!pendingNotifIds) return;
+    /* Filter/search state is cleared in the same event as this pending target.
+       Resolve from this post-update render; regPager.go now clamps against the
+       unfiltered result count, and this effect runs after the reset effect. */
+    const target = findEquipmentNotificationTarget(regSorted, pendingNotifIds, regPager.size);
+    setPendingNotifIds(null);
+    flashPick(flash, pendingNotifIds, target?.index ?? -1, regPager.go, regPager.size);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingNotifIds]);
 
   /* ==== UBAH / HAPUS EQUIPMENT (tab Register) ====
    Satu form dipakai untuk create & update supaya aturan validasi kode/serial/
@@ -690,16 +719,19 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
       category: String(e.category ?? EQ_CATS[0]),
       categoryCustom: "",
       code: String(e.code ?? ""),
-      serial: String(e.serial ?? ""),
       branch: String(e.branch ?? "Samarinda"),
-      model: String(e.model ?? ""),
+      brand: equipmentBrandOf(e),
+      unitYear: e.unitYear === null || e.unitYear === undefined ? "" : String(e.unitYear),
+      acquisitionYear: e.acquisitionYear === null || e.acquisitionYear === undefined ? "" : String(e.acquisitionYear),
       pic: String(e.pic ?? ""),
-      util: String(e.util ?? 0),
+      util: String(dispUtil(e)),
       rate: String(Number(e.rate ?? 0)),
       fuelPrice: String(Number(e.fuelPrice ?? 0)),
       acquisitionCost: String(Number(e.acquisitionCost ?? 0)),
-      usefulLife: String(Number(e.usefulLife ?? 0)),
+      usefulLifeMonths: String(equipmentUsefulLifeMonthsOf(e) || ""),
+      note: String(e.note ?? ""),
     });
+    setUtilTouched(false);
     setShowAdd(true);
   };
 
@@ -708,38 +740,48 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     const category = form.category === "Lainnya" ? form.categoryCustom.trim() : form.category;
     if (!form.name.trim()) { toast(locale === "en" ? "Equipment name is required" : "Nama equipment wajib diisi", "info"); return; }
     if (!category) { toast(locale === "en" ? "Custom category is required" : "Kategori kustom wajib diisi", "info"); return; }
-    if (!form.serial.trim()) { toast(locale === "en" ? "Serial number is required" : "Nomor seri wajib diisi", "info"); return; }
+    const unitYear = form.unitYear.trim() === "" ? null : Number(form.unitYear);
+    const acquisitionYear = form.acquisitionYear.trim() === "" ? null : Number(form.acquisitionYear);
+    if ([unitYear, acquisitionYear].some((year) => year !== null && (!Number.isInteger(year) || year < 0))) { toast(S.eqYearInvalid, "info"); return; }
     /* Kode equipment = identitas bisnis (dipakai label QR, booking, kontrak
        sewa). Mengubahnya melenceng dari semua rujukan lama, jadi form ubah
        sengaja tidak menyediakan kolom kode sama sekali. */
+    const util = Number(form.util);
     const rate = parseRupiah(form.rate || "0");
     const fuelPrice = parseRupiah(form.fuelPrice || "0");
     const acquisitionCost = parseRupiah(form.acquisitionCost || "0");
-    const usefulLife = Number(form.usefulLife || 0);
+    const usefulLifeMonths = Number(form.usefulLifeMonths || 0);
+    if (!Number.isFinite(util) || util < 0 || util > 100) { toast(S.eqUtilRange, "info"); return; }
     if (!Number.isFinite(rate) || rate < 0) { toast(S.eqRateMin, "info"); return; }
     if (!Number.isFinite(fuelPrice) || fuelPrice < 0) { toast(S.eqFuelMin, "info"); return; }
-    if ((form.acquisitionCost && (!Number.isFinite(acquisitionCost) || acquisitionCost < 0))
-      || (form.usefulLife && (!Number.isFinite(usefulLife) || usefulLife <= 0))) {
-      toast(S.eqCostLife, "info");
-      return;
-    }
+    if (form.acquisitionCost && (!Number.isFinite(acquisitionCost) || acquisitionCost < 0)) { toast(S.eqCostLife, "info"); return; }
+    if (form.usefulLifeMonths && (!Number.isFinite(usefulLifeMonths) || usefulLifeMonths <= 0)) { toast(S.eqLifeInvalid, "info"); return; }
     try {
+      const original = equipment.find((e) => String(e.id) === editingId);
       await update("equipment", editingId, {
         name: form.name.trim(),
         category,
-        model: form.model.trim() || "-",
-        serial: form.serial.trim(),
+        brand: form.brand.trim() || "-",
+        model: original?.model ?? (form.brand.trim() || "-"),
+        serial: original?.serial ?? "",
+        unitYear,
+        acquisitionYear,
         branch: form.branch,
         pic: form.pic.trim(),
+        util: utilTouched ? util : Number(original?.util ?? 0),
+        utilManual: utilTouched ? true : original?.utilManual ?? false,
         rate: Math.round(rate),
         fuelPrice: Math.round(fuelPrice),
         acquisitionCost: Math.round(acquisitionCost),
-        usefulLife,
+        usefulLife: usefulLifeMonths / 12,
+        usefulLifeMonths,
+        note: form.note.trim(),
       });
       log("mengubah equipment", `${editingId} - ${form.name.trim()}`, "Equipment");
       toast(locale === "en" ? `Equipment ${form.name.trim()} updated` : `Equipment ${form.name.trim()} diperbarui`);
       setShowAdd(false);
       setEditingId(null);
+      setUtilTouched(false);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -761,31 +803,34 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     const code = form.code.trim().toUpperCase();
     if (!/^[A-Z0-9-]{3,20}$/.test(code)) { toast(S.eqCodeFormat, "info"); return; }
     if (equipment.some((e) => String(e.code).toUpperCase() === code)) { toast(S.eqCodeUsed.replace("{a}", code), "info"); return; }
-    if (!form.serial.trim()) { toast(S.eqSerialReq, "info"); return; }
     if (!form.pic.trim()) { toast(S.eqPicReq, "info"); return; }
     /* Kategori "Lainnya" → teks custom wajib, tersimpan sebagai kategori + ikut filter. */
     const category = form.category === "Lainnya" ? form.categoryCustom.trim() : form.category;
     if (!category) { toast(locale === "en" ? "Custom category is required" : "Kategori kustom wajib diisi", "info"); return; }
+    const unitYear = form.unitYear.trim() === "" ? null : Number(form.unitYear);
+    const acquisitionYear = form.acquisitionYear.trim() === "" ? null : Number(form.acquisitionYear);
+    if ([unitYear, acquisitionYear].some((year) => year !== null && (!Number.isInteger(year) || year < 0))) { toast(S.eqYearInvalid, "info"); return; }
     const util = Number(form.util);
     if (!Number.isFinite(util) || util < 0 || util > 100) { toast(S.eqUtilRange, "info"); return; }
     const rate = parseRupiah(form.rate || "0");
     if (!Number.isFinite(rate) || rate < 0) { toast(S.eqRateMin, "info"); return; }
     const fuelPrice = parseRupiah(form.fuelPrice || "0");
     const acquisitionCost = parseRupiah(form.acquisitionCost || "0");
-    const usefulLife = Number(form.usefulLife || 0);
+    const usefulLifeMonths = Number(form.usefulLifeMonths || 0);
     if (fuelPrice < 0 || !Number.isFinite(fuelPrice)) { toast(S.eqFuelMin, "info"); return; }
-    if ((form.acquisitionCost && (!Number.isFinite(acquisitionCost) || acquisitionCost < 0)) || (form.usefulLife && (!Number.isFinite(usefulLife) || usefulLife <= 0))) {
-      toast(S.eqCostLife, "info");
-      return;
-    }
+    if (form.acquisitionCost && (!Number.isFinite(acquisitionCost) || acquisitionCost < 0)) { toast(S.eqCostLife, "info"); return; }
+    if (form.usefulLifeMonths && (!Number.isFinite(usefulLifeMonths) || usefulLifeMonths <= 0)) { toast(S.eqLifeInvalid, "info"); return; }
+    const sessionBranch = branch.trim() !== "" && branch !== "SEMUA" ? branch : "Samarinda";
     const created = await add("equipment", {
-      name: form.name.trim(), category, code, serial: form.serial.trim(), branch: form.branch,
-      status: "Tersedia", util: 0, utilManual: false, nextService: "-", lastHours: 0, model: form.model.trim() || "-",
-      pic: form.pic.trim(), rate, fuelPrice, acquisitionCost, usefulLife,
+      name: form.name.trim(), category, code, serial: "", branch: sessionBranch,
+      status: "Tersedia", util, utilManual: true, nextService: "-", lastHours: 0,
+      model: form.brand.trim() || "-", brand: form.brand.trim() || "-",
+      unitYear, acquisitionYear, pic: form.pic.trim(), rate, fuelPrice, acquisitionCost,
+      usefulLife: usefulLifeMonths / 12, usefulLifeMonths, note: form.note.trim(),
     }, { action: "mendaftarkan equipment", module: "Equipment" });
     toast(S.eqAdded.replace("{a}", created.id));
     setShowAdd(false);
-    setForm({ name: "", category: "Pengangkat", categoryCustom: "", code: "", serial: "", branch: "Samarinda", model: "", pic: "", util: "50", rate: "", fuelPrice: "0", acquisitionCost: "", usefulLife: "" });
+    setForm({ name: "", category: "Pengangkat", categoryCustom: "", code: "", branch: "Samarinda", brand: "", unitYear: "", acquisitionYear: "", pic: "", util: "50", rate: "", fuelPrice: "0", acquisitionCost: "", usefulLifeMonths: "", note: "" });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1540,7 +1585,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
           const dep = depreciationOf(e);
           const st = statsByEquip(e.name);
           const fuelCost = st.fuel * Number(e.fuelPrice || 0);
-          return [e.code, e.name, e.category, Number(e.acquisitionCost || 0), Number(e.usefulLife || 0), dep ? Math.round(dep.annual) : 0, dep ? Math.round(dep.book) : 0, Number(e.fuelPrice || 0), st.fuel, Math.round(fuelCost)];
+          const usefulLifeYears = equipmentUsefulLifeMonthsOf(e) / 12;
+          return [e.code, e.name, e.category, Number(e.acquisitionCost || 0), usefulLifeYears, dep ? Math.round(dep.annual) : 0, dep ? Math.round(dep.book) : 0, Number(e.fuelPrice || 0), st.fuel, Math.round(fuelCost)];
         })],
       `Register-Aset-Equipment-${today}`,
       "Register",
@@ -1654,52 +1700,41 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="sticky top-0 z-10 bg-surface">
-                  <tr><SortTh label={S.thEquipment} sortKey="equipment" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thCategory} sortKey="kategori" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thModel} sortKey="model" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thUtil} sortKey="utilisasi" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thHours} sortKey="jam" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thRate} sortKey="tarif" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thBookVal} sortKey="nilaibuku" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.thAction}</th></tr>
+                  <tr>
+                    <SortTh label={S.thCode} sortKey="code" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thName} sortKey="name" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thBrand} sortKey="brand" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thUnitYear} sortKey="unitYear" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thPic} sortKey="pic" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <SortTh label={S.thEstUtil} sortKey="utilisasi" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                    <th className="th">{S.thAction}</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-steel-100">
                   {regPager.slice(regSorted).map((e) => {
                     const expired = isCalExpired(e.id, calibrations, today);
+                    const utilization = dispUtil(e);
                     return (
                     <tr key={e.id} id={notifRowId(String(e.id))} className={rowHighlightClass({ id: String(e.id), flash, notified: notified.has(String(e.id)), base: "hover:bg-surface" })}>
-                      <td className="td">
-                        <p className="font-medium text-navy-900">{e.name}</p>
-                        <p className="text-xs text-steel-500 font-mono">{e.code}</p>
-                      </td>
-                      <td className="td"><Badge tone="gray">{e.category}</Badge></td>
-                      <td className="td text-steel-600">{e.model}</td>
+                      <td className="td font-mono text-xs text-steel-600">{e.code ?? e.id}</td>
+                      <td className="td font-medium text-navy-900">{e.name}</td>
+                      <td className="td text-steel-600">{equipmentBrandOf(e) || <span className="text-steel-400">-</span>}</td>
+                      <td className="td text-steel-600 tabular-nums">{e.unitYear === null || e.unitYear === undefined || e.unitYear === "" ? <span className="text-steel-400">-</span> : Number(e.unitYear)}</td>
+                      <td className="td text-steel-600">{String(e.pic ?? "").trim() || <span className="text-steel-400">-</span>}</td>
                       <td className="td">
                         <div className="flex flex-wrap gap-1">
-                          <Badge tone={statusTone[e.status] ?? "gray"}>{e.status}</Badge>
+                          <Badge tone={statusTone[e.status] ?? "gray"}>{e.status ?? "-"}</Badge>
                           {isMeasuring(e) && expired && <Badge tone="red">{S.eqCalExpired}</Badge>}
                         </div>
                       </td>
                       <td className="td">
                         <div className="flex items-center gap-2">
-                          <ProgressBar value={dispUtil(e)} className="w-20" tone={dispUtil(e) > 85 ? "red" : dispUtil(e) >= 40 ? "green" : "amber"} />
-                          <span className="text-xs font-medium">{dispUtil(e)}%</span>
-                          <Badge tone={(e.utilManual === true) ? "gray" : "blue"}>{(e.utilManual === true) ? "Manual" : "Auto"}</Badge>
+                          <ProgressBar value={utilization} className="w-20" tone={utilization > 85 ? "red" : utilization >= 40 ? "green" : "amber"} />
+                          <span className="text-xs font-medium tabular-nums">{utilization}%</span>
                         </div>
-                        <p className="mt-0.5 text-[11px] text-steel-400">{autoHoursOf(e)} jam ÷ 176 · {utilGrade(dispUtil(e), locale === "en").label}</p>
+                        <p className="mt-0.5 text-[11px] text-steel-400">{utilGrade(utilization, locale === "en").label}</p>
                       </td>
-                      <td className="td text-steel-600 font-mono text-xs">{fmtJumlah(Number(e.lastHours || 0))} jam</td>
-                      <td className="td text-steel-600 text-xs">
-                        {Number(e.rate || 0) > 0 ? fmtRupiah(Number(e.rate)) : "-"}
-                        <span className="block text-steel-400">BBM {fmtRupiah(Number(e.fuelPrice || 0))}/L</span>
-                      </td>
-                      <td className="td text-steel-600 text-xs">
-                        {(() => {
-                          const dep = depreciationOf(e);
-                          if (!dep) return <span className="text-steel-400">-</span>;
-                          return (
-                            <span>
-                              <span className="font-semibold text-navy-900">{fmtRupiah(Math.round(dep.book))}</span>
-                              <span className="block text-steel-400">susut {fmtRupiah(Math.round(dep.annual))}/thn</span>
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="td text-xs text-steel-600">{createdAtOf(e) !== null ? fmtTanggal(createdAtOf(e)) : <span className="text-steel-400">-</span>}</td>
-                      <td className="td text-xs text-steel-600">{lastTouchedAt(e) !== null ? fmtTanggal(lastTouchedAt(e)) : <span className="text-steel-400">-</span>}</td>
                       <td className="td">
                         <div className="flex flex-wrap items-center gap-1.5">
                         {/* Aksi Register diarahkan ke ALUR SIKLUS, bukan lagi
@@ -2431,8 +2466,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                                   <span
                                     className="flex h-7 items-center justify-center rounded text-[10px] font-semibold"
                                     style={{
-                                      background: v === 0 ? "#f1f5f9" : `rgba(11,58,99,${0.12 + (v / heatMax) * 0.78})`,
-                                      color: v === 0 ? "#cbd5e1" : v / heatMax > 0.55 ? "#ffffff" : "#0b3a63",
+                                      background: v === 0 ? "#F1F1F1" : `rgba(11,58,99,${0.12 + (v / heatMax) * 0.78})`,
+                                      color: v === 0 ? "#C7C7C7" : v / heatMax > 0.55 ? "#ffffff" : "#0A0A0A",
                                     }}
                                     title={`${row.day} ${h}:00 · ${v}`}
                                   >
@@ -2502,12 +2537,12 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                   <div className="h-52 p-4 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={hoursChart} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                        <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2e9ad4" stopOpacity={0.35} /><stop offset="95%" stopColor="#2e9ad4" stopOpacity={0} /></linearGradient></defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                        <XAxis dataKey="label" stroke="#8aa2b6" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                        <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}rb`} />
+                        <defs><linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#E61919" stopOpacity={0.35} /><stop offset="95%" stopColor="#E61919" stopOpacity={0} /></linearGradient></defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                        <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                        <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}rb`} />
                         <Tooltip content={<ChartTooltip formatter={(v) => `${fmtJumlah(Number(v))} jam`} />} />
-                        <Area type="monotone" dataKey="jam" stroke="#2e9ad4" strokeWidth={2.5} fill="url(#eqGrad)" />
+                        <Area type="monotone" dataKey="jam" stroke="#E61919" strokeWidth={2.5} fill="url(#eqGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -2582,19 +2617,16 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                 <input className="input" value={form.categoryCustom} onChange={(e) => setForm({ ...form, categoryCustom: e.target.value })} placeholder={locale === "en" ? "e.g.: Survey" : "cth: Survei"} />
               </Field>
             )}
-            <Field label={S.eqBranchField}>
-              <select className="input" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })}>
-                {data.branches.map((b) => <option key={b.id} value={String(b.city)}>{String(b.city)}</option>)}
-              </select>
-            </Field>
-            <Field label={S.eqSerialField} hint={S.eqSerialHint}><input className="input font-mono" value={form.serial} onChange={(e) => setForm({ ...form, serial: e.target.value })} placeholder={S.eqSerialPh} /></Field>
-            <Field label={S.eqPicField} hint={S.eqPicHint}><EntityPicker value={form.pic} onChange={(v) => setForm({ ...form, pic: v })} options={picOptions} placeholder={S.eqPicPh} ariaLabel={S.eqPicField} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={form.pic.trim() !== "" && !isKnownEmployee(data.employees, form.pic)} /></Field>
-            <Field label={S.thModel}><input className="input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} /></Field>
-            <Field label={S.eqUtilField}><NumInput className="input" value={form.util} onChange={(e) => setForm({ ...form, util: e.target.value })} /></Field>
-            <Field label={S.eqRateField}><MoneyInput className="input" value={form.rate} onChange={(v) => setForm({ ...form, rate: v })} placeholder={S.eqRatePh} /></Field>
-            <Field label={S.eqFuelField}><MoneyInput className="input" value={form.fuelPrice} onChange={(v) => setForm({ ...form, fuelPrice: v })} placeholder={S.eqFuelPh} /></Field>
+            <Field label={S.eqUnitYearField}><NumInput integer min={0} className="input" value={form.unitYear} onChange={(e) => setForm({ ...form, unitYear: e.target.value })} placeholder={S.eqUnitYearPh} /></Field>
+            <Field label={S.eqAcquisitionYearField}><NumInput integer min={0} className="input" value={form.acquisitionYear} onChange={(e) => setForm({ ...form, acquisitionYear: e.target.value })} placeholder={S.eqAcquisitionYearPh} /></Field>
+            <Field label={S.eqPicField} hint={S.eqPicHint}><SearchSelect value={form.pic} onChange={(v) => setForm({ ...form, pic: v })} options={picOptions} placeholder={S.eqPicPh} ariaLabel={S.eqPicField} emptyText={S.eqEmployeeNone} allowCustom invalid={form.pic.trim() !== "" && !isKnownEmployee(data.employees, form.pic)} /></Field>
+            <Field label={S.eqBrandField}><input className="input" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder={S.eqBrandPh} /></Field>
+            <Field label={S.eqUtilField}><NumInput min={0} max={100} className="input" value={form.util} onChange={(e) => { setForm({ ...form, util: e.target.value }); setUtilTouched(true); }} /></Field>
+            {SHOW_EQP_COST_FIELDS && <Field label={S.eqRateField}><MoneyInput className="input" value={form.rate} onChange={(v) => setForm({ ...form, rate: v })} placeholder={S.eqRatePh} /></Field>}
+            {SHOW_EQP_COST_FIELDS && <Field label={S.eqFuelField}><MoneyInput className="input" value={form.fuelPrice} onChange={(v) => setForm({ ...form, fuelPrice: v })} placeholder={S.eqFuelPh} /></Field>}
             <Field label={S.eqCostField}><MoneyInput className="input" value={form.acquisitionCost} onChange={(v) => setForm({ ...form, acquisitionCost: v })} placeholder={S.eqCostPh} /></Field>
-            <Field label={S.eqLifeField}><NumInput min={0} className="input" value={form.usefulLife} onChange={(e) => setForm({ ...form, usefulLife: e.target.value })} placeholder={S.eqLifePh} /></Field>
+            <Field label={S.eqLifeField}><NumInput min={0} className="input" value={form.usefulLifeMonths} onChange={(e) => setForm({ ...form, usefulLifeMonths: e.target.value })} placeholder={S.eqLifePh} /></Field>
+            <Field label={S.eqNoteField}><textarea className="input min-h-20" rows={3} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={S.eqNotePh} /></Field>
           </FormGrid>
         </div>
       </Modal>
@@ -3113,4 +3145,3 @@ function minutesToStr(total: number): string {
   const m = total % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
-
