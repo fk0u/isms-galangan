@@ -232,7 +232,7 @@ export default function BomDetail() {
             <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-navy-900"><Barcode className="h-4 w-4" /> {item.sku}</p>
             <div className="mt-2 flex h-10 items-stretch justify-center overflow-hidden" aria-hidden="true">
               {barcodeBits(String(item.sku)).map((b, idx) => (
-                <div key={idx} style={{ width: b ? 3 : 2, background: b ? "#0b1e33" : "#ffffff" }} />
+                <div key={idx} style={{ width: b ? 3 : 2, background: b ? "#0A0A0A" : "#ffffff" }} />
               ))}
             </div>
             <p className="mt-2 font-mono text-[11px] text-steel-500" title={S.qrTitle}>QR: {qrPayloadOf(item)}{binOf(item) ? ` · Bin ${binOf(item)}` : ""}</p>

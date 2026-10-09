@@ -1344,7 +1344,7 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
     [arOpen]
   );
 
-  const AR_DONUT_COLORS = ["#22c55e", "#f59e0b", "#f97316", "#ef4444", "#8b5cf6", "#0b3a63"];
+  const AR_DONUT_COLORS = ["#262626", "#F04848", "#FF8A8A", "#E61919", "#474747", "#0A0A0A"];
 
   const agingDonut = useMemo(
     () =>
@@ -3134,16 +3134,16 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
                     <AreaChart data={flowMonthly} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                       <defs>
                         <linearGradient id="cp" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0d9488" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#262626" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#262626" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                      <XAxis dataKey="month" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                      <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                      <XAxis dataKey="month" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                      <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Area type="monotone" dataKey="masuk" name={S.chartIn} stroke="#0d9488" strokeWidth={2.5} fill="url(#cp)" />
-                      <Area type="monotone" dataKey="keluar" name={S.chartOut} stroke="#e11d48" strokeWidth={2} fill="transparent" />
+                      <Area type="monotone" dataKey="masuk" name={S.chartIn} stroke="#262626" strokeWidth={2.5} fill="url(#cp)" />
+                      <Area type="monotone" dataKey="keluar" name={S.chartOut} stroke="#E61919" strokeWidth={2} fill="transparent" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -3357,11 +3357,11 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={flowMonthly} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" />
-                        <XAxis dataKey="month" stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                        <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" />
+                        <XAxis dataKey="month" stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                        <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
                         <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                        <Area type="monotone" dataKey="masuk" name={S.chartIssued} stroke="#0b3a63" strokeWidth={2.5} fill="#8cc9e8" fillOpacity={0.3} />
+                        <Area type="monotone" dataKey="masuk" name={S.chartIssued} stroke="#0A0A0A" strokeWidth={2.5} fill="#FF8A8A" fillOpacity={0.3} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -3869,17 +3869,17 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
                       <ComposedChart data={ebitdaReal} margin={{ top: 8, right: 10, left: -18, bottom: 0 }}>
                         <defs>
                           <linearGradient id="ebitdaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#0d9488" stopOpacity={0.32} />
-                            <stop offset="100%" stopColor="#0d9488" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor="#262626" stopOpacity={0.32} />
+                            <stop offset="100%" stopColor="#262626" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                         <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} jt`} />} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
-                        <Bar dataKey="revenue" name="Pendapatan" fill="#0b3a63" radius={[4, 4, 0, 0]} isAnimationActive />
-                        <Area type="monotone" dataKey="ebitda" name="EBITDA" stroke="#0d9488" strokeWidth={2.5} fill="url(#ebitdaGrad)" dot={{ r: 3 }} isAnimationActive />
+                        <Bar dataKey="revenue" name="Pendapatan" fill="#0A0A0A" radius={[4, 4, 0, 0]} isAnimationActive />
+                        <Area type="monotone" dataKey="ebitda" name="EBITDA" stroke="#262626" strokeWidth={2.5} fill="url(#ebitdaGrad)" dot={{ r: 3 }} isAnimationActive />
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>

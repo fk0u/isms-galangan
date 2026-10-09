@@ -454,7 +454,7 @@ const exportSummary = async () => {
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
     value: projects.filter((p) => p.type === t).length,
-    color: ["#0b3a63", "#2e9ad4", "#22c55e"][i],
+    color: ["#0A0A0A", "#E61919", "#262626"][i],
   }));
   const pipelineActive = inBranch(data.quotations)
     .filter((x) => x.stage !== "Menang")
@@ -925,18 +925,18 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
                 <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0b3a63" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#0b3a63" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0A0A0A" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#0A0A0A" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-                  <XAxis dataKey="bln" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="rev" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12 }} stroke="#8aa2b6" axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                  <XAxis dataKey="bln" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="rev" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? `Rp ${v} M` : v)} />} />
-                  <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0b3a63" strokeWidth={2.5} fill="url(#revGrad)" isAnimationActive />
-                  <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#8cc9e8" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
-                  <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#e11d48" strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive />
+                  <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0A0A0A" strokeWidth={2.5} fill="url(#revGrad)" isAnimationActive />
+                  <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#FF8A8A" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
+                  <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#E61919" strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -998,19 +998,19 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
           <Card className="h-full">
             <CardHeader title={S.productionUtil} subtitle={S.drydockVsEquip} />
             <div className="flex items-center justify-center gap-6 p-4">
-              <RadialGauge value={utilDrydock} label="Drydock" color="#0b3a63" />
-              <RadialGauge value={utilEquipment} label="Equipment" color="#2e9ad4" />
+              <RadialGauge value={utilDrydock} label="Drydock" color="#0A0A0A" />
+              <RadialGauge value={utilEquipment} label="Equipment" color="#E61919" />
             </div>
             <div className="mt-2 -mb-1 h-16 px-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={utilSeries} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="utilGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2e9ad4" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#2e9ad4" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#E61919" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#E61919" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="equipment" stroke="#2e9ad4" strokeWidth={2} fill="url(#utilGrad)" isAnimationActive />
+                  <Area type="monotone" dataKey="equipment" stroke="#E61919" strokeWidth={2} fill="url(#utilGrad)" isAnimationActive />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

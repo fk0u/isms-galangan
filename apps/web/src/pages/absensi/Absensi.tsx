@@ -620,11 +620,11 @@ export default function Absensi() {
                       <AreaChart data={trenShown} margin={{ top: 5, right: 8, left: -18, bottom: 0 }}>
                         <defs>
                           <linearGradient id="attGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#0d9488" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="#0d9488" stopOpacity={0.02} />
+                            <stop offset="0%" stopColor="#262626" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="#262626" stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E2E2E2" />
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                         <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                         <Tooltip
@@ -642,7 +642,7 @@ export default function Absensi() {
                         <Area
                           type="monotone"
                           dataKey="tingkat"
-                          stroke="#0d9488"
+                          stroke="#262626"
                           strokeWidth={2.5}
                           fill="url(#attGrad)"
                           connectNulls

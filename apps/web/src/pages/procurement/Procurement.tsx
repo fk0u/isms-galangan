@@ -85,11 +85,11 @@ const RFQ_NEXT: Record<string, string[]> = {
 
 const RFQ_STAGES = ["Draf", "Draft", "Terkirim", "Evaluasi", "Diputuskan"];
 const RFQ_STAGE_COLOR: Record<string, string> = {
-  Draf: "#94a3b8",
-  Draft: "#94a3b8",
-  Terkirim: "#2e9ad4",
-  Evaluasi: "#f59e0b",
-  Diputuskan: "#0d9488",
+  Draf: "#8F8F8F",
+  Draft: "#8F8F8F",
+  Terkirim: "#E61919",
+  Evaluasi: "#F04848",
+  Diputuskan: "#262626",
 };
 
 const PR_PENDING = ["Draft", "Menunggu Approval", "RFQ", "Diajukan"];
@@ -259,12 +259,12 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
         <div className="h-44 p-4 pt-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs><linearGradient id="procGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0d9488" stopOpacity={0.3} /><stop offset="95%" stopColor="#0d9488" stopOpacity={0} /></linearGradient></defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e9eff4" vertical={false} />
-              <XAxis dataKey="bln" stroke="#8aa2b6" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
-              <YAxis stroke="#8aa2b6" axisLine={false} tickLine={false} />
+              <defs><linearGradient id="procGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#262626" stopOpacity={0.3} /><stop offset="95%" stopColor="#262626" stopOpacity={0} /></linearGradient></defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+              <XAxis dataKey="bln" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+              <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? chartRpM(String(v)) : v)} />} />
-              <Area type="monotone" dataKey="pengeluaran" name={chartKeluar} stroke="#0d9488" strokeWidth={2.5} fill="url(#procGrad)" />
+              <Area type="monotone" dataKey="pengeluaran" name={chartKeluar} stroke="#262626" strokeWidth={2.5} fill="url(#procGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -318,7 +318,7 @@ export default function Procurement() {
     }
     return RFQ_STAGES.filter((s) => m.has(s)).map((s) => {
       const v = m.get(s) as { count: number; nilai: number; minDays: number | null };
-      return { name: s, value: v.count, count: v.count, nilai: v.nilai, minDays: v.minDays, color: RFQ_STAGE_COLOR[s] ?? "#94a3b8" };
+      return { name: s, value: v.count, count: v.count, nilai: v.nilai, minDays: v.minDays, color: RFQ_STAGE_COLOR[s] ?? "#8F8F8F" };
     });
   }, [rfqs]);
   const rfqStuck = quotationStageDistReal.filter((d) => (d.minDays ?? 0) > 14);
