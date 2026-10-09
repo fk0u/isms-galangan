@@ -37,14 +37,28 @@ function parseData(raw: string, id: string, table: string): Data {
   }
 }
 
-function legacyTotal(data: Data): number {
-  const totalPrice = Number(data.totalPrice);
-  if (data.totalPrice !== undefined && data.totalPrice !== null && Number.isFinite(totalPrice)) {
-    return totalPrice;
+function legacyNumber(data: Data, field: "totalPrice" | "quantity" | "unitPrice", id: string): number {
+  const value = data[field];
+  if ((typeof value !== "number" && typeof value !== "string")
+    || (typeof value === "string" && value.trim() === "")) {
+    throw new Error(`BoQ ${id} memiliki nilai ${field} yang hilang atau bukan numerik; migrasi dihentikan.`);
   }
-  const quantity = Number(data.quantity);
-  const unitPrice = Number(data.unitPrice);
-  return (Number.isFinite(quantity) ? quantity : 0) * (Number.isFinite(unitPrice) ? unitPrice : 0);
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`BoQ ${id} memiliki nilai ${field} yang hilang atau bukan numerik; migrasi dihentikan.`);
+  }
+  return parsed;
+}
+
+function legacyTotal(data: Data, id: string): number {
+  if (data.totalPrice !== undefined && data.totalPrice !== null) {
+    return legacyNumber(data, "totalPrice", id);
+  }
+  const total = legacyNumber(data, "quantity", id) * legacyNumber(data, "unitPrice", id);
+  if (!Number.isFinite(total)) {
+    throw new Error(`BoQ ${id} memiliki total hasil perhitungan yang tidak valid; migrasi dihentikan.`);
+  }
+  return total;
 }
 
 function stableDocId(projectId: string): string {
@@ -110,7 +124,13 @@ async function buildPlan(tx: TxContext, now: string): Promise<GroupPlan[]> {
     }
 
     const rows = group.rows.sort((a, b) => a.id.localeCompare(b.id));
-    const total = Math.round(rows.reduce((sum, row) => sum + legacyTotal(row.data), 0));
+    const total = Math.round(rows.reduce((sum, row) => {
+      const next = sum + legacyTotal(row.data, row.id);
+      if (!Number.isFinite(next)) {
+        throw new Error(`BoQ ${row.id} menghasilkan total gabungan yang tidak valid; migrasi dihentikan.`);
+      }
+      return next;
+    }, 0));
     const itemApprovalDates = rows.map((row) => stringField(row.data.approvedAt)).filter((value): value is string => value !== undefined);
     const issuedAt = rows.map((row) => row.updatedAt).filter(Boolean).sort()[0] ?? now;
     const approvedAt = itemApprovalDates.sort().at(-1);

@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     ]);
     const fixtures = [
       { id: "OLD-A-1", projectId: "PRJ-MIG-A", quantity: 2, unitPrice: 10, totalPrice: 20 },
-      { id: "OLD-A-2", projectId: "PRJ-MIG-A", quantity: 3, unitPrice: 5 },
+      { id: "OLD-A-2", projectId: "PRJ-MIG-A", quantity: "3", unitPrice: "5" },
       { id: "OLD-B-1", projectId: "PRJ-MIG-B", quantity: 4, unitPrice: 7, totalPrice: 28 },
     ];
     for (const item of fixtures) {
@@ -78,6 +78,28 @@ async function main(): Promise<void> {
     assert.equal((await q("SELECT id FROM boqDocs")).length, 2, "transaksi gagal tidak membuat dokumen parsial");
     await exec("DELETE FROM boq WHERE id = ?", ["OLD-BROKEN"]);
 
+    const damagedNumbers = [
+      { id: "OLD-MISSING-QUANTITY", field: "quantity", data: { projectId: "PRJ-MIG-A", unitPrice: 10 } },
+      { id: "OLD-MISSING-UNIT-PRICE", field: "unitPrice", data: { projectId: "PRJ-MIG-A", quantity: 2 } },
+      { id: "OLD-NONNUMERIC-QUANTITY", field: "quantity", data: { projectId: "PRJ-MIG-A", quantity: "rusak", unitPrice: 10 } },
+      { id: "OLD-NONNUMERIC-UNIT-PRICE", field: "unitPrice", data: { projectId: "PRJ-MIG-A", quantity: 2, unitPrice: "rusak" } },
+      { id: "OLD-BLANK-UNIT-PRICE", field: "unitPrice", data: { projectId: "PRJ-MIG-A", quantity: 2, unitPrice: " " } },
+      { id: "OLD-NONNUMERIC-TOTAL-PRICE", field: "totalPrice", data: { projectId: "PRJ-MIG-A", quantity: 2, unitPrice: 10, totalPrice: "rusak" } },
+      { id: "OLD-OVERFLOW-TOTAL", field: "total hasil", data: { projectId: "PRJ-MIG-A", quantity: 1e308, unitPrice: 1e308 } },
+    ];
+    for (const damaged of damagedNumbers) {
+      await exec("INSERT INTO boq (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+        damaged.id, "Samarinda", JSON.stringify(damaged.data), now,
+      ]);
+      const numericError = new RegExp(`BoQ ${damaged.id}.*${damaged.field}`);
+      await assert.rejects(() => migrateBoqDocs(false), numericError, `${damaged.id}: dry-run harus gagal tertutup`);
+      await assert.rejects(() => migrateBoqDocs(true), numericError, `${damaged.id}: apply harus gagal tertutup`);
+      assert.equal((await q("SELECT id FROM boqDocs")).length, 2, `${damaged.id}: tidak membuat dokumen baru`);
+      const [unchanged] = await q<{ data: string }>("SELECT data FROM boq WHERE id = ?", [damaged.id]);
+      assert.equal(JSON.parse(unchanged.data).boqDocId, undefined, `${damaged.id}: tidak tertaut setelah gagal`);
+      await exec("DELETE FROM boq WHERE id = ?", [damaged.id]);
+    }
+
     await exec("INSERT INTO boq (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
       "OLD-DANGLING", "Samarinda", JSON.stringify({ projectId: "PRJ-MIG-A", boqDocId: "MISSING-DOC" }), now,
     ]);
@@ -92,7 +114,7 @@ async function main(): Promise<void> {
     assert.equal((await q("SELECT id FROM boqDocs")).length, 2, "proyek yang hilang tidak membuat dokumen parsial");
     await exec("DELETE FROM boq WHERE id = ?", ["OLD-UNKNOWN-PROJECT"]);
 
-    console.log("[probe:boq-migration] PASS — preview, pengelompokan, status, total, tautan, idempotensi, relasi, dan rollback terverifikasi.");
+    console.log("[probe:boq-migration] PASS — preview, pengelompokan, fail-closed numerik, status, total, tautan, idempotensi, relasi, dan rollback terverifikasi.");
   } finally {
     await closeDb();
     if (originalDbPath === undefined) delete process.env.SQLITE_PATH;
