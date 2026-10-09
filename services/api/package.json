@@ -27,6 +27,7 @@
     "probe:pdf-db": "tsx --env-file-if-exists=.env scripts/pdf-db-probe.ts",
     "probe:page": "tsx scripts/page-probe.ts",
     "probe:security": "tsx --env-file-if-exists=.env scripts/security-probe.ts",
+    "probe:security-isolation": "tsx --env-file-if-exists=.env scripts/security-probe-isolation-probe.ts",
     "probe:tx": "tsx --env-file-if-exists=.env scripts/tx-probe.ts",
     "probe:env": "tsx scripts/env-probe.ts",
     "probe:users": "tsx --env-file-if-exists=.env scripts/user-hierarchy-probe.ts",
@@ -35,7 +36,7 @@
     "probe:boq": "tsx --env-file-if-exists=.env scripts/boq-docs-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint .",
-    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:boq && npm run probe:boq-migration"
+    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
