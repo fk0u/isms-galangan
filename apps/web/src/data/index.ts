@@ -926,6 +926,7 @@ export const surveyTimeline = [
 export interface BoQItem {
   id: string;
   projectId: string;
+  boqDocId?: string;
   name: string;
   description: string;
   quantity: number;
@@ -944,16 +945,19 @@ export interface BoQItem {
 
 export const boqByProject: Record<string, BoQItem[]> = {
   "RP-2026-003": [
-    { id: "BQ-001", projectId: "RP-2026-003", name: "Overhaul Main Engine", description: "Overhaul & replacement main engine bearing", quantity: 1, unit: "set", unitPrice: 480000000, totalPrice: 480000000, category: "Mechanical", status: "Pending", requestedBy: "Rudi Hartono" },
-    { id: "BQ-002", projectId: "RP-2026-003", name: "Coating Lambung", description: "Epoxy coating hull exterior", quantity: 120, unit: "mÂ²", unitPrice: 850000, totalPrice: 102000000, category: "Paint", status: "Approved", requestedBy: "Sari Wulandari", approvedBy: "Andi Darman", approvedAt: "2026-07-20" },
-    { id: "BQ-003", projectId: "RP-2026-003", name: "Inspection Docking", description: "Survey & inspection during drydock", quantity: 1, unit: "service", unitPrice: 150000000, totalPrice: 150000000, category: "Survey", status: "Completed", requestedBy: "Rudi Hartono", approvedBy: "Budi Santoso", approvedAt: "2026-07-05" },
+    { id: "BQ-001", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R0", name: "Overhaul Main Engine", description: "Overhaul & replacement main engine bearing", quantity: 1, unit: "set", unitPrice: 480000000, totalPrice: 480000000, category: "Mechanical", status: "Pending", requestedBy: "Rudi Hartono" },
+    { id: "BQ-002", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R0", name: "Coating Lambung", description: "Epoxy coating hull exterior", quantity: 120, unit: "m²", unitPrice: 850000, totalPrice: 102000000, category: "Paint", status: "Approved", requestedBy: "Sari Wulandari", approvedBy: "Andi Darman", approvedAt: "2026-07-20" },
+    { id: "BQ-003", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R0", name: "Inspection Docking", description: "Survey & inspection during drydock", quantity: 1, unit: "service", unitPrice: 150000000, totalPrice: 150000000, category: "Survey", status: "Completed", requestedBy: "Rudi Hartono", approvedBy: "Budi Santoso", approvedAt: "2026-07-05" },
+    { id: "BQ-007", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R1", name: "Overhaul Main Engine", description: "Overhaul & replacement main engine bearing", quantity: 1, unit: "set", unitPrice: 480000000, totalPrice: 480000000, category: "Mechanical", status: "Approved", requestedBy: "Rudi Hartono" },
+    { id: "BQ-008", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R1", name: "Coating Lambung", description: "Epoxy coating hull exterior", quantity: 120, unit: "m²", unitPrice: 900000, totalPrice: 108000000, category: "Paint", status: "Approved", requestedBy: "Sari Wulandari", approvedBy: "Direktur Demo", approvedAt: "2026-08-15" },
+    { id: "BQ-009", projectId: "RP-2026-003", boqDocId: "BQD-RP-2026-003-R1", name: "Inspection Docking", description: "Survey & inspection during drydock", quantity: 1, unit: "service", unitPrice: 150000000, totalPrice: 150000000, category: "Survey", status: "Approved", requestedBy: "Rudi Hartono", approvedBy: "Direktur Demo", approvedAt: "2026-08-15" },
   ],
   "NB-2025-012": [
-    { id: "BQ-004", projectId: "NB-2025-012", name: "Fabrikasi Baja Section 4-7", description: "Steel fabrication for hull section", quantity: 45, unit: "ton", unitPrice: 12000000, totalPrice: 540000000, category: "Fabrikasi", status: "Approved", requestedBy: "Hendra Wijaya", approvedBy: "Andi Darman", approvedAt: "2025-11-01" },
-    { id: "BQ-005", projectId: "NB-2025-012", name: "Mesin & Kelistrikan", description: "Aux engine & electrical installation", quantity: 1, unit: "package", unitPrice: 850000000, totalPrice: 850000000, category: "Mechanical", status: "Pending", requestedBy: "Budi Santoso" },
+    { id: "BQ-004", projectId: "NB-2025-012", boqDocId: "BQD-NB-2025-012-R0", name: "Fabrikasi Baja Section 4-7", description: "Steel fabrication for hull section", quantity: 45, unit: "ton", unitPrice: 12000000, totalPrice: 540000000, category: "Fabrikasi", status: "Approved", requestedBy: "Hendra Wijaya", approvedBy: "Andi Darman", approvedAt: "2025-11-01" },
+    { id: "BQ-005", projectId: "NB-2025-012", boqDocId: "BQD-NB-2025-012-R0", name: "Mesin & Kelistrikan", description: "Aux engine & electrical installation", quantity: 1, unit: "package", unitPrice: 850000000, totalPrice: 850000000, category: "Mechanical", status: "Pending", requestedBy: "Budi Santoso" },
   ],
   "RP-2026-005": [
-    { id: "BQ-006", projectId: "RP-2026-005", name: "Bearing Overhaul", description: "Replace bearing on main propulsion", quantity: 4, unit: "pcs", unitPrice: 80000000, totalPrice: 320000000, category: "Mechanical", status: "Pending", requestedBy: "Fajar Nugroho" },
+    { id: "BQ-006", projectId: "RP-2026-005", boqDocId: "BQD-RP-2026-005-R0", name: "Bearing Overhaul", description: "Replace bearing on main propulsion", quantity: 4, unit: "pcs", unitPrice: 80000000, totalPrice: 320000000, category: "Mechanical", status: "Pending", requestedBy: "Fajar Nugroho" },
   ],
 };
 
@@ -961,6 +965,49 @@ export const seedBoq: BoQItem[] = [
   ...(boqByProject["RP-2026-003"] ?? []),
   ...(boqByProject["NB-2025-012"] ?? []),
   ...(boqByProject["RP-2026-005"] ?? []),
+];
+
+export interface BoQDoc {
+  id: string;
+  branch: string;
+  projectId: string;
+  number: string;
+  revision: number;
+  status: "Draft" | "Diajukan" | "Disetujui" | "Ditolak" | "Digantikan";
+  supersedes?: string;
+  supersededBy?: string;
+  issuedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  note: string;
+  total: number;
+}
+
+export const seedBoqDocs: BoQDoc[] = [
+  {
+    id: "BQD-RP-2026-003-R0", branch: "Samarinda", projectId: "RP-2026-003",
+    number: "BQ/RP-2026-003/001", revision: 0, status: "Digantikan",
+    issuedAt: "2026-07-01", approvedBy: "Direktur Demo", approvedAt: "2026-07-20",
+    supersededBy: "BQD-RP-2026-003-R1", note: "Surat awal sebelum revisi 1.", total: 732000000,
+  },
+  {
+    id: "BQD-RP-2026-003-R1", branch: "Samarinda", projectId: "RP-2026-003",
+    number: "BQ/RP-2026-003/001", revision: 1, status: "Disetujui",
+    supersedes: "BQD-RP-2026-003-R0", issuedAt: "2026-08-01", approvedBy: "Direktur Demo", approvedAt: "2026-08-15",
+    note: "Revisi 1 menyesuaikan harga coating.", total: 738000000,
+  },
+  {
+    id: "BQD-NB-2025-012-R0", branch: "Samarinda", projectId: "NB-2025-012",
+    number: "BQ/NB-2025-012/001", revision: 0, status: "Disetujui",
+    issuedAt: "2025-11-01", approvedBy: "Direktur Demo", approvedAt: "2025-11-01",
+    note: "Surat BoQ demo Rev 0.", total: 1390000000,
+  },
+  {
+    id: "BQD-RP-2026-005-R0", branch: "Samarinda", projectId: "RP-2026-005",
+    number: "BQ/RP-2026-005/001", revision: 0, status: "Disetujui",
+    issuedAt: "2026-07-15", approvedBy: "Direktur Demo", approvedAt: "2026-07-15",
+    note: "Surat BoQ demo Rev 0.", total: 320000000,
+  },
 ];
 
 /* ====== Deret tren per modul - 1 deret per kartu KPI (12 titik, Sep-Ags) ====== */
@@ -998,5 +1045,4 @@ export const pipelineTrend = mk([42, 45, 44, 48, 47, 51, 49, 53, 55, 58, 60, 61]
 export const winRateTrend = mk([58, 60, 59, 62, 61, 63, 64, 65, 64, 66, 67, 68]);
 export const wonTrend = mk([28, 30, 29, 33, 32, 36, 34, 38, 40, 43, 46, 49]);
 export const activeEmployeeTrend = mk([232, 238, 242, 238, 242, 246, 244, 250, 254, 258, 262, 266]);
-
 

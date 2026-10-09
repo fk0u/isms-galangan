@@ -37,7 +37,7 @@ P0 · 1,5 HK
 ### F3-C-02 — Migrasi data lama
 P0 · 3 j
 **Langkah.** Skrip `scripts/migrate-boq-docs.ts`: kelompokkan `boq` lama per proyek ke 1 surat `BQ/<projectId>/001 Rev 0` status Disetujui; isi `boqDocId`. Update seed agar memakai model baru (minimal 2 proyek dengan 2 surat, satu punya revisi).
-**Kriteria.** [ ] Tidak ada `boq` tanpa `boqDocId` setelah migrasi.
+**Kriteria.** [x] Tidak ada `boq` tanpa `boqDocId` setelah migrasi.
 
 ### F3-C-03 — UI list & detail surat BoQ
 P0 · 1,5 HK

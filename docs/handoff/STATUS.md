@@ -41,7 +41,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-B-13 | Tab Tim terhubung SDM | P1 | F3-B-proyek.md | | todo | |
 | F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | todo | |
 | F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
-| F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | | todo | |
+| F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | review | PR #22; commit `6554095`; re-review PENGUJI lulus; api & GitGuardian lulus, web & reviewer otomatis masih berjalan; menunggu seluruh checks dan keputusan merge OWNER |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | | todo | |
 | F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | todo | |
 | F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | | todo | |

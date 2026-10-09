@@ -25,6 +25,7 @@ import {
   services as seedServices,
   spareparts as seedSpareparts,
   seedBoq as seedBoq,
+  seedBoqDocs,
 } from "./index";
 import { COA_EXCEL, ASET_EXCEL } from "./financeExcel";
 import {
@@ -334,7 +335,7 @@ function buildSeeds(): StoreShape {
       coa: clone(seedCoa),
       journals: clone(seedJournals),
       assets: clone(seedAssets),
-      boqDocs: [],
+      boqDocs: clone(seedBoqDocs) as StoreItem[],
 wbsByProject: {},
      teamByProject: clone(seedTeamByProject),
    };
