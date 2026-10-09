@@ -71,7 +71,20 @@ export function clearJwt(): void {
 
 /* ============ FETCH + ENVELOPE ============ */
 
-export const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+/* VITE_API_URL = "same-origin": API dilayani di origin yang sama dengan
+   frontend (nginx meneruskan /api, /files, /health). URL publik bisa berganti
+   (domain baru, tunnel) tanpa build ulang, dan tidak ada permintaan CORS.
+   Saat render SSR (probe) `window` tidak ada → kosong → mode lokal. */
+export function resolveApiBase(raw: string | undefined, origin: string | undefined): string {
+  const value = (raw ?? "").trim();
+  if (value === "same-origin") return (origin ?? "").replace(/\/$/, "");
+  return value.replace(/\/$/, "");
+}
+
+export const BASE = resolveApiBase(
+  import.meta.env.VITE_API_URL as string | undefined,
+  typeof window !== "undefined" ? window.location?.origin : undefined,
+);
 
 export function isBackendConfigured(): boolean {
   return BASE.length > 0;
