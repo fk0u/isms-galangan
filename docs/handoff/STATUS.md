@@ -100,7 +100,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F4-05 | File upload terkontrol | P1 | F4-integritas.md | | todo | |
 | F4-06 | Kinerja frontend | P1 | F4-integritas.md | | todo | |
 | F4-07 | Lain-lain audit | P1 | F4-integritas.md | | todo | |
-| F5-01 | Docker & deploy | P0 | F5-demo.md | | todo | |
+| F5-01 | Docker & deploy | P0 | F5-demo.md | agent | review | compose + Caddy TLS + runbook; SQLite volume untuk pilot |
 | F5-02 | Backup & restore teruji | P0 | F5-demo.md | | todo | |
 | F5-03 | Data demo yang bercerita | P0 | F5-demo.md | | todo | |
 | F5-04 | Skenario demo per modul | P0 | F5-demo.md | | todo | |
