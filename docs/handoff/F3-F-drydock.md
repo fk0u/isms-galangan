@@ -27,7 +27,7 @@ P0 · 4 j · DRY-04 · Bergantung: F3-A-04 (`DateInput`, `SearchSelect`)
 
 **Implementasi.** `startDate`/`endDate` disimpan inklusif sebagai tanggal ISO, sedangkan `from`/`to` half-open dinormalisasi server memakai hari WITA agar konsisten untuk Gantt, kapasitas, dan biaya. Pemeriksaan overlap serta penyimpanan diserialisasi per fasilitas dalam transaksi. Probe integrasi drydock menjadi bagian `npm run check`.
 
-**Verifikasi.** Build API/web, migrasi, seed, dan root `npm run check` lulus pada SQLite terisolasi; probe drydock lulus 11/11, termasuk bentrok POST/PATCH, branch-only PATCH, data legacy, konsistensi indeks tanggal, dan create serentak. Smoke test UI manual ID/EN **belum dilakukan** karena login browser belum selesai; tidak ada screenshot atau hasil manual yang diklaim.
+**Verifikasi.** Pada branch berbasis `main` `e984be5`, build API/web, migrasi, seed, dan root `npm run check` lulus pada SQLite terisolasi, termasuk probe `security-isolation` dan `security`; `probe:drydock` lulus 11/11, termasuk bentrok POST/PATCH, branch-only PATCH, data legacy, konsistensi indeks tanggal, dan create serentak. Smoke test UI manual ID/EN **belum dilakukan** karena login browser belum selesai; tidak ada screenshot atau hasil manual yang diklaim.
 
 ### F3-F-05 — Jadwalkan maintenance
 P1 · 2 j · DRY-05
