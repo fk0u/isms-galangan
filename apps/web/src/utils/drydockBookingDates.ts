@@ -138,7 +138,7 @@ export function slotDateRange(
   const offsets = slotDateOffsets(fields, today);
   if (!offsets) return null;
   const startDate = dayToISO(offsets.from, today);
-  const endDate = dayToISO(offsets.to, today);
+  const endDate = dayToISO(offsets.to - 1, today);
   return startDate && endDate ? { startDate, endDate } : null;
 }
 

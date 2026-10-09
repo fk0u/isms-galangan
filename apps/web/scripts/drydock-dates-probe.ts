@@ -146,6 +146,11 @@ equal(
   { from: -3, to: 1 },
   "data legacy tanpa tanggal ISO memakai from/to",
 );
+equal(
+  slotDateRange({ from: 4, to: 7 }, "2026-10-10"),
+  { startDate: "2026-10-14", endDate: "2026-10-16" },
+  "fallback legacy mengubah batas to exclusive menjadi tanggal akhir inklusif to minus satu",
+);
 check(
   slotDateOffsets({ startDate: "invalid", endDate: "2026-10-11", from: 0, to: 2 }, "2026-10-10") === null,
   "baris dengan tanggal ISO parsial/rusak tidak menyamarkan data dengan offset tersimpan",
