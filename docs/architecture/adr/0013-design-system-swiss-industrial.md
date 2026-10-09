@@ -1,6 +1,6 @@
 # ADR-0013: Design system "Swiss Industrial" (putih netral + aksen merah)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0014](0014-design-system-minimal-modern.md)
 - **Tanggal:** 2026-10-09
 - **Pemutus:** Kou (owner)
 

@@ -101,10 +101,10 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-steel-200 px-5 pt-4 pb-3">
+    <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
       <div className="min-w-0">
-        <h3 className="text-[13px] font-extrabold uppercase tracking-[-0.01em] text-navy-900">{title}</h3>
-        {subtitle && <p className="mono-label mt-1 normal-case tracking-[0.04em]">{subtitle}</p>}
+        <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-navy-900">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-[13px] text-steel-500">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -121,8 +121,7 @@ export function GlowCard({
   className?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden ${gradient} text-white ${className}`}>
-      <div className="absolute inset-x-0 bottom-0 h-1 bg-ocean-500" />
+    <div className={`relative overflow-hidden rounded-xl ${gradient} text-white shadow-lift ${className}`}>
       <div className="relative p-5">{children}</div>
     </div>
   );
@@ -130,22 +129,32 @@ export function GlowCard({
 
 /* ============ B A D G E / P I L L ============ */
 
-/* Nada badge dalam sistem industri: hanya tinta, abu, dan merah.
-   - OK/selesai   → tinta solid (green, teal)
-   - berjalan     → garis tinta (blue, navy, cyan, violet)
-   - peringatan   → garis merah (amber)
-   - bahaya       → merah solid (red)
-   - netral       → abu (gray) */
+/* Nada badge: lembut, satu warna per makna.
+   hijau = selesai/OK, kuning = menunggu/peringatan, merah = bahaya,
+   abu gelap = berjalan, abu terang = netral. */
 const toneMap: Record<string, string> = {
-  green: "bg-navy-900 text-white border-navy-900",
-  teal: "bg-navy-900 text-white border-navy-900",
-  amber: "bg-white text-ocean-600 border-ocean-500",
-  red: "bg-ocean-500 text-white border-ocean-500",
-  blue: "bg-white text-navy-900 border-navy-900",
-  navy: "bg-white text-navy-900 border-navy-900",
-  violet: "bg-white text-navy-900 border-navy-900",
-  cyan: "bg-white text-navy-900 border-navy-900",
-  gray: "bg-steel-100 text-steel-600 border-steel-300",
+  green: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
+  teal: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
+  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  red: "bg-ocean-50 text-ocean-700 ring-ocean-600/15",
+  blue: "bg-steel-100 text-navy-800 ring-navy-900/10",
+  navy: "bg-steel-100 text-navy-800 ring-navy-900/10",
+  violet: "bg-steel-100 text-navy-800 ring-navy-900/10",
+  cyan: "bg-steel-100 text-navy-800 ring-navy-900/10",
+  gray: "bg-steel-50 text-steel-600 ring-steel-500/15",
+};
+
+/* Titik warna di depan label: status terbaca dari bentuk + teks, bukan warna saja. */
+const toneDot: Record<string, string> = {
+  green: "bg-emerald-500",
+  teal: "bg-emerald-500",
+  amber: "bg-amber-500",
+  red: "bg-ocean-500",
+  blue: "bg-navy-700",
+  navy: "bg-navy-700",
+  violet: "bg-navy-700",
+  cyan: "bg-navy-700",
+  gray: "bg-steel-400",
 };
 
 export function Badge({
@@ -167,11 +176,13 @@ export function Badge({
      className jadi "bg-... undefined" - kelas rusak yang tetap lolos ke DOM
      tanpa error apa pun. */
   const toneClass = toneMap[tone] ?? toneMap.gray;
+  const dot = toneDot[tone] ?? toneDot.gray;
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 border px-1.5 py-[3px] font-mono text-[10px] font-semibold uppercase leading-none tracking-[0.06em] whitespace-nowrap ${toneClass} ${className}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${toneClass} ${className}`}
     >
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
       {children}
     </span>
   );
@@ -246,16 +257,15 @@ function StatusText({ value }: { value: string }) {
 
 /* ============ K P I   C A R D   ( P R E M I U M ) ============ */
 
-/* Penanda nada KPI = bar atas 3px. Merah hanya untuk nada perhatian. */
+/* Nada KPI: warna ikon lembut. Merah hanya untuk nada perhatian. */
 const gradientChip: Record<string, string> = {
-  navy: "bg-navy-900",
-  teal: "bg-navy-900",
-  rose: "bg-ocean-500",
-  violet: "bg-steel-400",
-  amber: "bg-ocean-500",
-  ocean: "bg-navy-900",
+  navy: "bg-steel-100 text-navy-800",
+  teal: "bg-emerald-50 text-emerald-700",
+  rose: "bg-ocean-50 text-ocean-600",
+  violet: "bg-steel-100 text-navy-800",
+  amber: "bg-amber-50 text-amber-700",
+  ocean: "bg-steel-100 text-navy-800",
 };
-
 
 export function KpiCard({
   label,
@@ -281,16 +291,19 @@ export function KpiCard({
      Prop dipertahankan agar pemanggil lama tetap valid. */
   void spark;
   return (
-    <Card className="card-hover relative overflow-hidden p-4 pt-5">
-      <div className={`absolute inset-x-0 top-0 h-[3px] ${gradientChip[chip] ?? "bg-navy-900"}`} />
-      <div className="flex items-start justify-between">
+    <Card className="card-hover relative overflow-hidden p-5">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="mono-label truncate" title={label}>{label}</p>
-          <p className="mt-2 text-[30px] font-black leading-none tracking-[-0.04em] text-navy-900 break-words tabular-nums" title={value}>{value}</p>
+          <p className="truncate text-[13px] font-medium text-steel-500" title={label}>{label}</p>
+          <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy-900 break-words tabular-nums" title={value}>{value}</p>
           {delta ? (
             <p
-              className={`mt-2 flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.04em] ${
-                deltaDirection === "down" ? "text-ocean-600" : "text-steel-600"
+              className={`mt-2.5 flex items-center gap-1 text-xs font-medium ${
+                deltaDirection === "up"
+                  ? "text-emerald-700"
+                  : deltaDirection === "down"
+                  ? "text-ocean-600"
+                  : "text-steel-500"
               }`}
             >
               {deltaDirection === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
@@ -299,11 +312,11 @@ export function KpiCard({
               {delta}
             </p>
           ) : (
-            hint && <p className="mt-2 font-mono text-[11px] text-steel-500 truncate">{hint}</p>
+            hint && <p className="mt-2.5 text-xs text-steel-500 truncate">{hint}</p>
           )}
         </div>
         {icon && (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-navy-900 text-navy-900">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${gradientChip[chip] ?? gradientChip.navy}`}>
             {icon}
           </div>
         )}
@@ -316,7 +329,7 @@ export function KpiCard({
 
 export function Donut({
   data,
-  colors = ["#0A0A0A", "#E61919", "#8F8F8F", "#FF8A8A", "#474747"],
+  colors = ["#27272A", "#E61919", "#A1A1AA", "#FF8A8A", "#D4D4D8"],
   size = 140,
   thickness = 18,
   centerLabel,
@@ -444,7 +457,7 @@ export function Avatar({
   const palette = ["bg-navy-900", "bg-steel-600", "bg-navy-700", "bg-ocean-500", "bg-steel-500", "bg-navy-800"];
   const idx = name.length % palette.length;
   return (
-    <div className={`flex items-center justify-center font-mono text-[11px] font-bold text-white ${palette[idx]} ${className}`}>
+    <div className={`flex items-center justify-center rounded-full text-[11px] font-semibold text-white ${palette[idx]} ${className}`}>
       {init}
     </div>
   );
@@ -455,30 +468,26 @@ export function PageHeader({
   subtitle,
   actions,
   icon,
-  gradient = false,
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   icon?: ReactNode;
+  /** Dulu judul bergradien; kini diabaikan (ADR-0014), dipertahankan untuk kompatibilitas. */
   gradient?: boolean;
 }) {
   return (
-    <div className="mb-6 border-b-2 border-navy-900 pb-4">
+    <div className="enter-up mb-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex min-w-0 items-end gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           {icon && (
-            <div className="hidden h-12 w-12 shrink-0 items-center justify-center bg-navy-900 text-white sm:flex">
+            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-steel-200 bg-white text-navy-800 shadow-soft sm:flex">
               {icon}
             </div>
           )}
           <div className="min-w-0">
-            <p className="mono-label flex items-center gap-2">
-              <span className="inline-block h-2 w-2 bg-ocean-500" aria-hidden="true" />
-              ISMS / {gradient ? "Ringkasan" : "Modul"}
-            </p>
-            <h1 className="display mt-1.5 text-[clamp(1.75rem,3.2vw,2.75rem)]">{title}</h1>
-            {subtitle && <p className="mt-2 max-w-3xl text-sm text-steel-600">{subtitle}</p>}
+            <h1 className="display text-[26px] sm:text-[28px]">{title}</h1>
+            {subtitle && <p className="mt-1 max-w-3xl text-sm text-steel-500">{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto [&>div]:flex-wrap">{actions}</div>}
@@ -486,6 +495,7 @@ export function PageHeader({
     </div>
   );
 }
+
 
 export function ProgressBar({
   value,
@@ -499,23 +509,23 @@ export function ProgressBar({
   showLabel?: boolean;
 }) {
   const map = {
-    navy: "bg-navy-900",
-    green: "bg-navy-900",
-    amber: "bg-ocean-400",
+    navy: "bg-navy-800",
+    green: "bg-emerald-500",
+    amber: "bg-amber-500",
     red: "bg-ocean-500",
-    ocean: "bg-navy-900",
-    teal: "bg-navy-900",
+    ocean: "bg-navy-800",
+    teal: "bg-emerald-500",
   };
   return (
     <div className={`w-full ${className}`}>
-      <div className="h-1.5 w-full bg-steel-200">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-steel-100">
         <div
-          className={`h-1.5 ${map[tone]}`}
+          className={`h-1.5 rounded-full transition-[width] duration-500 ease-out ${map[tone]}`}
           style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
         />
       </div>
       {showLabel && (
-        <p className="mt-1 text-right font-mono text-[10.5px] font-semibold text-steel-600 tabular-nums">{Math.round(value)}%</p>
+        <p className="mt-1 text-right text-[11px] font-medium text-steel-500 tabular-nums">{Math.round(value)}%</p>
       )}
     </div>
   );
@@ -534,12 +544,14 @@ export function Tabs({
   labels?: Record<string, string>;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  /* layoutId unik per daftar tab supaya garis aktif tidak "terbang" antar Tabs. */
+  const listId = useId();
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-tab="${active}"]`);
     el?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }, [active]);
   return (
-    <div ref={listRef} className="flex gap-0 border-b-2 border-navy-900 overflow-x-auto" role="tablist" aria-label="Navigasi tab">
+    <div ref={listRef} className="flex gap-1 border-b border-steel-200 overflow-x-auto" role="tablist" aria-label="Navigasi tab">
       {tabs.map((t) => (
         <button
           key={t}
@@ -547,13 +559,17 @@ export function Tabs({
           role="tab"
           aria-selected={active === t}
           onClick={() => onChange(t)}
-          className={`relative whitespace-nowrap px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-            active === t ? "bg-navy-900 text-white" : "text-steel-500 hover:bg-steel-100 hover:text-navy-900"
+          className={`relative whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
+            active === t ? "text-navy-900" : "text-steel-500 hover:text-navy-800"
           }`}
         >
           {labels?.[t] ?? t}
           {active === t && (
-            <span className="absolute inset-x-0 -bottom-[2px] h-[3px] bg-ocean-500" />
+            <motion.span
+              layoutId={`tab-underline-${listId}`}
+              className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-ocean-500"
+              transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+            />
           )}
         </button>
       ))}
@@ -573,8 +589,8 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       {icon && <div className="mb-3 text-steel-300">{icon}</div>}
-      <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-steel-600">[ {title} ]</h3>
-      {subtitle && <p className="mt-2 text-sm text-steel-500">{subtitle}</p>}
+      <h3 className="text-sm font-medium text-steel-700">{title}</h3>
+      {subtitle && <p className="mt-1 text-sm text-steel-500">{subtitle}</p>}
     </div>
   );
 }
@@ -736,7 +752,7 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-navy-900/60"
+            className="absolute inset-0 bg-navy-900/40 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -748,31 +764,31 @@ export function Modal({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
-            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden border-2 border-navy-900 bg-white ${
+            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-steel-200 bg-white shadow-lift sm:rounded-2xl ${
               wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
-            initial={{ opacity: 0, y: 32, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.98 }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            /* Masuk dari scale 0.96 (tidak pernah dari 0), ease-out kuat;
+               keluar lebih cepat dari masuk. Modal tetap berpusat. */
+            initial={{ opacity: 0, transform: "translateY(8px) scale(0.96)" }}
+            animate={{ opacity: 1, transform: "translateY(0px) scale(1)", transition: { duration: 0.22, ease: [0.23, 1, 0.32, 1] } }}
+            exit={{ opacity: 0, transform: "translateY(4px) scale(0.98)", transition: { duration: 0.14, ease: [0.23, 1, 0.32, 1] } }}
           >
-            <div className="h-1 bg-ocean-500" aria-hidden="true" />
-            <div className="flex items-start justify-between gap-3 border-b-2 border-navy-900 px-5 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-steel-100 px-5 py-4">
               <div className="min-w-0">
-                <h3 className="text-lg font-black uppercase leading-tight tracking-[-0.02em] text-navy-900">{title}</h3>
-                {subtitle && <p className="mono-label mt-1 normal-case tracking-[0.04em]">{subtitle}</p>}
+                <h3 className="text-base font-semibold tracking-[-0.01em] text-navy-900">{title}</h3>
+                {subtitle && <p className="mt-0.5 text-[13px] text-steel-500">{subtitle}</p>}
               </div>
               <button
                 onClick={onClose}
                 aria-label="Tutup"
-                className="border border-navy-900 p-1 text-navy-900 hover:bg-navy-900 hover:text-white"
+                className="rounded-lg p-1.5 text-steel-400 transition-colors hover:bg-steel-100 hover:text-navy-900"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="overflow-y-auto px-5 py-4">{children}</div>
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-steel-300 bg-steel-50 px-5 py-3">
+              <div className="flex items-center justify-end gap-2 border-t border-steel-100 bg-steel-50/70 px-5 py-3">
                 {footer}
               </div>
             )}
