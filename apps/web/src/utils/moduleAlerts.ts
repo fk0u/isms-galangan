@@ -525,6 +525,13 @@ export function sortByLevel(items: ModuleAlertItem[]): ModuleAlertItem[] {
   });
 }
 
+export const BANNER_PREVIEW_LIMIT = 3;
+
+/** Ambil pratinjau banner global: prioritas severity, bukan tiga per group. */
+export function bannerPreview(items: ModuleAlertItem[]): ModuleAlertItem[] {
+  return sortByLevel(items).slice(0, BANNER_PREVIEW_LIMIT);
+}
+
 /** Hitung per level - sumber angka untuk badge sidebar & header banner. */
 export function countByLevel(items: readonly ModuleAlertItem[]): Record<AlertLevel, number> {
   const out: Record<AlertLevel, number> = { kritis: 0, perhatian: 0, info: 0 };

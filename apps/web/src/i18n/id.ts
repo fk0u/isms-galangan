@@ -124,6 +124,8 @@ export const id: Dict = {
     minimize: "Perkecil",
     showAll: "Tampilkan semua",
     showLess: "Tampilkan lebih sedikit ↑",
+    showAllCount: "Tampilkan semua ({n})",
+    hideAll: "Sembunyikan",
     markRead: "Tandai dibaca",
     markAllRead: "Tandai semua dibaca",
     markGroupRead: "Tandai grup dibaca",

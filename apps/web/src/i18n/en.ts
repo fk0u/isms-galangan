@@ -126,6 +126,8 @@ export const en: Dict = {
     minimize: "Minimize",
     showAll: "Show all",
     showLess: "Show less ↑",
+    showAllCount: "Show all ({n})",
+    hideAll: "Hide",
     markRead: "Mark as read",
     markAllRead: "Mark all as read",
     markGroupRead: "Mark group as read",
