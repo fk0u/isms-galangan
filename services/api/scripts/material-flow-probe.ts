@@ -22,6 +22,9 @@ async function main(): Promise<void> {
   };
   const dir = await tokenFor("direktur");
   if (!dir) throw new Error("Butuh akun direktur hasil seed (npm run seed)");
+  // Viewer wajib ada di seed (dicek sebelum fixture dibuat): tanpa itu aturan 403 tidak teruji.
+  const viewer = await tokenFor("viewer");
+  if (!viewer) throw new Error("Butuh akun viewer hasil seed (npm run seed)");
   const project = (await q<{ id: string }>("SELECT id FROM projects LIMIT 1"))[0];
   if (!project) throw new Error("Butuh minimal satu proyek hasil seed");
 
@@ -61,9 +64,6 @@ async function main(): Promise<void> {
   const missing = await call(dir, { itemId: "STK-TIDAK-ADA", qty: 1 });
   assert("item tidak ada → 404", missing.statusCode === 404, missing.body);
 
-  // Viewer wajib ada di seed: tanpa itu aturan 403 tidak teruji sama sekali.
-  const viewer = await tokenFor("viewer");
-  if (!viewer) throw new Error("Butuh akun viewer hasil seed (npm run seed)");
   const denied = await call(viewer, { itemId, qty: 1 });
   assert("viewer tidak boleh meminta barang → 403", denied.statusCode === 403, denied.body);
 

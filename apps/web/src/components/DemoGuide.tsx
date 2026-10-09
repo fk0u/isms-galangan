@@ -140,7 +140,7 @@ export default function DemoGuide() {
             tabIndex={-1}
             {...panelMotion}
             style={{ transformOrigin: "bottom right" }}
-            className="pointer-events-auto flex max-h-[min(78vh,640px)] outline-none w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift sm:w-[380px]"
+            className="pointer-events-auto flex max-h-[min(78vh,640px)] outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift sm:w-[380px]"
           >
             <div className="flex items-start justify-between gap-3 border-b border-steel-100 px-4 py-3.5">
               <div className="min-w-0">
