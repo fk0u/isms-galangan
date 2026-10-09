@@ -30,6 +30,9 @@ import { COMPLIANCE_ITEMS, complianceSummary } from "./Vessels";
 import { getSetting } from "../../utils/settings";
 import { useT } from "../../i18n/LanguageContext";
 import { n_eqp } from "../../i18n/n_eqp";
+import { SearchSelect } from "../../components/SearchSelect";
+import { DocumentPreviewCell } from "../../components/DocumentPreview";
+import { docFileNameOf, docUrlOf } from "../../utils/docAttachment";
 
 function monthDiff(expires: string, base: string): number | null {
   /* Terima YYYY-MM maupun YYYY-MM-DD (sertifikat kini diisi type="date"). */
@@ -90,6 +93,10 @@ export default function VesselDetail() {
  const { data, update, add, log } = useStore();
   const { locale } = useT();
   const S = n_eqp[locale];
+  const clientOptions = (data.clients ?? []).map((client) => ({ value: String(client.name ?? ""), label: String(client.name ?? ""), subLabel: String(client.id ?? "") })).filter((option) => option.value !== "");
+  const clientOptionsFor = (currentValue: string) => currentValue.trim() !== "" && !clientOptions.some((option) => option.value === currentValue)
+    ? [...clientOptions, { value: currentValue, label: currentValue }]
+    : clientOptions;
   /* JANGAN fallback ke vessels[0]: kalau id tidak match (kapal dihapus, URL
      basi, id salah ketik) halaman akan menampilkan kapal LAIN dan setiap
      update("vessels", v.id, ...) menulis ke kapal yang salah. */
@@ -102,7 +109,7 @@ export default function VesselDetail() {
   const [surveyForm, setSurveyForm] = useState({ type: "Annual Survey", date: "", status: "Terjadwal", linkedTrial: "" });
   const [tab, setTab] = useState("Sertifikat & Timeline");
   const [showSpec, setShowSpec] = useState(false);
-  const [specForm, setSpecForm] = useState({ mmsi: "", gt: "", nt: "", bhp: "", engineType: "" });
+  const [specForm, setSpecForm] = useState({ imo: "", mmsi: "", owner: "", type: "", class: "", flag: "", built: "", loa: "", beam: "", draft: "", bollard: "", gt: "", dwt: "", nt: "", bhp: "", engineType: "" });
   const [showPsc, setShowPsc] = useState(false);
   const [pscForm, setPscForm] = useState({ date: todayISO(), port: "", deficiencies: "0", status: "Bersih" });
   const [showDock, setShowDock] = useState(false);
@@ -129,6 +136,10 @@ export default function VesselDetail() {
 
   const nowMonth = todayISO().slice(0, 7);
   const projects = data.projects.filter((p) => sameName(p.vessel, v.name));
+  const projectIds = new Set(projects.map((p) => String(p.id)));
+  const vesselDocuments = (data.documents ?? [])
+    .filter((document) => sameName(document.vessel, v.name) || projectIds.has(String(document.project ?? "")))
+    .sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? ""), locale));
   const vesselWarranties = (data.warranties ?? []).filter((w) => String(w.vessel ?? "") === v.name);
 
   // Klaim garansi/DLP: Aktif → Klaim (lanjut Selesai setelah perbaikan).
@@ -211,8 +222,19 @@ export default function VesselDetail() {
 
   const openSpec = () => {
     setSpecForm({
+      imo: String(v.imo ?? ""),
       mmsi: String(v.mmsi ?? ""),
+      owner: String(v.owner ?? ""),
+      type: String(v.type ?? ""),
+      class: String(v.class ?? ""),
+      flag: String(v.flag ?? ""),
+      built: v.built === undefined || v.built === null ? "" : String(v.built),
+      loa: v.loa === undefined || v.loa === null ? "" : String(v.loa),
+      beam: v.beam === undefined || v.beam === null ? "" : String(v.beam),
+      draft: v.draft === undefined || v.draft === null ? "" : String(v.draft),
+      bollard: v.bollard === undefined || v.bollard === null ? "" : String(v.bollard),
       gt: v.gt === undefined || v.gt === null ? "" : String(v.gt),
+      dwt: v.dwt === undefined || v.dwt === null ? "" : String(v.dwt),
       nt: v.nt === undefined || v.nt === null ? "" : String(v.nt),
       bhp: v.bhp === undefined || v.bhp === null ? "" : String(v.bhp),
       engineType: String(v.engineType ?? ""),
@@ -222,17 +244,38 @@ export default function VesselDetail() {
 
   const saveSpec = async () => {
     try {
+    if (!specForm.imo.trim() || !specForm.owner.trim()) { toast(S.vsReqBasic, "info"); return; }
+    const imo = specForm.imo.trim();
+    if (imo !== "-" && data.vessels.some((other) => other.id !== v.id && String(other.imo ?? "").toLowerCase() === imo.toLowerCase())) {
+      toast(S.vsImoUsed.replace("{a}", imo), "info");
+      return;
+    }
+    if (!specForm.type.trim()) { toast(S.vsTypeReq, "info"); return; }
+    const dimensions = [specForm.loa, specForm.beam, specForm.draft, specForm.bollard].map(Number);
+    if (dimensions.some((value) => !Number.isFinite(value))) { toast(S.vsDimsNum, "info"); return; }
+    if (String(v.status) !== "Dalam Pembangunan" && dimensions.some((value) => value <= 0)) { toast(S.vsDimsPos, "info"); return; }
     const gt = Number(specForm.gt);
     const bhp = Number(specForm.bhp);
     const nt = specForm.nt.trim() === "" ? 0 : Number(specForm.nt);
     if (!Number.isFinite(gt) || !Number.isFinite(bhp)) { toast(S.vdGtBhpNum, "info"); return; }
     if (String(v.status) !== "Dalam Pembangunan" && (gt <= 0 || bhp <= 0)) { toast(S.vdGtBhpPos, "info"); return; }
     if (!Number.isFinite(nt) || nt < 0) { toast(S.vsNtMin, "info"); return; }
+    const dwt = specForm.dwt.trim() === "" ? null : Number(specForm.dwt);
+    if (dwt !== null && (!Number.isFinite(dwt) || dwt < 0)) { toast(S.vsDwtMin, "info"); return; }
+    const built = specForm.built.trim() === "" ? null : Number(specForm.built);
+    if (built !== null && (!Number.isInteger(built) || built < 1800 || built > new Date().getFullYear() + 1)) { toast(S.vsBuiltYear, "info"); return; }
     if (!specForm.engineType.trim()) { toast(S.vsEngineReq, "info"); return; }
     if (specForm.mmsi.trim() !== "" && !/^\d{9}$/.test(specForm.mmsi.trim())) { toast(S.vsMmsiFormat, "info"); return; }
     await update("vessels", v.id, {
+      imo,
       mmsi: specForm.mmsi.trim(),
-      gt, nt, bhp,
+      owner: specForm.owner.trim(),
+      type: specForm.type.trim(),
+      class: specForm.class,
+      flag: specForm.flag,
+      built,
+      loa: dimensions[0], beam: dimensions[1], draft: dimensions[2], bollard: dimensions[3],
+      gt, dwt, nt, bhp,
       engineType: specForm.engineType.trim(),
     });
     toast(S.vdSpecUpdated);
@@ -375,7 +418,7 @@ export default function VesselDetail() {
       </Link>
       <PageHeader
         title={v.name}
-        subtitle={`${v.imo}${v.mmsi ? ` · MMSI ${v.mmsi}` : ""} · ${v.class} · ${v.flag} · ${S.vdBuiltWord} ${v.built}`}
+        subtitle={`${v.imo ?? "-"}${v.mmsi ? ` · MMSI ${v.mmsi}` : ""} · ${v.class ?? "-"} · ${v.flag ?? "-"} · ${S.vdBuiltWord} ${v.built ?? "-"}`}
         actions={
           <div className="flex items-center gap-2">
             <Badge tone={comp.state === "ok" ? "green" : comp.state === "issue" ? "red" : "gray"}>
@@ -391,31 +434,34 @@ export default function VesselDetail() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.vdKpiLoa} value={`${v.loa} m`} icon={<Ship className="h-5 w-5" />} />
-        <KpiCard label={S.vdKpiBeam} value={`${v.beam} m`} icon={<Ship className="h-5 w-5" />} />
-        <KpiCard label={S.vdKpiDraft} value={`${v.draft} m`} icon={<Ship className="h-5 w-5" />} />
-        <KpiCard label={S.vdKpiBollard} value={`${v.bollard} T`} icon={<Ship className="h-5 w-5" />} />
+        <KpiCard label={S.vdKpiLoa} value={v.loa === undefined || v.loa === null ? "-" : `${v.loa} m`} icon={<Ship className="h-5 w-5" />} />
+        <KpiCard label={S.vdKpiBeam} value={v.beam === undefined || v.beam === null ? "-" : `${v.beam} m`} icon={<Ship className="h-5 w-5" />} />
+        <KpiCard label={S.vdKpiDraft} value={v.draft === undefined || v.draft === null ? "-" : `${v.draft} m`} icon={<Ship className="h-5 w-5" />} />
+        <KpiCard label={S.vdKpiBollard} value={v.bollard === undefined || v.bollard === null ? "-" : `${v.bollard} T`} icon={<Ship className="h-5 w-5" />} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label={S.vdKpiMmsi} value={v.mmsi ? String(v.mmsi) : "-"} icon={<Ship className="h-5 w-5" />} />
-        <KpiCard label={S.vdKpiTonase} value={v.gt !== undefined ? `${v.gt} / ${v.nt ?? "-"}` : "-"} icon={<Ship className="h-5 w-5" />} />
+        <KpiCard label={S.vdKpiTonase} value={v.gt !== undefined || v.dwt !== undefined ? `${v.gt ?? "-"} / ${v.dwt ?? "-"}` : "-"} icon={<Ship className="h-5 w-5" />} />
         <KpiCard label={S.vdKpiBhp} value={v.bhp !== undefined && v.bhp !== "" ? `${v.bhp} HP` : "-"} icon={<Ship className="h-5 w-5" />} />
         <KpiCard label={S.vdKpiEngine} value={v.engineType ? String(v.engineType) : "-"} icon={<Ship className="h-5 w-5" />} />
       </div>
 
-      {projects.length > 0 && (
-        <Card className="mt-5 p-4">
-          <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.vdProjects.replace("{n}", String(projects.length))}</h3>
-          <div className="flex flex-wrap gap-2">
-            {projects.map((p) => (
-              <Link key={p.id} to={`/proyek/${p.id}`} className="rounded-lg border border-steel-200 px-3 py-1.5 text-sm font-medium text-navy-800 hover:border-ocean-400 hover:text-ocean-600">
-                {p.id} - {p.progress}%
-              </Link>
-            ))}
-          </div>
-        </Card>
-      )}
+      <Card className="mt-5 p-4">
+        <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.vdProjectHistoryTitle} · {S.vdProjects.replace("{n}", String(projects.length))}</h3>
+        <div className="space-y-2">
+          {projects.map((p) => (
+            <Link key={p.id} to={`/proyek/${p.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-steel-100 p-3 hover:border-ocean-400 hover:bg-surface">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-navy-900">{p.id} · {p.type} · {p.client}</p>
+                <p className="text-xs text-steel-500">{S.vdProjectPeriod.replace("{a}", fmtTanggal(String(p.start ?? ""))).replace("{b}", fmtTanggal(String(p.end ?? ""))).replace("{c}", String(p.progress ?? 0))}</p>
+              </div>
+              <Badge tone={p.status === "Selesai" ? "green" : p.status === "Terlambat" ? "red" : p.status === "Tertunda" ? "amber" : "blue"}>{p.status}</Badge>
+            </Link>
+          ))}
+          {projects.length === 0 && <p className="text-sm text-steel-400">{S.vdNoProjects}</p>}
+        </div>
+      </Card>
 
       <Card className="mt-5 p-4">
         <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.vdWarranty.replace("{n}", String(vesselWarranties.length))}</h3>
@@ -500,17 +546,46 @@ export default function VesselDetail() {
                     </div>
                   ))}
                 </div>
-                {surveys.length > 0 && (
-                  <div className="mt-4 border-t border-steel-100 pt-3">
-                    <p className="mb-2 text-xs font-semibold text-steel-500">{S.vdSurveyList}</p>
+                <div className="mt-4 border-t border-steel-100 pt-3">
+                  <p className="mb-2 text-xs font-semibold text-steel-500">{S.vdSurveyList}</p>
+                  <div className="space-y-1">
                     {surveys.map((s) => (
-                      <div key={s.id} className="flex items-center justify-between py-1 text-sm">
-                        <span className="text-steel-700">{s.type} · {fmtTanggal(String(s.date))}{s.linkedTrial ? ` · trial ${String(s.linkedTrial)}` : ""}</span>
+                      <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-1 text-sm">
+                        <span className="text-steel-700">{s.type} · {fmtTanggal(String(s.date))}{s.classSurveyor ? ` · ${String(s.classSurveyor)}` : ""}{s.linkedTrial ? ` · trial ${String(s.linkedTrial)}` : ""}</span>
                         <Badge tone={s.status === "Selesai" ? "green" : s.status === "Dalam Proses" ? "blue" : "gray"}>{s.status}</Badge>
                       </div>
                     ))}
+                    {surveys.length === 0 && <p className="text-sm text-steel-400">{S.vdNoSurveys}</p>}
                   </div>
-                )}
+                </div>
+              </Card>
+              <Card className="p-5 lg:col-span-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-navy-900">{S.vdDocsTitle.replace("{n}", String(vesselDocuments.length))}</h3>
+                  <Link to="/dokumen" className="text-xs font-medium text-ocean-600 hover:underline">{S.vdOpenDocs}</Link>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-surface"><tr><th className="th">{S.vdDocName}</th><th className="th">{S.vdDocType}</th><th className="th">{S.vdDocVersion}</th><th className="th">{S.vdDocStatus}</th><th className="th">{S.vdDocValidUntil}</th><th className="th">{S.vdDocFile}</th></tr></thead>
+                    <tbody className="divide-y divide-steel-100">
+                      {vesselDocuments.map((document) => {
+                        const status = String(document.status ?? "-");
+                        const statusTone = status === "Berlaku" || status === "Disetujui" ? "green" : status === "Kedaluwarsa" || status === "Ditolak" ? "red" : status === "Diajukan" ? "blue" : "gray";
+                        return (
+                          <tr key={document.id} className="hover:bg-surface">
+                            <td className="td"><p className="font-medium text-navy-900">{String(document.title ?? document.id)}</p><p className="font-mono text-[11px] text-steel-400">{document.id}{document.archived ? ` · ${S.vdDocArchived}` : ""}</p></td>
+                            <td className="td text-steel-600">{String(document.type ?? "-")}</td>
+                            <td className="td text-steel-600">{String(document.version ?? "-")}</td>
+                            <td className="td"><Badge tone={statusTone}>{status}</Badge></td>
+                            <td className="td text-steel-600">{document.berlakuHingga ? fmtTanggal(String(document.berlakuHingga)) : S.vdNoExpiry}</td>
+                            <td className="td"><DocumentPreviewCell doc={{ title: String(document.title ?? document.id), fileUrl: docUrlOf(document), fileName: docFileNameOf(document), subtitle: `${document.id} · ${String(document.type ?? "")}` }} /></td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {vesselDocuments.length === 0 && <p className="py-6 text-center text-sm text-steel-400">{S.vdNoDocs}</p>}
+                </div>
               </Card>
             </div>
           )}
@@ -526,10 +601,12 @@ export default function VesselDetail() {
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsOwnerField}</dt><dd className="text-sm font-medium text-navy-900">{v.owner}</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsClassField}</dt><dd className="text-sm font-medium text-navy-900">{v.class}</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsFlagField}</dt><dd className="text-sm font-medium text-navy-900">{v.flag}</dd></div>
-                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecLoa}</dt><dd className="text-sm font-medium text-navy-900">{v.loa} / {v.beam} / {v.draft} m</dd></div>
+                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsImoField}</dt><dd className="font-mono text-sm font-medium text-navy-900">{v.imo ?? "-"}</dd></div>
+                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsBuiltField}</dt><dd className="text-sm font-medium text-navy-900">{v.built ?? "-"}</dd></div>
+                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecLoa}</dt><dd className="text-sm font-medium text-navy-900">{v.loa ?? "-"} / {v.beam ?? "-"} / {v.draft ?? "-"} m</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdKpiBollard}</dt><dd className="text-sm font-medium text-navy-900">{v.bollard} T</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdKpiMmsi}</dt><dd className="text-sm font-medium text-navy-900">{v.mmsi ?? "-"}</dd></div>
-                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecGtNt}</dt><dd className="text-sm font-medium text-navy-900">{v.gt ?? "-"} / {v.nt ?? "-"}</dd></div>
+                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecGtNt}</dt><dd className="text-sm font-medium text-navy-900">{v.gt ?? "-"} / {v.dwt ?? "-"} / {v.nt ?? "-"}</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecEngine}</dt><dd className="text-sm font-medium text-navy-900">{v.engineType ?? "-"} · {v.bhp ?? "-"} HP</dd></div>
               </dl>
             </Card>
@@ -811,12 +888,25 @@ export default function VesselDetail() {
         </div>
       </Modal>
 
-      <Modal open={showSpec} onClose={() => setShowSpec(false)} title={S.vdSpecModalTitle.replace("{a}", v.name)}
+      <Modal open={showSpec} onClose={() => setShowSpec(false)} title={S.vdSpecModalTitle.replace("{a}", v.name)} wide
         footer={<><button className="btn-secondary" onClick={() => setShowSpec(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveSpec}>{S.saveBtn}</AsyncButton></>}>
         <FormGrid>
+          <Field label={S.vsImoField}><input className="input font-mono" value={specForm.imo} onChange={(e) => setSpecForm({ ...specForm, imo: e.target.value })} placeholder={S.vsImoPh} /></Field>
+          <Field label={S.vsOwnerField}>
+            <SearchSelect value={specForm.owner} onChange={(owner) => setSpecForm({ ...specForm, owner })} options={clientOptionsFor(specForm.owner)} placeholder={S.vsOwnerPh} ariaLabel={S.vsOwnerField} emptyText={S.vsNoClient} required />
+          </Field>
+          <Field label={S.typeLabel}><input className="input" value={specForm.type} onChange={(e) => setSpecForm({ ...specForm, type: e.target.value })} /></Field>
+          <Field label={S.vsBuiltField}><NumInput min={1800} max={new Date().getFullYear() + 1} step={1} className="input" value={specForm.built} onChange={(e) => setSpecForm({ ...specForm, built: e.target.value })} placeholder={S.vsBuiltPh} /></Field>
+          <Field label={S.vsClassField}><input className="input" value={specForm.class} onChange={(e) => setSpecForm({ ...specForm, class: e.target.value })} placeholder={S.vsClassField} /></Field>
+          <Field label={S.vsFlagField}><input className="input" value={specForm.flag} onChange={(e) => setSpecForm({ ...specForm, flag: e.target.value })} placeholder={S.vsFlagField} /></Field>
+          <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={specForm.loa} onChange={(e) => setSpecForm({ ...specForm, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
+          <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={specForm.beam} onChange={(e) => setSpecForm({ ...specForm, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
+          <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={specForm.draft} onChange={(e) => setSpecForm({ ...specForm, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
+          <Field label={S.vsBollardField}><NumInput min={0} step={0.1} className="input" value={specForm.bollard} onChange={(e) => setSpecForm({ ...specForm, bollard: e.target.value })} placeholder={S.vsBollardPh} /></Field>
           <Field label={S.vsMmsiField}><input className="input font-mono" value={specForm.mmsi} onChange={(e) => setSpecForm({ ...specForm, mmsi: e.target.value })} placeholder={S.vsMmsiPh} /></Field>
           <Field label={S.vsEngineField}><input className="input" value={specForm.engineType} onChange={(e) => setSpecForm({ ...specForm, engineType: e.target.value })} placeholder={S.vsEnginePh} /></Field>
           <Field label={S.vsGtField}><NumInput min={0} className="input" value={specForm.gt} onChange={(e) => setSpecForm({ ...specForm, gt: e.target.value })} /></Field>
+          <Field label={S.vsDwtField}><NumInput min={0} className="input" value={specForm.dwt} onChange={(e) => setSpecForm({ ...specForm, dwt: e.target.value })} placeholder={S.vsDwtPh} /></Field>
           <Field label={S.vsNtField}><NumInput min={0} className="input" value={specForm.nt} onChange={(e) => setSpecForm({ ...specForm, nt: e.target.value })} /></Field>
           <Field label={S.vsBhpField}><NumInput min={0} className="input" value={specForm.bhp} onChange={(e) => setSpecForm({ ...specForm, bhp: e.target.value })} /></Field>
         </FormGrid>
