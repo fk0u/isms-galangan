@@ -80,7 +80,7 @@ import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLi
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { stockTrend, itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
 import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMaterialForm";
-import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequired } from "../../utils/unitConversion";
+import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequiredForEdit } from "../../utils/unitConversion";
 
 const emptyForm: MaterialFormValues = {
   name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "",
@@ -898,6 +898,15 @@ if (k === "mattype") return matTypeOf(i);
     ? inventory.filter((i) => reservedOf(i).some((r) => r.project === pickProject))
     : [];
 
+  const conversionBaseline = editing ? {
+    category: editing.category,
+    unit: editing.unit,
+    eceran: editing.eceran,
+    conversion: editing.conversion,
+    uom2: editing.uom2,
+    konversi: editing.konversi,
+  } : null;
+
   const setF = (key: keyof MaterialFormValues, value: string | boolean) => {
     if (key === "category" && typeof value === "string") {
       setConversionEdited(true);
@@ -914,7 +923,7 @@ if (k === "mattype") return matTypeOf(i);
       }));
       return;
     }
-    if (String(key).startsWith("conversion")) setConversionEdited(true);
+    if (key === "unit" || key === "eceran" || String(key).startsWith("conversion")) setConversionEdited(true);
     setForm((current) => ({ ...current, [key]: value } as MaterialFormValues));
   };
   const closeMaterialForm = () => {
@@ -935,7 +944,7 @@ if (k === "mattype") return matTypeOf(i);
     if (materialFormStep === 1 && !form.unit.trim()) { toast(S.purchaseUnitRequired, "info"); return; }
     if (materialFormStep === 2) {
       const conversion = buildUnitConversion(form.category, form.unit, form);
-      const shouldRequire = unitConversionRequired(form.category, form.eceran, form);
+      const shouldRequire = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
       const canKeepExisting = Boolean(editing && !conversionEdited && unitConversionOf(editing));
       if (shouldRequire && !conversion && !canKeepExisting) { toast(S.conversionRequired, "info"); return; }
     }
@@ -1026,7 +1035,7 @@ if (k === "mattype") return matTypeOf(i);
     const existingConversion = editing ? unitConversionOf(editing) : null;
     const canKeepExisting = Boolean(editing && !conversionEdited && existingConversion);
     const conversion = conversionDraft ?? (canKeepExisting ? existingConversion : null);
-    const conversionRequired = unitConversionRequired(form.category, form.eceran, form);
+    const conversionRequired = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
     if (conversionRequired && !conversion) { toast(S.conversionRequired, "info"); return; }
     const numStock = form.stock.trim() === "" ? 0 : Number(form.stock);
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);

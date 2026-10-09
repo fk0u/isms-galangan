@@ -93,6 +93,9 @@ async function runHelperChecks(): Promise<void> {
   assert("PATCH perubahan kategori/satuan tidak dapat membuat Cat → kg", inventoryConversionError({
     category: "Cat", unit: "kg", name: "Item lama",
   }, { category: "Listrik", unit: "roll", name: "Item lama" }) !== null);
+  assert("PATCH perubahan kategori menjadi Cat tanpa konversi ditolak", inventoryConversionError({
+    category: "Cat", unit: "drum", name: "Item lama",
+  }, { category: "Listrik", unit: "drum", name: "Item lama" }) !== null);
 }
 
 async function runRouteChecks(): Promise<void> {
@@ -187,6 +190,25 @@ async function runRouteChecks(): Promise<void> {
       const unchanged = await app.inject({ method: "GET", url: `/api/inventory/${validId}`, headers });
       const unchangedRow = objectOf(objectOf(bodyOf(unchanged).data)?.data);
       assert("PATCH invalid tidak mengubah data yang tersimpan", unchangedRow?.unit === "drum");
+    }
+
+    const generalCreate = await app.inject({
+      method: "POST",
+      url: "/api/inventory",
+      headers,
+      payload: { data: { name: "Material umum probe", category: "Listrik", unit: "drum", eceran: false } },
+    });
+    const generalCreated = objectOf(bodyOf(generalCreate).data);
+    const generalId = typeof generalCreated?.id === "string" ? generalCreated.id : null;
+    assert("POST material umum tanpa konversi diterima sebagai basis uji PATCH", generalCreate.statusCode === 201 && generalId !== null, generalCreate.body);
+    if (generalId) {
+      const categoryPatch = await app.inject({
+        method: "PATCH",
+        url: `/api/inventory/${generalId}`,
+        headers,
+        payload: { data: { category: "Cat" } },
+      });
+      assert("PATCH perubahan kategori ke Cat tanpa conversion ditolak dengan 422", categoryPatch.statusCode === 422, categoryPatch.body);
     }
 
     const legacyId = `STK-PROBE-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;

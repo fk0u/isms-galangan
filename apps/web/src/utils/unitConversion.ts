@@ -101,6 +101,42 @@ export function unitConversionRequired(
   return eceran || conversionRuleForCategory(category) !== null || hasUnitConversionDraft(draft);
 }
 
+export interface ExistingUnitConversionState {
+  category: unknown;
+  unit: unknown;
+  eceran?: unknown;
+  conversion?: unknown;
+  uom2?: unknown;
+  konversi?: unknown;
+}
+
+function eceranEnabled(value: unknown): boolean {
+  return value === true || String(value ?? "").trim().toLowerCase() === "true";
+}
+
+/** Legacy material tanpa conversion boleh diedit di field lain hanya jika state konversinya tetap sama. */
+export function unitConversionRequiredForEdit(
+  category: unknown,
+  purchaseUnit: string,
+  eceran: boolean,
+  draft: UnitConversionDraft,
+  existing?: ExistingUnitConversionState | null,
+): boolean {
+  const hasStoredConversion = existing !== undefined && existing !== null && (
+    (existing.conversion !== undefined && existing.conversion !== null)
+    || String(existing.uom2 ?? "").trim() !== ""
+    || (String(existing.konversi ?? "").trim() !== "" && Number(existing.konversi) !== 0)
+  );
+  const legacyStateUnchanged = existing !== undefined && existing !== null
+    && !hasStoredConversion
+    && normalizedCategory(existing.category) === normalizedCategory(category)
+    && normalizedCategory(existing.unit) === normalizedCategory(purchaseUnit)
+    && eceranEnabled(existing.eceran) === eceran
+    && !hasUnitConversionDraft(draft);
+  if (legacyStateUnchanged) return false;
+  return unitConversionRequired(category, eceran, draft);
+}
+
 /** Membuat skema baru tanpa membuang nilai fisik yang diperlukan untuk tahap potong berikutnya. */
 export function buildUnitConversion(
   category: unknown,

@@ -7,6 +7,7 @@ import {
   purchaseUnitsForCategory,
   unitConversionOf,
   unitConversionRequired,
+  unitConversionRequiredForEdit,
 } from "../src/utils/unitConversion";
 
 declare const process: { exit(code: number): never };
@@ -67,6 +68,19 @@ assert("Draft generik terdeteksi", hasUnitConversionDraft({ conversionBaseUnit: 
 assert("Kategori Cat tetap mewajibkan konversi saat edit", unitConversionRequired("Cat", false, {}));
 assert("Material eceran mewajibkan konversi", unitConversionRequired("Baja", true, {}));
 assert("Kategori umum tanpa eceran tidak mewajibkan konversi", !unitConversionRequired("Baja", false, {}));
+const legacyCatWithoutConversion = { category: "Cat", unit: "drum", eceran: false };
+assert("Form edit mengizinkan field non-konversi untuk material Cat legacy yang state-nya unchanged", !unitConversionRequiredForEdit(
+  "Cat", "drum", false, {}, legacyCatWithoutConversion,
+));
+assert("Form edit tetap mewajibkan konversi saat kategori umum diubah menjadi Cat", unitConversionRequiredForEdit(
+  "Cat", "drum", false, {}, { category: "Listrik", unit: "drum", eceran: false },
+));
+assert("Form edit tetap mewajibkan konversi saat satuan material Cat legacy berubah", unitConversionRequiredForEdit(
+  "Cat", "kg", false, {}, legacyCatWithoutConversion,
+));
+assert("Form edit tidak melewati validasi saat draft konversi legacy mulai diisi", unitConversionRequiredForEdit(
+  "Cat", "drum", false, { conversionAmount: "200" }, legacyCatWithoutConversion,
+));
 
 const roundTrip = unitConversionOf({ conversion: plate });
 assert("Konversi baru dapat dibaca kembali dengan dimensi", roundTrip?.perUnit === 706.5
