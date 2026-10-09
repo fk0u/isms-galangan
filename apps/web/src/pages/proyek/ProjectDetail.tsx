@@ -49,7 +49,7 @@ import { usePdfDoc } from "../../components/usePdfDoc";
 import { canonPrioritas, scopeList } from "../../utils/scope";
 import { equipmentCostSummary } from "../../utils/projectCost";
 import { employeeOptions } from "../../utils/employeeOptions";
-import { delayDaysOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
+import { projectDelayDetailsOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
 import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
@@ -493,6 +493,9 @@ if (from === "Desain" && to === "Produksi") {
     const diff = Math.round((d.getTime() - new Date(`${todayISO()}T00:00:00`).getTime()) / 86400000);
     return diff >= 0 && diff <= milestoneDays;
   });
+  const progressDelayDetails = project.status === "Terlambat" || project.status === "Tertunda"
+    ? projectDelayDetailsOf(project.end, wbs, todayISO(), project.status === "Terlambat")
+    : null;
 
   const baseline = (project.wbsBaseline ?? null) as WbsBaseline | null;
 
@@ -1122,7 +1125,7 @@ const createWarranty = async (wbsTask?: string) => {
               className="input w-auto py-1.5 text-sm"
               value={project.status}
               onChange={(e) => askStatus(e.target.value)}
-              title="Terlambat terisi otomatis dari jatuh tempo"
+              title={S.detStatusLateTitle}
             >
               {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -1170,26 +1173,47 @@ const createWarranty = async (wbsTask?: string) => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label={S.colBudget} value={fmtMiliar(project.budget)} hint={S.detKpiBudgetHint} icon={<Calendar className="h-5 w-5" />} />
         <KpiCard label={S.colActual} value={fmtMiliar(project.actual)} delta={S.detKpiUsed.replace("{a}", String(project.budget ? Math.round((project.actual / project.budget) * 100) : 0))} deltaDirection={project.actual > project.budget ? "down" : "flat"} hint={S.detKpiActualHint} />
-        {/* Angka keterlambatan di card progres (P14). Versi lama hanya menulis
-            "Terlambat dari jadwal" tanpa angkanya, jadi pengguna harus pindah
-            ke Monitoring untuk tahu seberapa jauh. Monitoring sudah menghitung
-            ini; sekarang keduanya satu sumber (`utils/projectDelay`). */}
-        <KpiCard
-          label={S.progLabel}
-          value={`${project.progress}%`}
-          delta={project.status === "Terlambat" ? S.detKpiLate : S.detKpiOnTrack}
-          deltaDirection={project.status === "Terlambat" ? "down" : "up"}
-          hint={
-            project.status === "Terlambat"
-              ? (() => {
-                  const lateDays = delayDaysOf(project.end, todayISO(), true);
-                  return lateDays === null
-                    ? S.detKpiAvgHint
-                    : `${S.monDelayDays.replace("{n}", String(lateDays))} - ${S.detKpiAvgHint}`;
-                })()
-              : S.detKpiAvgHint
-          }
-        />
+        <Card className="card-hover relative overflow-hidden p-4">
+          <p className="text-xs font-medium text-steel-500">{S.progLabel}</p>
+          <p className="mt-1 text-[26px] font-bold tracking-tight text-navy-900">{project.progress}%</p>
+          {progressDelayDetails ? (
+            <>
+              <div className="mt-1"><StatusBadge status={project.status} /></div>
+              <div
+                role="note"
+                className={`mt-2 space-y-1.5 rounded-xl border p-2.5 ${project.status === "Terlambat" ? "border-rose-100 bg-rose-50" : "border-amber-100 bg-amber-50"}`}
+              >
+                <p className={`text-[11px] font-semibold ${project.status === "Terlambat" ? "text-rose-700" : "text-amber-700"}`}>
+                  {project.status === "Tertunda" && progressDelayDetails.causeDaysLate !== null
+                    ? S.detDelayWbsDays.replace("{n}", String(progressDelayDetails.causeDaysLate))
+                    : progressDelayDetails.daysLate !== null
+                    ? S.detDelayDays.replace("{n}", String(progressDelayDetails.daysLate))
+                    : progressDelayDetails.projectDaysRemaining === null
+                      ? S.detDelayDaysUnknown
+                      : S.detDelayDaysNone}
+                </p>
+                <p className="text-[11px] text-steel-600">
+                  {S.detDelayCause.replace("{a}", progressDelayDetails.cause ?? S.detDelayCauseUnknown)}
+                </p>
+                {progressDelayDetails.causeTargetDate && (
+                  <p className="text-[11px] text-steel-600">
+                    {S.detDelayCauseTarget.replace("{a}", fmtTanggal(progressDelayDetails.causeTargetDate))}
+                  </p>
+                )}
+                {progressDelayDetails.targetDate && (
+                  <p className="text-[11px] text-steel-600">
+                    {S.detDelayTarget.replace("{a}", fmtTanggal(progressDelayDetails.targetDate))}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mt-1"><Badge tone="green">{S.detKpiOnTrack}</Badge></div>
+              <p className="mt-1 text-[11px] text-steel-400">{S.detKpiAvgHint}</p>
+            </>
+          )}
+        </Card>
         <KpiCard label={S.detKpiPeriod} value={fmtRentang(project.start, project.end)} hint={project.branch} icon={<MapPin className="h-5 w-5" />} />
       </div>
 
