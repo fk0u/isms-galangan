@@ -26,7 +26,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-A-02 | Format titik untuk semua input harga | P0 | F3-A-lintas-modul.md | agent | selesai | PR #16 |
 | F3-A-03 | Pagination tabel diperbaiki | P1 | F3-A-lintas-modul.md | | todo | |
 | F3-A-04 | Komponen bersama untuk task berikutnya | P0 | F3-A-lintas-modul.md | agent | selesai | PR #14 |
-| F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | | todo | |
+| F3-B-01 | Banner notifikasi maks 3 | P1 | F3-B-proyek.md | agent | review | PR #34; branch feat/F3-B-01-alert-preview-3; P2 ekspansi >200 diperbaiki; probe alert 250 dan UI lulus; gate root berhenti di API probe keamanan (`no such table: projects`), area API tidak diubah |
 | F3-B-02 | Tabel: nomor, tombol Detail, urutan terbaru | P0 | F3-B-proyek.md | agent | selesai | PR #17 |
 | F3-B-03 | Card status gradient + label | P1 | F3-B-proyek.md | | todo | |
 | F3-B-04 | Filter jadi deret chip | P1 | F3-B-proyek.md | | todo | |
