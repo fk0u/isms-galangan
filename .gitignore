@@ -34,3 +34,6 @@ docs/audit/
 .agent/
 .agents/
 ai-prompts/
+
+# Secret deploy
+deploy/.env

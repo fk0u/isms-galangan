@@ -1,0 +1,52 @@
+# ISMS — deploy pilot (ADR-0010). Jalankan dari root repo:
+#   cp deploy/.env.example deploy/.env   # isi nilainya
+#   docker compose --env-file deploy/.env up -d --build
+# Runbook lengkap: docs/runbook/deploy.md
+services:
+  api:
+    build: ./services/api
+    restart: unless-stopped
+    env_file: deploy/.env
+    environment:
+      NODE_ENV: production
+      TRUST_PROXY: "true"
+      SQLITE_PATH: /data/isms.db
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      - isms-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_URL: https://${ISMS_DOMAIN:?ISMS_DOMAIN wajib diisi}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      ISMS_DOMAIN: ${ISMS_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+
+volumes:
+  isms-data:
+  caddy-data:
+  caddy-config:
