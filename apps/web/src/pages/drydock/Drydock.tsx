@@ -26,6 +26,7 @@ import { exportExcel } from "../../utils/export";
 import { findUsages } from "../../utils/usages";
 import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
+import { bookingDateOffsets, dateBasedSlotStatus, dayToISO, intervalsOverlap, isCalendarDate, slotDateOffsets, slotDateRange, witaTodayISO } from "../../utils/drydockBookingDates";
 
 const DAYS = 90;
 const FREE_WINDOW = 7;
@@ -47,41 +48,8 @@ const STATUS_FILTERS = ["Semua", "Terjadwal", "Berjalan", "Selesai", "Maintenanc
 const UNDOCK_ITEMS = ["Lambung bersih", "Katup laut tertutup", "Anoda terpasang", "Propeller terpasang", "Sea trial siap"];
 const MONTH_NAMES = MONTH_ID;
 
-function drydockTodayISO(): string {
-  const parts = new Map(new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Makassar", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  return `${parts.get("year")}-${parts.get("month")}-${parts.get("day")}`;
-}
-
-function dayToISO(day: number): string {
-  const today = isoDayNumber(drydockTodayISO());
-  return today === null ? "" : new Date((today + day) * 86_400_000).toISOString().slice(0, 10);
-}
-
-function isoDayNumber(value: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const time = Date.parse(`${value}T00:00:00.000Z`);
-  if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 10) !== value) return null;
-  return Math.floor(time / 86_400_000);
-}
-
-function isCalendarDate(value: unknown): value is string {
-  return typeof value === "string" && isoDayNumber(value) !== null;
-}
-
-/* Form memakai tanggal inklusif; indeks hari lama tetap disimpan eksklusif agar
-   perhitungan Gantt, kapasitas, dan biaya yang sudah ada tetap kompatibel. */
-function bookingDateOffsets(startDate: string, endDate: string): { from: number; to: number } | null {
-  const start = isoDayNumber(startDate);
-  const end = isoDayNumber(endDate);
-  const today = isoDayNumber(drydockTodayISO());
-  if (start === null || end === null || today === null || end < start) return null;
-  return { from: start - today, to: end - today + 1 };
-}
-
 function newBookingForm() {
-  const startDate = drydockTodayISO();
+  const startDate = witaTodayISO();
   return {
     dockId: "DD-1", project: "", priority: "Normal", ratePerDay: "0",
     dsRef: "", vessel2: "", startDate, endDate: dayToISO(29), area: "",
@@ -99,25 +67,22 @@ function vesselLoa(vesselName: string, vessels: StoreItem[]): number | null {
   return v && Number.isFinite(loa) ? loa : null;
 }
 
-function coveredDays(dockId: string, slots: StoreItem[]): number {
+function coveredDays(dockId: string, slots: StoreItem[], today: string = witaTodayISO()): number {
   const covered = new Set<number>();
   for (const s of slots) {
     if (s.dockId !== dockId) continue;
-    const from = Number(s.from);
-    const to = Number(s.to);
-    if (!Number.isFinite(from) || !Number.isFinite(to)) continue;
-    for (let d = Math.max(0, from); d < Math.min(DAYS, to); d++) covered.add(d);
+    const offsets = slotDateOffsets(s, today);
+    if (!offsets) continue;
+    for (let d = Math.max(0, offsets.from); d < Math.min(DAYS, offsets.to); d++) covered.add(d);
   }
   return covered.size;
 }
 
-function slotStatus(s: StoreItem, projects: StoreItem[]): string {
+function slotStatus(s: StoreItem, projects: StoreItem[], today: string = witaTodayISO()): string {
   if (s.project === "MAINT") return "Maintenance";
   if (s.undockDone === true) return "Selesai";
   const proj = projects.find((p) => p.id === s.project);
-  if (proj?.status === "Selesai" || Number(s.to) <= 0) return "Selesai";
-  if (Number(s.from) <= 0) return "Berjalan";
-  return "Terjadwal";
+  return dateBasedSlotStatus(s, proj?.status === "Selesai", today);
 }
 
 /* Status internal tetap canonical; pencarian juga menerima label locale aktif. */
@@ -125,12 +90,13 @@ export function mappingStatusSearchText(status: string, label: string): string {
   return `${status} ${label}`;
 }
 
-function slotDays(s: StoreItem): number {
-  return Math.max(0, Number(s.to || 0) - Number(s.from || 0));
+function slotDays(s: StoreItem, today: string = witaTodayISO()): number {
+  const offsets = slotDateOffsets(s, today);
+  return offsets ? Math.max(0, offsets.to - offsets.from) : 0;
 }
 
-function slotCost(s: StoreItem): number {
-  return slotDays(s) * Math.max(0, Number(s.ratePerDay || 0));
+function slotCost(s: StoreItem, today: string = witaTodayISO()): number {
+  return slotDays(s, today) * Math.max(0, Number(s.ratePerDay || 0));
 }
 
 function undockList(s: StoreItem): boolean[] {
@@ -171,10 +137,29 @@ export default function Drydock() {
   const dockSlots = data.dockSlots;
   const projectOptions = data.projects;
   const [selected, setSelected] = useState<string | null>(null);
+  const [todayWita, setTodayWita] = useState(() => witaTodayISO());
+  useEffect(() => {
+    const refreshToday = () => setTodayWita((current) => {
+      const next = witaTodayISO();
+      return current === next ? current : next;
+    });
+    const timer = window.setInterval(refreshToday, 60_000);
+    document.addEventListener("visibilitychange", refreshToday);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshToday);
+    };
+  }, []);
+  const slotOffsetsForView = (slot: StoreItem) => slotDateOffsets(slot, todayWita);
+  const slotDateRangeForView = (slot: StoreItem) => slotDateRange(slot, todayWita);
+  const formatSlotDateRange = (slot: StoreItem): string => {
+    const dates = slotDateRangeForView(slot);
+    return dates ? fmtRentang(dates.startDate, dates.endDate) : "—";
+  };
 
   const [showBook, setShowBook] = useState(false);
   const [bookForm, setBookForm] = useState(() => newBookingForm());
-  const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate);
+  const bookingDays = bookingDateOffsets(bookForm.startDate, bookForm.endDate, todayWita);
   const [bookError, setBookError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<StoreItem | null>(null);
   const [moveTarget, setMoveTarget] = useState<StoreItem | null>(null);
@@ -207,7 +192,7 @@ export default function Drydock() {
   const tarifAir = getSetting(data, "TARIF_AIR_M3", 15000);
   const utilCostOf = (s: StoreItem): number =>
     Math.max(0, Number(s.powerKwh || 0)) * tarifKwh + Math.max(0, Number(s.waterM3 || 0)) * tarifAir;
-  const tagihanOf = (s: StoreItem): number => slotCost(s) + utilCostOf(s);
+  const tagihanOf = (s: StoreItem): number => slotCost(s, todayWita) + utilCostOf(s);
 
   const openSlot = (s: StoreItem) => {
     setSelected(s.id);
@@ -343,7 +328,7 @@ export default function Drydock() {
     const ref = `Dock ${String(s.id)}`;
     const dupe = (data.invoices ?? []).some((i) => String(i.milestoneRef ?? "") === ref || String(i.paymentTerm ?? "").startsWith(ref));
     if (dupe) { toast(`${ref} sudah pernah dibuatkan invoice - tolak tagih ganda`, "info"); return; }
-    const days = slotDays(s);
+    const days = slotDays(s, todayWita);
     const rate = Math.max(0, Number(s.ratePerDay || 0));
     const dockAmt = days * rate;
     const kwh = Math.max(0, Number(s.powerKwh || 0));
@@ -381,34 +366,56 @@ export default function Drydock() {
   const exportAnnualPlan = () => {
     void exportExcel(
       [["Slot", "Fasilitas", "Kapal", "Mulai", "Selesai", "Hari", "Tarif/Hari (Rp)", "Biaya Dock (Rp)", "Listrik (kWh)", "Air (m³)"],
-        ...dockSlots.map((s) => [s.id, drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId, s.vessel, fmtTanggal(dayToISO(Number(s.from))), fmtTanggal(dayToISO(Number(s.to))), slotDays(s), Number(s.ratePerDay || 0), slotCost(s), Number(s.powerKwh || 0), Number(s.waterM3 || 0)])],
+        ...dockSlots.map((s) => {
+          const dates = slotDateRangeForView(s);
+          return [s.id, drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId, s.vessel,
+            dates ? fmtTanggal(dates.startDate) : "", dates ? fmtTanggal(dates.endDate) : "",
+            slotDays(s, todayWita), Number(s.ratePerDay || 0), slotCost(s, todayWita),
+            Number(s.powerKwh || 0), Number(s.waterM3 || 0)];
+        })],
       "Rencana-Dock-Tahunan",
       "Dock Plan",
     ).then(() => toast(S.tAnnualExported)).catch(() => toast(S.saveFail, "info"));
   };
 
-  const totalCovered = drydocks.reduce((s, d) => s + coveredDays(d.id, dockSlots), 0);
+  const totalCovered = drydocks.reduce((s, d) => s + coveredDays(d.id, dockSlots, todayWita), 0);
   const util = drydocks.length ? Math.round((totalCovered / (drydocks.length * DAYS)) * 100) : 0;
 
   const overlap = (dockId: string, from: number, to: number, ignore?: string) =>
-    dockSlots.some((o) => o.dockId === dockId && o.id !== ignore && from < o.to && o.from < to);
+    dockSlots.some((o) => {
+      if (o.dockId !== dockId || o.id === ignore) return false;
+      const existing = slotOffsetsForView(o);
+      return existing !== null && intervalsOverlap({ from, to }, existing);
+    });
 
   const conflict = dockSlots.filter((s) => {
     const sameDock = dockSlots.filter((o) => o.dockId === s.dockId && o.id !== s.id);
-    return sameDock.some((o) => s.from < o.to && o.from < s.to);
+    const range = slotOffsetsForView(s);
+    return range !== null && sameDock.some((o) => {
+      const otherRange = slotOffsetsForView(o);
+      return otherRange !== null && intervalsOverlap(range, otherRange);
+    });
   });
   const hasConflict = conflict.length > 0;
 
   const overlapsKritis = (s: StoreItem): boolean => {
     if (s.priority === "Kritis") return true;
-    return dockSlots.some((o) => o.id !== s.id && o.dockId === s.dockId && s.from < o.to && o.from < s.to && o.priority === "Kritis");
+    const range = slotOffsetsForView(s);
+    return range !== null && dockSlots.some((o) => {
+      if (o.id === s.id || o.dockId !== s.dockId || o.priority !== "Kritis") return false;
+      const otherRange = slotOffsetsForView(o);
+      return otherRange !== null && intervalsOverlap(range, otherRange);
+    });
   };
   const criticalConflicts = conflict.filter(overlapsKritis);
 
   const firstFree = (dockId: string): number | null => {
     const segs = dockSlots
       .filter((s) => s.dockId === dockId)
-      .map((s) => ({ from: Number(s.from), to: Number(s.to) }))
+      .flatMap((s) => {
+        const offsets = slotOffsetsForView(s);
+        return offsets ? [offsets] : [];
+      })
       .sort((a, b) => a.from - b.from);
     for (let s = 0; s + FREE_WINDOW <= DAYS; s++) {
       if (!segs.some((o) => s < o.to && o.from < s + FREE_WINDOW)) return s;
@@ -426,27 +433,27 @@ export default function Drydock() {
   const selCap = selDock ? dockLengthM(selDock.capacity) : null;
 
   const isActiveSlot = (s: StoreItem): boolean => {
-    const st = slotStatus(s, data.projects);
+    const st = slotStatus(s, data.projects, todayWita);
     return st === "Terjadwal" || st === "Berjalan";
   };
   const filteredSlots = dockSlots.filter((s) => {
-    if (statusFilter !== "Semua" && slotStatus(s, data.projects) !== statusFilter) return false;
+    if (statusFilter !== "Semua" && slotStatus(s, data.projects, todayWita) !== statusFilter) return false;
     /* Positioning: Masuk = Terjadwal (akan masuk dock), Keluar = Selesai (sudah
        keluar). "Berjalan" pernah hilang: FlowStrip menampilkannya sebagai
        langkah aktif tetapi tidak ada cabang yang menanganinya, jadi tidak
        ada cara memfilter docking yang sedang berjalan - dan karena
        current selalu diisi salah satu langkah, legendanya terlihat seperti
        filter yang aktif padahal posFilter masih "Semua". */
-    if (posFilter === "Masuk" && slotStatus(s, data.projects) !== "Terjadwal") return false;
-    if (posFilter === "Keluar" && slotStatus(s, data.projects) !== "Selesai") return false;
-    if (posFilter === "Berjalan" && slotStatus(s, data.projects) !== "Berjalan") return false;
+    if (posFilter === "Masuk" && slotStatus(s, data.projects, todayWita) !== "Terjadwal") return false;
+    if (posFilter === "Keluar" && slotStatus(s, data.projects, todayWita) !== "Selesai") return false;
+    if (posFilter === "Berjalan" && slotStatus(s, data.projects, todayWita) !== "Berjalan") return false;
     if (showActiveOnly && !isActiveSlot(s)) return false;
     if (areaFilter !== "Semua" && slotAreaOf(s) !== areaFilter) return false;
     /* Pencarian teks (A2). Disini, bukan di masing-masing tabel, karena kedua
        tabel modul ini membaca `filteredSlots` yang sama - satu kotak pencarian
        untuk keduanya, bukan dua. */
     if (slotQ !== "") {
-      const status = slotStatus(s, data.projects);
+      const status = slotStatus(s, data.projects, todayWita);
       if (!rowMatches(
         {
           area: String(slotAreaOf(s)), slot: String(s.slot ?? s.id ?? ""),
@@ -468,12 +475,12 @@ export default function Drydock() {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dockSlots, data.projects, drydocks]);
+  }, [dockSlots, data.projects, drydocks, todayWita]);
   const sortedSlots = useMemo(() => sortRows(filteredSlots, sort, (s: StoreItem, k) => {
     if (k === "createdAt") return createdAtOf(s) ?? "";
     if (k === "updatedAt") return lastTouchedAt(s) ?? "";
-    return k === "days" ? Number(slotDays(s)) : k === "status" ? String(slotStatus(s, data.projects)) : k === "area" ? String(s.area ?? "") : k === "facility" ? String(drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId) : String((s as unknown as Record<string, unknown>)[k] ?? "");
-  }), [filteredSlots, sort, data.projects, drydocks]);
+    return k === "days" ? Number(slotDays(s, todayWita)) : k === "status" ? String(slotStatus(s, data.projects, todayWita)) : k === "area" ? String(s.area ?? "") : k === "facility" ? String(drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId) : String((s as unknown as Record<string, unknown>)[k] ?? "");
+  }), [filteredSlots, sort, data.projects, drydocks, todayWita]);
   const pager = usePager(filteredSlots.length);
   /* Terjemahkan id deep-link menjadi sorotan baris. Satu id (banner modul)
      dan daftar id (kartu Dashboard yang menghitung kelompok) memakai jalur
@@ -487,7 +494,7 @@ export default function Drydock() {
     const fullSorted = sortRows(dockSlots, sort, (s: StoreItem, k) => {
       if (k === "createdAt") return createdAtOf(s) ?? "";
       if (k === "updatedAt") return lastTouchedAt(s) ?? "";
-      return k === "days" ? Number(slotDays(s)) : k === "status" ? String(slotStatus(s, data.projects)) : k === "area" ? String(s.area ?? "") : k === "facility" ? String(drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId) : String((s as unknown as Record<string, unknown>)[k] ?? "");
+      return k === "days" ? Number(slotDays(s, todayWita)) : k === "status" ? String(slotStatus(s, data.projects, todayWita)) : k === "area" ? String(s.area ?? "") : k === "facility" ? String(drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId) : String((s as unknown as Record<string, unknown>)[k] ?? "");
     });
     const fullIdx = fullSorted.findIndex((s) => ids.includes(String(s.id)));
     setStatusFilter("Semua");
@@ -508,7 +515,7 @@ export default function Drydock() {
   const saveBooking = async () => {
     const proj = data.projects.find((p) => p.id === bookForm.project);
     if (!proj) { setBookError(S.tPickProject); return; }
-    const dateRange = bookingDateOffsets(bookForm.startDate, bookForm.endDate);
+    const dateRange = bookingDateOffsets(bookForm.startDate, bookForm.endDate, todayWita);
     if (!dateRange) { setBookError(S.bookingDatesInvalid); return; }
     const { from, to } = dateRange;
     if (overlap(bookForm.dockId, from, to)) {
@@ -581,7 +588,7 @@ export default function Drydock() {
       const created = await add("dockSlots", {
         dockId: maintForm.dockId, project: "MAINT", vessel: `Maintenance - ${maintForm.reason.trim()}`,
         from, to, priority: "Normal", reason: maintForm.reason.trim(), color: "bg-steel-400",
-      }, { action: "memblokir maintenance", target: `${maintForm.dockId} · ${fmtRentang(dayToISO(from), dayToISO(to))}`, module: "Drydock" });
+      }, { action: "memblokir maintenance", target: `${maintForm.dockId} · ${fmtRentang(dayToISO(from, todayWita), dayToISO(to, todayWita))}`, module: "Drydock" });
       toast(S.tMaintSaved.replace("{a}", created.id).replace("{b}", dock?.name ?? maintForm.dockId));
       setShowMaint(false);
       setMaintForm({ dockId: "DD-1", from: "1", to: "7", reason: "" });
@@ -608,7 +615,8 @@ export default function Drydock() {
      validasi sama dengan booking baru (abaikan slot sendiri). */
   const openMove = (s: StoreItem) => {
     setMoveTarget(s);
-    setMoveForm({ dockId: String(s.dockId ?? "DD-1"), from: String(s.from ?? ""), to: String(s.to ?? ""), area: String(s.area ?? "") });
+    const offsets = slotOffsetsForView(s);
+    setMoveForm({ dockId: String(s.dockId ?? "DD-1"), from: String(offsets?.from ?? ""), to: String(offsets?.to ?? ""), area: String(s.area ?? "") });
     setMoveError(null);
   };
 
@@ -636,7 +644,7 @@ export default function Drydock() {
     try {
       await update("dockSlots", moveTarget.id, {
         dockId: moveForm.dockId, from, to,
-        startDate: dayToISO(from), endDate: dayToISO(to - 1), area: moveForm.area.trim(),
+        startDate: dayToISO(from, todayWita), endDate: dayToISO(to - 1, todayWita), area: moveForm.area.trim(),
       });
       log("memindah slot", `${moveTarget.id} → ${moveForm.dockId} hari ${from}-${to}`, "Drydock");
       toast(S.tMoved.replace("{a}", String(moveTarget.id)).replace("{b}", String(from)).replace("{c}", String(to)));
@@ -699,7 +707,7 @@ export default function Drydock() {
         />
         <KpiCard
           label={S.kpiNext}
-          value={nextFree ? fmtTanggal(dayToISO(nextFree.start)) : S.kpiFull}
+          value={nextFree ? fmtTanggal(dayToISO(nextFree.start, todayWita)) : S.kpiFull}
           hint={nextFree ? S.kpiNextHint.replace("{a}", nextFree.dock.name) : S.kpiFullHint.replace("{n}", String(DAYS))}
           chip="amber"
           spark={dockUtilTrend}
@@ -727,7 +735,7 @@ export default function Drydock() {
           <p className="font-bold">{S.critTitle.replace("{n}", String(criticalConflicts.length))}</p>
           <ul className="mt-1 list-disc pl-5">
             {criticalConflicts.map((c) => (
-              <li key={c.id} className="font-semibold">{c.vessel} · {c.project} · {drydocks.find((d) => d.id === c.dockId)?.name} · {fmtRentang(dayToISO(Number(c.from)), dayToISO(Number(c.to)))}</li>
+              <li key={c.id} className="font-semibold">{c.vessel} · {c.project} · {drydocks.find((d) => d.id === c.dockId)?.name} · {formatSlotDateRange(c)}</li>
             ))}
           </ul>
         </div>
@@ -768,7 +776,7 @@ export default function Drydock() {
               </thead>
               <tbody className="divide-y divide-steel-100">
                 {pager.slice(sortedSlots).map((s) => {
-                  const st = slotStatus(s, data.projects);
+                  const st = slotStatus(s, data.projects, todayWita);
                   const isCrit = conflict.some((c) => c.id === s.id) && overlapsKritis(s);
                   return (
                     <tr key={s.id} id={notifRowId(String(s.id))} className={`${isCrit ? "bg-rose-50" : "hover:bg-surface"} ${rowHighlightClass({ id: String(s.id), flash, notified: notified.has(String(s.id)), base: isCrit ? "" : "hover:bg-surface" })}`}>
@@ -780,7 +788,7 @@ export default function Drydock() {
                         {s.dsRef ? <p className="text-xs font-mono text-steel-400">DS {s.dsRef}</p> : null}
                         {s.startDate ? <p className="text-xs text-steel-400">{S.startedOn.replace("{a}", fmtTanggal(s.startDate))}</p> : null}
                       </td>
-                      <td className="td text-steel-600">{fmtRentang(dayToISO(s.from), dayToISO(s.to))} ({S.durationDays.replace("{n}", String(s.to - s.from))})</td>
+                      <td className="td text-steel-600">{formatSlotDateRange(s)} ({S.durationDays.replace("{n}", String(slotDays(s, todayWita)))})</td>
                       <td className="td">
                         {s.project === "MAINT"
                           ? <Badge tone="gray">{S.maintBadge}</Badge>
@@ -855,9 +863,9 @@ export default function Drydock() {
               </div>
             );
             return entries.map(([area, slots]) => {
-              const nMasuk = slots.filter((s) => slotStatus(s, data.projects) === "Terjadwal").length;
-              const nJalan = slots.filter((s) => slotStatus(s, data.projects) === "Berjalan").length;
-              const nKeluar = slots.filter((s) => slotStatus(s, data.projects) === "Selesai").length;
+              const nMasuk = slots.filter((s) => slotStatus(s, data.projects, todayWita) === "Terjadwal").length;
+              const nJalan = slots.filter((s) => slotStatus(s, data.projects, todayWita) === "Berjalan").length;
+              const nKeluar = slots.filter((s) => slotStatus(s, data.projects, todayWita) === "Selesai").length;
               return (
               <div key={area} className="rounded-xl border border-steel-100 bg-surface p-3">
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
@@ -878,7 +886,7 @@ export default function Drydock() {
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {slots.map((s) => {
-                    const st = slotStatus(s, data.projects);
+                    const st = slotStatus(s, data.projects, todayWita);
                     return (
                     <button
                       key={s.id}
@@ -888,7 +896,7 @@ export default function Drydock() {
                     >
                       <p className="truncate text-sm font-semibold text-navy-900">{s.vessel}</p>
                       <p className="font-mono text-[11px] text-steel-500">{s.id} · {drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId}</p>
-                      <p className="mt-1 text-[11px] text-steel-500">{fmtRentang(dayToISO(Number(s.from)), dayToISO(Number(s.to)))}</p>
+                      <p className="mt-1 text-[11px] text-steel-500">{formatSlotDateRange(s)}</p>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
                         <StatusBadge status={st} label={mappingStatusLabel(st)} />
                         {st === "Terjadwal" && <Badge tone="gray">↓ {S.posMasuk}</Badge>}
@@ -940,7 +948,7 @@ export default function Drydock() {
                 {weeks.map((w) => (
                   <div key={w} className="flex-1 border-l border-steel-200 pl-1 text-[10px] text-steel-400">
                     <p className="font-semibold">{S.weekShort.replace("{n}", String(w))}</p>
-                    <p>{fmtTanggal(dayToISO((w - 1) * 7))}</p>
+                    <p>{fmtTanggal(dayToISO((w - 1) * 7, todayWita))}</p>
                   </div>
                 ))}
               </div>
@@ -970,8 +978,13 @@ export default function Drydock() {
                       }}
                     >
                       {slots.map((s) => {
-                        const leftPct = (s.from / DAYS) * 100;
-                        const widthPct = ((s.to - s.from) / DAYS) * 100;
+                        const offsets = slotOffsetsForView(s);
+                        if (!offsets) return null;
+                        const visibleFrom = Math.max(0, offsets.from);
+                        const visibleTo = Math.min(DAYS, offsets.to);
+                        if (visibleTo <= visibleFrom) return null;
+                        const leftPct = (visibleFrom / DAYS) * 100;
+                        const widthPct = ((visibleTo - visibleFrom) / DAYS) * 100;
                         const isSel = selected === s.id;
                         const isConf = conflict.some((c) => c.id === s.id);
                         const isCrit = isConf && overlapsKritis(s);
@@ -984,7 +997,7 @@ export default function Drydock() {
                             onClick={() => { if (isSel) setSelected(null); else openSlot(s); }}
                             className={`absolute top-1/2 -translate-y-1/2 flex h-10 items-center justify-between rounded-md px-2 text-xs font-medium text-white shadow cursor-pointer transition ${isSel ? "ring-2 ring-navy-900" : "hover:brightness-110"} ${isCrit && !isSel ? "ring-4 ring-rose-800" : isConf && !isSel ? "ring-2 ring-rose-700" : ""} ${rowHighlightClass({ id: String(s.id), flash, notified: notified.has(String(s.id)) })}`}
                             style={{ left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: barBg }}
-                            title={`${s.vessel} · ${s.project} · ${fmtRentang(dayToISO(s.from), dayToISO(s.to))}${s.priority ? ` · ${s.priority}` : ""}${isCrit ? S.tipCrit : isConf ? S.tipOverlap : ""}`}
+                            title={`${s.vessel} · ${s.project} · ${formatSlotDateRange(s)}${s.priority ? ` · ${s.priority}` : ""}${isCrit ? S.tipCrit : isConf ? S.tipOverlap : ""}`}
                           >
                             <span className="truncate min-w-0 flex-1 flex items-center gap-1" title={s.vessel}>
                               <GripVertical className="h-3 w-3 shrink-0 opacity-70" />
@@ -1013,16 +1026,19 @@ export default function Drydock() {
         <div className="overflow-x-auto p-4 pt-0">
           <div className="grid min-w-[1100px] grid-cols-12 gap-2">
             {Array.from({ length: 12 }, (_, m) => {
-              const base = new Date();
-              const dt = new Date(base.getFullYear(), base.getMonth() + m, 1);
-              const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-              const inMonth = dockSlots.filter((s) => dayToISO(Number(s.from)).slice(0, 7) === key || dayToISO(Number(s.to)).slice(0, 7) === key);
+              const base = new Date(`${todayWita}T00:00:00.000Z`);
+              const dt = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + m, 1));
+              const key = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
+              const inMonth = dockSlots.filter((s) => {
+                const dates = slotDateRangeForView(s);
+                return dates !== null && (dates.startDate.slice(0, 7) === key || dates.endDate.slice(0, 7) === key);
+              });
               return (
                 <div key={key} className="rounded-lg border border-steel-100 bg-surface p-2">
-                  <p className="text-xs font-semibold text-navy-900">{MONTH_NAMES[dt.getMonth()]} {dt.getFullYear()}</p>
+                  <p className="text-xs font-semibold text-navy-900">{MONTH_NAMES[dt.getUTCMonth()]} {dt.getUTCFullYear()}</p>
                   <div className="mt-1.5 space-y-1">
                     {inMonth.map((s) => (
-                      <button key={s.id} className="block w-full truncate rounded bg-white px-1.5 py-1 text-left text-[11px] text-steel-600 hover:text-navy-900" title={`${s.vessel} · ${fmtRentang(dayToISO(Number(s.from)), dayToISO(Number(s.to)))}`} onClick={() => openSlot(s)}>
+                      <button key={s.id} className="block w-full truncate rounded bg-white px-1.5 py-1 text-left text-[11px] text-steel-600 hover:text-navy-900" title={`${s.vessel} · ${formatSlotDateRange(s)}`} onClick={() => openSlot(s)}>
                         {s.vessel}
                       </button>
                     ))}
@@ -1045,15 +1061,15 @@ export default function Drydock() {
               <input className="input w-36 py-1 text-xs" value={slotAreaDraft} onChange={(e) => setSlotAreaDraft(e.target.value)} placeholder={S.areaPh} aria-label={S.areaLabel} />
               <button className="btn-secondary px-2 py-1 text-xs" onClick={() => void saveSlotArea()}>{S.saveShort}</button>
             </dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.colDuration}</dt><dd className="font-medium">{fmtRentang(dayToISO(sel.from), dayToISO(sel.to))} ({S.durationDays.replace("{n}", String(slotDays(sel)))})</dd></div>
+            <div className="flex justify-between"><dt className="text-steel-500">{S.colDuration}</dt><dd className="font-medium">{formatSlotDateRange(sel)} ({S.durationDays.replace("{n}", String(slotDays(sel, todayWita)))})</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.colPriority}</dt><dd className="font-medium">{sel.priority ?? "Normal"}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblRate}</dt><dd className="font-medium">{S.perDay.replace("{a}", fmtRupiah(Number(sel.ratePerDay || 0)))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.lblCost}</dt><dd className="font-semibold text-navy-900">{S.durationDays.replace("{n}", String(slotDays(sel)))} × {fmtRupiah(Number(sel.ratePerDay || 0))} = {fmtRupiah(slotCost(sel))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects)} label={mappingStatusLabel(slotStatus(sel, data.projects))} /></dd></div>
+            <div className="flex justify-between"><dt className="text-steel-500">{S.lblCost}</dt><dd className="font-semibold text-navy-900">{S.durationDays.replace("{n}", String(slotDays(sel, todayWita)))} × {fmtRupiah(Number(sel.ratePerDay || 0))} = {fmtRupiah(slotCost(sel, todayWita))}</dd></div>
+            <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects, todayWita)} label={mappingStatusLabel(slotStatus(sel, data.projects, todayWita))} /></dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblConflict}</dt><dd>{conflict.some((c) => c.id === sel.id) ? <Badge tone="red">{S.conflictBadge}</Badge> : <Badge tone="green">{S.safeBadge}</Badge>}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblRecorded}</dt><dd className="font-medium">{fmtJumlah(Number(sel.powerKwh || 0))} kWh · {fmtJumlah(Number(sel.waterM3 || 0))} m³</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">Tagihan konsumsi</dt><dd className="font-medium text-right">{fmtJumlah(Number(sel.powerKwh || 0))} kWh × {fmtRupiah(tarifKwh)} + {fmtJumlah(Number(sel.waterM3 || 0))} m³ × {fmtRupiah(tarifAir)} = {fmtRupiah(utilCostOf(sel))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">Total tagihan slot</dt><dd className="font-semibold text-navy-900">Dock {fmtRupiah(slotCost(sel))} + konsumsi {fmtRupiah(utilCostOf(sel))} = {fmtRupiah(tagihanOf(sel))}</dd></div>
+            <div className="flex justify-between"><dt className="text-steel-500">Total tagihan slot</dt><dd className="font-semibold text-navy-900">Dock {fmtRupiah(slotCost(sel, todayWita))} + konsumsi {fmtRupiah(utilCostOf(sel))} = {fmtRupiah(tagihanOf(sel))}</dd></div>
             <p className="text-right text-[11px] text-steel-400">Tarif dari Pengaturan (TARIF_LISTRIK_KWH / TARIF_AIR_M3)</p>
           </dl>
           <button className="btn-primary mt-2 w-full justify-center text-xs" onClick={() => void createInvoiceFromSlot(sel)}>Buat invoice dari slot (draft Milestone)</button>
