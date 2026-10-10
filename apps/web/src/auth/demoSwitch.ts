@@ -56,7 +56,7 @@ async function resetCacheFor(userId: string): Promise<void> {
 
 export async function switchToRole(role: string): Promise<void> {
   if (!confirmDropPending()) return;
-  const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string } }>(
+  const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
     "/api/auth/demo-switch",
     { method: "POST", body: JSON.stringify({ role }), headers: authHeader() },
   );
@@ -68,7 +68,7 @@ export async function switchToRole(role: string): Promise<void> {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     id: u.id, name: u.name, role: u.role, email: u.email, username: u.username,
     initials: u.name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase(),
-    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions,
+    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, employeeId: u.employeeId ?? null,
   }));
   await resetCacheFor(u.id);
   window.location.assign("/dashboard");

@@ -1,6 +1,6 @@
 import { exec, q, closeDb } from "./db.js";
 import { seedUsers } from "./auth.js";
-import { buildSeedRows, buildTeamSeeds, buildWbsSeeds } from "./seedData.js";
+import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, DEMO_WBS_HISTORY } from "./seedData.js";
 
 // Full DB seed (idempotent, skip-if-exists): users + all seedData rows +
 // wbs/team. Same content as POST /api/admin/seed (without force).
@@ -25,9 +25,26 @@ export async function runSeed(): Promise<void> {
     inserted += 1;
   }
   for (const w of buildWbsSeeds()) {
-    const exists = await q("SELECT project_id FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
+    const exists = await q<{ project_id: string; data: string }>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
     if (exists.length > 0) {
-      skipped += 1;
+      /* Demo top-up: tambahkan histori demo ke task yang BELUM punya histori
+         sama sekali (tidak menimpa update nyata). */
+      const demo = DEMO_WBS_HISTORY[w.projectId];
+      let current: Array<Record<string, unknown>> = [];
+      try { current = JSON.parse(exists[0].data) as Array<Record<string, unknown>>; } catch { current = []; }
+      let changed = false;
+      if (demo) {
+        for (const row of current) {
+          const hist = demo[String(row.task ?? "")];
+          if (hist && !(Array.isArray(row.history) && row.history.length > 0)) { row.history = hist; changed = true; }
+        }
+      }
+      if (changed) {
+        await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [JSON.stringify(current), w.projectId]);
+        inserted += 1;
+      } else {
+        skipped += 1;
+      }
       continue;
     }
     await exec("INSERT INTO wbs_by_project (project_id, data) VALUES (?, ?)", [w.projectId, JSON.stringify(w.wbs)]);
@@ -42,15 +59,18 @@ export async function runSeed(): Promise<void> {
     await exec("INSERT INTO team_by_project (project_id, data) VALUES (?, ?)", [t.projectId, JSON.stringify(t.memberIds)]);
     inserted += 1;
   }
-  // Tautkan akun seed ke karyawan (default; bisa diubah via /api/users):
-  // direktur@galangan.com → EMP-001 (Andi Darman, Direktur).
+  // Tautkan akun seed ke karyawan (default; bisa diubah via /api/users).
+  // Peran lapangan ditautkan ke anggota tim proyek (TEAM_SEED) supaya
+  // Monitoring "proyek saya" (F3-E-02) bisa diperagakan.
+  const LINKS: Array<[string, string]> = [
+    ["direktur@galangan.com", "EMP-001"], ["proyek@galangan.com", "EMP-004"], ["mekanik@galangan.com", "EMP-005"],
+    ["qc@galangan.com", "EMP-006"], ["finance@galangan.com", "EMP-007"], ["procurement@galangan.com", "EMP-008"],
+  ];
   try {
-    const emp = await q("SELECT id FROM employees WHERE id = ?", ["EMP-001"]);
-    if (emp.length > 0) {
-      await exec("UPDATE users SET employee_id = ? WHERE username = ? AND (employee_id IS NULL OR employee_id = '')", [
-        "EMP-001",
-        "direktur@galangan.com",
-      ]);
+    for (const [username, empId] of LINKS) {
+      const emp = await q("SELECT id FROM employees WHERE id = ?", [empId]);
+      if (emp.length === 0) continue;
+      await exec("UPDATE users SET employee_id = ? WHERE username = ? AND (employee_id IS NULL OR employee_id = '')", [empId, username]);
     }
   } catch {
     // DB lama tanpa kolom employee_id — migrasi akan menambahkannya saat boot.

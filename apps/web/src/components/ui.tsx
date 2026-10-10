@@ -1767,7 +1767,9 @@ export function SecureImg({
   name?: string;
   className?: string;
 }) {
-  const raw = absUrl(src);
+  /* Aset statis frontend (ilustrasi demo, ikon) bukan file backend: muat
+     langsung dari origin web, jangan diarahkan ke API ber-JWT. */
+  const raw = typeof src === "string" && /^\/(demo|icons)\//.test(src) ? src : absUrl(src);
   const [obj, setObj] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {

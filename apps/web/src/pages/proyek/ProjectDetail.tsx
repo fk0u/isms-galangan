@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
 import {
   Card,
@@ -126,6 +126,9 @@ export default function ProjectDetail() {
      menulis ke server. Peran yang hanya boleh membaca proyek (viewer, QC,
      finance, …) tidak boleh memicu tulis saat sekadar membuka halaman. */
   const canAutoWrite = hasPermission(session?.permissions, "projects", "w");
+  const fromState = (useLocation().state as { from?: unknown } | null)?.from;
+  const backTo = fromState === "/proyek/monitoring" || fromState === "/dashboard" ? fromState : "/proyek";
+  const backLabel = backTo === "/proyek/monitoring" ? S.detBackMon : backTo === "/dashboard" ? S.detBackDash : S.detBack;
   /* Printer PDF: BAST disusun server dari baris `bast` + relasi proyek/WO,
      jadi tidak ada jalur lokal untuk dokumen ini. */
   const pdfDoc = usePdfDoc();
@@ -1088,8 +1091,10 @@ const createWarranty = async (wbsTask?: string) => {
 
   return (
     <div>
-      <Link to="/proyek" className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-ocean-600 hover:underline">
-        <ArrowLeft className="h-4 w-4" /> {S.detBack}
+      {/* F3-E-04: kembali ke halaman asal (state.from tersimpan di history,
+          jadi tetap benar setelah refresh); tanpa state → daftar proyek. */}
+      <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-ocean-600 hover:underline">
+        <ArrowLeft className="h-4 w-4" /> {backLabel}
       </Link>
       <PageHeader
         title={project.vessel}

@@ -214,10 +214,34 @@ export function buildSeedRows(): SeedRow[] {
   return rows;
 }
 
+/* Histori update pekerjaan demo (feed Monitoring, F3-E-01). Nama & foto
+   sintetis: foto = ilustrasi SVG di apps/web/public/demo. */
+const H = (date: string, actor: string, from: number, to: number, note: string, photo?: string) => ({
+  id: `wbs-hist-demo-${date}-${to}`, date: `${date}T08:30:00.000Z`, actor,
+  action: `Update progres: ${from}% → ${to}%`, from, to, note, photos: photo ? [photo] : [],
+});
+export const DEMO_WBS_HISTORY: Record<string, Record<string, Array<Record<string, unknown>>>> = {
+  "RP-2026-003": {
+    "Hull Assembly": [
+      H("2026-10-03", "Rudi Hartono", 30, 38, "Blok 3 dan 4 terpasang, pengelasan sisi kiri.", "/demo/wbs-hull.svg"),
+      H("2026-10-08", "Rudi Hartono", 38, 45, "Fit-up blok 5, NDT las sambungan blok 3 lolos.", "/demo/wbs-hull.svg"),
+    ],
+    "Painting — Priming": [
+      H("2026-10-06", "Sari Wulandari", 0, 5, "Blasting Sa 2.5 area lambung bawah garis air dimulai.", "/demo/wbs-paint.svg"),
+    ],
+    "Outfitting — Machinery": [
+      H("2026-10-09", "Agus Setiawan", 15, 20, "Overhaul main engine: crankshaft diperiksa, bearing diganti.", "/demo/wbs-engine.svg"),
+    ],
+  },
+};
+
 export function buildWbsSeeds(): WbsSeed[] {
   return WBS_PROJECTS.map((projectId) => ({
     projectId,
-    wbs: WBS_TEMPLATE.map(([task, start, end, progress, weight]) => ({ task, start, end, progress, weight })),
+    wbs: WBS_TEMPLATE.map(([task, start, end, progress, weight]) => ({
+      task, start, end, progress, weight,
+      ...(DEMO_WBS_HISTORY[projectId]?.[task] ? { history: DEMO_WBS_HISTORY[projectId][task] } : {}),
+    })),
   }));
 }
 

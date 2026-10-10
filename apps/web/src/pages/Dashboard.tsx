@@ -926,6 +926,7 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
                 <Link
                   key={p.id}
                   to={`/proyek/${p.id}`}
+                  state={{ from: "/dashboard" }}
                   className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors"
                 >
                   <div className="min-w-0">
