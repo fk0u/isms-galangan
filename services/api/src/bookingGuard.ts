@@ -19,7 +19,9 @@ export async function loanOverlapError(table: string, id: string | null, after: 
   if (!equipId || !start || !end) return "Peminjaman wajib punya equipment, tanggal mulai, dan tanggal selesai";
   // Perbandingan string hanya benar untuk tanggal ISO ber-nol (YYYY-MM-DD).
   const ISO = /^\d{4}-\d{2}-\d{2}$/;
-  if (!ISO.test(start) || !ISO.test(end) || Number.isNaN(Date.parse(start)) || Number.isNaN(Date.parse(end))) {
+  // Round-trip UTC: 2024-02-31 lolos Date.parse (jadi 2 Maret) padahal bukan tanggal sah.
+  const real = (d: string): boolean => { const t = new Date(`${d}T00:00:00Z`); return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d; };
+  if (!ISO.test(start) || !ISO.test(end) || !real(start) || !real(end)) {
     return "Tanggal peminjaman harus berformat YYYY-MM-DD";
   }
   if (end < start) return "Tanggal selesai tidak boleh sebelum tanggal mulai";

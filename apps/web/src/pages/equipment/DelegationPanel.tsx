@@ -79,6 +79,13 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
       toast(T.returned);
     } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
   };
+  // Pinjaman terjadwal yang belum dimulai dibatalkan (bukan "dikembalikan").
+  const cancelLoan = async (b: StoreItem) => {
+    try {
+      await update("bookings", String(b.id), { status: "Dibatalkan", cancelledAt: todayISO() });
+      toast(T.cancelled);
+    } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
+  };
   const finishMaint = async (m: StoreItem) => {
     try {
       await update("maintenances", String(m.id), { status: "Selesai", selesai: todayISO() });
@@ -168,6 +175,9 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                         </p>
                         {/* Pengembalian baru bisa setelah peminjaman dimulai — menutup pinjaman
                             yang belum berjalan akan melepas perlindungan bentrok jadwalnya. */}
+                        {!closed && String(h.row.startDate ?? "") > todayISO() && (
+                          <AsyncButton className="btn-secondary mt-2 h-8 text-xs text-rose-600" onAction={() => cancelLoan(h.row)}>{T.cancelBtn}</AsyncButton>
+                        )}
                         {!closed && String(h.row.startDate ?? "") <= todayISO() && (
                           <div className="mt-2 flex gap-2">
                             <input className="input h-8 flex-1 py-0 text-xs" placeholder={T.condIn} value={condIn[h.id] ?? ""} onChange={(e) => setCondIn({ ...condIn, [h.id]: e.target.value })} />

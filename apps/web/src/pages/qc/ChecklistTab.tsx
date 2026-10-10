@@ -27,7 +27,7 @@ const itemsOf = (t: StoreItem): (ScItem & { text?: string })[] =>
 export default function ChecklistTab() {
   const { locale } = useT();
   const T = n_clq[locale];
-  const { data, add, update, remove, wbsFor } = useStore();
+  const { data, add, update, remove, wbsFor, inBranch } = useStore();
   const { user } = useAuth();
   const canManage = hasPermission(user?.permissions, "checklistTemplates", "w");
   const canInspect = hasPermission(user?.permissions, "checklistResponses", "w");
@@ -42,8 +42,10 @@ export default function ChecklistTab() {
   const [edit, setEdit] = useState<EditTemplate | null>(null);
 
   const templates = data.checklistTemplates ?? [];
-  const responses = data.checklistResponses ?? [];
-  const projects = useMemo(() => (data.projects ?? []).filter((p) => !["Selesai", "Batal"].includes(String(p.status))), [data.projects]);
+  // Lingkup cabang sesi: proyek & hasil inspeksi cabang lain tidak ikut tampil.
+  const projects = useMemo(() => inBranch(data.projects ?? []).filter((p) => !["Selesai", "Batal"].includes(String(p.status))), [data.projects, inBranch]);
+  const branchPids = useMemo(() => new Set(inBranch(data.projects ?? []).map((p) => String(p.id))), [data.projects, inBranch]);
+  const responses = useMemo(() => (data.checklistResponses ?? []).filter((r) => branchPids.has(String(r.projectId ?? ""))), [data.checklistResponses, branchPids]);
   const respOf = (projectId: string, task?: string) => responses
     .filter((r) => String(r.projectId ?? "") === projectId && (task === undefined || String(r.wbsTask ?? "") === task))
     .sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
@@ -98,7 +100,9 @@ export default function ChecklistTab() {
         ...(i.type === "pilihan" ? { options: i.options.split(",").map((o) => o.split("=")).filter((o) => o[0]?.trim()).map((o) => ({ label: o[0].trim(), score: Math.max(0, Math.min(1, Number(o[1]) || 0)) })) } : {}),
       })),
     })).filter((s) => s.items.length > 0);
-    if (!edit.name.trim() || sections.length === 0) { toast(T.tplInvalid, "info"); return; }
+    // Minimal satu butir bernilai (bukan teks) berbobot > 0, supaya skor tidak selalu 0.
+    const scored = sections.flatMap((x) => x.items).filter((i) => i.type !== "teks" && i.weight > 0 && (i.type !== "pilihan" || (i.options ?? []).length > 0));
+    if (!edit.name.trim() || sections.length === 0 || scored.length === 0) { toast(T.tplInvalid, "info"); return; }
     const payload = { name: edit.name.trim(), scope: edit.scope, target: edit.target, sections };
     try {
       if (edit.id) await update("checklistTemplates", edit.id, payload);

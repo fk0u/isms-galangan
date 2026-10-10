@@ -49,9 +49,16 @@ export function scoreChecklist(template: ChecklistTemplate, answers: Record<stri
 export async function checklistHook(table: string, data: Data): Promise<{ data: Data } | { error: string }> {
   if (table === "checklistTemplates") {
     const sections = Array.isArray(data.sections) ? (data.sections as Data[]) : [];
-    const items = sections.flatMap((s) => (Array.isArray(s.items) ? (s.items as Data[]) : []));
+    const rawItems = sections.flatMap((s) => (s && typeof s === "object" && Array.isArray(s.items) ? (s.items as unknown[]) : []));
+    if (rawItems.some((i) => i === null || typeof i !== "object")) return { error: "Butir template tidak valid" };
+    const items = rawItems as Data[];
     if (String(data.name ?? "").trim() === "") return { error: "Nama template wajib diisi" };
     if (items.length === 0) return { error: "Template wajib punya minimal satu butir" };
+    const TYPES = new Set(["ya_tidak", "skala_1_5", "pilihan", "teks"]);
+    if (items.some((i) => !TYPES.has(String(i.type)))) return { error: "Tipe butir tidak dikenal" };
+    if (items.some((i) => i.type === "pilihan" && !(Array.isArray(i.options) && i.options.length > 0))) return { error: "Butir pilihan wajib punya daftar pilihan" };
+    // Tanpa butir bernilai berbobot > 0 setiap inspeksi akan berskor 0 (NCR palsu).
+    if (!items.some((i) => i.type !== "teks" && Number(i.weight ?? 1) > 0)) return { error: "Template wajib punya minimal satu butir bernilai berbobot lebih dari 0" };
     const ids = items.map((i) => String(i.id ?? ""));
     if (ids.some((x) => x === "") || new Set(ids).size !== ids.length) return { error: "ID butir template harus unik dan tidak kosong" };
     return { data };
@@ -62,6 +69,8 @@ export async function checklistHook(table: string, data: Data): Promise<{ data: 
     const template = JSON.parse(rows[0].data) as ChecklistTemplate;
     const answers = (data.answers && typeof data.answers === "object" ? data.answers : {}) as Record<string, unknown>;
     const r = scoreChecklist(template, answers);
+    // Isian kosong bukan inspeksi gagal — tolak supaya tidak menurunkan skor proyek.
+    if (r.answered === 0) return { error: "Kuesioner belum dijawab" };
     return { data: { ...data, answers, score: r.score, answered: r.answered, totalItems: r.total } };
   }
   return { data };

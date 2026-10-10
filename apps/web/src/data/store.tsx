@@ -768,7 +768,8 @@ function parseMaybeJson(raw: string | undefined): unknown {
    useModuleSync(AN_COLS) - jadi bug ini muncul tepat saat Analytics dibuka.
    Module scope, bukan di dalam provider: Set baru dialokasikan tiap render
    kalau ditaruh di sana. */
-const NEVER_EMPTY_COLLECTIONS: ReadonlySet<string> = new Set(["settings"]);
+// checklistTemplates: template bawaan tidak boleh hilang saat backend belum di-seed.
+const NEVER_EMPTY_COLLECTIONS: ReadonlySet<string> = new Set(["settings", "checklistTemplates"]);
 
 /**
  * Terima hasil tarik server hanya kalau tidak merusak data lokal.
