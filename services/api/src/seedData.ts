@@ -235,6 +235,27 @@ export const DEMO_WBS_HISTORY: Record<string, Record<string, Array<Record<string
   },
 };
 
+/** Demo top-up untuk WBS yang SUDAH ada: hanya bila baris itu masih WBS seed
+ *  murni (nama task persis template) dan belum punya histori sama sekali,
+ *  supaya histori sintetis tidak tercampur dengan update nyata.
+ *  Mengembalikan JSON baru, atau null bila tidak perlu diubah. */
+export function topUpDemoWbsHistory(projectId: string, existingJson: string): string | null {
+  const demo = DEMO_WBS_HISTORY[projectId];
+  if (!demo) return null;
+  let rows: Array<Record<string, unknown>>;
+  try { rows = JSON.parse(existingJson) as Array<Record<string, unknown>>; } catch { return null; }
+  if (!Array.isArray(rows)) return null;
+  const names = rows.map((r) => String(r.task ?? ""));
+  const template = WBS_TEMPLATE.map(([task]) => task);
+  if (names.length !== template.length || names.some((n, i) => n !== template[i])) return null;
+  if (rows.some((r) => Array.isArray(r.history) && r.history.length > 0)) return null;
+  for (const r of rows) {
+    const hist = demo[String(r.task)];
+    if (hist) r.history = hist;
+  }
+  return JSON.stringify(rows);
+}
+
 export function buildWbsSeeds(): WbsSeed[] {
   return WBS_PROJECTS.map((projectId) => ({
     projectId,

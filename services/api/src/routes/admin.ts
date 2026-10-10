@@ -4,7 +4,7 @@ import { exec, q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { createRateLimiter, getClientIp } from "../rateLimit.js";
 import { requestIp, writeAudit } from "../audit.js";
-import { buildSeedRows, buildTeamSeeds, buildWbsSeeds } from "../seedData.js";
+import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, topUpDemoWbsHistory } from "../seedData.js";
 
 const seedLimiter = createRateLimiter(20, 60_000);
 
@@ -77,8 +77,12 @@ export function registerAdminRoutes(app: FastifyInstance): void {
     }
     for (const w of buildWbsSeeds()) {
       try {
-        const exists = await q("SELECT project_id FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
-        if (exists.length > 0) { skipped += 1; continue; }
+        const exists = await q<{ project_id: string; data: string }>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
+        if (exists.length > 0) {
+          const next = topUpDemoWbsHistory(w.projectId, exists[0].data);
+          if (next) { await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [next, w.projectId]); inserted += 1; } else skipped += 1;
+          continue;
+        }
         await exec("INSERT INTO wbs_by_project (project_id, data) VALUES (?, ?)", [w.projectId, JSON.stringify(w.wbs)]);
         inserted += 1;
       } catch (err) {

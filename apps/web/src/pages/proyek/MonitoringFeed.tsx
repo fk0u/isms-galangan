@@ -49,26 +49,26 @@ export default function MonitoringFeed({ projects, canUpdate }: Props) {
     for (const [projectId, rows] of Object.entries(data.wbsByProject ?? {})) {
       if (!allowed.has(projectId)) continue;
       for (const w of rows ?? []) {
-        for (const h of (w as { history?: Record<string, unknown>[] }).history ?? []) {
+        ((w as { history?: Record<string, unknown>[] }).history ?? []).forEach((h, i) => {
           out.push({
-            key: `wbs-${projectId}-${String(h.id ?? h.date)}`, kind: "wbs", pid: projectId, vessel: allowed.get(projectId) ?? projectId,
+            key: `wbs-${projectId}-${String(w.task)}-${String(h.id ?? h.date)}-${i}`, kind: "wbs", pid: projectId, vessel: allowed.get(projectId) ?? projectId,
             title: String(w.task), from: num(h.from), to: num(h.to), actor: String(h.actor ?? "-"),
             date: String(h.date ?? ""), note: String(h.note ?? ""), photos: Array.isArray(h.photos) ? (h.photos as unknown[]).map(String) : [],
           });
-        }
+        });
       }
     }
     for (const wo of data.workOrders ?? []) {
       const projectId = String(wo.project ?? "");
       if (!allowed.has(projectId)) continue;
-      for (const h of (Array.isArray(wo.progressLog) ? (wo.progressLog as Record<string, unknown>[]) : [])) {
+      (Array.isArray(wo.progressLog) ? (wo.progressLog as Record<string, unknown>[]) : []).forEach((h, i) => {
         out.push({
-          key: `wo-${String(wo.id)}-${String(h.id ?? h.date)}`, kind: "wo", pid: projectId, vessel: allowed.get(projectId) ?? projectId,
+          key: `wo-${String(wo.id)}-${String(h.id ?? h.date)}-${i}`, kind: "wo", pid: projectId, vessel: allowed.get(projectId) ?? projectId,
           title: `${String(wo.id)} · ${String(wo.scope ?? wo.title ?? wo.sub ?? "")}`, from: num(h.from), to: num(h.to),
           actor: String(h.by ?? h.actor ?? "-"), date: String(h.date ?? ""), note: String(h.note ?? ""),
           photos: Array.isArray(h.photos) ? (h.photos as unknown[]).map(String) : [],
         });
-      }
+      });
     }
     return out.sort((a, b) => b.date.localeCompare(a.date));
   }, [data.wbsByProject, data.workOrders, projects]);

@@ -1,6 +1,6 @@
 import { exec, q, closeDb } from "./db.js";
 import { seedUsers } from "./auth.js";
-import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, DEMO_WBS_HISTORY } from "./seedData.js";
+import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, topUpDemoWbsHistory } from "./seedData.js";
 
 // Full DB seed (idempotent, skip-if-exists): users + all seedData rows +
 // wbs/team. Same content as POST /api/admin/seed (without force).
@@ -27,20 +27,10 @@ export async function runSeed(): Promise<void> {
   for (const w of buildWbsSeeds()) {
     const exists = await q<{ project_id: string; data: string }>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
     if (exists.length > 0) {
-      /* Demo top-up: tambahkan histori demo ke task yang BELUM punya histori
-         sama sekali (tidak menimpa update nyata). */
-      const demo = DEMO_WBS_HISTORY[w.projectId];
-      let current: Array<Record<string, unknown>> = [];
-      try { current = JSON.parse(exists[0].data) as Array<Record<string, unknown>>; } catch { current = []; }
-      let changed = false;
-      if (demo) {
-        for (const row of current) {
-          const hist = demo[String(row.task ?? "")];
-          if (hist && !(Array.isArray(row.history) && row.history.length > 0)) { row.history = hist; changed = true; }
-        }
-      }
-      if (changed) {
-        await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [JSON.stringify(current), w.projectId]);
+      // Demo top-up hanya untuk WBS seed murni tanpa histori (lihat topUpDemoWbsHistory).
+      const next = topUpDemoWbsHistory(w.projectId, exists[0].data);
+      if (next) {
+        await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [next, w.projectId]);
         inserted += 1;
       } else {
         skipped += 1;

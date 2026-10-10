@@ -1,6 +1,6 @@
 # STATUS — Papan Task
 
-Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `selesai` · `terblokir` · `verifikasi saja`.
+Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sebagian` · `selesai` · `terblokir` · `verifikasi saja`.
 
 | Task | Judul | Prioritas | File | PIC | Status | Catatan |
 |---|---|---|---|---|---|---|

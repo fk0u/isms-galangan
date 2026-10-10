@@ -125,7 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: res.user?.role ?? prev.role,
             name: res.user?.name ?? prev.name,
             branch: res.user?.branch ?? prev.branch,
-            employeeId: res.user?.employeeId ?? prev.employeeId ?? null,
+            // null dari server = tautan karyawan dicabut → kosongkan; undefined = tak dikirim.
+            employeeId: res.user?.employeeId !== undefined ? res.user.employeeId : prev.employeeId ?? null,
             permissions: res.permissions,
           };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));

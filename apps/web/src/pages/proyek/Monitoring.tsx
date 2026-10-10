@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, AlertTriangle, FileDown } from "lucide-react";
 import {
@@ -56,9 +56,12 @@ export default function Monitoring() {
   const myEmp = String(user?.employeeId ?? "");
   const canUpdate = hasPermission(user?.permissions, "wbs_by_project", "w");
   const groupLbl: Record<string, string> = { Terlambat: S.attLate, "Over-budget": S.attOver, "NCR Critical": S.attNcr, "CO Diajukan": S.attCo, "Milestone dekat": S.attMile };
-  const projects = teamScoped
-    ? data.projects.filter((p) => myEmp !== "" && teamFor(String(p.id)).includes(myEmp))
-    : data.projects;
+  // Dimemo supaya feed (MonitoringFeed) tidak menghitung ulang setiap render.
+  const projects = useMemo(
+    () => (teamScoped ? data.projects.filter((p) => myEmp !== "" && teamFor(String(p.id)).includes(myEmp)) : data.projects),
+    [teamScoped, data.projects, myEmp, teamFor],
+  );
+  const feedProjects = useMemo(() => inBranch(projects), [inBranch, projects]);
   const [branchFilter, setBranchFilter] = useState("Semua");
   const [q, setQ] = useState("");
   const [mode, setMode] = useState<"Semua" | "Perhatian">("Semua");
@@ -227,7 +230,7 @@ export default function Monitoring() {
         </p>
       )}
 
-      <MonitoringFeed projects={inBranch(projects)} canUpdate={canUpdate} />
+      <MonitoringFeed projects={feedProjects} canUpdate={canUpdate} />
 
       {/* F3-E-03: "Perhatian khusus" — kartu merah agar menonjol. */}
       <Card className={`mb-4 p-5 ${attention.length > 0 ? "border-red-200 bg-red-50/60" : ""}`}>
