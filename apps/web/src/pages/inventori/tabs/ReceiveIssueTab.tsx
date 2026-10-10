@@ -194,7 +194,8 @@ export default function ReceiveIssueTab() {
                 <tbody className="divide-y divide-steel-100">
                   {waiting.map((m) => {
                     const it = stockOf(m.itemId);
-                    const hasStock = Number(it?.stock ?? 0) > 0 || Number(it?.openBase ?? 0) > 0;
+                    // Pemenuhan permintaan memakai kemasan utuh (stock); sisa kemasan terbuka lewat Additional.
+                    const hasStock = Number(it?.stock ?? 0) > 0;
                     return (
                       <tr key={String(m.id)}>
                         <td className="td w-8">

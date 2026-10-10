@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Anchor, Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
+import { Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
 import { useAuth, demoUsers } from "../auth/auth";
 import { useStore } from "../data/store";
 import { useT } from "../i18n/LanguageContext";
@@ -101,9 +101,7 @@ export default function Login() {
       {/* Panel kiri - identitas, tenang */}
       <div className="relative hidden w-[48%] flex-col justify-between border-r border-steel-200 bg-surface p-12 lg:flex">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ocean-500 text-white shadow-soft">
-            <Anchor className="h-5 w-5" />
-          </div>
+          <img src="/logo-sb.png" alt="Logo perusahaan" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
           <div>
             <p className="text-sm font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
             <p className="text-xs text-steel-500">PT Syukur Bersaudara</p>
@@ -167,9 +165,7 @@ export default function Login() {
           className="w-full max-w-md"
         >
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ocean-500 text-white">
-              <Anchor className="h-5 w-5" />
-            </div>
+            <img src="/logo-sb.png" alt="Logo perusahaan" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
             <div>
               <p className="font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
               <p className="text-xs text-steel-500">{t.auth.tagline}</p>

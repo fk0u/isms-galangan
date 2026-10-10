@@ -1650,7 +1650,7 @@ if (k === "mattype") return matTypeOf(i);
         item: item.name, itemId: item.id, type: "Retur", qty,
         by: `Retur - ${retReason.trim()}${useUom2 ? ` · input ${qtyNote}` : ""}`,
         date: todayISO(), tone: "out",
-        supplier: vendorTrim, purpose: retReason.trim(),
+        ...(vendorTrim ? { supplier: vendorTrim } : {}), purpose: retReason.trim(),
         branch: moveBranch(`${vendorTrim} ${retReason}`),
       }, { action: "meretur barang", target: `${item.name} × ${qtyNote} (${vendorTrim})`, module: "Inventori" });
       /* Koreksi hutang: cari payable po/item/vendor terkait, kurangi amt proporsional. */
@@ -1663,7 +1663,12 @@ if (k === "mattype") return matTypeOf(i);
       });
       const unitVal = effCost(item);
       let corrected = 0;
-      for (const a of cands) {
+      /* Tanpa field vendor, koreksi otomatis hanya aman bila semua hutang
+         kandidat milik SATU vendor; selain itu vendor mana yang dikoreksi ambigu. */
+      const candVendors = new Set(cands.map((a) => String(a.v ?? a.vendor ?? "").trim().toLowerCase()));
+      const ambiguous = candVendors.size > 1;
+      if (ambiguous) toast(n_recv[locale].returMultiVendor, "info");
+      for (const a of ambiguous ? [] : cands) {
         const amt = Number(a.amt || 0);
         if (amt <= 0) continue;
         const red = Math.min(amt, Math.round(qty * unitVal * 100) / 100);
@@ -2182,7 +2187,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           <td className="td font-semibold text-navy-900">
                             {/* Kemasan terbuka dihitung sebagai satu kemasan: "3 drum (550 L)". */}
                             {fmtJumlah(Number(i.stock) + (Number(i.openBase || 0) > 0 ? 1 : 0))} <span className="font-normal text-steel-400">{i.unit}</span>
-                            {Number(i.openBase || 0) > 0 && <span className="ml-1 text-[11px] font-normal text-amber-700">(1 terbuka)</span>}
+                            {Number(i.openBase || 0) > 0 && <span className="ml-1 text-[11px] font-normal text-amber-700">{n_recv[locale].opened}</span>}
                             {hasConversion(i) && <p className="text-xs font-normal text-steel-400">≈ {fmtJumlah(qtyInUom2(i))} {u2} ({formatUnitConversion(String(i.unit), conversion, locale)})</p>}
                           </td>
                           <td className="td text-steel-600">{fmtJumlah(Number(i.volume ?? 0))}</td>

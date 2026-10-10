@@ -38,7 +38,7 @@ export function useStockIssue(): (a: StockIssueArgs) => Promise<{ baseQty: numbe
     await update("inventory", String(item.id), { stock: r.next.stock, openBase: r.next.openBase });
     await add("movements", {
       item: String(item.name), itemId: String(item.id), type: "Pengeluaran", qty, unit: conv.baseUnit,
-      by: a.actor || "Gudang", date: todayISO(), tone: "out", note: a.note,
+      by: a.actor || "Gudang", date: todayISO(), tone: "out", note: a.note, additional: true,
       ...(a.cut ? { cut: a.cut } : {}), ...(a.projectId ? { ref: { projectId: a.projectId } } : {}),
     }, { action: "barang keluar eceran/potongan", module: "Inventori" });
     return { baseQty: qty, baseUnit: conv.baseUnit };

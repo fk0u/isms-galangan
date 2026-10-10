@@ -48,8 +48,15 @@ export async function issueInventory(id: string, input: IssueInput, actor: strin
     }
     if (!(qty > 0)) throw new IssueError(422, "Jumlah harus lebih dari 0", "UNPROCESSABLE");
 
-    const stock = Math.max(0, Number(item.stock ?? 0));
-    const open = Math.max(0, Number(item.openBase ?? 0));
+    const rawStock = Number(item.stock ?? 0);
+    const rawOpen = Number(item.openBase ?? 0);
+    if (!Number.isFinite(rawStock) || !Number.isFinite(rawOpen)) throw new IssueError(422, "Saldo stok item tidak valid", "BAD_BALANCE");
+    const stock = Math.max(0, rawStock);
+    const open = Math.max(0, rawOpen);
+    if (input.projectId) {
+      const proj = await q<{ id: string }>("SELECT id FROM projects WHERE id = ?", [input.projectId]);
+      if (proj.length === 0) throw new IssueError(422, `Proyek ${input.projectId} tidak ada`, "UNPROCESSABLE");
+    }
     const available = round3(stock * perUnit + open);
     if (qty > available + 1e-9) throw new IssueError(409, `Stok tidak cukup (tersedia ${available} ${conv.baseUnit})`, "INSUFFICIENT");
     let nextStock = stock;
@@ -57,7 +64,8 @@ export async function issueInventory(id: string, input: IssueInput, actor: strin
     let opened = 0;
     if (qty > open + 1e-9) {
       const need = qty - open;
-      opened = Math.ceil(round3(need / perUnit));
+      // Ceiling pada rasio eksak (epsilon), bukan setelah dibulatkan: 200,01 L dari drum 200 L = 2 drum.
+      opened = Math.ceil(need / perUnit - 1e-9);
       nextStock = stock - opened;
       nextOpen = round3(opened * perUnit - need);
     }
@@ -70,7 +78,7 @@ export async function issueInventory(id: string, input: IssueInput, actor: strin
     await exec("INSERT INTO movements (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
       movementId, DEFAULT_BRANCH, JSON.stringify({
         item: String(item.name ?? id), itemId: id, type: "Pengeluaran", qty, unit: String(conv.baseUnit ?? ""),
-        by: actor, date: now.slice(0, 10), tone: "out", note: input.note,
+        by: actor, date: now.slice(0, 10), tone: "out", note: input.note, additional: true,
         ...(input.cut ? { cut: input.cut } : {}), ...(input.projectId ? { ref: { projectId: input.projectId } } : {}),
       }), now,
     ]);

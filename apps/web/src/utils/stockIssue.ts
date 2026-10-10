@@ -28,7 +28,8 @@ export function issueBase(s: StockState, perUnit: number, qty: number): IssueRes
   const open = Math.max(0, s.openBase);
   if (qty <= open + 1e-9) return { ok: true, next: { stock: s.stock, openBase: round3(open - qty) }, opened: 0 };
   const need = qty - open;
-  const opened = Math.ceil(round3(need / perUnit));
+  // Ceiling pada rasio eksak (epsilon), bukan setelah dibulatkan.
+  const opened = Math.ceil(need / perUnit - 1e-9);
   return { ok: true, next: { stock: s.stock - opened, openBase: round3(opened * perUnit - need) }, opened };
 }
 

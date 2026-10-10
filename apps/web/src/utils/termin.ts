@@ -34,8 +34,14 @@ export function buildTermins(value: number, scheme: TerminScheme): BuildResult {
     if (parts.length === 0) return { ok: false, error: "Isi minimal satu tahap persentase" };
     const pctTotal = sum(parts.map((p) => Number(p.pct)));
     if (Math.abs(pctTotal - 100) > 0.001) return { ok: false, error: `Total persentase harus 100% (sekarang ${Math.round(pctTotal * 100) / 100}%)` };
-    const lines = parts.map((p, i) => ({ label: p.label || `Tahap ${i + 1}`, amount: Math.round((total * Number(p.pct)) / 100) }));
-    lines[lines.length - 1].amount = total - sum(lines.slice(0, -1).map((l) => l.amount));
+    /* Tiap tahap dibatasi sisa saldo supaya pembulatan tidak membuat tahap
+       terakhir negatif (nilai 2 dibagi 4×25% → 1,1,0,0, bukan 1,1,1,-1). */
+    let left = total;
+    const lines = parts.map((p, i) => {
+      const amount = i === parts.length - 1 ? left : Math.min(left, Math.round((total * Number(p.pct)) / 100));
+      left -= amount;
+      return { label: p.label || `Tahap ${i + 1}`, amount };
+    });
     return { ok: true, lines };
   }
 
