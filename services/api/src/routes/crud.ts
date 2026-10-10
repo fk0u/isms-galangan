@@ -13,7 +13,7 @@ import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { checklistHook } from "../scoring.js";
-import { changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
+import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -22,6 +22,9 @@ export const DEFAULT_BRANCH = "Samarinda";
 const REQUIRED_AUDIT_TABLES = new Set([
   "invoices", "payables", "journals", "payroll", "users", "settings", "coa", "purchaseOrders",
 ]);
+
+/** Baris berubah di antara baca dan tulis (F4-01). */
+class StaleWriteError extends Error {}
 
 async function persistWithAudit(table: string, persist: () => Promise<unknown>, audit: AuditInput): Promise<void> {
   if (REQUIRED_AUDIT_TABLES.has(table)) {
@@ -589,9 +592,17 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       branch !== current.branch
     );
     if (changedRange) merged = normalizeDrydockOffsets(merged);
-    const persist = () => persistWithAudit(table, () => exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ?`, [
-      branch, JSON.stringify(merged), now, id,
-    ]), {
+    /* F4-01 (audit S-01): tulis bersyarat pada versi yang dibaca. Dua perangkat
+       yang mem-PATCH baris sama bersamaan: tepat satu menang, yang lain 409 STALE
+       (bukan saling menimpa diam-diam). updated_at saja tidak cukup bila dua tulis
+       jatuh di milidetik yang sama, jadi isi data ikut dibandingkan. */
+    const rawData = typeof (current as { data: unknown }).data === "string" ? String((current as { data: unknown }).data) : null;
+    const persist = () => persistWithAudit(table, async () => {
+      const res = rawData !== null
+        ? await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?`, [branch, JSON.stringify(merged), now, id, current.updated_at, rawData])
+        : await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ?`, [branch, JSON.stringify(merged), now, id, current.updated_at]);
+      if (res.changes !== 1) throw new StaleWriteError();
+    }, {
       actor: requestActor(req),
       action: "update",
       table,
@@ -602,11 +613,21 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       },
       ip: requestIp(req),
     });
-    if (changedRange) {
-      const overlapError = await persistDrydockWithOverlap(merged, branch, id, persist);
-      if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
-    } else {
-      await persist();
+    try {
+      if (changedRange) {
+        const overlapError = await persistDrydockWithOverlap(merged, branch, id, persist);
+        if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
+      } else {
+        await persist();
+      }
+    } catch (err) {
+      if (!(err instanceof StaleWriteError)) throw err;
+      const fresh = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
+      return reply.status(409).send({
+        ok: false,
+        error: { message: "Stale data: row was modified by another user", code: "STALE" },
+        ...(fresh[0] ? { data: toJson(fresh[0]) } : {}),
+      });
     }
     return ok({ id, branch, data: merged, updated_at: now });
   });
@@ -623,6 +644,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
     const deleteGuard = await serviceGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
     if (deleteGuard) return reply.status(409).send(fail(deleteGuard, "LOCKED"));
+    const coDelete = changeOrderDeleteError(table, toJson(doomed).data as Record<string, unknown>);
+    if (coDelete) return reply.status(409).send(fail(coDelete, "LOCKED"));
     const spkDelete = spkLockError(table, toJson(doomed).data as Record<string, unknown>, null, req.user?.role);
     if (spkDelete) return reply.status(403).send(fail(spkDelete, "FORBIDDEN"));
     if (deleteLock) return reply.status(409).send(fail(deleteLock, "LOCKED"));

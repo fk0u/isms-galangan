@@ -7,7 +7,7 @@ import { z } from "zod";
 import { loadEnv } from "./env.js";
 import { fail, ok, registerErrorHandler } from "./envelope.js";
 import { createRateLimiter, getClientIp, getWriteRateKey } from "./rateLimit.js";
-import { branchOfUser, bumpTokenVersion, comparePassword, requireAuth, SEED_ACCOUNTS, signToken } from "./auth.js";
+import { branchOfUser, bumpTokenVersion, comparePassword, hashPassword, requireAuth, SEED_ACCOUNTS, signToken } from "./auth.js";
 import { getAuditErrorCount, requestIp, writeAudit } from "./audit.js";
 import { exec, q } from "./db.js";
 import { requireManageUsers } from "./rbac.js";
@@ -63,6 +63,12 @@ const SEED_USERNAMES = new Set(SEED_ACCOUNTS.map((a) => a.username.toLowerCase()
 function isSeedLoginDisabled(): boolean {
   const raw = (process.env.ALLOW_SEED_LOGIN ?? "").toLowerCase().trim();
   return raw !== "true" && raw !== "1";
+}
+
+let dummyHashPromise: Promise<string> | null = null;
+function dummyHash(): Promise<string> {
+  dummyHashPromise ??= hashPassword(randomUUID());
+  return dummyHashPromise;
 }
 
 function denyRateLimited(reply: FastifyReply, retryAfterSec: number, message: string): unknown {
@@ -133,6 +139,14 @@ export function buildApp(): FastifyInstance {
   app.addHook("onSend", async (req, reply) => {
     reply.header("Vary", "Origin");
     reply.header("Access-Control-Expose-Headers", "X-Request-Id, Retry-After");
+    /* Audit T26: header keamanan juga dikirim API sendiri (bukan hanya nginx),
+       supaya tetap ada bila API diakses langsung. CSP ketat aman karena API
+       hanya mengirim JSON/berkas, bukan halaman. */
+    reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("X-Frame-Options", "SAMEORIGIN");
+    reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    reply.header("Strict-Transport-Security", "max-age=31536000");
+    reply.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'");
     const origin = resolveCorsOrigin(req);
     if (origin) reply.header("Access-Control-Allow-Origin", origin);
     // Correlation id: echo inbound X-Request-Id (or generated req.id).
@@ -181,8 +195,7 @@ export function buildApp(): FastifyInstance {
       db,
       uploads: { writable: uploadsWritable },
       uptimeSec: Math.floor(process.uptime()),
-      version: getApiVersion(),
-      dialect: env.dialect,
+      // Audit T27: dialek DB & versi tidak dibuka di endpoint publik (versi kontrak ada di /api/version).
     });
   });
 
@@ -235,7 +248,11 @@ export function buildApp(): FastifyInstance {
       }
     }
     const user = rows[0];
-    if (!user || !(await comparePassword(password, user.pass_hash))) {
+    /* Audit T20: username tak dikenal tetap menjalankan satu perbandingan hash,
+       supaya waktu respons tidak membocorkan akun mana yang ada. */
+    const hashToCheck = user ? user.pass_hash : await dummyHash();
+    const passwordOk = await comparePassword(password, hashToCheck);
+    if (!user || !passwordOk) {
       await writeAudit({
         actor: username,
         action: "auth.login_failed",

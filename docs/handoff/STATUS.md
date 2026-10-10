@@ -93,18 +93,18 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | todo | |
 | F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | agent | review | branch feat/F3-M-03-dashboard-attention-categories; `npm run check` hijau; review independen bersih |
 | F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
-| F4-01 | Concurrency atomik | P0 | F4-integritas.md | | todo | |
+| F4-01 | Concurrency atomik | P0 | F4-integritas.md | Claude | review | feat/F4-F5-production-readiness — PATCH bersyarat (updated_at + data), 409 STALE dengan data terbaru (`probe:concurrency` 3/3); baseUpdatedAt wajib per koleksi belum |
 | F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | selesai | PR #4 |
 | F4-03 | Realtime perubahan data | P1 | F4-integritas.md | | todo | |
-| F4-04 | Relasi baru di `refs.ts` | P0 | F4-integritas.md | | todo | |
+| F4-04 | Relasi baru di `refs.ts` | P0 | F4-integritas.md | Claude | review | relasi baru: services.boqRef, spareparts.inventoryItemId, requisitions.itemId/projectId, materialRequests.*, checklistResponses.*, changeOrders.boqDocId, bookings.equipId |
 | F4-05 | File upload terkontrol | P1 | F4-integritas.md | | todo | |
 | F4-06 | Kinerja frontend | P1 | F4-integritas.md | | todo | |
 | F4-07 | Lain-lain audit | P1 | F4-integritas.md | | todo | |
 | F5-01 | Docker & deploy | P0 | F5-demo.md | agent | selesai | PR #25; pilot di isms.85-211-245-134.sslip.io (nginx host varian) |
-| F5-02 | Backup & restore teruji | P0 | F5-demo.md | | todo | |
-| F5-03 | Data demo yang bercerita | P0 | F5-demo.md | | todo | |
-| F5-04 | Skenario demo per modul | P0 | F5-demo.md | | todo | |
-| F5-05 | Audit ulang | P0 | F5-demo.md | | todo | |
+| F5-02 | Backup & restore teruji | P0 | F5-demo.md | Claude | review | `probe:backup` (backup → restore ke DB kosong, 68 tabel identik), `deploy/backup-cron.sh` harian + retensi 14 hari, `docs/runbook/backup.md`; uji MySQL belum (pilot SQLite) |
+| F5-03 | Data demo yang bercerita | P0 | F5-demo.md | Claude | sebagian | seed: absensi September 2026 + lembur, inspeksi berskor, WO skema DP + termin, PO sebagian, item eceran/potongan, 14 akun peran; belum: 20 karyawan lengkap & proyek tahap trial/selesai+garansi |
+| F5-04 | Skenario demo per modul | P0 | F5-demo.md | Claude | review | `docs/demo/` 13 alur (langkah klik, data, hasil) + panel Demo di aplikasi; uji kering 2× oleh presenter belum |
+| F5-05 | Audit ulang | P0 | F5-demo.md | Claude | review | `docs/log/audit-ulang.md` — security probe 0 VULN K/T; T20/T21/T26/T27 ditutup; Lighthouse belum |
 | F6-01 | Deteksi kode mati dengan knip | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
 | F6-02 | Hapus file, export, dan dependensi tak terpakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
 | F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |

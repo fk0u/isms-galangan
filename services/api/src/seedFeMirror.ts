@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (493 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (708 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -173,6 +173,3100 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "doneAt": "2026-08-13"
         }
       ]
+    }
+  },
+  {
+    "table": "checklistResponses",
+    "id": "CLR-2026-001",
+    "branch": "",
+    "data": {
+      "templateId": "CLT-QC-LAS",
+      "templateName": "Inspeksi pengelasan lambung",
+      "scope": "QC",
+      "projectId": "RP-2026-003",
+      "wbsTask": "Hull Assembly",
+      "answers": {
+        "prep-wps": "ya",
+        "prep-fit": 4,
+        "prep-clean": "ya",
+        "weld-visual": 4,
+        "weld-ndt": "Lolos",
+        "weld-note": "Blok 3–4 rapi"
+      },
+      "score": 88.6,
+      "answered": 5,
+      "totalItems": 5,
+      "inspector": "Sari Wulandari",
+      "at": "2026-10-08T03:10:00.000Z"
+    }
+  },
+  {
+    "table": "checklistResponses",
+    "id": "CLR-2026-002",
+    "branch": "",
+    "data": {
+      "templateId": "CLT-QC-COAT",
+      "templateName": "Inspeksi coating lambung",
+      "scope": "QC",
+      "projectId": "RP-2026-003",
+      "wbsTask": "Painting — Priming",
+      "answers": {
+        "coat-sa": "ya",
+        "coat-profile": 3,
+        "coat-dft": "Di bawah minimum",
+        "coat-cure": "tidak"
+      },
+      "score": 49,
+      "answered": 4,
+      "totalItems": 4,
+      "inspector": "Sari Wulandari",
+      "at": "2026-10-07T06:40:00.000Z"
+    }
+  },
+  {
+    "table": "checklistResponses",
+    "id": "CLR-2026-003",
+    "branch": "",
+    "data": {
+      "templateId": "CLT-QC-LAS",
+      "templateName": "Inspeksi pengelasan lambung",
+      "scope": "QC",
+      "projectId": "NB-2025-012",
+      "wbsTask": "Hull Assembly",
+      "answers": {
+        "prep-wps": "ya",
+        "prep-fit": 5,
+        "prep-clean": "ya",
+        "weld-visual": 5,
+        "weld-ndt": "Lolos"
+      },
+      "score": 100,
+      "answered": 5,
+      "totalItems": 5,
+      "inspector": "Sari Wulandari",
+      "at": "2026-10-05T02:15:00.000Z"
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260901-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-01",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260902-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-02",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260903-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-03",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260904-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-04",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Alpa",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260905-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-05",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260907-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-07",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260908-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-08",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260909-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-09",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Alpa",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260910-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-10",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260911-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-11",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260912-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-12",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260914-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-14",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Alpa",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260915-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-15",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260916-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-16",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260917-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-17",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260918-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-18",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260919-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-19",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260921-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-21",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260922-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-22",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Alpa",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260923-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-23",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260924-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-24",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Izin",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260925-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-25",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "13:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260926-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-26",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Alpa",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "21:30",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260928-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-28",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Sakit",
+      "checkIn": "",
+      "checkOut": "",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260929-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-29",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-001",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-002",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-002",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-003",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-004",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-004",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-005",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-005",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "19:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-006",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-006",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-007",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-007",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "07:55",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "attendance",
+    "id": "ABS-20260930-008",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-008",
+      "date": "2026-09-30",
+      "shift": "Pagi",
+      "status": "Hadir",
+      "checkIn": "08:20",
+      "checkOut": "17:00",
+      "overtime": 0
+    }
+  },
+  {
+    "table": "workOrders",
+    "id": "WO-2026-061",
+    "branch": "",
+    "data": {
+      "sub": "CV Pengecatan Marine",
+      "project": "RP-2026-003",
+      "scope": "Coating lambung bawah garis air",
+      "wbsTask": "Painting — Priming",
+      "status": "Dalam Proses",
+      "progress": 35,
+      "date": "2026-09-28",
+      "targetDate": "2026-11-15",
+      "penaltyPct": 0.1,
+      "value": 600000000,
+      "paymentScheme": {
+        "type": "DP",
+        "parts": [
+          {
+            "label": "DP 1",
+            "pct": 30
+          },
+          {
+            "label": "DP 2",
+            "pct": 30
+          }
+        ]
+      },
+      "taxPct": 2,
+      "retPct": 5,
+      "progressLog": [
+        {
+          "id": "wo-log-demo-1",
+          "date": "2026-10-02T02:00:00.000Z",
+          "by": "Staff Proyek",
+          "from": 0,
+          "to": 15,
+          "note": "Blasting sisi kiri selesai",
+          "photos": [
+            "/demo/wbs-paint.svg"
+          ]
+        },
+        {
+          "id": "wo-log-demo-2",
+          "date": "2026-10-09T07:30:00.000Z",
+          "by": "Staff Proyek",
+          "from": 15,
+          "to": 35,
+          "note": "Primer lapis pertama sisi kiri",
+          "photos": [
+            "/demo/wbs-paint.svg"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "table": "termins",
+    "id": "TRM-2026-051",
+    "branch": "",
+    "data": {
+      "sub": "CV Pengecatan Marine",
+      "woId": "WO-2026-061",
+      "project": "RP-2026-003",
+      "milestone": "DP 1",
+      "progress": "WO-2026-061 (0%)",
+      "amount": 180000000,
+      "pphPct": 2,
+      "retPct": 5,
+      "status": "Disetujui",
+      "date": "2026-09-28",
+      "fromScheme": "DP"
+    }
+  },
+  {
+    "table": "termins",
+    "id": "TRM-2026-052",
+    "branch": "",
+    "data": {
+      "sub": "CV Pengecatan Marine",
+      "woId": "WO-2026-061",
+      "project": "RP-2026-003",
+      "milestone": "DP 2",
+      "progress": "WO-2026-061 (0%)",
+      "amount": 180000000,
+      "pphPct": 2,
+      "retPct": 5,
+      "status": "Draf",
+      "date": "2026-09-28",
+      "fromScheme": "DP"
+    }
+  },
+  {
+    "table": "termins",
+    "id": "TRM-2026-053",
+    "branch": "",
+    "data": {
+      "sub": "CV Pengecatan Marine",
+      "woId": "WO-2026-061",
+      "project": "RP-2026-003",
+      "milestone": "Pelunasan",
+      "progress": "WO-2026-061 (0%)",
+      "amount": 240000000,
+      "pphPct": 2,
+      "retPct": 5,
+      "status": "Draf",
+      "date": "2026-09-28",
+      "fromScheme": "DP"
     }
   },
   {

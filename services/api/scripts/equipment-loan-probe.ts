@@ -16,6 +16,7 @@ async function main(): Promise<void> {
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = 'direktur' LIMIT 1"))[0];
   const tok = signToken({ id: u.id, username: u.username, role: u.role, branch: "SEMUA", v: u.token_version ?? 0 });
   const equipId = `EQ-PROBE-${Date.now().toString(36).toUpperCase()}`;
+  await exec("INSERT INTO equipment (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [equipId, "Samarinda", JSON.stringify({ name: "Probe Crane", status: "Tersedia" }), new Date().toISOString()]);
   const created: string[] = [];
   const loan = async (startDate: string, endDate: string) => {
     const res = await app.inject({ method: "POST", url: "/api/bookings", headers: { authorization: `Bearer ${tok}` }, payload: { data: { kind: "Peminjaman", equipId, equip: "Probe Crane", borrower: "Probe", startDate, endDate, date: startDate, status: "Dipinjam" } } });
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
     assert("setelah dikembalikan boleh dipinjam di rentang itu → 201", e.statusCode === 201, e.body);
   } finally {
     for (const id of created) { await exec("DELETE FROM bookings WHERE id = ?", [id]); await exec("DELETE FROM audit_log WHERE row_id = ?", [id]); }
+    await exec("DELETE FROM equipment WHERE id = ?", [equipId]);
   }
   console.log(`\n${passed}/${total} pemeriksaan peminjaman equipment lolos.`);
   await app.close();

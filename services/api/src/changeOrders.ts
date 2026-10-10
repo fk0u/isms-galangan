@@ -22,6 +22,7 @@ export class CoError extends Error {
 
 const OWNER_ROLES = new Set(["direktur", "developer"]);
 const SERVER_OWNED = ["ownerApproval", "resultBoqDocId", "appliedAt", "appliedBy"] as const;
+const FROZEN = ["changes", "boqDocId", "project", "impact", "title"] as const;
 const parse = (r: Row): Data => { try { return JSON.parse(r.data) as Data; } catch { return {}; } };
 const num = (v: unknown): number => Number(v ?? 0) || 0;
 
@@ -42,13 +43,21 @@ export function changeOrderGuardError(table: string, before: Data | null, after:
   }
   const from = String(before.status ?? "");
   const to = String(after.status ?? "");
-  if (from !== to && (to === "Disetujui" || to === "Diterapkan" || from === "Diterapkan")) {
-    return "Status Disetujui/Diterapkan hanya lewat POST /api/changeOrders/:id/decision atau /apply";
-  }
-  if (from === "Diterapkan" && JSON.stringify(before.changes ?? null) !== JSON.stringify(after.changes ?? null)) {
-    return "CO yang sudah diterapkan tidak bisa diubah";
+  // Semua perpindahan status (termasuk Ditolak) adalah keputusan owner / hasil apply.
+  if (from !== to) return "Status change order hanya lewat POST /api/changeOrders/:id/decision atau /apply";
+  /* Isi CO beku setelah diputuskan: apply membaca changes/boqDocId, jadi mengubahnya
+     setelah owner menyetujui berarti menerapkan sesuatu yang tidak pernah disetujui. */
+  if (from !== "Diajukan" && FROZEN.some((k) => JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null))) {
+    return `Change order berstatus ${from} tidak bisa diubah isinya`;
   }
   return null;
+}
+
+/** DELETE: CO yang sudah disetujui/diterapkan adalah bukti keputusan — tidak boleh dihapus. */
+export function changeOrderDeleteError(table: string, before: Data | null): string | null {
+  if (table !== "changeOrders" || !before) return null;
+  const st = String(before.status ?? "");
+  return st === "Disetujui" || st === "Diterapkan" ? `Change order ${st} tidak bisa dihapus` : null;
 }
 
 async function loadCo(id: string): Promise<{ row: Row; data: Data }> {
@@ -107,6 +116,10 @@ export async function applyChangeOrder(id: string, actor: string): Promise<Apply
       const byOrigin = new Map(copies.map((r) => [String(parse(r).copiedFrom ?? ""), r]));
       const docRow = (await q<Row>("SELECT id, branch, data, updated_at FROM boqDocs WHERE id = ?", [rev.id]))[0];
       const projectId = String(parse(docRow).projectId ?? co.data.project ?? "");
+      // CO proyek A tidak boleh merevisi surat BoQ (dan anggaran) proyek B.
+      if (String(co.data.project ?? "") !== "" && projectId !== String(co.data.project)) {
+        throw new CoError(422, `Surat BoQ ${boqDocId} bukan milik proyek ${String(co.data.project)}`, "PROJECT_MISMATCH");
+      }
       for (const ch of changes) {
         if (ch.op === "add") {
           const qty = num(ch.quantity);
@@ -124,13 +137,15 @@ export async function applyChangeOrder(id: string, actor: string): Promise<Apply
         if (!target) throw new CoError(422, `Item BoQ ${String(ch.itemId)} tidak ada di surat ${boqDocId}`, "UNPROCESSABLE");
         if (ch.op === "remove") {
           await exec("DELETE FROM boq WHERE id = ?", [target.id]);
+          byOrigin.delete(String(ch.itemId ?? ""));
         } else {
           const d = parse(target);
           const qty = ch.quantity !== undefined ? num(ch.quantity) : num(d.quantity);
           const price = ch.unitPrice !== undefined ? num(ch.unitPrice) : num(d.unitPrice);
-          await exec("UPDATE boq SET data = ?, updated_at = ? WHERE id = ?", [
-            JSON.stringify({ ...d, quantity: qty, unitPrice: price, totalPrice: Math.round(qty * price), fromChangeOrder: id }), now, target.id,
-          ]);
+          const nextData = JSON.stringify({ ...d, quantity: qty, unitPrice: price, totalPrice: Math.round(qty * price), fromChangeOrder: id });
+          await exec("UPDATE boq SET data = ?, updated_at = ? WHERE id = ?", [nextData, now, target.id]);
+          // Perubahan berikutnya pada item yang sama melanjutkan dari hasil ini.
+          byOrigin.set(String(ch.itemId ?? ""), { ...target, data: nextData, updated_at: now });
         }
       }
       // Revisi disetujui atas nama owner yang menyetujui CO; revisi lama → Digantikan.

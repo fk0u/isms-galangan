@@ -51,6 +51,8 @@ async function main(): Promise<void> {
     assert("terapkan sebelum disetujui owner → 409", early.statusCode === 409, early.body);
     const sneak = await app.inject({ method: "PATCH", url: `/api/changeOrders/${coId}`, headers: h(proyek), payload: { data: { status: "Disetujui" } } });
     assert("setujui lewat CRUD → 422", sneak.statusCode === 422, sneak.body);
+    const sneakReject = await app.inject({ method: "PATCH", url: `/api/changeOrders/${coId}`, headers: h(proyek), payload: { data: { status: "Ditolak" } } });
+    assert("tolak lewat CRUD → 422", sneakReject.statusCode === 422, sneakReject.body);
     const byProyek = await post(proyek, `/api/changeOrders/${coId}/decision`, { decision: "Disetujui" });
     assert("peran proyek memutuskan CO → 403", byProyek.statusCode === 403, byProyek.body);
     const approve = await post(dir, `/api/changeOrders/${coId}/decision`, { decision: "Disetujui" });
@@ -63,7 +65,10 @@ async function main(): Promise<void> {
     const newDoc = JSON.parse((await q<{ data: string }>("SELECT data FROM boqDocs WHERE id = ?", [res.resultBoqDocId]))[0]?.data ?? "{}") as { status: string; revision: number; supersedes: string };
     const oldDoc = JSON.parse((await q<{ data: string }>("SELECT data FROM boqDocs WHERE id = ?", [docId]))[0]?.data ?? "{}") as { status: string };
     assert("revisi Rev 1 Disetujui, surat lama Digantikan", newDoc.status === "Disetujui" && newDoc.revision === 1 && oldDoc.status === "Digantikan", JSON.stringify(newDoc));
-    assert("anggaran proyek turun 30 jt", res.budget === 970_000_000, String(res.budget));
+    const storedBudget = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM projects WHERE id = ?", [pid]))[0]?.data ?? "{}") as { budget?: number }).budget);
+    assert("anggaran proyek tersimpan turun 30 jt", res.budget === 970_000_000 && storedBudget === 970_000_000, `${res.budget} / ${storedBudget}`);
+    const del = await app.inject({ method: "DELETE", url: `/api/changeOrders/${coId}`, headers: h(dir) });
+    assert("hapus CO yang sudah diterapkan → 409", del.statusCode === 409, del.body);
     const again = await post(dir, `/api/changeOrders/${coId}/apply`);
     assert("terapkan ulang → 409", again.statusCode === 409, again.body);
   } finally {

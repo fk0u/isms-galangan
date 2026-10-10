@@ -49,7 +49,7 @@ export const REFS: Record<string, Record<string, RefDef>> = {
   drydocks: {},
   inventory: {},
   equipment: {},
-  bookings: {},
+  bookings: { equipId: { target: "equipment", allow: ["", "-"] } },
   subcontractors: {},
   workOrders: { project: { target: "projects" }, sub: { target: "__name__" } },
   employees: {},

@@ -8,6 +8,7 @@ import { requireAuth } from "../auth.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
+import { permissionsFor } from "../policy.js";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXT = new Set([".png", ".jpg", ".jpeg", ".pdf", ".xlsx", ".xls", ".csv", ".txt"]);
@@ -124,6 +125,11 @@ export function registerFileRoutes(app: FastifyInstance): void {
   });
 
   app.post("/api/files", { preHandler: [requireAuth] }, async (req, reply) => {
+    /* Audit T21: peran baca-saja (viewer klien) tidak boleh mengunggah file.
+       Upload sah untuk peran yang punya hak tulis di minimal satu modul. */
+    const perms = permissionsFor(req.user?.role);
+    const canWriteSomething = Object.entries(perms).some(([col, acts]) => col !== "activities" && acts.includes("w"));
+    if (!canWriteSomething) return reply.status(403).send(fail("Peran baca-saja tidak boleh mengunggah file", "FORBIDDEN"));
     let part: Awaited<ReturnType<typeof req.file>>;
     try {
       part = await req.file();

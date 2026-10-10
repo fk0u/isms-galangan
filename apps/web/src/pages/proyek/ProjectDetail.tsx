@@ -537,10 +537,12 @@ if (from === "Desain" && to === "Produksi") {
     const oldTotal = Number(item?.totalPrice ?? 0);
     if (ch.op === "remove") return sum - oldTotal;
     const qty = Number(ch.quantity || (ch.op === "update" ? item?.quantity : 0) || 0);
-    const price = parseRupiah(ch.unitPrice) || (ch.op === "update" ? Number(item?.unitPrice ?? 0) : 0);
+    // Kolom kosong = pakai harga lama; "0" eksplisit berarti harga memang nol.
+    const price = ch.unitPrice.trim() !== "" ? parseRupiah(ch.unitPrice) : (ch.op === "update" ? Number(item?.unitPrice ?? 0) : 0);
     return sum + Math.round(qty * price) - (ch.op === "update" ? oldTotal : 0);
   }, 0);
-  const coOwner = ["direktur", "developer"].includes(String(session?.role ?? "").toLowerCase()) || !session?.permissions;
+  // Keputusan CO hanya untuk owner (direktur/developer), juga di mode demo lokal.
+  const coOwner = ["direktur", "developer"].includes(String(session?.role ?? "").toLowerCase());
 
   const saveCo = async () => {
     if (!coForm.title.trim()) { toast(S.detToastCoTitle, "info"); return; }
@@ -583,7 +585,13 @@ if (from === "Desain" && to === "Produksi") {
           toast(res.resultBoqDocId ? S.detCoAppliedBoq.replace("{v}", fmtRupiah(res.newTotal)) : S.detToastCoStatus.replace("{a}", status.toLowerCase()));
           return;
         }
-        await apiFetch(`/api/changeOrders/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify({ decision: status, ...(status === "Ditolak" ? { note: S.detCoRejectNote } : {}) }) });
+        let note = "";
+        if (status === "Ditolak") {
+          // Alasan penolakan wajib (dicatat di ownerApproval & audit).
+          note = (window.prompt(S.detCoRejectAsk) ?? "").trim();
+          if (!note) return;
+        }
+        await apiFetch(`/api/changeOrders/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify({ decision: status, ...(note ? { note } : {}) }) });
         await resyncCollections(["changeOrders", "activities"]);
         toast(S.detToastCoStatus.replace("{a}", status.toLowerCase()));
         return;
