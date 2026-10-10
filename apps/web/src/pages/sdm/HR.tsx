@@ -50,7 +50,9 @@ import { n_qc } from "../../i18n/n_qc";
 const CERT_WINDOW = 90;
 const TIPE_KARYAWAN = ["Tetap", "Harian", "Kontrak", "Outsourcing"];
 const PTKP_STATUS = ["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"];
-const SURAT_JENIS = ["SP 1", "SP 2", "SP 3", "Mutasi"];
+const SURAT_JENIS = ["Kontrak Baru", "Perpanjang Kontrak", "SP 1", "SP 2", "SP 3", "Mutasi"];
+const isKontrak = (jenis: string): boolean => jenis === "Kontrak Baru" || jenis === "Perpanjang Kontrak";
+const SURAT_KOSONG = { employeeId: "", jenis: "SP 1", isi: "", tanggal: "", fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "", contractNo: "", contractStart: "", contractEnd: "" };
 const IMPORT_HEADERS = ["NIK", "Nama", "Jabatan", "Departemen", "Cabang", "Status", "Tanggal Gabung (YYYY-MM-DD)", "Tipe", "Gaji Pokok", "PTKP Status", "Tanggungan", "Kontrak Berakhir (YYYY-MM-DD)"];
 const DEPT_OPTIONS = ["Direksi", "Proyek", "Produksi", "Quality", "Finance", "Procurement", "Support"];
 const LEAVE_TYPES = ["Tahunan", "Sakit", "Izin", "Melahirkan", "Cuti Besar", "Unpaid"];
@@ -279,7 +281,7 @@ export default function HR() {
 
   /* ---------- surat ---------- */
   const [showSurat, setShowSurat] = useState(false);
-  const [suratForm, setSuratForm] = useState({ employeeId: "", jenis: "SP 1", isi: "", tanggal: todayISO(), fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "" });
+  const [suratForm, setSuratForm] = useState({ ...SURAT_KOSONG, tanggal: todayISO() });
   /* Arsip surat pindah dari useDraftState("isms.draft.hr.arsipSurat") ke
      koleksi `letters`. Alasan: draft localStorage hilang saat cache browser
      dibersihkan, tidak pernah sampai ke server (user lain tidak pernah
@@ -1073,6 +1075,19 @@ const finishTraining = async (t: StoreItem) => {
    *  saveSurat supaya keduanya tidak pernah berbeda - versi lama memanggil
    *  nextSuratId() di dalam suratPreview sehingga nomor yang tampil saat preview
    *  tidak sama dengan nomor yang benar-benar terbit saat disimpan. */
+  /* Surat kontrak terakhir karyawan terpilih (selain yang sedang diubah). */
+  const prevKontrak = arsipSurat
+    .filter((s) => s.employeeId === suratForm.employeeId && isKontrak(String(s.jenis)) && String(s.id) !== suratEditId)
+    .sort((a, b) => String(b.contractEnd ?? "").localeCompare(String(a.contractEnd ?? "")))[0];
+  /* Perpanjangan membaca kontrak terakhir: mulai = sehari setelah berakhir. */
+  const pickJenis = (jenis: string, employeeId = suratForm.employeeId): void => {
+    const emp = data.employees.find((e) => e.id === employeeId);
+    const end = String(emp?.contractEnd ?? "");
+    const next = jenis === "Perpanjang Kontrak" && /^\d{4}-\d{2}-\d{2}$/.test(end)
+      ? new Date(Date.parse(`${end}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
+      : "";
+    setSuratForm((f) => ({ ...f, jenis, employeeId, contractStart: isKontrak(jenis) ? (next || f.contractStart) : "", contractEnd: isKontrak(jenis) ? f.contractEnd : "", contractNo: isKontrak(jenis) ? f.contractNo : "" }));
+  };
   const suratNomor = nextSuratId(suratForm.tanggal || todayISO());
 
   /** Teks surat. SATU fungsi dipakai untuk preview di form, pratinjau arsip,
@@ -1125,6 +1140,9 @@ const finishTraining = async (t: StoreItem) => {
       approvedAt: String(s.approvedAt ?? ""),
       sourceType: String(s.sourceType ?? ""),
       sourceId: String(s.sourceId ?? ""),
+      contractNo: String(s.contractNo ?? ""),
+      contractStart: String(s.contractStart ?? ""),
+      contractEnd: String(s.contractEnd ?? ""),
     });
     setShowSurat(true);
   };
@@ -1135,7 +1153,7 @@ const finishTraining = async (t: StoreItem) => {
      pernah ditandatangani. */
   const printSuratPdf = async (): Promise<void> => {
     if (!suratEmp) { toast(S.tPilihKaryawan, "info"); return; }
-    if (!suratForm.isi.trim()) { toast(S.tIsiSurat, "info"); return; }
+    if (!isKontrak(suratForm.jenis) && !suratForm.isi.trim()) { toast(S.tIsiSurat, "info"); return; }
     if (!pdfServerReady()) { toast(S.tPdfServerBelum, "info"); return; }
     /* Surat yang belum disimpan tidak bisa dicetak: server membaca dari
        arsip, dan isinya harus sama persis dengan yang disimpan. */
@@ -1158,8 +1176,14 @@ const finishTraining = async (t: StoreItem) => {
       toast(S.tPilihKaryawan, "info");
       return;
     }
-    if (!suratForm.isi.trim()) {
+    const kontrak = isKontrak(suratForm.jenis);
+    /* Kontrak tidak butuh isi bebas, tapi wajib nomor + masa berlaku. */
+    if (!kontrak && !suratForm.isi.trim()) {
       toast(S.tIsiSurat, "info");
+      return;
+    }
+    if (kontrak && (!suratForm.contractNo.trim() || !suratForm.contractStart || !suratForm.contractEnd || suratForm.contractEnd < suratForm.contractStart)) {
+      toast(E.contractInvalid, "info");
       return;
     }
     if (!suratForm.tanggal) {
@@ -1187,6 +1211,16 @@ const finishTraining = async (t: StoreItem) => {
       sourceType: suratForm.sourceType,
       sourceId: suratForm.sourceId,
       branch: String(suratEmp.branch ?? branch),
+      ...(kontrak
+        ? {
+          contractNo: suratForm.contractNo.trim(),
+          contractStart: suratForm.contractStart,
+          contractEnd: suratForm.contractEnd,
+          /* Riwayat: perpanjangan menunjuk surat kontrak sebelumnya. */
+          supersedes: suratForm.jenis === "Perpanjang Kontrak" ? String(prevKontrak?.id ?? "") : "",
+          prevContractNo: suratForm.jenis === "Perpanjang Kontrak" ? String(prevKontrak?.contractNo ?? suratEmp.lastContractNo ?? "") : "",
+        }
+        : {}),
     };
     try {
       if (suratEditId) {
@@ -1205,8 +1239,15 @@ const finishTraining = async (t: StoreItem) => {
         );
         toast(S.tSuratOk.replace("{n}", suratNomor));
       }
+      /* Kontrak terakhir di data karyawan mengikuti surat, supaya alert
+         "kontrak segera berakhir" dan payroll tidak membaca masa lama. */
+      if (kontrak) {
+        await update("employees", String(suratEmp.id), {
+          lastContractNo: suratForm.contractNo.trim(), lastContractStart: suratForm.contractStart, contractEnd: suratForm.contractEnd,
+        });
+      }
       setShowSurat(false);
-      setSuratForm({ employeeId: "", jenis: "SP 1", isi: "", tanggal: todayISO(), fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "" });
+      setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1819,7 +1860,7 @@ const finishTraining = async (t: StoreItem) => {
                   <h3 className="text-sm font-semibold text-navy-900">{S.arsipT}</h3>
                   <div className="flex items-center gap-2">
                     <button className="btn-secondary text-xs" onClick={exportArsipSurat}>{S.btnExport}</button>
-                    <button className="btn-primary text-xs" onClick={() => { setSuratEditId(null); setSuratForm({ employeeId: "", jenis: "SP 1", isi: "", tanggal: todayISO(), fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "" }); setShowSurat(true); }}>{S.btnBuatSurat}</button>
+                    <button className="btn-primary text-xs" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); setShowSurat(true); }}>{S.btnBuatSurat}</button>
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-steel-500">
@@ -2269,7 +2310,7 @@ const finishTraining = async (t: StoreItem) => {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.fKaryawan}>
-              <select className="input" value={suratForm.employeeId} onChange={(e) => setSuratForm({ ...suratForm, employeeId: e.target.value })}>
+              <select className="input" value={suratForm.employeeId} onChange={(e) => pickJenis(suratForm.jenis, e.target.value)}>
                 <option value="">{S.optPilih}</option>
                 {data.employees.map((e) => (
                   <option key={e.id} value={e.id}>{e.name} · {e.role}</option>
@@ -2277,12 +2318,21 @@ const finishTraining = async (t: StoreItem) => {
               </select>
             </Field>
             <Field label={S.fJenisSurat}>
-              <select className="input" value={suratForm.jenis} onChange={(e) => setSuratForm({ ...suratForm, jenis: e.target.value })}>
-                {SURAT_JENIS.map((s) => <option key={s}>{s}</option>)}
+              <select className="input" value={suratForm.jenis} onChange={(e) => pickJenis(e.target.value)}>
+                {SURAT_JENIS.map((s) => <option key={s} value={s}>{E.jenis[s as keyof typeof E.jenis] ?? s}</option>)}
               </select>
             </Field>
             <Field label={S.thTanggal}><input type="date" className="input" value={suratForm.tanggal} onChange={(e) => setSuratForm({ ...suratForm, tanggal: e.target.value })} /></Field>
           </FormGrid>
+          {isKontrak(suratForm.jenis) && (
+            <FormGrid>
+              <Field label={E.lastContractNo}><input className="input font-mono" value={suratForm.contractNo} onChange={(e) => setSuratForm({ ...suratForm, contractNo: e.target.value })} /></Field>
+              <Field label={E.lastContractStart}><input type="date" className="input" value={suratForm.contractStart} onChange={(e) => setSuratForm({ ...suratForm, contractStart: e.target.value })} /></Field>
+              <Field label={S.fContractEnd} hint={suratForm.jenis === "Perpanjang Kontrak" && suratEmp?.contractEnd ? E.contractPrev.replace("{d}", fmtTanggal(String(suratEmp.contractEnd))) : undefined}>
+                <input type="date" className="input" value={suratForm.contractEnd} onChange={(e) => setSuratForm({ ...suratForm, contractEnd: e.target.value })} />
+              </Field>
+            </FormGrid>
+          )}
           <Field label={S.fIsi}><textarea className="input" rows={4} value={suratForm.isi} onChange={(e) => setSuratForm({ ...suratForm, isi: e.target.value })} placeholder={S.phSurat} /></Field>
 <Field label={locale === "en" ? "Scan / attachment (optional)" : "Pindai / Lampiran (opsional)"} hint={locale === "en" ? "PDF or image, shown side-by-side with the text" : "PDF atau gambar, tampil berdampingan dengan teks"}>
             {/* Dulu hanya input URL tanpa tombol Unggah - padahal modul lain
@@ -2304,7 +2354,7 @@ const finishTraining = async (t: StoreItem) => {
             </Field>
           </FormGrid>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-secondary text-xs" onClick={printSuratPdf} disabled={!suratEmp || !suratForm.isi.trim() || !suratEditId}>
+            <button type="button" className="btn-secondary text-xs" onClick={printSuratPdf} disabled={!suratEmp || (!isKontrak(suratForm.jenis) && !suratForm.isi.trim()) || !suratEditId}>
               {S.btnSuratPdf}
             </button>
             <span className="text-[11px] text-steel-400">{suratEditId ? S.hSuratPdf : S.hSuratPdfBelumSimpan}</span>

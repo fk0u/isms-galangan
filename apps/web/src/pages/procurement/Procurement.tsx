@@ -31,7 +31,7 @@ import { n_proc } from "../../i18n/n_proc";
 import { FilterPopover } from "../../components/FilterPopover";
 import { n_mr } from "../../i18n/n_mr";
 import MaterialRequestsTab from "./MaterialRequestsTab";
-import { poIsMultiItem, poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
+import { itemPriceTrack, poIsMultiItem, poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
 import { useAuth } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
@@ -1691,6 +1691,38 @@ const sparkVendors = useMemo(() => {
                           </tbody>
                         </table>
                       )}
+                    {(() => {
+                      /* Track record harga item dari PO sebelumnya (ETC-06). */
+                      const track = itemPriceTrack(purchaseOrders, String(r.item ?? ""));
+                      if (track.length === 0) return <p className="mt-3 text-xs text-steel-400">{S.trackEmpty}</p>;
+                      const prices = track.map((t) => t.unitPrice);
+                      const lo = Math.min(...prices);
+                      const span = Math.max(Math.max(...prices) - lo, 1);
+                      const pts = track.map((t, i) => `${track.length === 1 ? 50 : (i / (track.length - 1)) * 100},${22 - ((t.unitPrice - lo) / span) * 20}`).join(" ");
+                      return (
+                        <div className="mt-3 rounded-xl border border-steel-100 p-3">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <p className="text-xs font-semibold text-navy-900">{S.trackTitle.replace("{n}", String(track.length))}</p>
+                            <svg viewBox="0 0 100 24" className="h-6 w-28" preserveAspectRatio="none" role="img" aria-label={S.trackTrend}>
+                              <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" className="text-navy-700" vectorEffect="non-scaling-stroke" />
+                            </svg>
+                          </div>
+                          <table className="w-full text-xs">
+                            <thead><tr className="text-left text-steel-500"><th className="py-1 font-medium">{S.trackDate}</th><th className="py-1 font-medium">{S.vendor}</th><th className="py-1 text-right font-medium">{S.trackQty}</th><th className="py-1 text-right font-medium">{S.trackUnit}</th></tr></thead>
+                            <tbody className="divide-y divide-steel-100">
+                              {[...track].reverse().slice(0, 6).map((t) => (
+                                <tr key={t.po}>
+                                  <td className="py-1">{fmtTanggal(t.date)}</td>
+                                  <td className="py-1">{t.vendor} <span className="font-mono text-steel-400">{t.po}</span></td>
+                                  <td className="py-1 text-right tabular-nums">{t.qty}</td>
+                                  <td className={`py-1 text-right tabular-nums ${t.unitPrice === lo ? "font-semibold text-emerald-700" : ""}`}>{fmtRupiah(t.unitPrice)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {(RFQ_NEXT[r.status] ?? []).map((n, i) => (
                         <button key={n} className={i === 0 ? "btn-primary text-xs" : "btn-secondary text-xs"} onClick={async () => { try { await update("rfqs", r.id, { status: n }); toast(S.tArrow.replace("{a}", r.id).replace("{b}", n)); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } }}>{i === 0 ? `${n} - ${locale === "en" ? "next" : "lanjut"}` : n}</button>

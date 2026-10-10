@@ -339,6 +339,15 @@ const suratHr: Recipe<SuratHrInput> = {
       berlakuSampai: str(l, "berlakuSampai") !== "-" ? str(l, "berlakuSampai") : undefined,
       namaPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : SIGNER,
       jabatanPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "Direktur",
+      kontrak: str(l, "contractNo") !== "-"
+        ? {
+          nomor: str(l, "contractNo"),
+          mulai: str(l, "contractStart"),
+          selesai: str(l, "contractEnd"),
+          sebelumnya: str(l, "prevContractNo") !== "-" ? str(l, "prevContractNo") : undefined,
+          tipe: emp ? str(emp, "tipe") : "-",
+        }
+        : undefined,
       locale: ctx.locale,
     };
   },

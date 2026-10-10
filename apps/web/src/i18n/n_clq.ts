@@ -1,6 +1,9 @@
 /* Teks kuesioner inspeksi QC & HSE (F3-K-02, F3-K-03). */
 export const n_clq = {
   id: {
+    viewWorkers: "HSE Pekerja",
+    colWorker: "Pekerja",
+    fill: "Isi kuesioner",
     tab: "Inspeksi Proyek",
     intro: "Pilih proyek → pekerjaan WBS → mulai inspeksi dengan kuesioner berbobot. Skor dihitung server.",
     viewProjects: "Proyek",
@@ -62,6 +65,9 @@ export const n_clq = {
     onlyQc: "Template dikelola oleh QC / direktur",
   },
   en: {
+    viewWorkers: "Worker HSE",
+    colWorker: "Worker",
+    fill: "Fill questionnaire",
     tab: "Project Inspection",
     intro: "Pick a project → WBS work item → start an inspection with a weighted questionnaire. The server computes the score.",
     viewProjects: "Projects",

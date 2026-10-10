@@ -707,6 +707,18 @@ export const seedMaintenances: StoreItem[] = [
    saat cache browser dibersihkan dan tidak pernah sampai ke server. */
 export const seedLetters: StoreItem[] = [
   {
+    id: "SRT-20260105-001", employeeId: "EMP-003", nama: "Budi Santoso",
+    jenis: "Kontrak Baru", tanggal: "2026-01-05", isi: "",
+    contractNo: "PKWT/2026/003", contractStart: "2026-01-05", contractEnd: "2026-07-04", supersedes: "", prevContractNo: "",
+    fileUrl: "", fileName: "", createdBy: "Anda", createdAt: "2026-01-05 09:00",
+  },
+  {
+    id: "SRT-20260701-001", employeeId: "EMP-003", nama: "Budi Santoso",
+    jenis: "Perpanjang Kontrak", tanggal: "2026-07-01", isi: "",
+    contractNo: "PKWT/2026/003-P1", contractStart: "2026-07-05", contractEnd: "2027-01-04", supersedes: "SRT-20260105-001", prevContractNo: "PKWT/2026/003",
+    fileUrl: "", fileName: "", createdBy: "Anda", createdAt: "2026-07-01 09:00",
+  },
+  {
     id: "SRT-20260905-001", employeeId: "EMP-005", nama: "Sari Wahyuni",
     jenis: "SP 1", tanggal: "2026-09-05",
     isi: "Dengan hormat, atas nama perusahaan kami menyatakan bahwa nama tersebut benar-benar karyawan tetap PT Syukur Bersaudara dengan masa kerja aktif.",

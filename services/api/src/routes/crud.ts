@@ -12,6 +12,7 @@ import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
+import { dockFitError } from "../dockFit.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
@@ -471,6 +472,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
     const loanCreate = await loanOverlapError(table, null, rowData);
     if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
+    const fitCreate = await dockFitError(table, rowData, req.user?.role);
+    if (fitCreate) return reply.status(409).send(fail(fitCreate, "CONFLICT"));
     // F3-K-02: validasi template & skor respons dihitung server.
     const clCreate = await checklistHook(table, rowData);
     if ("error" in clCreate) return reply.status(422).send(fail(clCreate.error, "UNPROCESSABLE"));
@@ -579,6 +582,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
     const loanPatch = await loanOverlapError(table, id, merged);
     if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
+    // Hanya saat dock/proyek berganti: slot lama yang sudah terlanjur tidak dikunci.
+    const mergedRec = merged as Record<string, unknown>;
+    if (table === "dockSlots" && (oldData.dockId !== mergedRec.dockId || oldData.project !== mergedRec.project)) {
+      const fitPatch = await dockFitError(table, mergedRec, req.user?.role);
+      if (fitPatch) return reply.status(409).send(fail(fitPatch, "CONFLICT"));
+    }
     const coGuard = changeOrderGuardError(table, oldData, merged as Record<string, unknown>);
     if (coGuard) return reply.status(422).send(fail(coGuard, "UNPROCESSABLE"));
     const clPatch = await checklistHook(table, merged as Record<string, unknown>);

@@ -179,3 +179,19 @@ export function vendorPriceHistory(pos: StoreItem[], po: StoreItem): { vendor: s
   for (const r of rows) if (r.vendor && !latest.has(r.vendor)) latest.set(r.vendor, r);
   return [...latest.values()].sort((x, y) => x.unitPrice - y.unitPrice);
 }
+
+/** Riwayat harga satu item dari PO terdahulu (F3-J-03): semua transaksi,
+ *  urut tanggal naik, untuk tabel track record + tren kecil di RFQ.
+ *  Cocok bila nama item saling mengandung - RFQ sering memakai nama pendek
+ *  ("Cat Epoxy") sedangkan PO nama lengkap ("Cat Epoxy Primer"). */
+export function itemPriceTrack(pos: StoreItem[], item: string): { po: string; vendor: string; unitPrice: number; qty: number; date: string }[] {
+  const key = item.trim().toLowerCase();
+  if (!key) return [];
+  return pos
+    .filter((p) => {
+      const name = String(p.item ?? "").trim().toLowerCase();
+      return name !== "" && (name.includes(key) || key.includes(name)) && num(p.qty) > 0 && num(p.amount) > 0;
+    })
+    .map((p) => ({ po: String(p.id), vendor: String(p.vendor ?? ""), unitPrice: Math.round(num(p.amount) / num(p.qty)), qty: num(p.qty), date: String(p.date ?? "") }))
+    .sort((x, y) => x.date.localeCompare(y.date));
+}

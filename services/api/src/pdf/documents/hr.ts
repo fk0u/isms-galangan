@@ -177,7 +177,54 @@ export interface SuratHrInput {
   berlakuSampai?: string;
   namaPemberi: string;
   jabatanPemberi: string;
+  /** Terisi hanya untuk surat kontrak / perpanjangan (F3-L-05). */
+  kontrak?: { nomor: string; mulai: string; selesai: string; sebelumnya?: string; tipe: string };
   locale?: Locale;
+}
+
+/* Surat kontrak memakai badan surat sendiri: template SP berbicara tentang
+   pelanggaran, dan mencetak kontrak dengan kalimat itu menyesatkan. */
+function kontrakBody(d: Document, input: SuratHrInput, locale: Locale): void {
+  const k = input.kontrak!;
+  d.add(
+    paragraph({
+      text: k.sebelumnya
+        ? L(locale,
+          "Dengan ini perusahaan memperpanjang perjanjian kerja dengan karyawan berikut:",
+          "The company hereby extends the employment agreement with the following employee:")
+        : L(locale,
+          "Dengan ini perusahaan mengikat perjanjian kerja dengan karyawan berikut:",
+          "The company hereby enters into an employment agreement with the following employee:"),
+      size: TYPE.base,
+    }),
+  );
+  d.add(
+    keyValue({
+      labelW: 44,
+      pairs: [
+        { label: L(locale, "Nama", "Name"), value: input.namaKaryawan, bold: true },
+        { label: L(locale, "NIK", "Employee no."), value: input.nik },
+        { label: L(locale, "Jabatan / Unit", "Position / Unit"), value: `${input.jabatan} - ${input.unit}` },
+        { label: L(locale, "Tipe karyawan", "Employment type"), value: k.tipe },
+        { label: L(locale, "No. kontrak", "Contract no."), value: k.nomor, bold: true },
+        { label: L(locale, "Berlaku mulai", "Valid from"), value: longDate(k.mulai) },
+        { label: L(locale, "Berlaku sampai", "Valid until"), value: longDate(k.selesai), bold: true },
+        ...(k.sebelumnya
+          ? [{ label: L(locale, "Menggantikan kontrak", "Supersedes contract"), value: k.sebelumnya }]
+          : []),
+      ],
+    }),
+  );
+  if (input.pelanggaran !== "-" && input.pelanggaran.trim() !== "") {
+    d.add(divider());
+    d.add(paragraph({ text: input.pelanggaran, size: TYPE.base }));
+  }
+  d.add(
+    signatures([
+      { role: L(locale, "Karyawan", "Employee"), name: input.namaKaryawan, rows: 4 },
+      { role: L(locale, "Perusahaan", "Company"), name: input.namaPemberi, rows: 4 },
+    ]),
+  );
 }
 
 export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document {
@@ -195,6 +242,11 @@ export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document
       ref: `${L(locale, "No", "No")}. ${input.no}`,
     }),
   );
+
+  if (input.kontrak) {
+    kontrakBody(d, input, locale);
+    return d;
+  }
 
   d.add(
     paragraph({

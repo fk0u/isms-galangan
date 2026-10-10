@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { ID_MON as MONTH_ID } from "../../utils/monthAxis";
 import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench, User, Eye, ArrowLeftRight } from "lucide-react";
 import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
   NumInput, MoneyInput, FlowStrip,
@@ -60,7 +59,6 @@ const SLOT_HEX: Record<string, string> = {
 const PRIORITIES = ["Normal", "Tinggi", "Kritis"];
 const STATUS_FILTERS = ["Semua", "Terjadwal", "Berjalan", "Selesai", "Maintenance"];
 const UNDOCK_ITEMS = ["Lambung bersih", "Katup laut tertutup", "Anoda terpasang", "Propeller terpasang", "Sea trial siap"];
-const MONTH_NAMES = MONTH_ID;
 
 function newBookingForm(today: string = witaTodayISO()) {
   return {
@@ -72,6 +70,24 @@ function newBookingForm(today: string = witaTodayISO()) {
 function dockLengthM(capacity: unknown): number | null {
   const m = /(\d+(?:\.\d+)?)\s*m/i.exec(String(capacity ?? ""));
   return m ? Number(m[1]) : null;
+}
+
+/* Batas dock (F3-F-01): field eksplisit lebih dulu, lalu angka pada teks
+   kapasitas lama. Lebar & sarat hanya dari field eksplisit. */
+function dockMaxLoa(dock: StoreItem | undefined): number | null {
+  if (!dock) return null;
+  const explicit = Number(dock.maxLoa);
+  return Number.isFinite(explicit) && explicit > 0 ? explicit : dockLengthM(dock.capacity);
+}
+/** Dimensi kapal yang melebihi batas dock, mis. "lebar 13 m > 12 m". */
+function dockOverLimits(dock: StoreItem | undefined, vesselName: string, vessels: StoreItem[]): string[] {
+  const v = vessels.find((x) => x.name === vesselName);
+  if (!dock || !v) return [];
+  return ([["maxBeam", "beam"], ["maxDraft", "draft"]] as const).flatMap(([limit, dim]) => {
+    const max = Number(dock[limit]);
+    const val = Number(v[dim]);
+    return Number.isFinite(max) && max > 0 && Number.isFinite(val) && val > max ? [`${dim} ${val} m > ${max} m`] : [];
+  });
 }
 
 function vesselLoa(vesselName: string, vessels: StoreItem[]): number | null {
@@ -201,9 +217,10 @@ export default function Drydock() {
   const [picDraft, setPicDraft] = useState("");
   const [areaModal, setAreaModal] = useState<StoreItem | null>(null);
   const [areaDraft, setAreaDraft] = useState("");
+  const [limitDraft, setLimitDraft] = useState({ maxLoa: "", maxBeam: "", maxDraft: "" });
   const [slotAreaDraft, setSlotAreaDraft] = useState("");
   const [showMaint, setShowMaint] = useState(false);
-  const [maintForm, setMaintForm] = useState({ dockId: "DD-1", from: "1", to: "7", reason: "" });
+  const [maintForm, setMaintForm] = useState({ dockId: "DD-1", startDate: "", endDate: "", reason: "" });
 
   /* No. DS SB max+1: scan dsRef DS-type saja, parse leading (\d+)/. */
   const nextDsSeq = (): number =>
@@ -242,7 +259,10 @@ export default function Drydock() {
   const saveArea = async () => {
     if (!areaModal) return;
     try {
-      await update("drydocks", areaModal.id, { area: areaDraft.trim() });
+      await update("drydocks", areaModal.id, {
+        area: areaDraft.trim(),
+        maxLoa: Number(limitDraft.maxLoa) || 0, maxBeam: Number(limitDraft.maxBeam) || 0, maxDraft: Number(limitDraft.maxDraft) || 0,
+      });
       log("menetapkan area dock", `${areaModal.name} · ${areaDraft.trim() || "-"}`, "Drydock");
       toast(S.tAreaSaved.replace("{a}", areaModal.name));
       setAreaModal(null);
@@ -452,10 +472,25 @@ export default function Drydock() {
     .filter((x): x is { dock: StoreItem; start: number } => x.start !== null)
     .sort((a, b) => a.start - b.start)[0];
 
+  const waiting = data.projects
+    .filter((p) => !["Selesai", "Batal"].includes(String(p.status)) && !dockSlots.some((sl) => sl.project === p.id))
+    .map((p) => {
+      const loa = vesselLoa(p.vessel, data.vessels);
+      /* Dock cocok = panjang cukup dan lebar/sarat tidak melebihi batas. */
+      const eta = drydocks
+        .filter((d) => { const cap = dockMaxLoa(d); return (cap === null || loa === null || loa <= cap) && dockOverLimits(d, p.vessel, data.vessels).length === 0; })
+        .map((d) => ({ dock: d, start: firstFree(d.id) }))
+        .filter((x): x is { dock: StoreItem; start: number } => x.start !== null)
+        .sort((x, y) => x.start - y.start)[0];
+      return { project: p, since: (createdAtOf(p) ?? "").slice(0, 10), eta };
+    })
+    .sort((x, y) => (x.since || "9999").localeCompare(y.since || "9999"));
+
   const selDock = drydocks.find((d) => d.id === bookForm.dockId);
   const selProj = data.projects.find((p) => p.id === bookForm.project);
   const selLoa = selProj ? vesselLoa(selProj.vessel, data.vessels) : null;
-  const selCap = selDock ? dockLengthM(selDock.capacity) : null;
+  const selCap = dockMaxLoa(selDock);
+  const selOver = selProj ? dockOverLimits(selDock, selProj.vessel, data.vessels) : [];
 
   const isActiveSlot = (s: StoreItem): boolean => {
     const st = slotStatus(s, data.projects, todayWita);
@@ -549,8 +584,14 @@ export default function Drydock() {
       toast(msg, "info");
       return;
     }
-    const cap = selDock ? dockLengthM(selDock.capacity) : null;
+    const cap = dockMaxLoa(selDock);
     const loa = vesselLoa(proj.vessel, data.vessels);
+    if (selOver.length > 0) {
+      const msg = S.tDimReject.replace("{a}", proj.vessel).replace("{b}", selOver.join(", ")).replace("{c}", selDock?.name ?? "");
+      setBookError(msg);
+      toast(msg, "info");
+      return;
+    }
     if (cap !== null && loa !== null && loa > cap) {
       const msg = S.tLoaReject.replace("{a}", proj.vessel).replace("{b}", String(loa)).replace("{c}", selDock?.name ?? "").replace("{d}", String(cap));
       setBookError(msg);
@@ -597,15 +638,12 @@ export default function Drydock() {
   };
 
   const saveMaintBlock = async () => {
-    const from = Number(maintForm.from);
-    const to = Number(maintForm.to);
-    if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from || from < 0 || to > DAYS) {
-      toast(S.rangeInvalid.replace("{n}", String(DAYS)), "info");
-      return;
-    }
+    const range = bookingDateOffsets(maintForm.startDate, maintForm.endDate, todayWita);
+    if (!range) { toast(S.bookingDatesInvalid, "info"); return; }
+    const { from, to } = range;
     if (!maintForm.reason.trim()) { toast(S.tMaintReason, "info"); return; }
     if (overlap(maintForm.dockId, from, to)) {
-      const msg = S.tOverlapReject.replace("{a}", String(from)).replace("{b}", String(to)).replace("{c}", drydocks.find((d) => d.id === maintForm.dockId)?.name ?? maintForm.dockId);
+      const msg = S.tOverlapReject.replace("{a}", fmtTanggal(maintForm.startDate)).replace("{b}", fmtTanggal(maintForm.endDate)).replace("{c}", drydocks.find((d) => d.id === maintForm.dockId)?.name ?? maintForm.dockId);
       toast(msg, "info");
       return;
     }
@@ -613,11 +651,12 @@ export default function Drydock() {
     try {
       const created = await add("dockSlots", {
         dockId: maintForm.dockId, project: "MAINT", vessel: `Maintenance - ${maintForm.reason.trim()}`,
-        from, to, priority: "Normal", reason: maintForm.reason.trim(), color: "bg-steel-400",
-      }, { action: "memblokir maintenance", target: `${maintForm.dockId} · ${fmtRentang(dayToISO(from, todayWita), dayToISO(to, todayWita))}`, module: "Drydock" });
+        from, to, startDate: maintForm.startDate, endDate: maintForm.endDate,
+        priority: "Normal", reason: maintForm.reason.trim(), color: "bg-steel-400",
+      }, { action: "menjadwalkan maintenance", target: `${maintForm.dockId} · ${fmtRentang(maintForm.startDate, maintForm.endDate)}`, module: "Drydock" });
       toast(S.tMaintSaved.replace("{a}", created.id).replace("{b}", dock?.name ?? maintForm.dockId));
       setShowMaint(false);
-      setMaintForm({ dockId: "DD-1", from: "1", to: "7", reason: "" });
+      setMaintForm({ dockId: "DD-1", startDate: "", endDate: "", reason: "" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -662,7 +701,7 @@ export default function Drydock() {
     const dock = drydocks.find((d) => d.id === moveForm.dockId);
     const proj = data.projects.find((p) => p.id === moveTarget.project);
     const loa = proj ? vesselLoa(proj.vessel, data.vessels) : null;
-    const cap = dock ? dockLengthM(dock.capacity) : null;
+    const cap = dockMaxLoa(dock);
     if (cap !== null && loa !== null && loa > cap) {
       setMoveError(S.tMoveLoa.replace("{a}", String(moveTarget.vessel)).replace("{b}", String(loa)).replace("{c}", dock?.name ?? "").replace("{d}", String(cap)));
       return;
@@ -990,7 +1029,13 @@ export default function Drydock() {
                       <span className="inline-flex items-center gap-1 text-xs text-steel-500"><User className="h-3 w-3" /> {S.picLabel.replace("{a}", String(dock.pic ?? S.picFallback))}</span>
                       <button className="btn-secondary text-xs" onClick={() => { setPicModal(dock); setPicDraft(String(dock.pic ?? "")); }}>{S.btnPic}</button>
                       <Badge tone="teal">{String(dock.area ?? "").trim() || S.noArea}</Badge>
-                      <button className="btn-secondary text-xs" onClick={() => { setAreaModal(dock); setAreaDraft(String(dock.area ?? "")); }}>{S.areaLabel}</button>
+                      <button className="btn-secondary text-xs" onClick={() => {
+                        setAreaModal(dock); setAreaDraft(String(dock.area ?? ""));
+                        setLimitDraft({ maxLoa: String(dock.maxLoa || ""), maxBeam: String(dock.maxBeam || ""), maxDraft: String(dock.maxDraft || "") });
+                      }}>{S.btnDockSetting}</button>
+                      {(Number(dock.maxLoa) > 0 || Number(dock.maxBeam) > 0 || Number(dock.maxDraft) > 0) && (
+                        <span className="text-xs text-steel-500">{S.dockLimits.replace("{a}", String(dock.maxLoa || "-")).replace("{b}", String(dock.maxBeam || "-")).replace("{c}", String(dock.maxDraft || "-"))}</span>
+                      )}
                     </div>
                     <Badge tone={dock.status === "Terpakai" ? "blue" : "green"}>{dock.status}</Badge>
                   </div>
@@ -1043,37 +1088,37 @@ export default function Drydock() {
 
       </div>
 
+      {/* Waiting list (DRY-03): proyek aktif yang belum punya slot dock,
+          urut tanggal pengajuan, dengan perkiraan dock cocok yang kosong. */}
       <Card className="mt-5">
         <CardHeader
-          title={S.annualTitle}
-          subtitle={S.annualSub}
+          title={S.waitTitle.replace("{n}", String(waiting.length))}
+          subtitle={S.waitSub}
           action={<button className="btn-secondary text-xs" onClick={exportAnnualPlan}>{S.exportExcelBtn}</button>}
         />
         <div className="overflow-x-auto p-4 pt-0">
-          <div className="grid min-w-[1100px] grid-cols-12 gap-2">
-            {Array.from({ length: 12 }, (_, m) => {
-              const base = new Date(`${todayWita}T00:00:00.000Z`);
-              const dt = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + m, 1));
-              const key = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
-              const inMonth = dockSlots.filter((s) => {
-                const dates = slotDateRangeForView(s);
-                return dates !== null && (dates.startDate.slice(0, 7) === key || dates.endDate.slice(0, 7) === key);
-              });
-              return (
-                <div key={key} className="rounded-lg border border-steel-100 bg-surface p-2">
-                  <p className="text-xs font-semibold text-navy-900">{MONTH_NAMES[dt.getUTCMonth()]} {dt.getUTCFullYear()}</p>
-                  <div className="mt-1.5 space-y-1">
-                    {inMonth.map((s) => (
-                      <button key={s.id} className="block w-full truncate rounded bg-white px-1.5 py-1 text-left text-[11px] text-steel-600 hover:text-navy-900" title={`${s.vessel} · ${formatSlotDateRange(s)}`} onClick={() => openSlot(s)}>
-                        {s.vessel}
-                      </button>
-                    ))}
-                    {inMonth.length === 0 && <p className="text-[11px] text-steel-400">{S.monthEmpty}</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {waiting.length === 0 ? <p className="text-sm text-steel-400">{S.waitEmpty}</p> : (
+            <table className="w-full text-sm">
+              <thead><tr><th className="th">#</th><th className="th">{S.waitColProject}</th><th className="th">{S.waitColVessel}</th><th className="th">{S.waitColSince}</th><th className="th">{S.waitColEta}</th><th className="th" /></tr></thead>
+              <tbody className="divide-y divide-steel-100">
+                {waiting.map((w, i) => (
+                  <tr key={w.project.id}>
+                    <td className="td tabular-nums">{i + 1}</td>
+                    <td className="td font-mono text-xs">{w.project.id}</td>
+                    <td className="td font-medium text-navy-900">{w.project.vessel}</td>
+                    <td className="td">{w.since ? fmtTanggal(w.since) : "-"}</td>
+                    <td className="td">{w.eta ? `${w.eta.dock.name} · ${fmtTanggal(dayToISO(w.eta.start, todayWita))}` : S.waitNoFit}</td>
+                    <td className="td text-right">
+                      <button className="btn-secondary text-xs" onClick={() => {
+                        setBookForm({ ...newBookingForm(), project: String(w.project.id), dockId: String(w.eta?.dock.id ?? "DD-1") });
+                        setBookError(null); setShowBook(true);
+                      }}>{S.waitSchedule}</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 
@@ -1236,6 +1281,7 @@ export default function Drydock() {
             {S.capInfo.replace("{a}", selDock?.capacity ?? "-")}
             {selProj ? (selLoa !== null ? S.loaInfo.replace("{a}", selProj.vessel).replace("{b}", String(selLoa)) : S.loaMissing.replace("{a}", selProj.vessel)) : ""}
             {selCap !== null && selLoa !== null ? (selLoa > selCap ? S.overCap : S.fitsCap) : ""}
+            {selOver.length > 0 ? ` · ${selOver.join(", ")}` : ""}
           </p>
           {bookError && (
             <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{bookError}</p>
@@ -1253,10 +1299,10 @@ export default function Drydock() {
                 {drydocks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </Field>
-            <Field label={S.lblReason}><input className="input" value={maintForm.reason} onChange={(e) => setMaintForm({ ...maintForm, reason: e.target.value })} placeholder={S.phReason} /></Field>
-            <Field label={S.lblFromDay}><NumInput min={0} max={90} className="input" value={maintForm.from} onChange={(e) => setMaintForm({ ...maintForm, from: e.target.value })} /></Field>
-            <Field label={S.lblToDay}><NumInput min={1} max={90} className="input" value={maintForm.to} onChange={(e) => setMaintForm({ ...maintForm, to: e.target.value })} /></Field>
+            <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={maintForm.startDate} onChange={(startDate) => setMaintForm((f) => ({ ...f, startDate }))} /></Field>
+            <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={maintForm.endDate} onChange={(endDate) => setMaintForm((f) => ({ ...f, endDate }))} /></Field>
           </FormGrid>
+          <Field label={S.lblReason}><textarea className="input" rows={2} value={maintForm.reason} onChange={(e) => setMaintForm({ ...maintForm, reason: e.target.value })} placeholder={S.phReason} /></Field>
         </div>
       </Modal>
 
@@ -1274,6 +1320,13 @@ export default function Drydock() {
         <Field label={S.areaLabel}>
           <input className="input" value={areaDraft} onChange={(e) => setAreaDraft(e.target.value)} placeholder={S.areaPh} />
         </Field>
+        <p className="mb-1 mt-3 text-xs font-semibold text-navy-900">{S.limitTitle}</p>
+        <FormGrid>
+          <Field label={S.limitLoa}><NumInput min={0} className="input" value={limitDraft.maxLoa} onChange={(e) => setLimitDraft({ ...limitDraft, maxLoa: e.target.value })} /></Field>
+          <Field label={S.limitBeam}><NumInput min={0} className="input" value={limitDraft.maxBeam} onChange={(e) => setLimitDraft({ ...limitDraft, maxBeam: e.target.value })} /></Field>
+          <Field label={S.limitDraft}><NumInput min={0} className="input" value={limitDraft.maxDraft} onChange={(e) => setLimitDraft({ ...limitDraft, maxDraft: e.target.value })} /></Field>
+        </FormGrid>
+        <p className="mt-1 text-xs text-steel-400">{S.limitHint}</p>
       </Modal>
 
       <ConfirmModal open={bastOffer !== null} title={`Buat BAST draft untuk slot ${bastOffer?.id ?? ""}?`}

@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (708 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (710 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -6104,6 +6104,48 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "note": "Preventif triwulan Q4"
         }
       ]
+    }
+  },
+  {
+    "table": "letters",
+    "id": "SRT-20260105-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "nama": "Budi Santoso",
+      "jenis": "Kontrak Baru",
+      "tanggal": "2026-01-05",
+      "isi": "",
+      "contractNo": "PKWT/2026/003",
+      "contractStart": "2026-01-05",
+      "contractEnd": "2026-07-04",
+      "supersedes": "",
+      "prevContractNo": "",
+      "fileUrl": "",
+      "fileName": "",
+      "createdBy": "Anda",
+      "createdAt": "2026-01-05 09:00"
+    }
+  },
+  {
+    "table": "letters",
+    "id": "SRT-20260701-001",
+    "branch": "",
+    "data": {
+      "employeeId": "EMP-003",
+      "nama": "Budi Santoso",
+      "jenis": "Perpanjang Kontrak",
+      "tanggal": "2026-07-01",
+      "isi": "",
+      "contractNo": "PKWT/2026/003-P1",
+      "contractStart": "2026-07-05",
+      "contractEnd": "2027-01-04",
+      "supersedes": "SRT-20260105-001",
+      "prevContractNo": "PKWT/2026/003",
+      "fileUrl": "",
+      "fileName": "",
+      "createdBy": "Anda",
+      "createdAt": "2026-07-01 09:00"
     }
   },
   {

@@ -26,6 +26,7 @@ import {
 import { TimeInput24 } from "../../components/TimeInput24";
 import type { SortState } from "../../components/ui";
 import { useStore } from "../../data/store";
+import { n_emp } from "../../i18n/n_emp";
 import type { StoreItem } from "../../data/store";
 import { DocumentPreviewCell, DocumentPreviewModal, DocumentPreviewPanel } from "../../components/DocumentPreview";
 import { apiFetch, isBackendConfigured } from "../../services/http";
@@ -64,7 +65,14 @@ function AkunLogin({ employeeId }: { employeeId: string }) {
 interface EmpCert {
   name: string;
   expires: string;
+  number?: string;
+  issuer?: string;
+  issued?: string;
+  fileUrl?: string;
 }
+
+interface SkillLevel { pct: number; at: string; by: string }
+const CERT_KOSONG = { name: "", number: "", issuer: "", issued: "", expires: "", fileUrl: "" };
 
 function addYearsISO(iso: string, years = 2): string {
   const m = String(iso).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/);
@@ -100,7 +108,10 @@ function normCerts(e: StoreItem): EmpCert[] {
     return raw.map((c) =>
       typeof c === "string"
         ? { name: c, expires: fallback }
-        : { name: String(c.name ?? "Sertifikat"), expires: String(c.expires ?? fallback) },
+        : {
+          name: String(c.name ?? "Sertifikat"), expires: String(c.expires ?? fallback),
+          number: String(c.number ?? ""), issuer: String(c.issuer ?? ""), issued: String(c.issued ?? ""), fileUrl: String(c.fileUrl ?? ""),
+        },
     );
   }
   if (typeof raw === "string" && raw.trim()) {
@@ -122,10 +133,15 @@ export default function KaryawanDetail() {
   const { data, add, update, remove, log } = useStore();
   const { locale } = useT();
   const S = n_qc[locale];
+  const E = n_emp[locale];
+  const kontrakHistory = data.letters
+    .filter((l) => l.employeeId === id && String(l.contractNo ?? "") !== "")
+    .sort((a, b) => String(b.contractStart ?? "").localeCompare(String(a.contractStart ?? "")));
   const [tab, setTab] = useState("Absensi");
   const [skillInput, setSkillInput] = useState("");
   const [showCert, setShowCert] = useState(false);
-  const [certForm, setCertForm] = useState({ name: "", expires: todayISO() });
+  const [certForm, setCertForm] = useState({ ...CERT_KOSONG, expires: todayISO() });
+  const [skillForm, setSkillForm] = useState({ pct: 50, at: todayISO(), by: "" });
   const [showDoc, setShowDoc] = useState(false);
   const [docForm, setDocForm] = useState({ title: "", type: "Kontrak", status: "Berlaku", fileUrl: "" });
   const [docPreview, setDocPreview] = useState<StoreItem | null>(null);
@@ -191,6 +207,8 @@ export default function KaryawanDetail() {
 
   const certs = normCerts(emp);
   const skills = getSkills(emp);
+  const skillLevels = (emp.skillLevels && typeof emp.skillLevels === "object" ? emp.skillLevels : {}) as Record<string, SkillLevel>;
+  const allSkills = [...new Set(data.employees.flatMap((e) => getSkills(e)))].sort();
 
   const saveSkill = async () => {
     const extra = skillInput.split(",").map((s) => s.trim()).filter(Boolean);
@@ -204,7 +222,12 @@ export default function KaryawanDetail() {
       if (!lower.has(s.toLowerCase())) { merged.push(s); lower.add(s.toLowerCase()); }
     }
     try {
-    await update("employees", emp.id, { skills: merged });
+    /* Level disimpan terpisah dari `skills` (array nama) supaya pembaca lama
+       - matriks SDM, rekomendasi tim - tidak perlu berubah. */
+    const level: SkillLevel = { pct: Math.max(0, Math.min(100, Math.round(skillForm.pct))), at: skillForm.at, by: skillForm.by.trim() };
+    const levels = { ...skillLevels };
+    for (const s of extra) levels[merged.find((m) => m.toLowerCase() === s.toLowerCase()) ?? s] = level;
+    await update("employees", emp.id, { skills: merged, skillLevels: levels });
     log("memperbarui skill karyawan", emp.id, "SDM");
     setSkillInput("");
     toast(S.tSkillOk);
@@ -232,11 +255,11 @@ export default function KaryawanDetail() {
       toast(S.tCertWajib, "info");
       return;
     }
-    const next = [...certs, { name: certForm.name.trim(), expires: certForm.expires }];
+    const next = [...certs, { ...certForm, name: certForm.name.trim(), number: certForm.number.trim(), issuer: certForm.issuer.trim() }];
     try {
     await update("employees", emp.id, { certs: next });
     log("menambah sertifikat karyawan", emp.id, "SDM");
-    setCertForm({ name: "", expires: todayISO() });
+    setCertForm({ ...CERT_KOSONG, expires: todayISO() });
     setShowCert(false);
     toast(S.tCertAdd);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
@@ -494,22 +517,59 @@ export default function KaryawanDetail() {
             <div className="flex justify-between"><dt className="text-steel-500">{S.fAllow}</dt><dd className="font-medium">{fmtRupiah(sumAllowances(emp.allowances))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlAkun}</dt><dd className="font-medium"><AkunLogin employeeId={String(emp.id)} /></dd></div>
           </dl>
+          {/* Riwayat kontrak dari arsip surat (F3-L-05): terbaru di atas. */}
+          <h3 className="mt-4 text-sm font-semibold text-navy-900">{E.contractHistory}</h3>
+          {kontrakHistory.length === 0 ? (
+            <p className="mt-2 text-xs text-steel-500">{E.contractNone}</p>
+          ) : (
+            <ul className="mt-2 space-y-2 text-xs">
+              {kontrakHistory.map((k) => (
+                <li key={String(k.id)} className="rounded-lg bg-surface p-2">
+                  <p className="font-semibold text-navy-900">{String(k.contractNo ?? k.id)} · {E.jenis[String(k.jenis) as keyof typeof E.jenis] ?? String(k.jenis)}</p>
+                  <p className="text-steel-500">{fmtTanggal(String(k.contractStart ?? ""))} – {fmtTanggal(String(k.contractEnd ?? ""))}</p>
+                  {String(k.prevContractNo ?? "") !== "" && <p className="text-steel-400">{E.contractReplaces.replace("{n}", String(k.prevContractNo))}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card className="p-5">
           <h3 className="text-sm font-semibold text-navy-900">{S.cardSkill}</h3>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {skills.map((s) => (
-              <span key={s} className="inline-flex items-center gap-1 rounded-full bg-navy-50 border border-navy-100 px-2.5 py-1 text-xs font-medium text-navy-800">
-                {s}
-                <button className="text-steel-400 hover:text-rose-600" aria-label={S.ariaHapusSkill.replace("{n}", s)} onClick={() => delSkill(s)}>×</button>
-              </span>
-            ))}
+          <div className="mt-3 space-y-2">
+            {skills.map((s) => {
+              const lv = skillLevels[s];
+              return (
+                <div key={s} className="text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-navy-800">{s}</span>
+                    <span className="flex items-center gap-2 tabular-nums text-steel-500">
+                      {lv ? `${lv.pct}%` : "-"}
+                      <button className="text-steel-400 hover:text-rose-600" aria-label={S.ariaHapusSkill.replace("{n}", s)} onClick={() => delSkill(s)}>×</button>
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-steel-100">
+                    <div className="h-full rounded-full bg-navy-600" style={{ width: `${lv?.pct ?? 0}%` }} />
+                  </div>
+                  {lv && (lv.at || lv.by) && <p className="mt-0.5 text-[11px] text-steel-400">{[lv.at ? fmtTanggal(lv.at) : "", lv.by].filter(Boolean).join(" · ")}</p>}
+                </div>
+              );
+            })}
             {skills.length === 0 && <span className="text-xs text-steel-400">{S.emptySkill}</span>}
           </div>
-          <div className="mt-3 flex gap-2">
-            <input className="input flex-1" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} placeholder={S.phSkill} />
-            <AsyncButton className="btn-secondary whitespace-nowrap text-xs" onAction={saveSkill}>{S.btnTambah}</AsyncButton>
+          <div className="mt-3 space-y-2 border-t border-steel-100 pt-3">
+            <input className="input" list="skill-list" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} placeholder={S.phSkill} />
+            <datalist id="skill-list">{allSkills.map((s) => <option key={s} value={s} />)}</datalist>
+            <label className="flex items-center gap-2 text-xs text-steel-500">
+              {E.skillLevel}
+              <input type="range" min={0} max={100} step={5} className="flex-1" value={skillForm.pct} onChange={(e) => setSkillForm({ ...skillForm, pct: Number(e.target.value) })} aria-label={E.skillLevel} />
+              <input type="number" min={0} max={100} className="input w-16 px-2 py-1 text-xs" value={skillForm.pct} onChange={(e) => setSkillForm({ ...skillForm, pct: Number(e.target.value) || 0 })} aria-label={E.skillLevel} />
+            </label>
+            <div className="flex gap-2">
+              <input type="date" className="input flex-1" value={skillForm.at} onChange={(e) => setSkillForm({ ...skillForm, at: e.target.value })} aria-label={E.skillAt} />
+              <input className="input flex-1" value={skillForm.by} onChange={(e) => setSkillForm({ ...skillForm, by: e.target.value })} placeholder={E.skillBy} />
+            </div>
+            <AsyncButton className="btn-secondary w-full text-xs" onAction={saveSkill}>{S.btnTambah}</AsyncButton>
           </div>
         </Card>
 
@@ -525,7 +585,11 @@ export default function KaryawanDetail() {
                 <div key={c.name} className="flex items-center justify-between gap-2 rounded-lg bg-surface p-2.5 text-sm">
                   <div>
                     <p className="font-medium text-navy-900">{c.name}</p>
-                    <p className="text-xs text-steel-500">{S.berlakuHingga.replace("{n}", fmtTanggal(c.expires))}</p>
+                    <p className="text-xs text-steel-500">
+                      {[c.number, c.issuer, c.issued ? fmtTanggal(c.issued) : ""].filter(Boolean).join(" · ")}
+                      {(c.number || c.issuer || c.issued) ? " · " : ""}{S.berlakuHingga.replace("{n}", fmtTanggal(c.expires))}
+                    </p>
+                    {c.fileUrl ? <DocumentPreviewCell doc={{ title: c.name, fileUrl: c.fileUrl, fileName: c.name }} /> : null}
                   </div>
                   <div className="flex items-center gap-2">
                     {left !== null && (
@@ -776,7 +840,18 @@ export default function KaryawanDetail() {
       >
         <div className="space-y-3">
           <Field label={S.fNamaCert}><input className="input" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} placeholder={S.phNdt} /></Field>
-          <Field label={S.fBerlaku}><input type="date" className="input" value={certForm.expires} onChange={(e) => setCertForm({ ...certForm, expires: e.target.value })} /></Field>
+          <FormGrid>
+            <Field label={E.certNo}><input className="input font-mono" value={certForm.number} onChange={(e) => setCertForm({ ...certForm, number: e.target.value })} /></Field>
+            <Field label={E.certIssuer}><input className="input" value={certForm.issuer} onChange={(e) => setCertForm({ ...certForm, issuer: e.target.value })} /></Field>
+            <Field label={E.certIssued}><input type="date" className="input" value={certForm.issued} onChange={(e) => setCertForm({ ...certForm, issued: e.target.value })} /></Field>
+            <Field label={S.fBerlaku}><input type="date" className="input" value={certForm.expires} onChange={(e) => setCertForm({ ...certForm, expires: e.target.value })} /></Field>
+          </FormGrid>
+          <Field label={E.certFile}>
+            <div className="flex items-center gap-2">
+              <FileUploadButton label={E.upload} onUploaded={(url) => setCertForm((f) => ({ ...f, fileUrl: url }))} />
+              {certForm.fileUrl && <span className="text-xs text-emerald-700">{E.uploaded}</span>}
+            </div>
+          </Field>
         </div>
       </Modal>
 
