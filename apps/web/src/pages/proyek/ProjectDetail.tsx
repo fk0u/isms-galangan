@@ -2136,7 +2136,10 @@ const createWarranty = async (wbsTask?: string) => {
           {tab === "Subkon" && (
             <div className="space-y-4">
               <Card className="p-4">
-                <h3 className="mb-3 text-sm font-semibold text-navy-900">{S.detSubkonTitle.replace("{n}", String(subkonList.length))}</h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-navy-900">{S.detSubkonTitle.replace("{n}", String(subkonList.length))}</h3>
+                  <Link to="/subkontraktor" className="text-xs font-medium text-ocean-600 hover:underline">{S.detSubkonOpen}</Link>
+                </div>
                 {subkonList.length === 0 ? (
                   <p className="text-xs text-steel-400">{S.detNoSubkon}</p>
                 ) : (
@@ -2162,6 +2165,7 @@ const createWarranty = async (wbsTask?: string) => {
                                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                                     <span className="font-mono text-xs font-semibold text-navy-900">{w.id}</span>
                                     <span className="text-xs text-steel-600">{String(w.scope ?? "")}</span>
+                                    {Number(w.value || 0) > 0 && <span className="text-xs font-semibold tabular-nums text-navy-900">{fmtRupiah(Number(w.value))}</span>}
                                     <Badge tone={w.status === "Selesai" ? "green" : "blue"}>{w.progress}%</Badge>
                                   </div>
                                   {woTerms.length > 0 && (

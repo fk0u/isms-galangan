@@ -10,7 +10,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F0-04 | README & quickstart | P1 | F0-setup.md | | selesai | README quickstart ditulis ulang tanpa password |
 | F1-01 | Verifikasi revisi klien item per item | P0 | F1-verifikasi.md | | ditunda | diganti verifikasi per kartu (sprint plan) |
 | F1-02 | ESLint minimal | P1 | F1-verifikasi.md | agent | selesai | PR #5 |
-| F1-03 | Vitest untuk logika murni | P1 | F1-verifikasi.md | | todo | |
+| F1-03 | Vitest untuk logika murni | P1 | F1-verifikasi.md | | selesai | vitest di web & api, masuk check |
 | F1-04 | CI GitHub Actions | P0 | F1-verifikasi.md | | selesai | CI dibuat saat inisialisasi repo |
 | F1-05 | Baseline security probe | P0 | F1-verifikasi.md | agent | selesai | PR #3 |
 | F2-01 | Akun seed & demo login | P0 | F2-keamanan.md | agent | selesai | PR #6 |
@@ -39,7 +39,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-B-11 | Perubahan & Risiko: hapus tabel risiko | P1 | F3-B-proyek.md | | selesai | PR batch P1 (10 Okt) |
 | F3-B-12 | Terkait: Trial & Garansi | P1 | F3-B-proyek.md | | selesai | label + cetak PDF kartu garansi (kind garansi) |
 | F3-B-13 | Tab Tim terhubung SDM | P1 | F3-B-proyek.md | | selesai | PR batch P1 (10 Okt) |
-| F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | todo | |
+| F3-B-14 | Verifikasi tab Subkon | P2 | F3-B-proyek.md | | selesai | terverifikasi; ditambah nilai WO + tautan ke modul Subkon |
 | F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
 | F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | selesai | PR #22 merged ke main via squash commit `33816fc`; re-review PENGUJI dan semua checks lulus |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
@@ -68,7 +68,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; PR #33 tetap terbuka/tanpa merge; Cubic P2 ekspor umur pakai dan P3 comparator bersama ditangani; P3 notifikasi kini reset pencarian/filter lalu mengatur paginator setelah hasil filter baru; probe regresi lulus; `npm run check` lulus (DB sementara bermigrasi + seed sintetis); UI demo diperiksa |
 | F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | Claude | review | feat/F3-H-equipment — tab Daftar Equipment + Utilisasi; kartu Total · Sedang terpakai · Dalam maintenance |
 | F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | Claude | review | feat/F3-H-equipment — panel Delegasi (peminjaman → bookings, maintenance → maintenances), status turunan, server 409 bila bentrok (`probe:equipment-loan` 7/7) |
-| F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | Claude | sebagian | feat/F3-I-subkon — tab Timesheet disembunyikan; hapus evaluasi kinerja & StatusChips belum |
+| F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | Claude | selesai | evaluasi kinerja & rating dihapus dari UI, filter = StatusChips status |
 | F3-I-02 | Work Order rinci | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — tabel WO (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status), Nilai SPK & WBS di form |
 | F3-I-03 | Update progres WO dengan foto & histori | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — modal progres + foto + riwayat (progressLog), tampil di feed Monitoring |
 | F3-I-04 | SPK terkunci kecuali procurement | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — server menolak ubah field SPK selain procurement (`probe:wo-spk` 4/4) |
@@ -85,12 +85,12 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — tipe, pendidikan, jenis kelamin, status kawin, tanggungan → PTKP otomatis (utils/ptkp.ts), kontrak, foto/KTP/ijazah; `probe:hr-rules` |
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
-| F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | sebagian | kop surat dari Pengaturan (upload logo) belum; kop masih konstanta server |
+| F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | selesai | kop dari setting COMPANY_KOP (JSON); logo gambar belum |
 | F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | sebagian | QR + NIK + PIN, endpoint publik ber-rate-limit, ADR-0017; lampiran dari halaman publik sengaja tidak ada |
 | F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — rekap bulanan karyawan × tanggal (filter bulan & tahun), tanpa shift, lembur otomatis dengan batas harian/mingguan (utils/overtime.ts) |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | selesai | ingest per alat (API key) + impor CSV; adaptor merk menunggu Q14 |
 | F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | agent | review | Branch feat/F3-M-01-detail-data-kapal; basis origin/main e984be5; PR #38; root check + build lulus; UI diverifikasi |
-| F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | sebagian | tab & sheet dihapus dari UI; date picker bulan + kode mati menunggu F6-02 |
+| F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | sebagian | tab, sheet, dan kode mati dihapus; filter rentang bulan belum |
 | F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | agent | review | branch feat/F3-M-03-dashboard-attention-categories; `npm run check` hijau; review independen bersih |
 | F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
 | F4-01 | Concurrency atomik | P0 | F4-integritas.md | Claude | review | feat/F4-F5-production-readiness — PATCH bersyarat (updated_at + data), 409 STALE dengan data terbaru (`probe:concurrency` 3/3); baseUpdatedAt wajib per koleksi belum |
@@ -107,6 +107,6 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F5-05 | Audit ulang | P0 | F5-demo.md | Claude | review | `docs/log/audit-ulang.md` — security probe 0 VULN K/T; T20/T21/T26/T27 ditutup; Lighthouse belum |
 | F6-01 | Deteksi kode mati dengan knip | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
 | F6-02 | Hapus file, export, dan dependensi tak terpakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
-| F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
-| F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | sebagian | probe simetri ID/EN masuk check; penghapusan kunci mati belum |
+| F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | selesai | --max-warnings 74 (web) / 29 (api) |
 | F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |

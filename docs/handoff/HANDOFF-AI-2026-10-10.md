@@ -6,11 +6,42 @@ Repo ini publik: jangan menulis kredensial, alamat server, atau data nyata di si
 
 ## 1. Posisi sekarang
 
-- `main` = PR #55 (semua P0 kecuali F3-L-05 sudah selesai dan ter-deploy).
-- Branch `feat/p1-batch-sdm-proyek-drydock-inventori` (3 commit, **belum di-merge, belum di-deploy**) berisi batch P1 di bawah. `npm run check` exit 0 pada commit terakhir.
-- Sumber status per task: `docs/handoff/STATUS.md` (sudah diperbarui untuk batch ini).
+- `main` = PR #56 (semua P0 + batch P1 pertama) — **sudah ter-deploy**.
+- Branch `feat/p1-batch-2` berisi batch kedua (tabel "Batch 2" di bawah). Lihat PR terkait untuk status merge/deploy terakhir.
+- Sumber status per task: `docs/handoff/STATUS.md`.
 
-### Isi branch batch P1
+### Batch 2 (branch `feat/p1-batch-2`)
+
+| Task | Status | Yang dikerjakan | File utama |
+|---|---|---|---|
+| F4-03 | selesai | SSE `GET /api/events`: setiap tulis DB memancarkan nama koleksi (di `db.ts` `exec`), disaring per izin baca; klien `useRealtime` menarik ulang koleksi terkait | `services/api/src/db.ts`, `routes/events.ts`, `apps/web/src/data/useRealtime.ts`, probe `events-probe.ts` |
+| F4-06 | sebagian | Semua halaman `React.lazy` + muat ulang sekali bila chunk basi; chunk awal ±1 MB (dari 3,1 MB) | `apps/web/src/main.tsx` |
+| F4-07 | sebagian | IP watermark dari `/api/auth/me` (ipapi.co dihapus); migrasi gagal keras bila checksum berubah (`MIGRATE_ALLOW_DRIFT=true` untuk darurat); `/api/admin/seed` 404 di produksi | `security/watermark.tsx`, `migrate.ts`, `routes/admin.ts` |
+| F4-05 | sebagian | `GET /files/*`: berkas yang dipakai sebagai `ktpUrl`/`ijazahUrl` karyawan hanya untuk peran dengan izin tulis `employees` | `routes/files.ts`, probe `files-privacy-probe.ts` |
+| F3-C-04 | sebagian | PDF `kind: "boq"`; surat Disetujui otomatis membuat `documents` (`DOC-<boqDocId>`, type BoQ) | `pdf/documents/boq.ts`, `pdf/registry.ts`, `boqDocs.ts`, `BoqDocsSection.tsx` |
+| F3-B-12 | selesai | PDF `kind: "garansi"` + tombol "Cetak kartu" | `pdf/documents/boq.ts`, `ProjectDetail.tsx` |
+| F3-L-06 | sebagian | Cuti via QR: `/f/cuti/:token` (publik), NIK + PIN 6 angka (hash bcrypt), rate limit; HR: modal QR + ganti token, tombol "Atur PIN cuti" | `routes/publicLeave.ts`, `pages/publik/CutiQr.tsx`, `HR.tsx`, `KaryawanDetail.tsx`, ADR-0017, migrasi 016 |
+| F3-L-08 | selesai | `POST /api/attendance/ingest` (API key per alat), `/api/attendance/import` (CSV), `/api/attendance/devices` | `routes/attendanceIngest.ts`, `pages/absensi/DeviceImport.tsx` |
+| F3-E-02 | sebagian | `/api/projects` (list & by id) disaring per tim untuk peran `proyek` dan `mekanik` | `services/api/src/teamScope.ts`, probe `team-scope-probe.ts` |
+| F3-L-05 | selesai | Kop PDF dari setting `COMPANY_KOP` (JSON di Pengaturan); logo gambar belum | `pdf/documents/shared.ts`, `routes/pdf.ts` |
+| F5-03 | selesai | 12 karyawan sintetis baru (total 20), TRIAL-002, `seedWarranties`, tahap Trial/Handover diisi saat seed | `data/index.ts`, `data/seeds.ts`, `services/api/src/seed.ts` |
+| F0-04 | selesai | README quickstart | `README.md` |
+| F1-03 | selesai | Vitest di kedua paket (`npm test`, masuk `check`) | `src/utils/__tests__/`, `services/api/src/__tests__/` |
+| F6-03 | sebagian | Probe simetri ID/EN semua `n_*.ts` (masuk `check`); kunci mati belum dihapus | `apps/web/scripts/i18n-probe.ts` |
+| F6-04 | selesai | `eslint --max-warnings` = 74 (web) / 29 (api) | `package.json` |
+
+**Jebakan baru dari batch 2**
+- Event realtime dipancarkan sebelum transaksi commit; ada jeda 400 ms di server + 500 ms di klien untuk menutupinya. Bila ada laporan "data tidak ikut berubah", periksa ini dulu.
+- `teamScope` hanya menyaring koleksi `projects`. WBS/BoQ/WO proyek di luar tim masih bisa dibaca lewat endpoint masing-masing. Peran `subkon` dan `viewer` belum dibatasi karena akunnya belum tertaut ke karyawan/klien.
+- Bila proyek hasil saringan kosong, store klien menolak tarikan kosong dan tetap menampilkan data seed lokal (bukan kebocoran server, tapi membingungkan saat demo).
+- Kolom tabel `access_secrets` bernama `access_key` karena `key` kata tercadang di MySQL.
+- Migrasi yang sudah diterapkan **tidak boleh diedit** lagi (S-07): API menolak start. Tambah migrasi baru.
+- Halaman publik cuti tidak menerima lampiran (keputusan ADR-0017).
+
+**Temuan yang perlu keputusan pemilik (tidak saya ubah)**
+- Repo publik ini memuat identitas yang tampak nyata, bertentangan dengan AGENTS.md butir 9: kop perusahaan + alamat + telepon + nama direktur di `services/api/src/pdf/documents/shared.ts` dan `apps/web/src/utils/sb.ts`, nama perusahaan klien di `apps/web/src/data/index.ts` (komentar "RawData CONTOH INVOICE"), dan di model `scripts/pdf-probe.ts`. Menggantinya menyentuh probe kesetaraan KOP dan mirror seed; riwayat git tetap menyimpannya.
+
+### Batch 1 (sudah di `main`, PR #56)
 
 | Task | Status | Yang dikerjakan | File utama |
 |---|---|---|---|
