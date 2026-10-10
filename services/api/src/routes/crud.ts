@@ -11,6 +11,8 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
+import { loanOverlapError } from "../bookingGuard.js";
+import { checklistHook } from "../scoring.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -95,6 +97,8 @@ export const PREFIX: Record<string, string> = {
   assets: "AST",
   boqDocs: "BQD",
   materialRequests: "MR",
+  checklistTemplates: "CLT",
+  checklistResponses: "CLR",
 };
 
 // Every envelope table from migrations/001_init.sql except users
@@ -109,6 +113,7 @@ export const COLLECTIONS: string[] = [
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
   "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
+  "checklistTemplates", "checklistResponses",
 ];
 
 // Tulis settings/coa dibatasi di registerCrud (requireSettingsWrite).
@@ -459,6 +464,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    const loanCreate = await loanOverlapError(table, null, rowData);
+    if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
+    // F3-K-02: validasi template & skor respons dihitung server.
+    const clCreate = await checklistHook(table, rowData);
+    if ("error" in clCreate) return reply.status(422).send(fail(clCreate.error, "UNPROCESSABLE"));
+    rowData = clCreate.data;
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const drydockDateValidation = table === "dockSlots" ? drydockDateError(rowData) : null;
@@ -561,6 +572,11 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
     const spkLock = spkLockError(table, oldData, merged, req.user?.role);
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
+    const loanPatch = await loanOverlapError(table, id, merged);
+    if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
+    const clPatch = await checklistHook(table, merged as Record<string, unknown>);
+    if ("error" in clPatch) return reply.status(422).send(fail(clPatch.error, "UNPROCESSABLE"));
+    merged = clPatch.data as typeof merged;
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const changedRange = table === "dockSlots" && (

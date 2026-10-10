@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (490 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (493 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -8343,6 +8343,184 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "requisitionId": null,
       "sparepartId": null,
       "note": ""
+    }
+  },
+  {
+    "table": "checklistTemplates",
+    "id": "CLT-QC-LAS",
+    "branch": "",
+    "data": {
+      "name": "Inspeksi pengelasan lambung",
+      "scope": "QC",
+      "target": "pekerjaan",
+      "sections": [
+        {
+          "title": "Persiapan",
+          "items": [
+            {
+              "id": "prep-wps",
+              "text": "WPS tersedia dan sesuai sambungan",
+              "type": "ya_tidak",
+              "weight": 2
+            },
+            {
+              "id": "prep-fit",
+              "text": "Fit-up & gap sesuai toleransi",
+              "type": "skala_1_5",
+              "weight": 2
+            },
+            {
+              "id": "prep-clean",
+              "text": "Permukaan bersih dari karat/cat",
+              "type": "ya_tidak",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "title": "Hasil las",
+          "items": [
+            {
+              "id": "weld-visual",
+              "text": "Visual las (undercut, porositas, spatter)",
+              "type": "skala_1_5",
+              "weight": 3
+            },
+            {
+              "id": "weld-ndt",
+              "text": "Hasil NDT",
+              "type": "pilihan",
+              "weight": 3,
+              "options": [
+                {
+                  "label": "Lolos",
+                  "score": 1
+                },
+                {
+                  "label": "Repair minor",
+                  "score": 0.5
+                },
+                {
+                  "label": "Gagal",
+                  "score": 0
+                }
+              ]
+            },
+            {
+              "id": "weld-note",
+              "text": "Catatan inspektur",
+              "type": "teks",
+              "weight": 0
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "table": "checklistTemplates",
+    "id": "CLT-QC-COAT",
+    "branch": "",
+    "data": {
+      "name": "Inspeksi coating lambung",
+      "scope": "QC",
+      "target": "pekerjaan",
+      "sections": [
+        {
+          "title": "Surface preparation",
+          "items": [
+            {
+              "id": "coat-sa",
+              "text": "Standar blasting Sa 2.5 tercapai",
+              "type": "ya_tidak",
+              "weight": 3
+            },
+            {
+              "id": "coat-profile",
+              "text": "Profil permukaan sesuai spesifikasi",
+              "type": "skala_1_5",
+              "weight": 2
+            }
+          ]
+        },
+        {
+          "title": "Aplikasi",
+          "items": [
+            {
+              "id": "coat-dft",
+              "text": "DFT per lapisan sesuai spesifikasi",
+              "type": "pilihan",
+              "weight": 3,
+              "options": [
+                {
+                  "label": "Sesuai",
+                  "score": 1
+                },
+                {
+                  "label": "Di bawah minimum",
+                  "score": 0.3
+                },
+                {
+                  "label": "Tidak diukur",
+                  "score": 0
+                }
+              ]
+            },
+            {
+              "id": "coat-cure",
+              "text": "Waktu curing antar-lapisan dipatuhi",
+              "type": "ya_tidak",
+              "weight": 2
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "table": "checklistTemplates",
+    "id": "CLT-HSE-PEKERJA",
+    "branch": "",
+    "data": {
+      "name": "Kepatuhan K3 pekerja",
+      "scope": "HSE",
+      "target": "pekerja",
+      "sections": [
+        {
+          "title": "APD",
+          "items": [
+            {
+              "id": "apd-helm",
+              "text": "Helm, sepatu, dan kacamata dipakai",
+              "type": "ya_tidak",
+              "weight": 2
+            },
+            {
+              "id": "apd-harness",
+              "text": "Full body harness saat bekerja di ketinggian",
+              "type": "ya_tidak",
+              "weight": 3
+            }
+          ]
+        },
+        {
+          "title": "Perilaku kerja",
+          "items": [
+            {
+              "id": "work-permit",
+              "text": "Izin kerja (hot work / confined space) tersedia",
+              "type": "ya_tidak",
+              "weight": 3
+            },
+            {
+              "id": "work-house",
+              "text": "Kerapian area kerja",
+              "type": "skala_1_5",
+              "weight": 1
+            }
+          ]
+        }
+      ]
     }
   },
   {

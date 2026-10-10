@@ -187,6 +187,11 @@ function parseCSV(text: string): string[][] {
     });
 }
 
+import { n_emp } from "../../i18n/n_emp";
+import { n_prj } from "../../i18n/n_prj";
+import { PhotoUploader } from "../../components/PhotoUploader";
+import { parsePtkp, ptkpCode } from "../../utils/ptkp";
+
 const emptyEmpForm = () => ({
   nik: "",
   name: "",
@@ -201,7 +206,19 @@ const emptyEmpForm = () => ({
   contractEnd: "",
   ptkpStatus: "TK/0",
   dependents: "0",
+  // F3-L-02: data karyawan lengkap.
+  gender: "L",
+  marital: "TK",
+  education: "SMA/SMK",
+  partnerContractNo: "",
+  partnerName: "",
+  lastContractNo: "",
+  lastContractStart: "",
+  photoUrl: "",
+  ktpUrl: "",
+  ijazahUrl: "",
 });
+const EDUCATION = ["SD", "SMP", "SMA/SMK", "D1", "D2", "D3", "D4", "S1", "S2", "S3"];
 
 /* Batch koleksi modul SDM untuk useModuleSync (pengganti resync penuh). */
 const HR_COLS: CollectionKey[] = ["activities", "attendance", "branches", "employees", "leaves", "trainings", "letters"];
@@ -210,6 +227,8 @@ export default function HR() {
   const busy = useBusy();
   const { data, add, update, remove, log, branch, setBranch, inBranch } = useStore();
   const { locale } = useT();
+  const E = n_emp[locale];
+  const P = n_prj[locale];
   const S = n_qc[locale];
   /* Nama penyetuju dicatat di baris cuti, bukan diasumsikan: surat persetujuan
      ditandatangani atas nama orang tertentu, jadi "siapa" harus benar. */
@@ -523,7 +542,17 @@ export default function HR() {
       allowances: String(e.allowances ?? ""),
       contractEnd: String(e.contractEnd ?? ""),
       ptkpStatus: String(e.ptkpStatus ?? "TK/0"),
-      dependents: String(e.dependents ?? 0),
+      dependents: String(e.dependents ?? parsePtkp(e.ptkpStatus).dependents),
+      gender: String(e.gender ?? "L"),
+      marital: String(e.marital ?? parsePtkp(e.ptkpStatus).marital),
+      education: String(e.education ?? "SMA/SMK"),
+      partnerContractNo: String(e.partnerContractNo ?? ""),
+      partnerName: String(e.partnerName ?? ""),
+      lastContractNo: String(e.lastContractNo ?? ""),
+      lastContractStart: String(e.lastContractStart ?? ""),
+      photoUrl: String(e.photoUrl ?? e.photo ?? ""),
+      ktpUrl: String(e.ktpUrl ?? ""),
+      ijazahUrl: String(e.ijazahUrl ?? ""),
     });
     setShowForm(true);
   };
@@ -585,7 +614,9 @@ export default function HR() {
       return;
     }
     const dependents = Math.min(3, Math.max(0, Number(form.dependents || 0)));
-    if (!PTKP_STATUS.includes(form.ptkpStatus)) {
+    // PTKP diturunkan otomatis dari status kawin + tanggungan (utils/ptkp.ts).
+    const ptkpAuto = ptkpCode(form.marital, dependents);
+    if (!PTKP_STATUS.includes(ptkpAuto)) {
       toast(S.tPtkpInvalid, "info");
       return;
     }
@@ -593,6 +624,12 @@ export default function HR() {
       toast(S.tTangValid, "info");
       return;
     }
+    const extraEmp = {
+      gender: form.gender, marital: form.marital, education: form.education,
+      partnerContractNo: form.partnerContractNo.trim(), partnerName: form.partnerName.trim(),
+      lastContractNo: form.lastContractNo.trim(), lastContractStart: form.lastContractStart,
+      photoUrl: form.photoUrl, ktpUrl: form.ktpUrl, ijazahUrl: form.ijazahUrl,
+    };
     const empPatch = {
       username: nik,
       name,
@@ -605,8 +642,9 @@ export default function HR() {
       basic,
       allowances,
       contractEnd: form.contractEnd || "",
-      ptkpStatus: form.ptkpStatus,
+      ptkpStatus: ptkpAuto,
       dependents,
+      ...extraEmp,
     };
     try {
     if (editingId) {
@@ -628,8 +666,9 @@ export default function HR() {
           basic,
           allowances,
           contractEnd: form.contractEnd || "",
-          ptkpStatus: form.ptkpStatus,
+          ptkpStatus: ptkpAuto,
           dependents,
+          ...extraEmp,
           skills: defaultSkills(form.dept, role),
           certs: [],
         },
@@ -1875,7 +1914,8 @@ const finishTraining = async (t: StoreItem) => {
           <FormGrid>
             <Field label={S.fNik} hint="NIK = username login karyawan (16 digit angka, dipakai untuk masuk aplikasi)."><input className="input" inputMode="numeric" pattern="[0-9]*" maxLength={16} value={form.nik} onChange={(e) => setForm({ ...form, nik: e.target.value.replace(/[^0-9]/g, "").slice(0, 16) })} placeholder={S.phNik} /></Field>
             <Field label={S.fNama}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.phNamaHr} /></Field>
-            <Field label={S.thJabatan}><input className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder={S.phWelder} /></Field>
+            <Field label={S.thJabatan}><input className="input" list="job-titles" title={E.jobHint} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder={S.phWelder} />
+              <datalist id="job-titles">{[...new Set(data.employees.map((x) => String(x.role ?? "")).filter(Boolean))].sort().map((r) => <option key={r} value={r} />)}</datalist></Field>
             <Field label={S.fDept}>
               <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
                 {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
@@ -1902,9 +1942,19 @@ const finishTraining = async (t: StoreItem) => {
             <Field label={S.fBasic}><NumInput min="0" className="input" value={form.basic} onChange={(e) => setForm({ ...form, basic: e.target.value })} placeholder={S.phBasic} /></Field>
             <Field label={S.fAllow}><NumInput min="0" className="input" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} placeholder={S.phAllow} /></Field>
             <Field label={S.fContractEnd}><input type="date" className="input" value={form.contractEnd} onChange={(e) => setForm({ ...form, contractEnd: e.target.value })} /></Field>
-            <Field label={S.fPtkp}>
-              <select className="input" value={form.ptkpStatus} onChange={(e) => setForm({ ...form, ptkpStatus: e.target.value })}>
-                {PTKP_STATUS.map((s) => <option key={s}>{s}</option>)}
+            <Field label={E.gender}>
+              <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                <option value="L">{E.male}</option><option value="P">{E.female}</option>
+              </select>
+            </Field>
+            <Field label={E.education}>
+              <select className="input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+                {EDUCATION.map((d) => <option key={d}>{d}</option>)}
+              </select>
+            </Field>
+            <Field label={E.marital}>
+              <select className="input" value={form.marital} onChange={(e) => setForm({ ...form, marital: e.target.value })}>
+                <option value="TK">{E.single}</option><option value="K">{E.married}</option>
               </select>
             </Field>
             <Field label={S.fTanggungan}>
@@ -1912,7 +1962,32 @@ const finishTraining = async (t: StoreItem) => {
                 {["0", "1", "2", "3"].map((d) => <option key={d}>{d}</option>)}
               </select>
             </Field>
+            <Field label={E.ptkpAuto} hint={E.ptkpHint}>
+              <input className="input bg-steel-50 font-mono" readOnly value={ptkpCode(form.marital, form.dependents)} />
+            </Field>
+            <Field label={E.lastContractNo}><input className="input" value={form.lastContractNo} onChange={(e) => setForm({ ...form, lastContractNo: e.target.value })} /></Field>
+            <Field label={E.lastContractStart}><input type="date" className="input" value={form.lastContractStart} onChange={(e) => setForm({ ...form, lastContractStart: e.target.value })} /></Field>
+            {(form.tipe === "Outsourcing" || form.partnerName !== "") && (
+              <>
+                <Field label={E.partnerName}><input className="input" value={form.partnerName} onChange={(e) => setForm({ ...form, partnerName: e.target.value })} /></Field>
+                <Field label={E.partnerNo}><input className="input" value={form.partnerContractNo} onChange={(e) => setForm({ ...form, partnerContractNo: e.target.value })} /></Field>
+              </>
+            )}
           </FormGrid>
+          {/* Foto & dokumen pribadi (UU PDP): hanya peran yang boleh membuka form ini (HR/direktur). */}
+          <p className="mt-4 text-xs font-semibold text-navy-900">{E.docs}</p>
+          <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {([["photoUrl", E.photo], ["ktpUrl", E.ktp], ["ijazahUrl", E.ijazah]] as const).map(([key, label]) => (
+              <Field key={key} label={label}>
+                <PhotoUploader
+                  value={form[key] ? [{ url: form[key], caption: "" }] : []}
+                  onChange={(photos) => setForm({ ...form, [key]: photos[photos.length - 1]?.url ?? "" })}
+                  labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: label }}
+                  onUploadError={() => toast(P.detPhotoUploadError, "info")}
+                />
+              </Field>
+            ))}
+          </div>
         </div>
       </Modal>
 

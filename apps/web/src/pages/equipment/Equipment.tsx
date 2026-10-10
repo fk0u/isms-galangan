@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { bucketByMonth, monthAxis, rebindLegacyMonthSeries } from "../../utils/monthAxis";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Cpu, Pencil, Trash2, Wrench, AlertTriangle, Gauge, CheckCircle2, Download, Eye, History as HistoryIcon } from "lucide-react";
+import { Plus, Cpu, Pencil, Trash2, Wrench, Gauge, CheckCircle2, Download, Eye, History as HistoryIcon } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, ProgressBar, ChartTooltip, RadialGauge, Modal, Field, FormGrid, EmptyState, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
   NumInput, MoneyInput, AsyncButton,
@@ -18,7 +18,7 @@ import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { remoteRepository } from "../../services/repositories";
 import { getJwt, isBackendConfigured } from "../../services/http";
-import { equipmentHours, sparkUtil, equipTotalTrend, maintTrend, serviceDueTrend } from "../../data";
+import { equipmentHours, equipTotalTrend } from "../../data";
 import { fmtTanggal, fmtJumlah, fmtRupiah, parseRupiah, todayISO } from "../../utils/format";
 import { loadedLaborRatePerDay } from "../../utils/rates";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -58,6 +58,8 @@ import { exportExcel } from "../../utils/export";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
 import { n_eqp } from "../../i18n/n_eqp";
+import { n_dlg } from "../../i18n/n_dlg";
+import DelegationPanel, { activeLoanOf, activeMaintOf, delegationStatus } from "./DelegationPanel";
 
 const BOOK_PRIORITIES = ["Normal", "Tinggi", "Kritis"];
 const TARGET_HOURS = 176;
@@ -195,13 +197,6 @@ function bookingRange(b: StoreItem): { mulai: number; selesai: number } | null {
   return { mulai: a, selesai: c };
 }
 
-function daysUntil(dateISO: string, today: string): number | null {
-  if (!dateISO || dateISO === "-") return null;
-  const ms = Date.parse(dateISO) - Date.parse(today);
-  if (Number.isNaN(ms)) return null;
-  return Math.floor(ms / 86400000);
-}
-
 function isMeasuring(e: StoreItem): boolean {
   return /las|ukur|load|meter/i.test(`${e.name ?? ""} ${e.category ?? ""} ${e.code ?? ""}`);
 }
@@ -254,6 +249,14 @@ export default function EquipmentPage() {
   const employees = data.employees;
   const projects = data.projects;
   const [tab, setTab] = useState("Register");
+  const D = n_dlg[locale];
+  /* Tab lama (booking/maintenance/kalibrasi/biaya) sudah tidak punya tombol;
+     deep link ke sana dikembalikan ke Daftar Equipment. */
+  useEffect(() => {
+    if (tab !== "Register" && tab !== "Utilisasi") setTab("Register");
+  }, [tab]);
+  /* F3-H-03: delegasi peminjaman/maintenance per equipment. */
+  const [delegFor, setDelegFor] = useState<StoreItem | null>(null);
 
   /* Heatmap hari x jam dari booking nyata. Sumbu jam diambil dari jam
      mulai booking (jam field "08:00-17:00"), jadi heatmap ikut bergerak
@@ -455,12 +458,7 @@ const [utilQ, setUtilQ] = useState("");
     Maintenance: "amber",
   };
 
-  const maintenance = equipment.filter((e) => e.status === "Maintenance").length;
   const avgUtil = equipment.length ? Math.round(equipment.reduce((s, e) => s + dispUtil(e), 0) / equipment.length) : 0;
-  const dueSoon = equipment.filter((e) => {
-    const d = daysUntil(String(e.nextService ?? ""), today);
-    return d !== null && d <= 14;
-  });
 
   const activeBookings = bookings.filter((b) => b.status !== "Selesai");
   const conflictIds = new Set<string>();
@@ -1638,23 +1636,17 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.eqKpiTotal} value={String(equipment.length)} icon={<Cpu className="h-5 w-5" />} chip="navy" spark={equipTotalTrend} hint={S.eqKpiTotalHint} />
-        <KpiCard label={S.eqKpiAvgUtil} value={`${avgUtil}%`} icon={<Gauge className="h-5 w-5" />} chip="teal" hint={S.eqKpiAvgHint} spark={sparkUtil} />
-        <KpiCard label={S.eqKpiMaint} value={String(maintenance)} delta={S.eqKpiMaintDelta} deltaDirection="down" icon={<Wrench className="h-5 w-5" />} chip="amber" spark={maintTrend} />
-        <KpiCard
-          label={S.eqKpiDue}
-          value={String(dueSoon.length)}
-          delta={dueSoon.length > 0 ? dueSoon.slice(0, 2).map((e) => e.name).join(" · ") : S.eqKpiDueSafe}
-          deltaDirection={dueSoon.length > 0 ? "down" : "up"}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          chip="rose"
-          spark={serviceDueTrend}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* F3-H-02: Total · Sedang terpakai · Dalam maintenance (kalibrasi + service). */}
+        <KpiCard label={D.kpiTotal} value={String(equipment.length)} icon={<Cpu className="h-5 w-5" />} chip="navy" spark={equipTotalTrend} hint={S.eqKpiTotalHint} />
+        <KpiCard label={D.kpiInUse} value={String(equipment.filter((e) => String(e.status) === "Terpakai" || activeLoanOf(e, data.bookings ?? [], todayISO())).length)} icon={<Gauge className="h-5 w-5" />} chip="teal" />
+        <KpiCard label={D.kpiMaint} value={String(equipment.filter((e) => String(e.status) === "Maintenance" || activeMaintOf(e, data.maintenances ?? [])).length)} hint={D.kpiMaintHint} icon={<Wrench className="h-5 w-5" />} chip="amber" />
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={["Register", "Alokasi / Booking", "Sedang Dipakai", "Maintenance", "Kalibrasi", "Biaya", "Utilisasi"]} active={tab} onChange={setTab} labels={{ Register: S.eqTabRegister, "Alokasi / Booking": S.eqTabBooking, "Sedang Dipakai": S.eqTabInUse, Maintenance: S.eqTabMaint, Kalibrasi: S.eqTabCal, Biaya: S.eqTabCost, Utilisasi: S.eqTabUtil }} />
+        {/* F3-H-02: hanya Daftar Equipment + Utilisasi. Booking/maintenance/kalibrasi
+            kini lewat aksi Delegasi per equipment (kode tab lama tetap, tidak dirender). */}
+        <Tabs tabs={["Register", "Utilisasi"]} active={tab} onChange={setTab} labels={{ Register: D.tabList, Utilisasi: S.eqTabUtil }} />
         <div className="p-4">
           {tab === "Register" && (
             <div>
@@ -1782,6 +1774,13 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                             las ini retak lagi" menempel pada unit, bukan pada satu
                             siklus maintenance, jadi tidak ikut tertutup bersama
                             arsip siklusnya. */}
+                        <button type="button" className="btn-secondary text-xs" onClick={() => setDelegFor(e)}>
+                          {D.action}
+                          {(() => {
+                            const st = delegationStatus(e, data.bookings ?? [], data.maintenances ?? [], todayISO());
+                            return st === "Tersedia" ? null : <Badge tone={st === "Dipinjam" ? "navy" : "amber"} className="ml-1.5">{st === "Dipinjam" ? D.stLoan : D.stMaint}</Badge>;
+                          })()}
+                        </button>
                         <ServiceNotesButton
                           count={notesOf(e).length}
                           labels={{
@@ -3136,6 +3135,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
           setNoteEquip((e) => (e ? { ...e, serviceNotes: next } : e));
         }}
       />
+      {delegFor && <DelegationPanel equipment={equipment.find((e) => e.id === delegFor.id) ?? delegFor} onClose={() => setDelegFor(null)} />}
     </div>
   );
 }

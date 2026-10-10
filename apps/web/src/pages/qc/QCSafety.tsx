@@ -27,6 +27,8 @@ import { useAuth, hasPermission } from "../../auth/auth";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
 import { n_qc } from "../../i18n/n_qc";
+import { n_clq } from "../../i18n/n_clq";
+import ChecklistTab from "./ChecklistTab";
 import { QC_SAFETY_TABS } from "./qcTabs";
 
 const ncrTone: Record<string, "red" | "amber" | "blue" | "green"> = {
@@ -97,7 +99,7 @@ function nextItp(inspections: StoreItem[]): string {
 }
 
 /* Batch koleksi modul QC & Safety untuk useModuleSync (pengganti resync penuh). */
-const QC_COLS: CollectionKey[] = ["activities", "auditPlans", "bast", "branches", "calibrations", "clients", "drawings", "employees", "equipment", "incidents", "inspections", "journals", "ncr", "projects", "toolbox", "vessels", "walks"];
+const QC_COLS: CollectionKey[] = ["activities", "auditPlans", "bast", "branches", "calibrations", "checklistResponses", "checklistTemplates", "clients", "drawings", "employees", "equipment", "incidents", "inspections", "journals", "ncr", "projects", "toolbox", "vessels", "walks"];
 
 export default function QCSafety() {
   const busy = useBusy();
@@ -1009,8 +1011,9 @@ export default function QCSafety() {
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={QC_SAFETY_TABS} active={tab} onChange={setTab} labels={{ "Inspeksi (ITP)": S.tabInsp, NCR: S.tabNcr, "HSE Operasional": S.tabHse, Insiden: S.tabInsiden, Sertifikat: S.tabSertifikat }} />
+        <Tabs tabs={QC_SAFETY_TABS} active={tab} onChange={setTab} labels={{ "Inspeksi Proyek": n_clq[locale].tab, "Inspeksi (ITP)": S.tabInsp, NCR: S.tabNcr, "HSE Operasional": S.tabHse, Insiden: S.tabInsiden, Sertifikat: S.tabSertifikat }} />
         <div className="p-4">
+          {tab === "Inspeksi Proyek" && <ChecklistTab />}
           {tab === "Inspeksi (ITP)" && (
             <div className="space-y-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
