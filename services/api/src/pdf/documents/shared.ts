@@ -44,13 +44,35 @@ export const KOP_LINES: Record<keyof typeof KOP, string> = {
   director: KOP.director,
 };
 
+/* F3-L-05: kop bisa diganti dari Pengaturan (setting COMPANY_KOP) tanpa
+   mengubah kode. Route PDF memanggil setKopOverride() sebelum merakit; kunci
+   yang kosong tetap memakai kop bawaan di atas. */
+type KopText = "name" | "line1" | "hq" | "addr1" | "addr2" | "hp";
+const KOP_TEXT: KopText[] = ["name", "line1", "hq", "addr1", "addr2", "hp"];
+let kopOverride: Partial<Record<KopText, string>> = {};
+
+/** Terima nilai setting apa adanya (string JSON / objek / kosong). */
+export function setKopOverride(raw: unknown): void {
+  let obj: unknown = raw;
+  if (typeof raw === "string") { try { obj = JSON.parse(raw); } catch { obj = null; } }
+  const next: Partial<Record<KopText, string>> = {};
+  if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+    for (const k of KOP_TEXT) {
+      const v = (obj as Record<string, unknown>)[k];
+      if (typeof v === "string" && v.trim() !== "") next[k] = v.trim().slice(0, 160);
+    }
+  }
+  kopOverride = next;
+}
+
 /** Kop perusahaan. Semua dokumen resmi memakai ini tanpa variasi. */
 export function companyKop(): Block {
+  const k = { ...KOP, ...kopOverride };
   return kopBlock({
-    name: KOP.name,
-    line1: KOP.line1,
-    hq: KOP.hq,
-    addr: `${KOP.addr1} · ${KOP.addr2} · ${KOP.hp}`,
+    name: k.name,
+    line1: k.line1,
+    hq: k.hq,
+    addr: `${k.addr1} · ${k.addr2} · ${k.hp}`,
   });
 }
 

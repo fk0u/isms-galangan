@@ -16,10 +16,10 @@ import type { FastifyInstance } from "fastify";
 import { requireAuth, branchAllowed } from "../auth.js";
 import { ok } from "../envelope.js";
 import { findRecipe, DOC_KINDS, buildFromModel, type RenderContext } from "../pdf/registry.js";
-import { getDialect } from "../db.js";
+import { getDialect, q } from "../db.js";
 import { writeAudit, requestActor, requestIp } from "../audit.js";
 import { saveRenderModel, loadRenderModel } from "../pdf/renderStore.js";
-import { entityBranch, knownBranches } from "../pdf/documents/shared.js";
+import { entityBranch, knownBranches, setKopOverride } from "../pdf/documents/shared.js";
 import type { RenderResult } from "../pdf/document.js";
 
 interface RenderBody {
@@ -32,6 +32,14 @@ interface RenderBody {
   /** Filter laporan: periode, mode, projectId, months. Tidak pernah berisi
    *  nilai laporan - angka tetap dibaca server dari DB. */
   filters?: Record<string, unknown>;
+}
+
+/** Muat kop dari setting COMPANY_KOP; gagal baca = kop bawaan. */
+async function applyKopSetting(): Promise<void> {
+  try {
+    const rows = await q<{ data: string }>("SELECT data FROM settings WHERE id = ?", ["SET-KOP"]);
+    setKopOverride(rows[0] ? (JSON.parse(rows[0].data) as { value?: unknown }).value : null);
+  } catch { setKopOverride(null); }
 }
 
 export function registerPdfRoutes(app: FastifyInstance): void {
@@ -108,6 +116,7 @@ export function registerPdfRoutes(app: FastifyInstance): void {
 
       /* Tahap 1: model dibaca dari baris DB server. Snapshot ini yang
          disimpan - bukan byte PDF, dan bukan isi dari klien. */
+      await applyKopSetting();
       const model = await recipe.prepare(id, ctx);
       /* Tahap 2: model dirakit jadi dokumen. */
       const doc = buildFromModel(recipe, model, ctx);
@@ -193,6 +202,7 @@ export function registerPdfRoutes(app: FastifyInstance): void {
     }
     const ctx: RenderContext = { locale: snap.locale === "en" ? "en" : "id", branch: snapBranch, filters: {} };
     try {
+      await applyKopSetting();
       const res = buildFromModel(recipe, snap.model, ctx).render();
       await writeAudit({
         actor: requestActor(req),
