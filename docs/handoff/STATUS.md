@@ -1,6 +1,6 @@
 # STATUS — Papan Task
 
-Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `selesai` · `terblokir` · `verifikasi saja`.
+Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sebagian` · `selesai` · `terblokir` · `verifikasi saja`.
 
 | Task | Judul | Prioritas | File | PIC | Status | Catatan |
 |---|---|---|---|---|---|---|
@@ -48,10 +48,10 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-D-01 | Tambah sparepart dari inventori | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-D-02 | Service: dari WBS, teknisi, biaya BoQ, approval | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-D-02-service-approval-mr (`probe:service` 14/14, ADR-0015) |
 | F3-D-03 | Probe alur material | P1 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo (`probe:material` 10/10) |
-| F3-E-01 | Feed update pekerjaan dengan foto | P0 | F3-E-monitoring.md | | todo | |
-| F3-E-02 | Tampilan per peran | P0 | F3-E-monitoring.md | | todo | |
-| F3-E-03 | Label "Perhatian khusus" | P1 | F3-E-monitoring.md | | todo | |
-| F3-E-04 | Tombol Kembali ke asal | P0 | F3-E-monitoring.md | | todo | |
+| F3-E-01 | Feed update pekerjaan dengan foto | P0 | F3-E-monitoring.md | Claude | review | feat/F3-E-monitoring — feed WBS+WO dengan foto, filter proyek & tanggal |
+| F3-E-02 | Tampilan per peran | P0 | F3-E-monitoring.md | Claude | sebagian | feat/F3-E-monitoring — sebagian: lingkup per peran di UI (anggota tim); penyaringan baris di server belum |
+| F3-E-03 | Label "Perhatian khusus" | P1 | F3-E-monitoring.md | Claude | review | feat/F3-E-monitoring — "Perhatian Khusus" kartu merah |
+| F3-E-04 | Tombol Kembali ke asal | P0 | F3-E-monitoring.md | Claude | review | feat/F3-E-monitoring — Kembali ke Monitoring/Dashboard/Proyek, tahan refresh |
 | F3-E-05 | Highlight menu aktif di sidebar | P1 | F3-E-monitoring.md | agent | review | Branch `feat/F3-E-05-sidebar-active`; root `npm run check` lulus; uji visual Dashboard, Monitoring, detail proyek, dan submenu Roles & Access |
 | F3-F-01 | Batas maksimal kapal per dock | P1 | F3-F-drydock.md | | todo | |
 | F3-F-02 | Sederhanakan halaman: Mapping slot area | P0 | F3-F-drydock.md | agent | review | Branch `feat/F3-F-02-drydock-mapping`; P2 status search ID/EN dan P3 SSR EN diperbaiki lokal; `npm run check` 37/37; re-review independen lokal pending; PR #24 masih di e21f8fe, fix belum dipush/merge |

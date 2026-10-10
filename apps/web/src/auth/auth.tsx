@@ -63,6 +63,8 @@ export interface Session {
   branch?: string;
   /** Peta izin koleksi dari /api/auth/me */
   permissions?: PermissionsMap;
+  /** Karyawan yang tertaut ke akun (keanggotaan tim proyek, F3-E-02). */
+  employeeId?: string | null;
 }
 
 function loadSession(): Session | null {
@@ -94,6 +96,7 @@ interface BackendLoginUser {
   role?: string;
   email?: string;
   branch?: string;
+  employeeId?: string | null;
 }
 
 interface AuthCtx {
@@ -122,6 +125,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: res.user?.role ?? prev.role,
             name: res.user?.name ?? prev.name,
             branch: res.user?.branch ?? prev.branch,
+            // null dari server = tautan karyawan dicabut → kosongkan; undefined = tak dikirim.
+            employeeId: res.user?.employeeId !== undefined ? res.user.employeeId : prev.employeeId ?? null,
             permissions: res.permissions,
           };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
@@ -159,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: bu.username || uname,
           loginAt: new Date().toISOString(),
           branch: String(bu.branch ?? "SEMUA") || "SEMUA",
+          employeeId: bu.employeeId ?? null,
           permissions: res.permissions,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));

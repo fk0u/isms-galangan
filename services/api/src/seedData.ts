@@ -214,10 +214,55 @@ export function buildSeedRows(): SeedRow[] {
   return rows;
 }
 
+/* Histori update pekerjaan demo (feed Monitoring, F3-E-01). Nama & foto
+   sintetis: foto = ilustrasi SVG di apps/web/public/demo. */
+const H = (date: string, actor: string, from: number, to: number, note: string, photo?: string) => ({
+  id: `wbs-hist-demo-${date}-${to}`, date: `${date}T08:30:00.000Z`, actor,
+  action: `Update progres: ${from}% → ${to}%`, from, to, note, photos: photo ? [photo] : [],
+});
+export const DEMO_WBS_HISTORY: Record<string, Record<string, Array<Record<string, unknown>>>> = {
+  "RP-2026-003": {
+    "Hull Assembly": [
+      H("2026-10-03", "Rudi Hartono", 30, 38, "Blok 3 dan 4 terpasang, pengelasan sisi kiri.", "/demo/wbs-hull.svg"),
+      H("2026-10-08", "Rudi Hartono", 38, 45, "Fit-up blok 5, NDT las sambungan blok 3 lolos.", "/demo/wbs-hull.svg"),
+    ],
+    "Painting — Priming": [
+      H("2026-10-06", "Sari Wulandari", 0, 5, "Blasting Sa 2.5 area lambung bawah garis air dimulai.", "/demo/wbs-paint.svg"),
+    ],
+    "Outfitting — Machinery": [
+      H("2026-10-09", "Agus Setiawan", 15, 20, "Overhaul main engine: crankshaft diperiksa, bearing diganti.", "/demo/wbs-engine.svg"),
+    ],
+  },
+};
+
+/** Demo top-up untuk WBS yang SUDAH ada: hanya bila baris itu masih WBS seed
+ *  murni (nama task persis template) dan belum punya histori sama sekali,
+ *  supaya histori sintetis tidak tercampur dengan update nyata.
+ *  Mengembalikan JSON baru, atau null bila tidak perlu diubah. */
+export function topUpDemoWbsHistory(projectId: string, existingJson: string): string | null {
+  const demo = DEMO_WBS_HISTORY[projectId];
+  if (!demo) return null;
+  let rows: Array<Record<string, unknown>>;
+  try { rows = JSON.parse(existingJson) as Array<Record<string, unknown>>; } catch { return null; }
+  if (!Array.isArray(rows)) return null;
+  const names = rows.map((r) => String(r.task ?? ""));
+  const template = WBS_TEMPLATE.map(([task]) => task);
+  if (names.length !== template.length || names.some((n, i) => n !== template[i])) return null;
+  if (rows.some((r) => Array.isArray(r.history) && r.history.length > 0)) return null;
+  for (const r of rows) {
+    const hist = demo[String(r.task)];
+    if (hist) r.history = hist;
+  }
+  return JSON.stringify(rows);
+}
+
 export function buildWbsSeeds(): WbsSeed[] {
   return WBS_PROJECTS.map((projectId) => ({
     projectId,
-    wbs: WBS_TEMPLATE.map(([task, start, end, progress, weight]) => ({ task, start, end, progress, weight })),
+    wbs: WBS_TEMPLATE.map(([task, start, end, progress, weight]) => ({
+      task, start, end, progress, weight,
+      ...(DEMO_WBS_HISTORY[projectId]?.[task] ? { history: DEMO_WBS_HISTORY[projectId][task] } : {}),
+    })),
   }));
 }
 

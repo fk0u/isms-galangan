@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, AlertTriangle, FileDown } from "lucide-react";
 import {
@@ -20,6 +20,12 @@ import { exportExcel } from "../../utils/export";
 import { TAHAP, tahapOf, isOverdue } from "./Projects";
 import { canonPrioritas } from "../../utils/scope";
 import { projectProgressOf } from "../../utils/projectProgress";
+import { useAuth, hasPermission } from "../../auth/auth";
+import MonitoringFeed from "./MonitoringFeed";
+
+/* F3-E-02: peran pimpinan & back-office melihat semua proyek; peran lapangan
+   (proyek, mekanik, QC, subkon, …) hanya proyek di mana karyawannya anggota tim. */
+const FULL_VIEW_ROLES = new Set(["direktur", "manager", "developer", "viewer", "finance", "procurement", "hr", "gudang"]);
 
 const prioritasTone: Record<string, "gray" | "blue" | "amber" | "red"> = {
   Rendah: "gray",
@@ -43,9 +49,19 @@ import { delayDaysOf as delayDaysShared, endInDays as endInDaysShared } from "..
 export default function Monitoring() {
   const { locale } = useT();
   const S = n_prj[locale];
-  const { data, wbsFor, inBranch } = useStore();
+  const { data, wbsFor, inBranch, teamFor } = useStore();
+  const { user } = useAuth();
+  const role = String(user?.role ?? "").toLowerCase();
+  const teamScoped = role !== "" && !FULL_VIEW_ROLES.has(role);
+  const myEmp = String(user?.employeeId ?? "");
+  const canUpdate = hasPermission(user?.permissions, "wbs_by_project", "w");
   const groupLbl: Record<string, string> = { Terlambat: S.attLate, "Over-budget": S.attOver, "NCR Critical": S.attNcr, "CO Diajukan": S.attCo, "Milestone dekat": S.attMile };
-  const projects = data.projects;
+  // Dimemo supaya feed (MonitoringFeed) tidak menghitung ulang setiap render.
+  const projects = useMemo(
+    () => (teamScoped ? data.projects.filter((p) => myEmp !== "" && teamFor(String(p.id)).includes(myEmp)) : data.projects),
+    [teamScoped, data.projects, myEmp, teamFor],
+  );
+  const feedProjects = useMemo(() => inBranch(projects), [inBranch, projects]);
   const [branchFilter, setBranchFilter] = useState("Semua");
   const [q, setQ] = useState("");
   const [mode, setMode] = useState<"Semua" | "Perhatian">("Semua");
@@ -208,9 +224,18 @@ export default function Monitoring() {
         <p className="ml-auto text-xs text-steel-500">{S.monCount.replace("{a}", String(pipeline.length)).replace("{b}", String(attentionPids.size))}</p>
       </div>
 
-      <Card className="mb-4 p-5">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-navy-900">
-          <AlertTriangle className="h-4 w-4 text-amber-500" /> {S.monAttTitle.replace("{n}", String(attention.length))}
+      {teamScoped && (
+        <p className="mb-3 rounded-lg border border-steel-200 bg-steel-50 px-3 py-2 text-xs text-steel-600">
+          {projects.length > 0 ? S.monScopeMine.replace("{n}", String(projects.length)) : S.monScopeNone}
+        </p>
+      )}
+
+      <MonitoringFeed projects={feedProjects} canUpdate={canUpdate} />
+
+      {/* F3-E-03: "Perhatian khusus" — kartu merah agar menonjol. */}
+      <Card className={`mb-4 p-5 ${attention.length > 0 ? "border-red-200 bg-red-50/60" : ""}`}>
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-700">
+          <AlertTriangle className="h-4 w-4 text-red-600" /> {S.monAttTitle.replace("{n}", String(attention.length))}
         </h3>
         {attention.length === 0 && <p className="text-sm text-steel-400">{S.monAttEmpty}</p>}
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
@@ -218,7 +243,8 @@ export default function Monitoring() {
             <Link
               key={`${a.group}-${a.title}-${i}`}
               to={`/proyek/${a.pid}`}
-              className="flex items-center gap-3 rounded-xl border border-steel-100 p-2.5 text-sm transition-colors hover:border-ocean-400 hover:bg-surface"
+              state={{ from: "/proyek/monitoring" }}
+              className="flex items-center gap-3 rounded-xl border border-red-100 bg-white p-2.5 text-sm transition-colors hover:border-red-300"
             >
               <Badge tone={a.group === "NCR Critical" || a.group === "Terlambat" || a.group === "Over-budget" ? "red" : "amber"}>{groupLbl[a.group] ?? a.group}</Badge>
               <div className="min-w-0">
@@ -270,6 +296,7 @@ export default function Monitoring() {
                     <Link
                       key={p.id}
                       to={`/proyek/${p.id}`}
+                      state={{ from: "/proyek/monitoring" }}
                       className="block rounded-xl border border-steel-200 bg-white p-3 transition-colors hover:border-ocean-400"
                     >
                       <p className="font-mono text-xs text-steel-500">{p.id}</p>

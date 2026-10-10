@@ -1767,7 +1767,10 @@ export function SecureImg({
   name?: string;
   className?: string;
 }) {
-  const raw = absUrl(src);
+  /* Aset statis frontend (ilustrasi demo, ikon) bukan file backend: muat
+     langsung dari origin web, jangan diarahkan ke API ber-JWT. */
+  const isPublicAsset = typeof src === "string" && /^\/(demo|icons)\//.test(src);
+  const raw = isPublicAsset ? String(src) : absUrl(src);
   const [obj, setObj] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -1777,7 +1780,8 @@ export function SecureImg({
     // URL absolut same-origin / backend ber-JWT â†’ ambil via fetch blob.
     let revoke = "";
     let cancelled = false;
-    const needsJwt = !/^https?:/i.test(raw) || (BASE && raw.startsWith(BASE));
+    // Aset publik dimuat langsung oleh <img> — token tidak dikirim, tanpa fetch ganda.
+    const needsJwt = !isPublicAsset && (!/^https?:/i.test(raw) || (BASE && raw.startsWith(BASE)));
     if (!needsJwt) return;
     void (async () => {
       try {
