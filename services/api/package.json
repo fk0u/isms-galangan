@@ -40,6 +40,7 @@
     "probe:public-leave": "tsx scripts/public-leave-probe.ts",
     "probe:attendance-ingest": "tsx scripts/attendance-ingest-probe.ts",
     "probe:files-privacy": "tsx scripts/files-privacy-probe.ts",
+    "probe:team-scope": "tsx scripts/team-scope-probe.ts",
     "probe:events": "tsx scripts/events-probe.ts",
     "probe:dock-fit": "tsx scripts/dock-fit-probe.ts",
     "probe:backup": "tsx --env-file-if-exists=.env scripts/backup-restore-probe.ts",
@@ -54,7 +55,7 @@
     "probe:drydock": "tsx --env-file-if-exists=.env scripts/drydock-booking-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint .",
-    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy"
+    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
