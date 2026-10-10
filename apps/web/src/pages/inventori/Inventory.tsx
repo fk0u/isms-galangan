@@ -80,6 +80,8 @@ import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLi
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { stockTrend, itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
 import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMaterialForm";
+import ReceiveIssueTab from "./tabs/ReceiveIssueTab";
+import { n_recv } from "../../i18n/n_recv";
 import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequiredForEdit } from "../../utils/unitConversion";
 
 const emptyForm: MaterialFormValues = {
@@ -305,7 +307,8 @@ function hasUom2(it: StoreItem): boolean {
 }
 
 function qtyInUom2(it: StoreItem): number {
-  return Number(it.stock || 0) * convOf(it);
+  // F3-G-03: termasuk sisa kemasan terbuka (openBase, satuan dasar).
+  return Number(it.stock || 0) * convOf(it) + Math.max(0, Number(it.openBase || 0));
 }
 
 /* Minimum per gudang tetap dibaca untuk laporan lama; field inputnya dihapus dari form material. */
@@ -373,7 +376,7 @@ export default function Inventory() {
      PageHeader, padahal isinya hanya butuh sebagian. */
   const INV_COLS: CollectionKey[] = [
     "inventory", "movements", "projects", "requisitions",
-    "documents", "settings", "purchaseOrders", "payables", "warehouses",
+    "documents", "settings", "purchaseOrders", "payables", "warehouses", "materialRequests", "spareparts",
   ];
   useModuleSync(INV_COLS);
   // Cabang movement: dari proyek tertaut (cocokkan teks ke id/vessel) atau fallback global.
@@ -1638,7 +1641,6 @@ if (k === "mattype") return matTypeOf(i);
     const useUom2 = hasUom2(item) && retUom === "uom2";
     const qty = useUom2 ? raw / convOf(item) : raw;
     if (qty > Number(item.stock)) { toast(S.stockShort.replace("{n}", fmtJumlah(Number(item.stock))), "info"); return; }
-    if (!retVendor.trim()) { toast("Vendor retur wajib diisi", "info"); return; }
     if (!retReason.trim()) { toast("Alasan retur wajib diisi", "info"); return; }
     const vendorTrim = retVendor.trim();
     const qtyNote = useUom2 ? `${fmtJumlah(raw)} ${uom2Of(item)} (${fmtJumlah(qty)} ${item.unit})` : fmtJumlah(qty);
@@ -1646,7 +1648,7 @@ if (k === "mattype") return matTypeOf(i);
       await update("inventory", item.id, { stock: Number(item.stock) - qty });
       await add("movements", {
         item: item.name, itemId: item.id, type: "Retur", qty,
-        by: `Retur ke ${vendorTrim} - ${retReason.trim()}${useUom2 ? ` · input ${qtyNote}` : ""}`,
+        by: `Retur - ${retReason.trim()}${useUom2 ? ` · input ${qtyNote}` : ""}`,
         date: todayISO(), tone: "out",
         supplier: vendorTrim, purpose: retReason.trim(),
         branch: moveBranch(`${vendorTrim} ${retReason}`),
@@ -1960,8 +1962,9 @@ if (k === "mattype") return matTypeOf(i);
       </div>
 
       <div className="card">
-        <Tabs tabs={["Katalog", "Stok per Gudang", "BOM", "Pergerakan", "Tonase & Surat Jalan", "Analisis"]} active={tab} onChange={setTab} labels={{ Katalog: S.tabKatalog, "Stok per Gudang": S.tabWh, BOM: S.tabBom, Pergerakan: S.tabMoves, "Tonase & Surat Jalan": S.tabTonase, Analisis: S.tabAnalisis }} />
+        <Tabs tabs={["Katalog", "Terima & Keluar", "Stok per Gudang", "BOM", "Pergerakan", "Tonase & Surat Jalan", "Analisis"]} active={tab} onChange={setTab} labels={{ "Terima & Keluar": n_recv[locale].tab, Katalog: S.tabKatalog, "Stok per Gudang": S.tabWh, BOM: S.tabBom, Pergerakan: S.tabMoves, "Tonase & Surat Jalan": S.tabTonase, Analisis: S.tabAnalisis }} />
         <div className="p-4">
+          {tab === "Terima & Keluar" && <ReceiveIssueTab />}
           {tab === "Katalog" && (
             <>
               <p className="mb-3 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">{S.fifoInfo}</p>
@@ -2177,7 +2180,9 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           <td className="td"><Badge tone="gray">{i.category}</Badge></td>
                           <td className="td"><Badge tone={matTone(matTypeOf(i))}>{matLabel(matTypeOf(i))}{isEceran(i) ? " · Eceran" : ""}</Badge></td>
                           <td className="td font-semibold text-navy-900">
-                            {fmtJumlah(Number(i.stock))} <span className="font-normal text-steel-400">{i.unit}</span>
+                            {/* Kemasan terbuka dihitung sebagai satu kemasan: "3 drum (550 L)". */}
+                            {fmtJumlah(Number(i.stock) + (Number(i.openBase || 0) > 0 ? 1 : 0))} <span className="font-normal text-steel-400">{i.unit}</span>
+                            {Number(i.openBase || 0) > 0 && <span className="ml-1 text-[11px] font-normal text-amber-700">(1 terbuka)</span>}
                             {hasConversion(i) && <p className="text-xs font-normal text-steel-400">≈ {fmtJumlah(qtyInUom2(i))} {u2} ({formatUnitConversion(String(i.unit), conversion, locale)})</p>}
                           </td>
                           <td className="td text-steel-600">{fmtJumlah(Number(i.volume ?? 0))}</td>
@@ -3263,9 +3268,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             <Field label={S.qtyTrLbl}>
               <NumInput min={1} className="input" value={retQty} onChange={(e) => setRetQty(e.target.value)} />
             </Field>
-            <Field label="Vendor">
-              <input className="input" value={retVendor} onChange={(e) => setRetVendor(e.target.value)} placeholder="Nama vendor" />
-            </Field>
+
           </FormGrid>
           {(() => {
             const sel = inventory.find((i) => i.id === retItem);

@@ -451,6 +451,12 @@ export interface InventoryItem {
   unit: string;
   cost: number;
   location: string;
+  /** Dijual/dipakai eceran (satuan dasar). */
+  eceran?: boolean;
+  /** Konversi satuan beli → satuan dasar (F3-G-02). */
+  conversion?: import("../utils/unitConversion").UnitConversion;
+  /** Sisa kemasan terbuka dalam satuan dasar (F3-G-03). */
+  openBase?: number;
 }
 
 export const inventory: InventoryItem[] = [
@@ -462,6 +468,9 @@ export const inventory: InventoryItem[] = [
   { id: "INV-006", name: "Kabel Listrik Marine 4x50", category: "Listrik", sku: "KBL-4X50", warehouse: "Gudang Listrik", stock: 1200, minStock: 800, unit: "meter", cost: 185000, location: "L-01" },
   { id: "INV-007", name: "Baut Marine M20", category: "Fastener", sku: "BLT-M20", warehouse: "Gudang B", stock: 1500, minStock: 2000, unit: "pcs", cost: 4500, location: "B1-05" },
   { id: "INV-008", name: "Winch Wire Rope", category: "Rigging", sku: "WIRE-ROPE", warehouse: "Gudang Rig", stock: 6, minStock: 4, unit: "roll", cost: 3200000, location: "R-02" },
+  /* F3-G-03 demo: item berkonversi satuan untuk barang keluar eceran & potongan. */
+  { id: "INV-021", name: "Cat Antifouling (drum 200 L)", category: "Cat", sku: "AF-DRUM", warehouse: "Gudang B", stock: 6, minStock: 2, unit: "drum", cost: 18500000, location: "B2-14", eceran: true, conversion: { baseUnit: "liter", perUnit: 200 } },
+  { id: "INV-022", name: "Plat Baja AH36 12mm (6000×1500)", category: "Plat", sku: "AH36-12-LBR", warehouse: "Gudang Baja A", stock: 12, minStock: 4, unit: "lembar", cost: 12300000, location: "A1-04", conversion: { baseUnit: "kg", perUnit: 848, dims: { lengthMm: 6000, widthMm: 1500, thicknessMm: 12, weightKg: 848 } } },
   // RawData REPORT WAREHOUSE 2024 (sheet KODE + STOCK ALL).
   { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Santi", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
   { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Santi", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },

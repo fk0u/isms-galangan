@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (488 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (490 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -6738,6 +6738,53 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "unit": "roll",
       "cost": 3200000,
       "location": "R-02"
+    }
+  },
+  {
+    "table": "inventory",
+    "id": "INV-021",
+    "branch": "",
+    "data": {
+      "name": "Cat Antifouling (drum 200 L)",
+      "category": "Cat",
+      "sku": "AF-DRUM",
+      "warehouse": "Gudang B",
+      "stock": 6,
+      "minStock": 2,
+      "unit": "drum",
+      "cost": 18500000,
+      "location": "B2-14",
+      "eceran": true,
+      "conversion": {
+        "baseUnit": "liter",
+        "perUnit": 200
+      }
+    }
+  },
+  {
+    "table": "inventory",
+    "id": "INV-022",
+    "branch": "",
+    "data": {
+      "name": "Plat Baja AH36 12mm (6000×1500)",
+      "category": "Plat",
+      "sku": "AH36-12-LBR",
+      "warehouse": "Gudang Baja A",
+      "stock": 12,
+      "minStock": 4,
+      "unit": "lembar",
+      "cost": 12300000,
+      "location": "A1-04",
+      "conversion": {
+        "baseUnit": "kg",
+        "perUnit": 848,
+        "dims": {
+          "lengthMm": 6000,
+          "widthMm": 1500,
+          "thicknessMm": 12,
+          "weightKg": 848
+        }
+      }
     }
   },
   {
