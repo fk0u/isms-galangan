@@ -21,6 +21,10 @@ interface Item {
 // [namaExport, tabelBE]
 const MAP: Array<[string, string]> = [
   ["seedWorkOrders", "workOrders"],
+  ["seedChecklistResponses", "checklistResponses"],
+  ["seedAttendanceMonth", "attendance"],
+  ["seedWorkOrdersDemo", "workOrders"],
+  ["seedTerminsDemo", "termins"],
   ["seedTermins", "termins"],
   ["seedVendors", "vendors"],
   ["seedRequisitions", "requisitions"],

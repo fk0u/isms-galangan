@@ -720,3 +720,53 @@ export const seedLetters: StoreItem[] = [
   },
 ];
 
+
+/* ====== DATA DEMO TAMBAHAN (F5-03) ======
+   Absensi satu bulan penuh (September 2026) untuk rekap bulanan & lembur
+   otomatis. Deterministik: pola ditentukan dari indeks, bukan acak. */
+const ATT_EMPS = ["EMP-001", "EMP-002", "EMP-003", "EMP-004", "EMP-005", "EMP-006", "EMP-007", "EMP-008"];
+export const seedAttendanceMonth: StoreItem[] = Array.from({ length: 30 }, (_, i) => i + 1).flatMap((day) => {
+  const date = `2026-09-${String(day).padStart(2, "0")}`;
+  const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
+  if (dow === 0) return []; // Minggu libur
+  return ATT_EMPS.map((employeeId, k) => {
+    const n = day * 7 + k * 3;
+    const status = n % 29 === 0 ? "Sakit" : n % 23 === 0 ? "Izin" : n % 41 === 0 ? "Alpa" : "Hadir";
+    // Tim produksi (EMP-004, EMP-005) rutin lembur di hari kerja; Sabtu setengah hari.
+    const late = n % 11 === 0;
+    const overtime = (employeeId === "EMP-004" || employeeId === "EMP-005") && dow >= 1 && dow <= 5 && day % 2 === 0;
+    const checkOut = dow === 6 ? "13:00" : overtime ? (day % 4 === 0 ? "21:30" : "19:00") : "17:00";
+    return {
+      id: `ABS-202609${String(day).padStart(2, "0")}-${String(k + 1).padStart(3, "0")}`, employeeId, date, shift: "Pagi", status,
+      checkIn: status === "Hadir" ? (late ? "08:20" : "07:55") : "", checkOut: status === "Hadir" ? checkOut : "", overtime: 0,
+    };
+  });
+});
+
+/* Hasil inspeksi kuesioner (F3-K-03). Skor = hasil rumus scoring untuk jawaban ini. */
+export const seedChecklistResponses: StoreItem[] = [
+  { id: "CLR-2026-001", templateId: "CLT-QC-LAS", templateName: "Inspeksi pengelasan lambung", scope: "QC", projectId: "RP-2026-003", wbsTask: "Hull Assembly",
+    answers: { "prep-wps": "ya", "prep-fit": 4, "prep-clean": "ya", "weld-visual": 4, "weld-ndt": "Lolos", "weld-note": "Blok 3–4 rapi" }, score: 88.6, answered: 5, totalItems: 5, inspector: "Sari Wulandari", at: "2026-10-08T03:10:00.000Z" },
+  { id: "CLR-2026-002", templateId: "CLT-QC-COAT", templateName: "Inspeksi coating lambung", scope: "QC", projectId: "RP-2026-003", wbsTask: "Painting — Priming",
+    answers: { "coat-sa": "ya", "coat-profile": 3, "coat-dft": "Di bawah minimum", "coat-cure": "tidak" }, score: 49, answered: 4, totalItems: 4, inspector: "Sari Wulandari", at: "2026-10-07T06:40:00.000Z" },
+  { id: "CLR-2026-003", templateId: "CLT-QC-LAS", templateName: "Inspeksi pengelasan lambung", scope: "QC", projectId: "NB-2025-012", wbsTask: "Hull Assembly",
+    answers: { "prep-wps": "ya", "prep-fit": 5, "prep-clean": "ya", "weld-visual": 5, "weld-ndt": "Lolos" }, score: 100, answered: 5, totalItems: 5, inspector: "Sari Wulandari", at: "2026-10-05T02:15:00.000Z" },
+];
+
+/* WO subkon dengan skema DP bertahap + termin otomatis + riwayat progres berfoto (F3-I). */
+export const seedWorkOrdersDemo: StoreItem[] = [
+  {
+    id: "WO-2026-061", sub: "CV Pengecatan Marine", project: "RP-2026-003", scope: "Coating lambung bawah garis air", wbsTask: "Painting — Priming",
+    status: "Dalam Proses", progress: 35, date: "2026-09-28", targetDate: "2026-11-15", penaltyPct: 0.1, value: 600000000,
+    paymentScheme: { type: "DP", parts: [{ label: "DP 1", pct: 30 }, { label: "DP 2", pct: 30 }] }, taxPct: 2, retPct: 5,
+    progressLog: [
+      { id: "wo-log-demo-1", date: "2026-10-02T02:00:00.000Z", by: "Staff Proyek", from: 0, to: 15, note: "Blasting sisi kiri selesai", photos: ["/demo/wbs-paint.svg"] },
+      { id: "wo-log-demo-2", date: "2026-10-09T07:30:00.000Z", by: "Staff Proyek", from: 15, to: 35, note: "Primer lapis pertama sisi kiri", photos: ["/demo/wbs-paint.svg"] },
+    ],
+  },
+];
+export const seedTerminsDemo: StoreItem[] = [
+  { id: "TRM-2026-051", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "DP 1", progress: "WO-2026-061 (0%)", amount: 180000000, pphPct: 2, retPct: 5, status: "Disetujui", date: "2026-09-28", fromScheme: "DP" },
+  { id: "TRM-2026-052", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "DP 2", progress: "WO-2026-061 (0%)", amount: 180000000, pphPct: 2, retPct: 5, status: "Draf", date: "2026-09-28", fromScheme: "DP" },
+  { id: "TRM-2026-053", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "Pelunasan", progress: "WO-2026-061 (0%)", amount: 240000000, pphPct: 2, retPct: 5, status: "Draf", date: "2026-09-28", fromScheme: "DP" },
+];
