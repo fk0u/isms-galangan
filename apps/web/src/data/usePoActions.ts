@@ -11,10 +11,19 @@ import { mrStatus } from "./useMaterialRequest";
 const num = (v: unknown): number => Number(v ?? 0) || 0;
 const SYNC = ["purchaseOrders", "inventory", "movements", "materialRequests", "spareparts", "requisitions", "activities"] as const;
 
-/** Sisa qty PO yang masih ditunggu dari vendor. */
+/** Sisa qty PO yang masih ditunggu dari vendor. PO lama tanpa qty → tak terbatas. */
 export function poOpenQty(po: StoreItem): number {
+  if (num(po.qty) <= 0) return Number.POSITIVE_INFINITY;
   return Math.max(0, num(po.qty) - num(po.receivedQty) - num(po.cancelledQty));
 }
+
+/** PO konsolidasi berisi beberapa barang — terima/alihkan level-PO ditolak (sama dengan server). */
+export function poIsMultiItem(po: StoreItem): boolean {
+  const lines = Array.isArray(po.lines) ? (po.lines as Record<string, unknown>[]) : [];
+  const names = new Set(lines.map((l) => String(l.name ?? "").trim().toLowerCase()).filter((n) => n !== ""));
+  return names.size > 1 || (Array.isArray(po.prIds) ? po.prIds.length : 0) > 1;
+}
+const MULTI_MSG = "PO berisi beberapa barang (konsolidasi) — terima/alihkan per barang belum didukung";
 /** Qty yang dinyatakan vendor tidak sanggup dan belum dialihkan. */
 export function poPendingReassign(po: StoreItem): number {
   return Math.max(0, num(po.cancelledQty) - num(po.reassignedQty));
@@ -46,9 +55,13 @@ export function usePoActions() {
       await resyncCollections([...SYNC]);
       return { status: String(res.po.status ?? ""), fulfilled: res.fulfilled };
     }
+    if (poIsMultiItem(po)) throw new Error(MULTI_MSG);
     const item = (data.inventory ?? []).find((i) => String(i.id) === a.itemId);
     if (!item) throw new Error("Pilih item inventori penerima barang");
-    if (num(po.qty) > 0 && a.qty > poOpenQty(po)) throw new Error(`Melebihi sisa PO (${poOpenQty(po)})`);
+    if (a.qty > poOpenQty(po)) throw new Error(`Melebihi sisa PO (${poOpenQty(po)})`);
+    if (num(po.receivedQty) > 0 && String(po.itemId ?? "") !== "" && String(po.itemId) !== a.itemId) {
+      throw new Error(`Barang PO sudah ditetapkan (${String(po.itemId)}) sejak penerimaan pertama`);
+    }
     const unitPrice = num(po.qty) > 0 ? num(po.amount) / num(po.qty) : 0;
     const oldStock = Math.max(0, num(item.stock));
     const oldAvg = num(item.avgCost) > 0 ? num(item.avgCost) : num(item.cost);
@@ -63,6 +76,7 @@ export function usePoActions() {
       ...(a.tglFaktur !== undefined ? { tglFaktur: a.tglFaktur } : {}),
       ...(a.dendaRp !== undefined ? { dendaRp: a.dendaRp } : {}),
     };
+    if (num(po.qty) <= 0) nextPo.qty = nextPo.receivedQty; // PO lama tanpa qty: terima = lunas
     const st = statusAfter(nextPo, String(po.status) === "Dalam Pengiriman" ? "Dikirim" : String(po.status));
     const { id: _poId, ...poPatch } = nextPo;
     void _poId;
@@ -86,13 +100,22 @@ export function usePoActions() {
       const shortage = num(m.shortage) - give;
       const mvIds = Array.isArray(m.movementIds) ? (m.movementIds as string[]) : [];
       await update("materialRequests", String(m.id), { issued, shortage, status: mrStatus(issued, shortage, true), movementIds: [...mvIds, String(mv.id)] });
+      // Sparepart terkait ikut diperbarui (sama dengan server & pemenuhan manual).
+      const sp = m.sparepartId ? (data.spareparts ?? []).find((x) => String(x.id) === String(m.sparepartId)) : undefined;
+      if (sp) {
+        const f = (sp.fulfillment ?? {}) as Record<string, unknown>;
+        await update("spareparts", String(sp.id), {
+          ...(shortage === 0 ? { status: "Sedang", usedDate: todayISO() } : {}),
+          fulfillment: { ...f, issued, shortage, status: shortage === 0 ? "Dari stok" : "Sebagian" },
+        });
+      }
       fulfilled.push({ id: String(m.id), given: give });
     }
     const invPatch: Record<string, unknown> = { stock };
     if (unitPrice > 0) invPatch.avgCost = Math.round(((oldStock * oldAvg + a.qty * unitPrice) / (oldStock + a.qty)) * 100) / 100;
     await update("inventory", String(item.id), invPatch);
     return { status: st, fulfilled };
-  }, [data.inventory, data.materialRequests, add, update, resyncCollections]);
+  }, [data.inventory, data.materialRequests, data.spareparts, add, update, resyncCollections]);
 
   const vendorCannotFulfill = useCallback(async (po: StoreItem, qty: number, reason: string, actor: string): Promise<void> => {
     if (remote()) {
@@ -100,6 +123,8 @@ export function usePoActions() {
       await resyncCollections(["purchaseOrders", "activities"]);
       return;
     }
+    if (poIsMultiItem(po)) throw new Error(MULTI_MSG);
+    if (num(po.qty) <= 0) throw new Error("PO tanpa jumlah pesanan tidak bisa dibatalkan sebagian");
     if (qty <= 0 || qty > poOpenQty(po)) throw new Error(`Jumlah harus 1–${poOpenQty(po)}`);
     if (!reason.trim()) throw new Error("Alasan wajib diisi");
     const issues = Array.isArray(po.vendorIssues) ? (po.vendorIssues as unknown[]) : [];
@@ -119,15 +144,17 @@ export function usePoActions() {
       await resyncCollections(["purchaseOrders", "activities"]);
       return res.to.id;
     }
+    if (poIsMultiItem(po)) throw new Error(MULTI_MSG);
     const pending = poPendingReassign(po);
     if (pending <= 0) throw new Error("Tidak ada qty yang menunggu dialihkan");
+    const unit = String((Array.isArray(po.lines) ? (po.lines as Record<string, unknown>[])[0]?.unit : "") ?? "") || "pcs";
     if (vendor.trim().toLowerCase() === String(po.vendor ?? "").trim().toLowerCase()) throw new Error("Vendor pengganti harus berbeda");
     const price = unitPrice && unitPrice > 0 ? unitPrice : (num(po.qty) > 0 ? num(po.amount) / num(po.qty) : 0);
     const created = await add("purchaseOrders", {
       poType: po.poType ?? "Besar", item: po.item, itemId: po.itemId, vendor: vendor.trim(), req: po.req ?? "",
       ...(Array.isArray(po.prIds) ? { prIds: po.prIds } : {}),
       amount: Math.round(price * pending), qty: pending,
-      lines: [{ name: String(po.item ?? ""), qty: pending, unit: "pcs", price: Math.round(price) }],
+      lines: [{ name: String(po.item ?? ""), qty: pending, unit, price: Math.round(price) }],
       project: po.project ?? "-", vessel: po.vessel ?? "", eta: "",
       receivedQty: 0, returnedQty: 0, cancelledQty: 0, status: "Diajukan", date: todayISO(),
       approvals: [], amendments: [], reassignedFrom: po.id, note: `Pengalihan dari ${String(po.id)} (${String(po.vendor ?? "")}) oleh ${actor}`,

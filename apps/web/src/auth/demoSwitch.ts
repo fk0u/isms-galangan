@@ -38,12 +38,24 @@ export async function fetchDemoRoles(): Promise<DemoRole[]> {
   return res.enabled ? res.roles : [];
 }
 
+/* Pindah peran membuang cache offline termasuk antrean edit yang belum
+   tersinkron (sama seperti logout) — minta konfirmasi dulu bila ada. */
+function confirmDropPending(): boolean {
+  try {
+    const raw = localStorage.getItem("isms.dirty");
+    const entries = raw ? ((JSON.parse(raw) as { entries?: unknown[] }).entries ?? []) : [];
+    if (entries.length === 0) return true;
+    return window.confirm(`Masih ada ${entries.length} perubahan yang belum tersinkron ke server dan akan hilang bila berpindah peran. Lanjutkan?`);
+  } catch { return true; }
+}
+
 async function resetCacheFor(userId: string): Promise<void> {
   await purgeOfflineCache();
   try { localStorage.setItem("isms.cache.ownerUserId", userId); } catch { /* abaikan */ }
 }
 
 export async function switchToRole(role: string): Promise<void> {
+  if (!confirmDropPending()) return;
   const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string } }>(
     "/api/auth/demo-switch",
     { method: "POST", body: JSON.stringify({ role }), headers: authHeader() },
@@ -65,6 +77,7 @@ export async function switchToRole(role: string): Promise<void> {
 export async function restoreOriginal(): Promise<void> {
   const origin = readOrigin();
   if (!origin) return;
+  if (!confirmDropPending()) return;
   setJwt(origin.jwt);
   sessionStorage.setItem(SESSION_KEY, origin.session);
   sessionStorage.removeItem(ORIGIN_KEY);

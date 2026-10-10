@@ -67,6 +67,10 @@ async function main(): Promise<void> {
     assert("permintaan otomatis terpenuhi 6 (sisa 4)", r6d.fulfilled.length === 1 && mrAfter6.issued === 6 && mrAfter6.shortage === 4 && mrAfter6.status === "Sebagian diterima", JSON.stringify(mrAfter6));
     assert("stok masuk 6 langsung keluar ke proyek (stok 0)", (await stock()) === 0);
 
+    const otherItem = await post(dir, `/api/purchaseOrders/${poAId}/receive`, { qty: 1, itemId: "INV-001" });
+    assert("ganti barang setelah penerimaan pertama → 422", otherItem.statusCode === 422, otherItem.body);
+    const blank = await post(dir, `/api/purchaseOrders/${poAId}/vendor-cannot-fulfill`, { qty: 4, reason: "   " });
+    assert("alasan kosong → 400/422", blank.statusCode === 400 || blank.statusCode === 422, blank.body);
     const cancel = await post(dir, `/api/purchaseOrders/${poAId}/vendor-cannot-fulfill`, { qty: 4, reason: "Stok vendor habis" });
     assert("vendor A tidak sanggup 4 → Dibatalkan Sebagian", cancel.statusCode === 200 && (await poOf(poAId)).status === "Dibatalkan Sebagian", cancel.body);
 
@@ -87,6 +91,21 @@ async function main(): Promise<void> {
     const mrDone = await mrOf();
     assert("vendor B kirim 4 → PO Diterima", r4.statusCode === 200 && (await poOf(poBId)).status === "Diterima", r4.body);
     assert("permintaan selesai (10 dari 10)", mrDone.status === "Selesai" && mrDone.issued === 10 && mrDone.shortage === 0, JSON.stringify(mrDone));
+
+    // PO konsolidasi (beberapa barang) ditolak; PO lama tanpa qty tetap bisa diterima penuh.
+    const multi = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", item: "Campuran", itemId, vendor: "PT Vendor A Probe", qty: 5, amount: 500000, status: "Dikirim", date: "2026-10-10",
+      lines: [{ name: "Probe Valve", qty: 3, unit: "pcs", price: 100000 }, { name: "Probe Gasket", qty: 2, unit: "pcs", price: 100000 }],
+    } });
+    const multiId = (multi.json().data as { id: string }).id;
+    poIds.push(multiId);
+    const multiRecv = await post(dir, `/api/purchaseOrders/${multiId}/receive`, { qty: 1 });
+    assert("PO multi-barang → 422 (tidak mencampur stok)", multiRecv.statusCode === 422, multiRecv.body);
+    const legacy = await post(dir, "/api/purchaseOrders", { data: { item: "Probe Valve", itemId, vendor: "PT Vendor A Probe", amount: 300000, status: "Dikirim", date: "2026-10-10" } });
+    const legacyId = (legacy.json().data as { id: string }).id;
+    poIds.push(legacyId);
+    const legacyRecv = await post(dir, `/api/purchaseOrders/${legacyId}/receive`, { qty: 3 });
+    assert("PO lama tanpa qty → diterima penuh", legacyRecv.statusCode === 200 && (await poOf(legacyId)).status === "Diterima", legacyRecv.body);
   } finally {
     for (const id of poIds) await exec("DELETE FROM purchaseOrders WHERE id = ?", [id]);
     for (const id of poIds) await exec("DELETE FROM audit_log WHERE row_id = ?", [id]);

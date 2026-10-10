@@ -40,16 +40,28 @@ async function loadPo(id: string): Promise<Row> {
 }
 
 async function savePo(row: Row, data: Data, now: string): Promise<void> {
-  const res = await exec("UPDATE purchaseOrders SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
-    JSON.stringify(data), now, row.id, row.updated_at,
+  // CAS pada updated_at DAN isi: dua tulis di milidetik yang sama tetap terdeteksi.
+  const res = await exec("UPDATE purchaseOrders SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
+    JSON.stringify(data), now, row.id, row.updated_at, row.data,
   ]);
   if (res.changes !== 1) throw new PoError(409, "PO berubah oleh pengguna lain — muat ulang", "STALE");
 }
 
-/** Sisa yang masih ditunggu dari vendor PO ini. */
+/** Sisa yang masih ditunggu dari vendor PO ini. PO lama tanpa qty → tak terbatas. */
 export function openQty(po: Data): number {
+  if (num(po.qty) <= 0) return Number.POSITIVE_INFINITY;
   return Math.max(0, num(po.qty) - num(po.receivedQty) - num(po.cancelledQty));
 }
+
+/* PO konsolidasi/multi-baris berisi beberapa barang berbeda; penerimaan &
+   pengalihan level-PO akan mencampur stok antar barang, jadi ditolak. */
+function multiItem(po: Data): boolean {
+  const lines = Array.isArray(po.lines) ? (po.lines as Data[]) : [];
+  const names = new Set(lines.map((l) => String(l.name ?? "").trim().toLowerCase()).filter((n) => n !== ""));
+  const prs = Array.isArray(po.prIds) ? (po.prIds as unknown[]).length : 0;
+  return names.size > 1 || prs > 1;
+}
+const MULTI_MSG = "PO berisi beberapa barang (konsolidasi) — terima/alihkan per barang belum didukung; gunakan PO per barang";
 
 /* Status setelah perubahan kuantitas. Semua qty sudah tuntas (diterima atau
    dibatalkan) → Diterima / Dibatalkan Sebagian; selain itu masih berjalan. */
@@ -90,9 +102,14 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     const po = parse(row);
     const st = String(po.status ?? "");
     if (!RECEIVABLE.has(st)) throw new PoError(409, `PO berstatus ${st} — belum/tidak bisa diterima`, "INVALID_TRANSITION");
+    if (multiItem(po)) throw new PoError(422, MULTI_MSG, "MULTI_ITEM");
     const open = openQty(po);
-    if (num(po.qty) > 0 && qty > open) throw new PoError(422, `Melebihi sisa PO (${open})`, "OVER_RECEIVE");
+    if (qty > open) throw new PoError(422, `Melebihi sisa PO (${open})`, "OVER_RECEIVE");
     const itemId = String(input.itemId ?? po.itemId ?? "");
+    // Setelah penerimaan pertama, barang PO terkunci: stok tidak boleh pindah SKU.
+    if (num(po.receivedQty) > 0 && String(po.itemId ?? "") !== "" && itemId !== String(po.itemId)) {
+      throw new PoError(422, `Barang PO sudah ditetapkan (${String(po.itemId)}) sejak penerimaan pertama`, "ITEM_LOCKED");
+    }
     const inv = await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [itemId]);
     if (!inv[0]) throw new PoError(422, "Pilih item inventori penerima barang", "UNPROCESSABLE");
     const item = parse(inv[0]);
@@ -124,6 +141,8 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
       ...(input.tglFaktur !== undefined ? { tglFaktur: input.tglFaktur } : {}),
       ...(input.dendaRp !== undefined ? { dendaRp: input.dendaRp } : {}),
     };
+    // PO lama tanpa qty: satu kali terima dianggap lunas (perilaku lama "terima penuh").
+    if (num(po.qty) <= 0) nextPo.qty = nextPo.receivedQty;
     nextPo.status = statusAfter(nextPo, st === "Dalam Pengiriman" ? "Dikirim" : st);
     await savePo(row, nextPo, now);
 
@@ -155,6 +174,8 @@ export async function vendorCannotFulfill(id: string, qty: number, reason: strin
     const po = parse(row);
     const st = String(po.status ?? "");
     if (!CANCELLABLE.has(st)) throw new PoError(409, `PO berstatus ${st} — tidak bisa dibatalkan sebagian`, "INVALID_TRANSITION");
+    if (multiItem(po)) throw new PoError(422, MULTI_MSG, "MULTI_ITEM");
+    if (num(po.qty) <= 0) throw new PoError(422, "PO tanpa jumlah pesanan tidak bisa dibatalkan sebagian", "UNPROCESSABLE");
     const open = openQty(po);
     if (qty > open) throw new PoError(422, `Melebihi sisa PO yang belum diterima (${open})`, "UNPROCESSABLE");
     const now = new Date().toISOString();
@@ -179,6 +200,7 @@ export async function reassignPo(id: string, input: ReassignInput, actor: string
   return withTx(async () => {
     const row = await loadPo(id);
     const po = parse(row);
+    if (multiItem(po)) throw new PoError(422, MULTI_MSG, "MULTI_ITEM");
     const pending = num(po.cancelledQty) - num(po.reassignedQty);
     if (pending <= 0) throw new PoError(409, "Tidak ada qty yang menunggu dialihkan", "NOTHING_TO_REASSIGN");
     if (vendor.toLowerCase() === String(po.vendor ?? "").trim().toLowerCase()) {

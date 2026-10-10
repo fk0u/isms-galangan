@@ -66,6 +66,10 @@ export function registerDemoSwitchRoutes(app: FastifyInstance): void {
     const user = rows[0];
     if (!user) return reply.status(404).send(fail("Akun demo belum dibuat — jalankan seed", "NOT_FOUND"));
     if ((user.is_active ?? 1) === 0) return reply.status(403).send(fail("Akun demo dinonaktifkan", "FORBIDDEN"));
+    // Peran di DB harus sama dengan peran yang dipilih (akun seed bisa diubah lewat /api/users).
+    if (normalizeRole(user.role) !== normalizeRole(account.role)) {
+      return reply.status(409).send(fail(`Akun demo ${account.username} kini berperan ${user.role}, bukan ${account.role}`, "CONFLICT"));
+    }
 
     const branch = await branchOfUser(user);
     const token = signToken({ id: user.id, username: user.username, role: user.role, branch, v: user.token_version ?? 0 });

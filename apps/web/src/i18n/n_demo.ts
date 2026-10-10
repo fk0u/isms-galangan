@@ -99,9 +99,9 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Mekanik meminta barang; stok kurang otomatis menjadi Purchase Request.",
       steps: [
         { title: "Tambah sparepart dari inventori", hint: "Pilih barang, lihat stok; jumlah melebihi stok → peringatan PR.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Daftar permintaan barang", hint: "Semua permintaan proyek: dipenuhi dari stok, menunggu PO, sebagian. MR-2026-002 menunggu PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Daftar permintaan barang", hint: "Semua permintaan proyek: dipenuhi dari stok, menunggu PO/stok, sebagian. MR-2026-002 menunggu stok (PO-2026-118 sedang dikirim).", to: "/procurement?tab=Permintaan" },
         { title: "Purchase Request otomatis", hint: "Kekurangan stok muncul sebagai PR berstatus Diajukan, tertaut ke permintaannya.", to: "/procurement?tab=PR" },
-        { title: "Penuhi dari stok", hint: "Setelah barang masuk gudang, klik 'Penuhi dari stok' — status jadi Sebagian / Selesai.", to: "/procurement?tab=Permintaan" },
+        { title: "Penuhi dari stok", hint: "Bila stok tersedia, 'Penuhi dari stok' mengeluarkan sisanya; saat PO diterima, permintaan terpenuhi otomatis.", to: "/procurement?tab=Permintaan" },
         { title: "Pergerakan stok", hint: "Barang keluar tercatat dengan referensi proyek & WBS.", to: "/inventori?tab=Pergerakan" },
         { title: "Update progres WBS dengan material", hint: "Material WBS memakai alur yang sama — stok tidak pernah minus.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
@@ -131,7 +131,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       steps: [
         { title: "Pindah ke Procurement", hint: "Bagian 'Lihat sebagai peran' di atas → Staff Procurement. Sidebar hanya berisi modul procurement.", to: "/dashboard" },
         { title: "Pindah ke Gudang", hint: "Kepala Gudang menerima barang & memenuhi permintaan, tapi tidak bisa membuat PO.", to: "/inventori" },
-        { title: "Pindah ke Viewer (klien)", hint: "Hanya baca: tombol simpan ditolak server (403) dan tercatat.", to: "/proyek" },
+        { title: "Pindah ke Viewer (klien)", hint: "Hanya baca: menu terbatas dan setiap simpan ditolak server (403).", to: "/proyek" },
         { title: "Kembali ke Direktur", hint: "Tombol 'Kembali ke akun asal'. Semua perpindahan ada di audit log.", to: "/dashboard" },
       ],
     },
@@ -180,9 +180,9 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Mechanics request items; shortages become Purchase Requests automatically.",
       steps: [
         { title: "Add a sparepart from inventory", hint: "Pick an item, see its stock; asking for more shows the PR warning.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Material request list", hint: "Every project request: from stock, awaiting PO, partial. MR-2026-002 is awaiting PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Material request list", hint: "Every project request: from stock, awaiting PO/stock, partial. MR-2026-002 awaits stock (PO-2026-118 is in transit).", to: "/procurement?tab=Permintaan" },
         { title: "Automatic Purchase Request", hint: "The shortage appears as a Submitted PR linked to its request.", to: "/procurement?tab=PR" },
-        { title: "Fulfill from stock", hint: "Once goods arrive, click 'Fulfill from stock' — status becomes Partial / Complete.", to: "/procurement?tab=Permintaan" },
+        { title: "Fulfill from stock", hint: "With stock available, 'Fulfill from stock' issues the rest; receiving the PO fulfills requests automatically.", to: "/procurement?tab=Permintaan" },
         { title: "Stock movements", hint: "Issued items are logged with project & WBS reference.", to: "/inventori?tab=Pergerakan" },
         { title: "WBS progress with material", hint: "WBS material uses the same flow — stock never goes negative.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
@@ -212,7 +212,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       steps: [
         { title: "Switch to Procurement", hint: "'View as role' above → Procurement staff. The sidebar shows only procurement modules.", to: "/dashboard" },
         { title: "Switch to Warehouse", hint: "Warehouse head receives goods and fulfills requests but cannot create POs.", to: "/inventori" },
-        { title: "Switch to Viewer (client)", hint: "Read-only: saves are rejected by the server (403) and logged.", to: "/proyek" },
+        { title: "Switch to Viewer (client)", hint: "Read-only: limited menus and every save is rejected by the server (403).", to: "/proyek" },
         { title: "Back to Director", hint: "'Back to original account'. Every switch is in the audit log.", to: "/dashboard" },
       ],
     },

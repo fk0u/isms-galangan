@@ -408,7 +408,7 @@ if (from === "Desain" && to === "Produksi") {
     for (const id of [...wbsResult.close, ...woResult.close]) {
       void update("risks", id, { status: "Tertutup" }).catch(() => {});
     }
-  }, [data.projects]);
+  }, [data.projects, canAutoWrite]);
 
 // Terlambat otomatis dari due (P8: bisa di-override manual).
     useEffect(() => {
@@ -431,7 +431,7 @@ if (from === "Desain" && to === "Produksi") {
         });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [project?.status, project?.end, project?.progress, project?.statusOverride]);
+    }, [project?.status, project?.end, project?.progress, project?.statusOverride, canAutoWrite]);
 
   const docOwnerOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
   /* Kandidat rujukan QC untuk form dokumen proyek. Sumbernya `qcCertCandidates`

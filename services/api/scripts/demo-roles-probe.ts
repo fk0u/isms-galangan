@@ -54,7 +54,13 @@ async function main(): Promise<void> {
       const perms = permissionsFor(account.role);
       const readable = COLLECTIONS.filter((c) => (perms[c] ?? []).includes("r") && !["activities", "branches", "settings"].includes(c));
       const forbidden = COLLECTIONS.find((c) => !(perms[c] ?? []).includes("r"));
-      const own = readable[0];
+      // Modul inti tiap peran (bukan koleksi bersama seperti projects).
+      const CORE: Record<string, string> = {
+        finance: "invoices", hr: "payroll", procurement: "purchaseOrders", gudang: "inventory", mekanik: "maintenances",
+        qc: "ncr", subkon: "workOrders", equipment: "equipment", drydock: "dockSlots", proyek: "projects",
+        manager: "projects", viewer: "projects", direktur: "payroll", developer: "payroll",
+      };
+      const own = CORE[account.role] ?? readable[0];
       const h = { authorization: `Bearer ${body.token}` };
       const okRes = own ? await app.inject({ method: "GET", url: `/api/${own}`, headers: h }) : null;
       const noRes = forbidden ? await app.inject({ method: "GET", url: `/api/${forbidden}`, headers: h }) : null;

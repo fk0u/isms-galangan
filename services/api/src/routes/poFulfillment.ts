@@ -10,14 +10,14 @@ import { MaterialError } from "../materialRequests.js";
 import { PoError, reassignPo, receivePo, vendorCannotFulfill } from "../poFulfillment.js";
 
 const ReceiveSchema = z.object({
-  qty: z.number().positive().max(1_000_000),
+  qty: z.number().finite().positive().max(1_000_000),
   itemId: z.string().max(128).optional(),
   noFaktur: z.string().max(100).optional(),
   tglFaktur: z.string().max(32).optional(),
-  dendaRp: z.number().min(0).optional(),
+  dendaRp: z.number().finite().min(0).optional(),
 });
-const CancelSchema = z.object({ qty: z.number().positive().max(1_000_000), reason: z.string().min(1).max(500) });
-const ReassignSchema = z.object({ vendor: z.string().min(1).max(200), unitPrice: z.number().positive().optional(), eta: z.string().max(32).optional() });
+const CancelSchema = z.object({ qty: z.number().finite().positive().max(1_000_000), reason: z.string().trim().min(1).max(500) });
+const ReassignSchema = z.object({ vendor: z.string().min(1).max(200), unitPrice: z.number().finite().positive().max(1e13).optional(), eta: z.string().max(32).optional() });
 
 function handleError(err: unknown, reply: FastifyReply) {
   if (err instanceof PoError || err instanceof MaterialError) return reply.status(err.status).send(fail(err.message, err.code));

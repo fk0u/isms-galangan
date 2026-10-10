@@ -19,7 +19,8 @@ Opsi 3.
   - `GET /api/auth/demo-switch` mengembalikan daftar peran (kosong bila tidak berhak).
   - `POST /api/auth/demo-switch {role}` menerbitkan token akun seed peran itu.
 - **Syarat:**
-  - `DEMO_ROLE_SWITCH=true` **dan** `ALLOW_SEED_LOGIN=true`; bila tidak, endpoint 404.
+  - `DEMO_ROLE_SWITCH=true` **dan** `ALLOW_SEED_LOGIN=true`; bila tidak, `POST` membalas 404 dan `GET` membalas `enabled: false` dengan daftar peran kosong.
+  - Peran akun seed di DB harus sama dengan peran yang dipilih; bila berbeda (diubah lewat /api/users), 409.
   - Peran pemanggil (dari DB) direktur atau developer; selain itu 403.
   - Target hanya akun seed.
   - Audit `auth.demo_switch` wajib (`required`); gagal audit berarti token tidak diterbitkan.

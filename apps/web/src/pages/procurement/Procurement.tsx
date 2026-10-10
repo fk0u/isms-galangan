@@ -31,7 +31,7 @@ import { n_proc } from "../../i18n/n_proc";
 import { FilterPopover } from "../../components/FilterPopover";
 import { n_mr } from "../../i18n/n_mr";
 import MaterialRequestsTab from "./MaterialRequestsTab";
-import { poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
+import { poIsMultiItem, poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
 import { useAuth } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
@@ -566,7 +566,7 @@ export default function Procurement() {
     if (!p) return null;
     const sisa = Number(p.budget || 0) - Number(p.actual || 0);
     const aktif = purchaseOrders
-      .filter((o) => o.project === projectId && !["Ditolak", "Diterima"].includes(normPo(o.status)) && o.id !== excludeId)
+      .filter((o) => o.project === projectId && !["Ditolak", "Diterima", "Dibatalkan Sebagian"].includes(normPo(o.status)) && o.id !== excludeId)
       .reduce((s, o) => s + Number(o.amount || 0), 0);
     return { sisa, aktif };
   };
@@ -966,7 +966,7 @@ export default function Procurement() {
   const openRecv = (po: StoreItem) => {
     setRecvPo(po);
     setRecvItem(po.itemId ?? "");
-    setRecvQty(po.qty ? String(poOpenQty(po)) : "");
+    setRecvQty(Number(po.qty || 0) > 0 ? String(poOpenQty(po)) : "");
     setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
     setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : "");
     setRecvDendaPct("0.1");
@@ -1287,7 +1287,7 @@ export default function Procurement() {
             {(st === "Diajukan") && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-rose-600 hover:bg-steel-50" aria-label={S.ariaTolakN.replace("{n}", po.id)} onClick={() => setConfirmRejectPo(po)}><X className="mr-1 inline h-3.5 w-3.5" />{S.btnTolak}</button>
             )}
-            {(st === "Disetujui" || st === "Dikirim" || st === "Diterima Sebagian") && poOpenQty(po) > 0 && (
+            {(st === "Disetujui" || st === "Dikirim" || st === "Diterima Sebagian") && Number(po.qty || 0) > 0 && poOpenQty(po) > 0 && !poIsMultiItem(po) && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-rose-600 hover:bg-steel-50" onClick={() => { setCannotFor(po); setCannotQty(String(poOpenQty(po))); setCannotReason(""); }}>
                 {n_mr[locale].poCannotBtn}
               </button>
@@ -1297,7 +1297,7 @@ export default function Procurement() {
                 {S.btnAmandemen}
               </button>
             )}
-            {st === "Diterima" && (
+            {(st === "Diterima" || (st === "Dibatalkan Sebagian" && Number(po.receivedQty || 0) > Number(po.returnedQty || 0))) && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-steel-600 hover:bg-steel-50" aria-label={S.ariaRetur.replace("{n}", po.id)} onClick={() => { setRetPo(po); setRetQty(""); setRetNote(""); }}>
                 {S.btnRetur}
               </button>
@@ -2291,7 +2291,8 @@ const sparkVendors = useMemo(() => {
             <select className="input" value={reassignVendor} onChange={(e) => {
               setReassignVendor(e.target.value);
               const h = reassignFor ? vendorPriceHistory(purchaseOrders, reassignFor).find((x) => x.vendor === e.target.value) : undefined;
-              if (h) setReassignPrice(String(h.unitPrice));
+              // Tanpa riwayat: kosongkan supaya harga vendor sebelumnya tidak ikut terkirim.
+              setReassignPrice(h ? String(h.unitPrice) : "");
             }}>
               <option value="">{n_mr[locale].poVendorPick}</option>
               {vendors.filter((v) => String(v.name ?? "") !== String(reassignFor?.vendor ?? "")).map((v) => <option key={String(v.id)} value={String(v.name)}>{String(v.name)}</option>)}
