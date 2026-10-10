@@ -44,7 +44,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | selesai | PR #22 merged ke main via squash commit `33816fc`; re-review PENGUJI dan semua checks lulus |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | todo | |
-| F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | | todo | |
+| F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-05-change-order — keputusan owner & apply lewat endpoint; apply membuat revisi BoQ + memperbarui anggaran (`probe:change-order` 9/9) |
 | F3-D-01 | Tambah sparepart dari inventori | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-D-02 | Service: dari WBS, teknisi, biaya BoQ, approval | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-D-02-service-approval-mr (`probe:service` 14/14, ADR-0015) |
 | F3-D-03 | Probe alur material | P1 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo (`probe:material` 10/10) |

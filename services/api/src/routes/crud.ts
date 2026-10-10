@@ -13,6 +13,7 @@ import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { checklistHook } from "../scoring.js";
+import { changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -453,6 +454,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     let rowData: Record<string, unknown> = { ...parsed.data.data };
     if (table === "boqDocs") rowData = normalizeNewDoc(rowData);
     if (table === "services") rowData = normalizeNewService(rowData);
+    if (table === "changeOrders") rowData = normalizeNewChangeOrder(rowData);
     if (table === "activities") {
       rowData.user = requestActor(req);
     }
@@ -574,6 +576,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
     const loanPatch = await loanOverlapError(table, id, merged);
     if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
+    const coGuard = changeOrderGuardError(table, oldData, merged as Record<string, unknown>);
+    if (coGuard) return reply.status(422).send(fail(coGuard, "UNPROCESSABLE"));
     const clPatch = await checklistHook(table, merged as Record<string, unknown>);
     if ("error" in clPatch) return reply.status(422).send(fail(clPatch.error, "UNPROCESSABLE"));
     merged = clPatch.data as typeof merged;

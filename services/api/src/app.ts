@@ -26,6 +26,7 @@ import { registerServiceApprovalRoutes } from "./routes/serviceApproval.js";
 import { registerPoFulfillmentRoutes } from "./routes/poFulfillment.js";
 import { registerDemoSwitchRoutes } from "./routes/demoSwitch.js";
 import { registerInventoryIssueRoutes } from "./routes/inventoryIssue.js";
+import { registerChangeOrderRoutes } from "./routes/changeOrders.js";
 
 const LoginSchema = z.object({
   username: z.string().min(1),
@@ -374,6 +375,7 @@ export function buildApp(): FastifyInstance {
   registerPoFulfillmentRoutes(app);
   registerDemoSwitchRoutes(app);
   registerInventoryIssueRoutes(app);
+  registerChangeOrderRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {
     return reply.status(404).send(fail("Not found", "NOT_FOUND"));

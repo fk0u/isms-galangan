@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
+import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
 import {
@@ -115,7 +116,7 @@ export default function ProjectDetail() {
   const { locale } = useT();
   const S = n_prj[locale];
   const { id } = useParams();
-  const { data, update, add, remove, wbsFor, setWbs, teamFor, setTeam, log } = useStore();
+  const { data, update, add, remove, wbsFor, setWbs, teamFor, setTeam, log, resyncCollections } = useStore();
   const requestMaterial = useMaterialRequest();
   /* D3: inventory diakses supaya material WBS bisa terhubung ke stok.
      Saat save WBS task dengan material terpilih, stok berkurang dan
@@ -338,6 +339,10 @@ if (from === "Desain" && to === "Produksi") {
   };
   const [showCo, setShowCo] = useState(false);
   const [coForm, setCoForm] = useState({ title: "", impact: "", requestedBy: "", date: "" });
+  /* F3-C-05: CO terhubung surat BoQ aktif + daftar perubahan item. */
+  type CoChangeForm = { op: "add" | "update" | "remove"; itemId: string; name: string; quantity: string; unit: string; unitPrice: string };
+  const [coDocId, setCoDocId] = useState("");
+  const [coChanges, setCoChanges] = useState<CoChangeForm[]>([]);
   const [docFile, setDocFile] = useState("");
   const [showDelBaseline, setShowDelBaseline] = useState(false);
   const [showBast, setShowBast] = useState(false);
@@ -524,18 +529,43 @@ if (from === "Desain" && to === "Produksi") {
     }
   };
 
+  const coDocs = (data.boqDocs ?? []).filter((d) => String(d.projectId ?? "") === pid && String(d.status ?? "") === "Disetujui");
+  const coDocItems = (data.boq ?? []).filter((b) => String(b.boqDocId ?? "") === coDocId);
+  /* Dampak dihitung dari perubahan item bila CO menunjuk surat BoQ. */
+  const coChangeImpact = coChanges.reduce((sum, ch) => {
+    const item = coDocItems.find((b) => String(b.id) === ch.itemId);
+    const oldTotal = Number(item?.totalPrice ?? 0);
+    if (ch.op === "remove") return sum - oldTotal;
+    const qty = Number(ch.quantity || (ch.op === "update" ? item?.quantity : 0) || 0);
+    const price = parseRupiah(ch.unitPrice) || (ch.op === "update" ? Number(item?.unitPrice ?? 0) : 0);
+    return sum + Math.round(qty * price) - (ch.op === "update" ? oldTotal : 0);
+  }, 0);
+  const coOwner = ["direktur", "developer"].includes(String(session?.role ?? "").toLowerCase()) || !session?.permissions;
+
   const saveCo = async () => {
     if (!coForm.title.trim()) { toast(S.detToastCoTitle, "info"); return; }
-    const impact = parseRupiah(coForm.impact);
-    if (coForm.impact === "" || !Number.isFinite(impact)) { toast(S.detToastCoImpact, "info"); return; }
+    const linked = coDocId !== "" && coChanges.length > 0;
+    const impact = linked ? coChangeImpact : parseRupiah(coForm.impact);
+    if (!linked && (coForm.impact === "" || !Number.isFinite(impact))) { toast(S.detToastCoImpact, "info"); return; }
     if (!coForm.requestedBy.trim()) { toast(S.detToastCoBy, "info"); return; }
+    if (linked && coChanges.some((ch) => (ch.op !== "add" && !ch.itemId) || (ch.op === "add" && (!ch.name.trim() || !(Number(ch.quantity) > 0))))) { toast(S.detCoChangeInvalid, "info"); return; }
     try {
       await add("changeOrders", {
         project: pid, title: coForm.title.trim(), impact,
         status: "Diajukan", requestedBy: coForm.requestedBy.trim(), date: coForm.date || todayISO(),
+        ...(linked ? {
+          boqDocId: coDocId,
+          changes: coChanges.map((ch) => ({
+            op: ch.op,
+            ...(ch.op !== "add" ? { itemId: ch.itemId } : { name: ch.name.trim(), unit: ch.unit.trim() || "ls" }),
+            ...(ch.op !== "remove" && ch.quantity !== "" ? { quantity: Number(ch.quantity) } : {}),
+            ...(ch.op !== "remove" && ch.unitPrice !== "" ? { unitPrice: parseRupiah(ch.unitPrice) } : {}),
+          })),
+        } : {}),
       }, { action: "mengajukan change order", module: "Proyek" });
       toast(S.detToastCoSent);
       setCoForm({ title: "", impact: "", requestedBy: "", date: "" });
+      setCoDocId(""); setCoChanges([]);
       setShowCo(false);
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
@@ -544,6 +574,20 @@ if (from === "Desain" && to === "Produksi") {
 
   const setCoStatus = async (id: string, status: string) => {
     try {
+      /* F3-C-05: keputusan owner & penerapan lewat endpoint (server memeriksa
+         peran, membuat revisi BoQ, dan memperbarui anggaran). Mode lokal: status saja. */
+      if (isBackendConfigured() && getJwt() !== null) {
+        if (status === "Diterapkan") {
+          const res = await apiFetch<{ resultBoqDocId: string | null; newTotal: number }>(`/api/changeOrders/${encodeURIComponent(id)}/apply`, { method: "POST" });
+          await resyncCollections(["changeOrders", "boqDocs", "boq", "projects", "activities"]);
+          toast(res.resultBoqDocId ? S.detCoAppliedBoq.replace("{v}", fmtRupiah(res.newTotal)) : S.detToastCoStatus.replace("{a}", status.toLowerCase()));
+          return;
+        }
+        await apiFetch(`/api/changeOrders/${encodeURIComponent(id)}/decision`, { method: "POST", body: JSON.stringify({ decision: status, ...(status === "Ditolak" ? { note: S.detCoRejectNote } : {}) }) });
+        await resyncCollections(["changeOrders", "activities"]);
+        toast(S.detToastCoStatus.replace("{a}", status.toLowerCase()));
+        return;
+      }
       await update("changeOrders", id, { status });
       log("mengubah change order", `${id} - ${status}`, "Proyek");
       toast(S.detToastCoStatus.replace("{a}", status.toLowerCase()));
@@ -1974,7 +2018,9 @@ const createWarranty = async (wbsTask?: string) => {
                       </div>
                       <div className="flex items-center gap-2">
                         <StatusBadge status={c.status} />
-                        {c.status === "Diajukan" && (
+                        {c.boqDocId ? <span className="text-[11px] text-steel-500">{S.detCoLinked.replace("{n}", String(Array.isArray(c.changes) ? c.changes.length : 0))}</span> : null}
+                        {c.status === "Diajukan" && !coOwner && <span className="text-[11px] text-steel-500">{S.detCoWaitOwner}</span>}
+                        {c.status === "Diajukan" && coOwner && (
                           <>
                             <button className="btn-secondary text-xs" onClick={() => setCoStatus(c.id, "Disetujui")}>{S.detApproveBtn}</button>
                             <button className="btn-secondary text-xs" onClick={() => setCoStatus(c.id, "Ditolak")}>{S.detRejectBtn}</button>
@@ -2363,6 +2409,48 @@ const createWarranty = async (wbsTask?: string) => {
             <Field label={S.dateField}><input type="date" className="input" value={coForm.date} onChange={(e) => setCoForm({ ...coForm, date: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.detRequester}><input className="input" value={coForm.requestedBy} onChange={(e) => setCoForm({ ...coForm, requestedBy: e.target.value })} placeholder={S.detRequesterPh} /></Field>
+          {/* F3-C-05: perubahan item pada surat BoQ aktif */}
+          {coDocs.length > 0 && (
+            <Field label={S.detCoDoc} hint={S.detCoDocHint}>
+              <select className="input" value={coDocId} onChange={(e) => { setCoDocId(e.target.value); setCoChanges([]); }}>
+                <option value="">{S.detCoDocNone}</option>
+                {coDocs.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.number)} · Rev {String(d.revision ?? 0)}</option>)}
+              </select>
+            </Field>
+          )}
+          {coDocId && (
+            <div className="space-y-2 rounded-xl border border-steel-200 p-3">
+              {coChanges.map((ch, i) => {
+                const patch = (p: Partial<CoChangeForm>) => setCoChanges(coChanges.map((x, j) => (j === i ? { ...x, ...p } : x)));
+                return (
+                  <div key={i} className="grid grid-cols-12 items-end gap-2">
+                    <div className="col-span-4 sm:col-span-2">
+                      <select className="input" aria-label={S.detCoOp} value={ch.op} onChange={(e) => patch({ op: e.target.value as CoChangeForm["op"] })}>
+                        <option value="update">{S.detCoOpUpdate}</option><option value="add">{S.detCoOpAdd}</option><option value="remove">{S.detCoOpRemove}</option>
+                      </select>
+                    </div>
+                    <div className="col-span-8 sm:col-span-4">
+                      {ch.op === "add"
+                        ? <input className="input" placeholder={S.detCoItemName} value={ch.name} onChange={(e) => patch({ name: e.target.value })} />
+                        : <select className="input" aria-label={S.detCoItem} value={ch.itemId} onChange={(e) => patch({ itemId: e.target.value })}>
+                            <option value="">{S.detCoItem}</option>
+                            {coDocItems.map((b) => <option key={String(b.id)} value={String(b.id)}>{String(b.name)} · {fmtRupiah(Number(b.totalPrice ?? 0))}</option>)}
+                          </select>}
+                    </div>
+                    {ch.op !== "remove" && (
+                      <>
+                        <div className="col-span-4 sm:col-span-2"><NumInput min={0} className="input" placeholder={S.detCoQty} value={ch.quantity} onChange={(e) => patch({ quantity: e.target.value })} /></div>
+                        <div className="col-span-6 sm:col-span-3"><MoneyInput className="input" placeholder={S.detCoPrice} value={ch.unitPrice} onChange={(v) => patch({ unitPrice: v })} /></div>
+                      </>
+                    )}
+                    <button type="button" className="btn-secondary col-span-2 h-9 px-2 text-xs sm:col-span-1" aria-label={S.detCoRemoveRow} onClick={() => setCoChanges(coChanges.filter((_, j) => j !== i))}>×</button>
+                  </div>
+                );
+              })}
+              <button type="button" className="btn-secondary text-xs" onClick={() => setCoChanges([...coChanges, { op: "update", itemId: "", name: "", quantity: "", unit: "", unitPrice: "" }])}><Plus className="h-3.5 w-3.5" /> {S.detCoAddRow}</button>
+              {coChanges.length > 0 && <p className="text-xs text-steel-600">{S.detCoAutoImpact.replace("{v}", fmtRupiah(coChangeImpact))}</p>}
+            </div>
+          )}
         </div>
 </Modal>
 
