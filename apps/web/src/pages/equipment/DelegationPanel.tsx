@@ -18,7 +18,8 @@ export function activeLoanOf(eq: StoreItem, bookings: StoreItem[], today: string
 }
 /** Maintenance/kalibrasi yang masih berjalan untuk equipment ini. */
 export function activeMaintOf(eq: StoreItem, maintenances: StoreItem[]): StoreItem | undefined {
-  return maintenances.find((m) => String(m.equipmentId ?? "") === String(eq.id) && !CLOSED.has(String(m.status ?? "")) && String(m.status ?? "") !== "Batal");
+  // Hanya yang benar-benar sedang dikerjakan; "Terjadwal" belum mengurangi ketersediaan.
+  return maintenances.find((m) => String(m.equipmentId ?? "") === String(eq.id) && String(m.status ?? "") === "Sedang Proses");
 }
 /** Status turunan: Maintenance > Dipinjam > Tersedia. */
 export function delegationStatus(eq: StoreItem, bookings: StoreItem[], maintenances: StoreItem[], today: string): "Maintenance" | "Dipinjam" | "Tersedia" {
@@ -42,7 +43,7 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
   const maints = (data.maintenances ?? []).filter((m) => String(m.equipmentId ?? "") === eqId);
   const history = [
     ...loans.map((b) => ({ id: String(b.id), date: String(b.startDate ?? b.date ?? ""), kind: "loan" as const, row: b })),
-    ...maints.map((m) => ({ id: String(m.id), date: String(m.mulai ?? m.tanggal ?? ""), kind: "maint" as const, row: m })),
+    ...maints.map((m) => ({ id: String(m.id), date: String(m.mulai || m.tanggal || ""), kind: "maint" as const, row: m })),
   ].sort((a, b) => b.date.localeCompare(a.date));
   const employees = (data.employees ?? []).map((e) => ({ value: String(e.name ?? e.id), label: String(e.name ?? e.id), subLabel: String(e.role ?? "") }));
 
@@ -165,7 +166,9 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                           {h.row.conditionOut ? `${T.condOut}: ${String(h.row.conditionOut)}` : ""}
                           {h.row.conditionIn ? ` · ${T.condIn}: ${String(h.row.conditionIn)}` : ""}
                         </p>
-                        {!closed && (
+                        {/* Pengembalian baru bisa setelah peminjaman dimulai — menutup pinjaman
+                            yang belum berjalan akan melepas perlindungan bentrok jadwalnya. */}
+                        {!closed && String(h.row.startDate ?? "") <= todayISO() && (
                           <div className="mt-2 flex gap-2">
                             <input className="input h-8 flex-1 py-0 text-xs" placeholder={T.condIn} value={condIn[h.id] ?? ""} onChange={(e) => setCondIn({ ...condIn, [h.id]: e.target.value })} />
                             <AsyncButton className="btn-secondary h-8 text-xs" onAction={() => returnLoan(h.row)}>{T.returnBtn}</AsyncButton>
@@ -174,9 +177,11 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                       </>
                     ) : (
                       <>
-                        <p className="mt-1 text-navy-900">{T.maintLine.replace("{kind}", String(h.row.jenis ?? "")).replace("{who}", String(h.row.teknisi ?? "-")).replace("{a}", fmtTanggal(String(h.row.mulai ?? h.row.tanggal ?? "")))}</p>
+                        <p className="mt-1 text-navy-900">{T.maintLine.replace("{kind}", String(h.row.jenis ?? "")).replace("{who}", String(h.row.teknisi ?? "-")).replace("{a}", fmtTanggal(String(h.row.mulai || h.row.tanggal || "")))}</p>
                         <p className="text-xs text-steel-500">{fmtRupiah(Number(h.row.costTotal ?? 0))}{h.row.projectId ? ` · ${String(h.row.projectId)}` : ""}{h.row.catatan ? ` · ${String(h.row.catatan)}` : ""}</p>
-                        {!closed && <AsyncButton className="btn-secondary mt-2 h-8 text-xs" onAction={() => finishMaint(h.row)}>{T.finishBtn}</AsyncButton>}
+                        {/* Hanya maintenance hasil delegasi: siklus maintenance penuh (material, status
+                            unit) diselesaikan lewat alur kanoniknya, bukan dari sini. */}
+                        {!closed && h.row.delegasi === true && <AsyncButton className="btn-secondary mt-2 h-8 text-xs" onAction={() => finishMaint(h.row)}>{T.finishBtn}</AsyncButton>}
                       </>
                     )}
                   </li>

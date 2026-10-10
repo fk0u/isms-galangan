@@ -17,6 +17,11 @@ export async function loanOverlapError(table: string, id: string | null, after: 
   const start = String(after.startDate ?? "");
   const end = String(after.endDate ?? "");
   if (!equipId || !start || !end) return "Peminjaman wajib punya equipment, tanggal mulai, dan tanggal selesai";
+  // Perbandingan string hanya benar untuk tanggal ISO ber-nol (YYYY-MM-DD).
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  if (!ISO.test(start) || !ISO.test(end) || Number.isNaN(Date.parse(start)) || Number.isNaN(Date.parse(end))) {
+    return "Tanggal peminjaman harus berformat YYYY-MM-DD";
+  }
   if (end < start) return "Tanggal selesai tidak boleh sebelum tanggal mulai";
   const rows = await q<{ id: string; data: string }>("SELECT id, data FROM bookings", []);
   for (const r of rows) {

@@ -250,6 +250,11 @@ export default function EquipmentPage() {
   const projects = data.projects;
   const [tab, setTab] = useState("Register");
   const D = n_dlg[locale];
+  /* Tab lama (booking/maintenance/kalibrasi/biaya) sudah tidak punya tombol;
+     deep link ke sana dikembalikan ke Daftar Equipment. */
+  useEffect(() => {
+    if (tab !== "Register" && tab !== "Utilisasi") setTab("Register");
+  }, [tab]);
   /* F3-H-03: delegasi peminjaman/maintenance per equipment. */
   const [delegFor, setDelegFor] = useState<StoreItem | null>(null);
 
