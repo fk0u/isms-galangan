@@ -91,6 +91,7 @@ const INDEX_MAP: Array<[string, string]> = [
   ["surveyTimeline", "surveys"],
   ["activities", "activities"],
   ["seedBoqDocs", "boqDocs"],
+  ["seedMaterialRequests", "materialRequests"],
   ["seedBoq", "boq"],
 ];
 

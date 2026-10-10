@@ -33,7 +33,16 @@ export interface MaterialRequestResult {
   movementId: string | null;
   requisitionId: string | null;
   sparepartId: string | null;
+  materialRequestId: string;
   status: MaterialStatus;
+}
+
+export type MrStatus = "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai";
+
+/** Sama dengan mrStatus di server (services/api/src/materialRequests.ts). */
+export function mrStatus(issued: number, shortage: number, hadShortage: boolean): MrStatus {
+  if (shortage === 0) return hadShortage ? "Selesai" : "Dipenuhi dari stok";
+  return issued > 0 ? "Sebagian diterima" : "Menunggu PO";
 }
 
 /** Status pemenuhan dari jumlah keluar & kekurangan (sama dengan server). */
@@ -55,7 +64,7 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
           ...(args.sparepart ? { sparepart: args.sparepart } : {}),
         }),
       });
-      await resyncCollections(["inventory", "movements", "requisitions", "spareparts", "activities"]);
+      await resyncCollections(["inventory", "movements", "requisitions", "spareparts", "materialRequests", "activities"]);
       return res;
     }
 
@@ -69,7 +78,14 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
     const shortage = args.qty - issued;
     const today = todayISO();
     const actor = args.actor || "Pengguna";
-    const ref = { projectId: args.projectId, ...(args.wbsTask ? { wbsId: args.wbsTask, wbsTask: args.wbsTask } : {}) };
+    const mr = await add("materialRequests", {
+      projectId: args.projectId, itemId: String(item.id), item: itemName, unit, purpose: args.purpose,
+      wbsTask: args.wbsTask ?? "", requested: args.qty, issued, shortage,
+      status: mrStatus(issued, shortage, false), requestedBy: actor, date: today,
+      movementIds: [], requisitionId: null, sparepartId: null, note: args.note ?? "",
+    }, { action: "permintaan barang proyek", module: "Procurement" });
+    const mrId = String(mr.id);
+    const ref = { projectId: args.projectId, materialRequestId: mrId, ...(args.wbsTask ? { wbsId: args.wbsTask, wbsTask: args.wbsTask } : {}) };
     const unitPrice = Number(item.cost ?? item.price ?? item.unitPrice ?? 0) || 0;
     let movementId: string | null = null;
     let requisitionId: string | null = null;
@@ -86,7 +102,7 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
       const pr = await add("requisitions", {
         projectId: args.projectId, item: itemName, itemId: String(item.id), qty: shortage, unit,
         status: "Diajukan", date: today, requestedBy: actor, by: actor, project: args.projectId,
-        amount: Math.round(unitPrice * shortage), ref,
+        amount: Math.round(unitPrice * shortage), ref, sourceRequestIds: [mrId],
         note: `Permintaan material proyek ${args.projectId}: butuh ${args.qty}, stok ${stock}`,
       }, { action: "permintaan pembelian material", module: "Procurement" });
       requisitionId = String(pr.id);
@@ -100,14 +116,66 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
         notes: args.sparepart?.notes ?? "", technician: args.sparepart?.technician ?? "-",
         usedDate: shortage === 0 ? today : "-", warrantyUntil: args.sparepart?.warrantyUntil ?? "-",
         projectId: args.projectId, vesselId: "", requestDate: today,
-        inventoryItemId: String(item.id), qty: args.qty, unit,
+        inventoryItemId: String(item.id), materialRequestId: mrId, qty: args.qty, unit,
         fulfillment: { status, issued, shortage, movementId, requisitionId },
       }, { action: "menambahkan sparepart dari inventori", module: "Sparepart" });
       sparepartId = String(sp.id);
     }
+    await update("materialRequests", mrId, { movementIds: movementId ? [movementId] : [], requisitionId, sparepartId });
     return {
       itemId: String(item.id), itemName, requested: args.qty, issued, shortage,
-      stockAfter: stock - issued, movementId, requisitionId, sparepartId, status,
+      stockAfter: stock - issued, movementId, requisitionId, sparepartId, materialRequestId: mrId, status,
     };
   }, [data.inventory, add, update, resyncCollections]);
+}
+
+export interface FulfillResult {
+  id: string;
+  given: number;
+  issued: number;
+  shortage: number;
+  status: MrStatus;
+}
+
+/** Penuhi sisa permintaan dari stok (setelah barang PO masuk gudang). */
+export function useFulfillMaterialRequest(): (id: string, actor?: string) => Promise<FulfillResult> {
+  const { data, add, update, resyncCollections } = useStore();
+
+  return useCallback(async (id: string, actor?: string): Promise<FulfillResult> => {
+    if (isBackendConfigured() && getJwt() !== null) {
+      const res = await apiFetch<FulfillResult>(`/api/material-requests/${encodeURIComponent(id)}/fulfill`, { method: "POST" });
+      await resyncCollections(["materialRequests", "inventory", "movements", "spareparts", "activities"]);
+      return res;
+    }
+    const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
+    if (!mr) throw new Error(`Permintaan ${id} tidak ditemukan`);
+    const remaining = Number(mr.shortage ?? 0);
+    if (remaining <= 0) throw new Error("Permintaan ini sudah terpenuhi");
+    const item = (data.inventory ?? []).find((i) => String(i.id) === String(mr.itemId));
+    if (!item) throw new Error(`Item inventori ${String(mr.itemId)} tidak ditemukan`);
+    const stock = Math.max(0, Number(item.stock ?? 0) || 0);
+    const given = Math.min(stock, remaining);
+    if (given === 0) throw new Error("Stok gudang masih kosong — tunggu barang PO masuk");
+    await update("inventory", String(item.id), { stock: stock - given });
+    const mv = await add("movements", {
+      item: String(mr.item ?? item.name), itemId: String(item.id), type: "Pengeluaran", qty: given,
+      unit: String(mr.unit ?? item.unit ?? "pcs"), by: actor || "Gudang", date: todayISO(), tone: "out",
+      ref: { projectId: mr.projectId, materialRequestId: id }, note: `Pemenuhan ${id}`,
+    }, { action: "memenuhi permintaan barang", module: "Inventori" });
+    const issued = Number(mr.issued ?? 0) + given;
+    const shortage = remaining - given;
+    const status = mrStatus(issued, shortage, true);
+    const mvIds = Array.isArray(mr.movementIds) ? (mr.movementIds as string[]) : [];
+    await update("materialRequests", id, { issued, shortage, status, movementIds: [...mvIds, String(mv.id)] });
+    const spId = String(mr.sparepartId ?? "");
+    const sp = spId ? (data.spareparts ?? []).find((x) => String(x.id) === spId) : undefined;
+    if (sp) {
+      const f = (sp.fulfillment ?? {}) as Record<string, unknown>;
+      await update("spareparts", spId, {
+        ...(shortage === 0 ? { status: "Sedang", usedDate: todayISO() } : {}),
+        fulfillment: { ...f, issued, shortage, status: shortage === 0 ? "Dari stok" : "Sebagian" },
+      });
+    }
+    return { id, given, issued, shortage, status };
+  }, [data.materialRequests, data.inventory, data.spareparts, add, update, resyncCollections]);
 }

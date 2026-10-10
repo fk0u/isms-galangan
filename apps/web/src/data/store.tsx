@@ -26,6 +26,7 @@ import {
   spareparts as seedSpareparts,
   seedBoq as seedBoq,
   seedBoqDocs,
+  seedMaterialRequests,
 } from "./index";
 import { COA_EXCEL, ASET_EXCEL } from "./financeExcel";
 import {
@@ -158,6 +159,7 @@ export interface StoreShape {
   assets: StoreItem[];
   /** Surat BoQ per nomor surat (ADR-0006). Kosong di seed lokal; diisi dari API. */
   boqDocs: StoreItem[];
+  materialRequests: StoreItem[];
   wbsByProject: Record<string, WbsItem[]>;
   teamByProject: Record<string, string[]>;
 }
@@ -336,6 +338,7 @@ function buildSeeds(): StoreShape {
       journals: clone(seedJournals),
       assets: clone(seedAssets),
       boqDocs: clone(seedBoqDocs) as StoreItem[],
+      materialRequests: clone(seedMaterialRequests) as StoreItem[],
 wbsByProject: {},
      teamByProject: clone(seedTeamByProject),
    };
@@ -489,6 +492,7 @@ const PREFIX: Record<string, string> = {
     journals: "JU",
     assets: "AST",
     boqDocs: "BQD",
+    materialRequests: "MR",
  };
 
 const ARRAY_KEYS: (keyof StoreShape)[] = [
@@ -500,7 +504,7 @@ const ARRAY_KEYS: (keyof StoreShape)[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties",
-  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
 ];
 
 function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
@@ -706,7 +710,7 @@ const OFFLINE_COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
 ];
 
 /* Hidrasi cache offline dari IndexedDB saat boot. Berjalan sebelum resync

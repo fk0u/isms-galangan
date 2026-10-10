@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (480 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (484 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -445,7 +445,11 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "item": "Anoda Zink",
       "by": "Agus S.",
       "amount": 94000000,
-      "status": "Menunggu Approval"
+      "status": "Menunggu Approval",
+      "sourceRequestIds": [
+        "MR-2026-002"
+      ],
+      "projectId": "RP-2026-003"
     }
   },
   {
@@ -7252,7 +7256,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "description": "Coating thickness check",
       "status": "Scheduled",
       "technician": "Sari Wulandari",
-      "cost": 75000000
+      "cost": 75000000,
+      "wbsTask": "Outfitting - Machinery",
+      "approval": "Diajukan"
     }
   },
   {
@@ -7283,6 +7289,23 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "In Progress",
       "technician": "Fajar Nugroho",
       "cost": 320000000
+    }
+  },
+  {
+    "table": "services",
+    "id": "SRV-006",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-005",
+      "vesselId": "V-004",
+      "date": "2026-10-12",
+      "type": "Repair",
+      "description": "Perbaikan sistem kemudi hidrolik",
+      "status": "Scheduled",
+      "technician": "Agus Setiawan",
+      "cost": 95000000,
+      "wbsTask": "Outfitting - Piping",
+      "approval": "Diajukan"
     }
   },
   {
@@ -8104,6 +8127,75 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedAt": "2026-07-15",
       "note": "Surat BoQ demo Rev 0.",
       "total": 320000000
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-001",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-003",
+      "item": "Cat Epoxy Primer",
+      "unit": "liter",
+      "purpose": "wbs",
+      "wbsTask": "Outfitting - Machinery",
+      "requested": 20,
+      "issued": 20,
+      "shortage": 0,
+      "status": "Dipenuhi dari stok",
+      "requestedBy": "Rudi Hartono",
+      "date": "2026-10-02",
+      "movementIds": [],
+      "requisitionId": null,
+      "sparepartId": null,
+      "note": ""
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-002",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-005",
+      "item": "Anoda Zink",
+      "unit": "pcs",
+      "purpose": "wbs",
+      "wbsTask": "Outfitting - Machinery",
+      "requested": 20,
+      "issued": 0,
+      "shortage": 20,
+      "status": "Menunggu PO",
+      "requestedBy": "Agus Setiawan",
+      "date": "2026-10-05",
+      "movementIds": [],
+      "requisitionId": "PR-2026-211",
+      "sparepartId": null,
+      "note": "Penggantian anoda lambung"
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-003",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-007",
+      "item": "Baut Marine M20",
+      "unit": "pcs",
+      "purpose": "wbs",
+      "wbsTask": "Hull Assembly",
+      "requested": 400,
+      "issued": 400,
+      "shortage": 0,
+      "status": "Dipenuhi dari stok",
+      "requestedBy": "Fajar Nugroho",
+      "date": "2026-10-07",
+      "movementIds": [],
+      "requisitionId": null,
+      "sparepartId": null,
+      "note": ""
     }
   },
   {

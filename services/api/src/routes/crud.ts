@@ -9,6 +9,7 @@ import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
+import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -92,6 +93,7 @@ export const PREFIX: Record<string, string> = {
   journals: "JU",
   assets: "AST",
   boqDocs: "BQD",
+  materialRequests: "MR",
 };
 
 // Every envelope table from migrations/001_init.sql except users
@@ -105,7 +107,7 @@ export const COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
 ];
 
 // Tulis settings/coa dibatasi di registerCrud (requireSettingsWrite).
@@ -444,12 +446,16 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     // 5. activities: actor diisi dari token; tolak pemalsuan nama aktor
     let rowData: Record<string, unknown> = { ...parsed.data.data };
     if (table === "boqDocs") rowData = normalizeNewDoc(rowData);
+    if (table === "services") rowData = normalizeNewService(rowData);
     if (table === "activities") {
       rowData.user = requestActor(req);
     }
     // ADR-0006: surat BoQ terkunci & unik (projectId, number, revision).
     const createLock = await boqLockError(table, null, rowData);
     if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
+    // F3-D-02: service wajib WBS & persetujuan; materialRequests hanya lewat endpoint.
+    const createGuard = await serviceGuardError(table, null, rowData);
+    if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const drydockDateValidation = table === "dockSlots" ? drydockDateError(rowData) : null;
@@ -548,6 +554,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const patchLock = await boqLockError(table, oldData, merged);
     if (patchLock) return reply.status(409).send(fail(patchLock, "LOCKED"));
+    const patchGuard = await serviceGuardError(table, oldData, merged);
+    if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const changedRange = table === "dockSlots" && (

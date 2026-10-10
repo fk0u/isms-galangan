@@ -550,14 +550,52 @@ export interface ServiceRecord {
     cost: number;
     /** D12: referensi opsional ke item BoQ project ini. */
     boqRef?: string;
+    /** F3-D-02: pekerjaan WBS asal service (wajib untuk service proyek). */
+    wbsTask?: string;
+    /** F3-D-02: persetujuan procurement; tanpa field = data lama (dianggap disetujui). */
+    approval?: "Diajukan" | "Disetujui" | "Ditolak";
+    approvalNote?: string;
+    approvedBy?: string;
+    /** Alasan bila biaya berbeda dari harga item BoQ. */
+    costReason?: string;
   }
 
 export const services: ServiceRecord[] = [
   { id: "SRV-001", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-01", type: "Drydock", description: "Inspection & repair kickoff", status: "Done", technician: "Rudi Hartono", cost: 150000000 },
   { id: "SRV-002", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-15", type: "Repair", description: "Overhaul main engine", status: "In Progress", technician: "Agus Setiawan", cost: 480000000 },
-  { id: "SRV-003", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-22", type: "Inspection", description: "Coating thickness check", status: "Scheduled", technician: "Sari Wulandari", cost: 75000000 },
+  { id: "SRV-003", projectId: "RP-2026-003", vesselId: "V-002", date: "2026-07-22", type: "Inspection", description: "Coating thickness check", status: "Scheduled", technician: "Sari Wulandari", cost: 75000000, wbsTask: "Outfitting - Machinery", approval: "Diajukan" },
   { id: "SRV-004", projectId: "NB-2025-012", vesselId: "V-001", date: "2026-06-10", type: "Survey", description: "Pre-construction survey", status: "Done", technician: "Budi Santoso", cost: 50000000 },
   { id: "SRV-005", projectId: "RP-2026-005", vesselId: "V-004", date: "2026-07-25", type: "Overhaul", description: "Bearing replacement", status: "In Progress", technician: "Fajar Nugroho", cost: 320000000 },
+  { id: "SRV-006", projectId: "RP-2026-005", vesselId: "V-004", date: "2026-10-12", type: "Repair", description: "Perbaikan sistem kemudi hidrolik", status: "Scheduled", technician: "Agus Setiawan", cost: 95000000, wbsTask: "Outfitting - Piping", approval: "Diajukan" },
+];
+
+/* ====== PERMINTAAN BARANG (F3-J-01) ======
+   Dibuat server lewat POST /api/projects/:id/material-requests. Seed demo
+   menunjukkan tiga keadaan: dipenuhi dari stok, menunggu PO, sebagian. */
+export interface MaterialRequest {
+  id: string;
+  projectId: string;
+  itemId: string;
+  item: string;
+  unit: string;
+  purpose: "wbs" | "sparepart";
+  wbsTask: string;
+  requested: number;
+  issued: number;
+  shortage: number;
+  status: "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai";
+  requestedBy: string;
+  date: string;
+  movementIds: string[];
+  requisitionId: string | null;
+  sparepartId: string | null;
+  note: string;
+}
+
+export const seedMaterialRequests: MaterialRequest[] = [
+  { id: "MR-2026-001", projectId: "RP-2026-003", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 20, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Rudi Hartono", date: "2026-10-02", movementIds: [], requisitionId: null, sparepartId: null, note: "" },
+  { id: "MR-2026-002", projectId: "RP-2026-003", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 0, shortage: 20, status: "Menunggu PO", requestedBy: "Agus Setiawan", date: "2026-10-05", movementIds: [], requisitionId: "PR-2026-211", sparepartId: null, note: "Penggantian anoda lambung" },
+  { id: "MR-2026-003", projectId: "NB-2025-012", itemId: "INV-007", item: "Baut Marine M20", unit: "pcs", purpose: "wbs", wbsTask: "Hull Assembly", requested: 400, issued: 400, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Fajar Nugroho", date: "2026-10-07", movementIds: [], requisitionId: null, sparepartId: null, note: "" },
 ];
 
 /* ====== SPAREPART ====== */

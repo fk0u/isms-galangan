@@ -29,6 +29,12 @@ import { useDraftState } from "../../utils/draft";
 import { useT } from "../../i18n/LanguageContext";
 import { n_proc } from "../../i18n/n_proc";
 import { FilterPopover } from "../../components/FilterPopover";
+import { n_mr } from "../../i18n/n_mr";
+import MaterialRequestsTab from "./MaterialRequestsTab";
+import ServiceApprovalsTab from "./ServiceApprovalsTab";
+
+/* Tab baru F3-J-01/F3-J-04 punya pencarian sendiri: filter bersama disembunyikan. */
+const OWN_FILTER_TABS = new Set(["Permintaan", "Persetujuan Service"]);
 
 /* Baris PO string-state (pola smallForm): simpan string, Number() saat validasi. */
 interface POLine { name: string; qty: string; unit: string; price: string; spec?: string; need?: string }
@@ -275,7 +281,7 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
 }
 
 /* Batch koleksi modul Procurement untuk useModuleSync (pengganti resync penuh). */
-const PROC_COLS: CollectionKey[] = ["activities", "inventory", "payables", "projects", "purchaseOrders", "requisitions", "rfqs", "vendors"];
+const PROC_COLS: CollectionKey[] = ["activities", "inventory", "materialRequests", "payables", "projects", "purchaseOrders", "requisitions", "rfqs", "services", "vendors"];
 
 export default function Procurement() {
   const busy = useBusy();
@@ -1344,9 +1350,11 @@ const sparkVendors = useMemo(() => {
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={["PR", "RFQ", "PO Besar (Kantor)", "PO Kecil (Workshop)", "Vendor"]} active={tab} onChange={setTab} labels={{ PR: S.tabPr, RFQ: S.tabRfq, "PO Besar (Kantor)": S.tabBig, "PO Kecil (Workshop)": S.tabSmall, Vendor: S.tabVendor }} />
+        <Tabs tabs={["Permintaan", "PR", "RFQ", "PO Besar (Kantor)", "PO Kecil (Workshop)", "Persetujuan Service", "Vendor"]} active={tab} onChange={setTab} labels={{ Permintaan: n_mr[locale].tabMr, PR: S.tabPr, RFQ: S.tabRfq, "PO Besar (Kantor)": S.tabBig, "PO Kecil (Workshop)": S.tabSmall, "Persetujuan Service": n_mr[locale].tabSvc, Vendor: S.tabVendor }} />
         <div className="p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          {tab === "Permintaan" && <MaterialRequestsTab />}
+          {tab === "Persetujuan Service" && <ServiceApprovalsTab />}
+          {!OWN_FILTER_TABS.has(tab) && <div className="mb-3 flex flex-wrap items-center gap-2">
             <SearchBox
               value={pq}
               onChange={setPq}
@@ -1388,7 +1396,7 @@ const sparkVendors = useMemo(() => {
                 {locale === "en" ? "Reset" : "Atur Ulang"}
               </button>
             )}
-          </div>
+          </div>}
           {tab === "PO Besar (Kantor)" && (
             <div className="space-y-4">
               <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">{S.bigInfo.replace("{n}", fmtRupiah(PO_KECIL_LIMIT))}</p>
