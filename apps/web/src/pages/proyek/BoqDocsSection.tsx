@@ -20,6 +20,7 @@ import { Badge, Card, ConfirmModal, EmptyState, toast, AsyncButton } from "../..
 import { fmtRupiah } from "../../utils/export";
 import { fmtTanggal, todayISO } from "../../utils/format";
 import BoQSection from "./BoQSection";
+import { usePdfDoc } from "../../components/usePdfDoc";
 
 type DocStatus = "Draft" | "Diajukan" | "Disetujui" | "Ditolak" | "Digantikan";
 
@@ -54,6 +55,7 @@ function remote(): boolean {
 export default function BoqDocsSection({ projectId }: { projectId: string }) {
   const { locale } = useT();
   const S = n_prj[locale];
+  const pdfDoc = usePdfDoc();
   const { data, add, update, resyncCollections, log } = useStore();
   const { user } = useAuth();
   const canWrite = hasPermission(user?.permissions, "boq", "w");
@@ -175,6 +177,9 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
       <div className="space-y-4">
         <button className="btn-secondary text-xs" onClick={() => setOpenId(null)}>
           <ArrowLeft className="h-3.5 w-3.5" /> {S.bqdBack}
+        </button>
+        <button className="btn-secondary text-xs" onClick={() => void pdfDoc.request({ kind: "boq", id: String(openId), locale }, `BoQ-${String(openId)}`, false)}>
+          <FileText className="h-3.5 w-3.5" /> {S.boqPrint}
         </button>
 
         <Card className="p-5">

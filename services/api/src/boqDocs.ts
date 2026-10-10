@@ -156,6 +156,23 @@ export async function setDocStatus(id: string, to: string, actor: string, note =
         ]);
       }
     }
+    /* F3-C-04: surat yang disetujui otomatis masuk arsip Dokumen proyek
+       (tab Dokumen & Laporan). Id deterministik supaya persetujuan ulang
+       tidak menggandakan entri. */
+    if (target === "Disetujui") {
+      const docId = `DOC-${id}`;
+      const exists = await q<{ id: string }>("SELECT id FROM documents WHERE id = ?", [docId]);
+      if (exists.length === 0) {
+        const pr = await q<{ data: string }>("SELECT data FROM projects WHERE id = ?", [String(next.projectId ?? "")]);
+        let vessel = "";
+        try { vessel = String((JSON.parse(pr[0]?.data ?? "{}") as Data).vessel ?? ""); } catch { /* proyek tanpa data */ }
+        await exec("INSERT INTO documents (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [docId, doc.row.branch, JSON.stringify({
+          title: `BoQ ${String(next.number ?? id)} Rev ${String(next.revision ?? 0)}`, type: "BoQ",
+          project: String(next.projectId ?? ""), vessel, version: `Rev ${String(next.revision ?? 0)}`,
+          status: "Disetujui", updated: now.slice(0, 10), owner: actor, boqDocId: id,
+        }), now]);
+      }
+    }
     return { id, ...next };
   });
 }

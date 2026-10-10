@@ -40,7 +40,7 @@ export const REFS: Record<string, Record<string, RefDef>> = {
   maintenances: { equipmentId: { target: "equipment" }, projectId: { target: "projects", allow: ["", "-"] } },
   letters: { employeeId: { target: "employees" } },
   dockSlots: { project: { target: "projects" }, dockId: { target: "drydocks" } },
-  documents: { project: { target: "projects", allow: ["-"] } },
+  documents: { project: { target: "projects", allow: ["-"] }, boqDocId: { target: "boqDocs", allow: ["", "-"] } },
   payroll: { employeeId: { target: "employees" } },
   attendance: { employeeId: { target: "employees" } },
   leaves: { employeeId: { target: "employees" } },

@@ -2248,7 +2248,10 @@ const createWarranty = async (wbsTask?: string) => {
                       {w.wbsTask && <p className="text-xs text-ocean-700">{w.wbsTask}</p>}
                       <p className="text-xs text-steel-500">{S.detWarRow.replace("{a}", fmtTanggal(String(w.start ?? ""))).replace("{b}", String(w.months ?? 12)).replace("{c}", String(w.status ?? "Aktif"))}</p>
                     </div>
-                    <StatusBadge status={String(w.status ?? "Aktif")} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={String(w.status ?? "Aktif")} />
+                      <button className="btn-secondary text-xs" onClick={() => void pdfDoc.request({ kind: "garansi", id: String(w.id), locale }, `Garansi-${String(w.id)}`, false)}>{S.detWarPrint}</button>
+                    </div>
                   </div>
                 ))}
                 {warrantyList.length === 0 && <p className="text-xs text-steel-400">{S.detNoWar}</p>}

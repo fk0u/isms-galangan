@@ -523,6 +523,20 @@ const MODELS: Record<string, unknown> = {
     nameGiver: "PT KRI REKAYASA",
     locale: "id",
   },
+  boq: {
+    number: "BQ/RP-2026-003/001", revision: 1, status: "Disetujui", issuedAt: "2026-08-01",
+    projectId: "RP-2026-003", vessel: "TB Contoh Satu", client: "PT Contoh Pelayaran",
+    approvedBy: "Direktur Demo", approvedAt: "2026-08-05", note: "Revisi 1: tambah pekerjaan blasting.",
+    items: [
+      { name: "Overhaul Main Engine", description: "Overhaul dan ganti bearing", qty: 1, unit: "set", unitPrice: 480_000_000, total: 480_000_000 },
+      { name: "Blasting lambung", description: "", qty: 320, unit: "m2", unitPrice: 85_000, total: 27_200_000 },
+    ],
+    total: 507_200_000, signer: "Direktur Demo",
+  },
+  garansi: {
+    no: "WRT-2026-001", projectId: "RP-2026-003", vessel: "TB Contoh Satu", client: "PT Contoh Pelayaran",
+    wbsTask: "Overhaul Main Engine", start: "2026-10-01", months: 12, end: "2027-10-01", status: "Aktif", signer: "Direktur Demo",
+  },
   spk: {
     no: "WO-2026-021",
     tanggal: "2026-10-02",

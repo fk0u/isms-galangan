@@ -25,6 +25,7 @@ import { kwitansi, type KwitansiInput } from "./documents/kwitansi.js";
 import { suratPersetujuanCutiDoc, suratHrDoc, type CutiDocInput, type SuratHrInput } from "./documents/hr.js";
 import { bast, type BastInput } from "./documents/bast.js";
 import { spk, type SpkInput } from "./documents/spk.js";
+import { boqDoc, garansiDoc, type BoqDocInput, type GaransiInput } from "./documents/boq.js";
 import { po, type PoInput } from "./documents/po.js";
 import { suratJalan, type SuratJalanInput } from "./documents/suratJalan.js";
 import { deliveryOrder, type DeliveryOrderInput } from "./documents/deliveryOrder.js";
@@ -458,6 +459,64 @@ const spkRecipe: Recipe<SpkInput> = {
     };
   },
   assemble: (input) => spk(input),
+};
+
+/* ---- Surat BoQ (F3-C-04) ---- */
+const boqRecipe: Recipe<BoqDocInput> = {
+  kind: "boq",
+  title: "Surat Bill of Quantity",
+  entity: { field: "boqDocs", prefix: "BQD" },
+  requiresEntity: true,
+  async prepare(id, ctx) {
+    const doc = await loadEntity({ field: "boqDocs", prefix: "BQD" }, id);
+    if (!doc) throw new Error(`Surat BoQ ${id} tidak ditemukan`);
+    const proj = await loadEntity({ field: "projects", prefix: "PRJ" }, str(doc, "projectId"));
+    /* Item milik surat INI saja: revisi lain punya salinan itemnya sendiri. */
+    const items = (await loadMany({ field: "boq", prefix: "BQ" })).filter((b) => String(b.boqDocId ?? "") === id);
+    const rows = items.map((b) => ({
+      name: str(b, "name"), description: str(b, "description") !== "-" ? str(b, "description") : "",
+      qty: num(b, "quantity"), unit: str(b, "unit"), unitPrice: num(b, "unitPrice"),
+      total: num(b, "totalPrice") || num(b, "quantity") * num(b, "unitPrice"),
+    }));
+    return {
+      number: str(doc, "number"), revision: num(doc, "revision"), status: str(doc, "status"),
+      issuedAt: str(doc, "issuedAt") !== "-" ? str(doc, "issuedAt") : today(),
+      projectId: str(doc, "projectId"),
+      vessel: proj ? str(proj, "vessel") : "-", client: proj ? str(proj, "client") : "-",
+      approvedBy: str(doc, "approvedBy") !== "-" ? str(doc, "approvedBy") : undefined,
+      approvedAt: str(doc, "approvedAt") !== "-" ? str(doc, "approvedAt") : undefined,
+      note: str(doc, "note") !== "-" ? str(doc, "note") : undefined,
+      items: rows, total: rows.reduce((t, r) => t + r.total, 0),
+      signer: SIGNER, locale: ctx.locale,
+    };
+  },
+  assemble: (input) => boqDoc(input),
+};
+
+/* ---- Kartu garansi (F3-B-12) ---- */
+const garansiRecipe: Recipe<GaransiInput> = {
+  kind: "garansi",
+  title: "Kartu Garansi",
+  entity: { field: "warranties", prefix: "WRT" },
+  requiresEntity: true,
+  async prepare(id, ctx) {
+    const w = await loadEntity({ field: "warranties", prefix: "WRT" }, id);
+    if (!w) throw new Error(`Garansi ${id} tidak ditemukan`);
+    const proj = await loadEntity({ field: "projects", prefix: "PRJ" }, str(w, "projectId"));
+    const start = str(w, "start") !== "-" ? str(w, "start") : today();
+    const months = num(w, "months") || 12;
+    const d = new Date(`${start}T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() + months);
+    return {
+      no: id, projectId: str(w, "projectId"),
+      vessel: str(w, "vessel") !== "-" ? str(w, "vessel") : proj ? str(proj, "vessel") : "-",
+      client: proj ? str(proj, "client") : "-",
+      wbsTask: str(w, "wbsTask") !== "-" ? str(w, "wbsTask") : undefined,
+      start, months, end: Number.isNaN(d.getTime()) ? start : d.toISOString().slice(0, 10),
+      status: str(w, "status"), signer: SIGNER, locale: ctx.locale,
+    };
+  },
+  assemble: (input) => garansiDoc(input),
 };
 
 /* ---- Purchase Order ----
@@ -1168,6 +1227,8 @@ const RECIPES: RecipeView[] = [
   view(bastRecipe),
   view(spkRecipe),
   view(poRecipe),
+  view(boqRecipe),
+  view(garansiRecipe),
   view(suratJalanRecipe),
   view(deliveryOrderRecipe),
   view(tandaTerimaRecipe),
