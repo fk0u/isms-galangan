@@ -267,6 +267,15 @@ const gradientChip: Record<string, string> = {
   ocean: "bg-steel-100 text-navy-800",
 };
 
+/* Varian gradient kartu status (revisi klien PRJ-03). Teks putih di atas
+   warna 600-700 supaya kontras tetap lolos AA. */
+const kpiTone: Record<string, string> = {
+  blue: "bg-gradient-to-br from-navy-600 to-navy-800",
+  green: "bg-gradient-to-br from-emerald-600 to-emerald-800",
+  orange: "bg-gradient-to-br from-amber-600 to-orange-700",
+  red: "bg-gradient-to-br from-rose-600 to-rose-800",
+};
+
 export function KpiCard({
   label,
   value,
@@ -276,7 +285,9 @@ export function KpiCard({
   hint,
   spark,
   chip = "navy",
+  tone,
 }: {
+  tone?: keyof typeof kpiTone;
   label: string;
   value: string;
   delta?: string;
@@ -290,6 +301,20 @@ export function KpiCard({
      grafik di kartu, dan sistem industri memakai angka besar, bukan dekorasi.
      Prop dipertahankan agar pemanggil lama tetap valid. */
   void spark;
+  if (tone) {
+    return (
+      <div className={`card-hover relative overflow-hidden rounded-2xl p-5 text-white shadow-sm ${kpiTone[tone]}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-medium text-white/85" title={label}>{label}</p>
+            <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] break-words tabular-nums" title={value}>{value}</p>
+            {(delta ?? hint) && <p className="mt-2.5 truncate text-xs font-medium text-white/85">{delta ?? hint}</p>}
+          </div>
+          {icon && <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">{icon}</div>}
+        </div>
+      </div>
+    );
+  }
   return (
     <Card className="card-hover relative overflow-hidden p-5">
       <div className="flex items-start justify-between gap-3">

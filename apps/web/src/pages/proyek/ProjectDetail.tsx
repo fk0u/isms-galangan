@@ -496,6 +496,13 @@ if (from === "Desain" && to === "Produksi") {
     return { min, max, total: max.y * 12 + max.m - (min.y * 12 + min.m) + 1 };
   })();
 
+  /* Posisi garis "hari ini" dalam persen; null bila di luar rentang. */
+  const ganttToday = (() => {
+    if (!ganttRange) return null;
+    const [y, m, d] = todayISO().split("-").map(Number);
+    const pos = ((y * 12 + m - (ganttRange.min.y * 12 + ganttRange.min.m) + (d - 1) / 30) / ganttRange.total) * 100;
+    return pos >= 0 && pos <= 100 ? pos : null;
+  })();
   const ganttBar = (start: string, end: string): { left: number; width: number } | null => {
     if (!ganttRange) return null;
     const s = parseYM(start) ?? ganttRange.min;
@@ -506,12 +513,14 @@ if (from === "Desain" && to === "Produksi") {
     return { left, width };
   };
 
-  const milestoneDays = getSetting(data, "ALERT_MILESTONE_DAYS", 7);
+  /* Horizon tampilan ringkasan 30 hari (PRJ-16) - sengaja terpisah dari
+     ALERT_MILESTONE_DAYS yang dipakai mesin alert & risiko otomatis. */
+  const MILE_VIEW_DAYS = 30;
   const milestonesNear = wbs.filter((w) => {
     const d = monthEndDate(w.end);
     if (!d || Number(w.progress) >= 100) return false;
     const diff = Math.round((d.getTime() - new Date(`${todayISO()}T00:00:00`).getTime()) / 86400000);
-    return diff >= 0 && diff <= milestoneDays;
+    return diff >= 0 && diff <= MILE_VIEW_DAYS;
   });
   const progressDelayDetails = project.status === "Terlambat" || project.status === "Tertunda"
     ? projectDelayDetailsOf(project.end, wbs, todayISO(), project.status === "Terlambat")
@@ -1341,16 +1350,16 @@ const createWarranty = async (wbsTask?: string) => {
                 </div>
                 <div className="mt-6">
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-navy-900">{S.detMileTitle.replace("{n}", String(milestoneDays))}</h3>
+                    <h3 className="text-sm font-semibold text-navy-900">{S.detMileTitle.replace("{n}", String(MILE_VIEW_DAYS))}</h3>
                     <Link to="/proyek/monitoring" className="text-xs font-medium text-ocean-600 hover:underline">{S.detMonitoringLink}</Link>
                   </div>
                   {milestonesNear.length === 0 ? (
-                    <p className="text-xs text-steel-400">{S.detMileEmpty.replace("{n}", String(milestoneDays))}</p>
+                    <p className="text-xs text-steel-400">{S.detMileEmpty.replace("{n}", String(MILE_VIEW_DAYS))}</p>
                   ) : (
                     <div className="space-y-1.5">
                       {milestonesNear.map((w) => (
                         <div key={w.task} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm">
-                          <span className="font-medium text-navy-900">{w.task}</span>
+                          <span className="font-medium text-navy-900"><span className="mr-2 font-mono text-xs text-steel-500">{fmtBulan(w.end)}</span>{w.task}</span>
                           <span className="text-xs text-steel-500">{S.detMileRow.replace("{a}", String(w.progress)).replace("{b}", fmtBulan(w.end))}</span>
                         </div>
                       ))}
@@ -1480,11 +1489,28 @@ const createWarranty = async (wbsTask?: string) => {
                           <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-steel-100">
                             <div className="absolute top-0 h-full rounded-full bg-ocean-300" style={{ left: `${bar.left}%`, width: `${bar.width}%` }} />
                             <div className="absolute top-0 h-full rounded-full bg-navy-700" style={{ left: `${bar.left}%`, width: `${(bar.width * Math.max(0, Math.min(100, Number(w.progress) || 0))) / 100}%` }} />
+                            {ganttToday !== null && <div className="absolute top-0 h-full w-px bg-rose-500" style={{ left: `${ganttToday}%` }} />}
                           </div>
                           <span className="w-9 text-right text-[11px] font-medium text-steel-600">{w.progress}%</span>
                         </div>
                       );
                     })}
+                    {/* Sumbu bulan (PRJ-18); rentang panjang hanya menampilkan sebagian label. */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-40" />
+                      <div className="flex flex-1">
+                        {Array.from({ length: ganttRange.total }, (_, i) => {
+                          const ym = ganttRange.min.y * 12 + ganttRange.min.m - 1 + i;
+                          const step = Math.ceil(ganttRange.total / 12);
+                          return (
+                            <span key={i} className="flex-1 truncate border-l border-steel-200 pl-0.5 text-[10px] text-steel-400">
+                              {i % step === 0 ? new Date(Date.UTC(Math.floor(ym / 12), ym % 12, 1)).toLocaleDateString(locale === "en" ? "en-GB" : "id-ID", { month: "short", timeZone: "UTC" }) : ""}
+                            </span>
+                          );
+                        })}
+                      </div>
+                      <span className="w-9" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1762,8 +1788,9 @@ const createWarranty = async (wbsTask?: string) => {
                       <Avatar name={String(e.name)} className="h-10 w-10 shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-navy-900">{e.name}</p>
+                      <Link to={`/sdm/karyawan/${e.id}`} className="block truncate text-sm font-semibold text-navy-900 hover:text-ocean-600 hover:underline">{e.name}</Link>
                       <p className="text-xs text-steel-500">{e.role} · {e.dept}</p>
+                      {(e.phone || e.email) ? <p className="truncate text-xs text-steel-400">{[e.phone, e.email].filter(Boolean).join(" · ")}</p> : null}
                     </div>
                     <button className="rounded p-1 text-rose-400 hover:bg-rose-50" title={S.detRemoveTitle} onClick={async () => { try { await setTeam(pid, teamIds.filter((t) => t !== e.id)); toast(S.detToastRemoved.replace("{a}", e.name), "info"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
                       <Trash2 className="h-4 w-4" />
@@ -2052,7 +2079,9 @@ const createWarranty = async (wbsTask?: string) => {
                 </div>
               </div>
 
-              <div>
+              {/* PRJ-22: tabel risiko disembunyikan (keputusan Q12). Risiko otomatis
+                  tetap dihitung untuk alert/monitoring; setting ini hanya tampilan. */}
+              {getSetting(data, "SHOW_RISK_TABLE", 0) === 1 && <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.detRiskTitle.replace("{n}", String(riskList.length))}</h3>
                 </div>
@@ -2099,7 +2128,7 @@ const createWarranty = async (wbsTask?: string) => {
                   ))}
                   {riskList.length === 0 && <p className="text-sm text-steel-400">{S.detNoRisk}</p>}
                 </div>
-              </div>
+              </div>}
             </div>
           )}
 
@@ -2824,12 +2853,13 @@ const createWarranty = async (wbsTask?: string) => {
           }
         }}>{S.addBtn}</button></>}>
         <Field label={S.detEmployee}>
-          <select className="input" value={teamPick} onChange={(e) => setTeamPick(e.target.value)}>
-            <option value="">{S.detPickEmployee}</option>
-            {data.employees.filter((e) => !teamIds.includes(e.id)).map((e) => (
-              <option key={e.id} value={e.id}>{e.name} · {e.role}</option>
-            ))}
-          </select>
+          <SearchSelect
+            value={teamPick}
+            onChange={setTeamPick}
+            options={data.employees.filter((e) => !teamIds.includes(e.id)).map((e) => ({ value: String(e.id), label: String(e.name), subLabel: `${String(e.role ?? "")} · ${String(e.dept ?? "")}` }))}
+            placeholder={S.detPickEmployee}
+            ariaLabel={S.detEmployee}
+          />
         </Field>
       </Modal>
 

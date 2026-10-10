@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Anchor, Wallet, TrendingUp, Clock, Trash2, Eye } from "lucide-react";
+import { Plus, Anchor, Wallet, TrendingUp, Clock, Trash2, Eye, Filter } from "lucide-react";
 import {
   Card,
   PageHeader,
@@ -8,7 +8,6 @@ import {
   ProgressBar,
   Badge,
   KpiCard,
-  Field,
   SortTh,
   toggleSort,
   sortRows,
@@ -26,7 +25,7 @@ import { findUsages } from "../../utils/usages";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
-import { fmtMiliar, sparkProjects, activeProjectTrend, contractValueTrend, avgProgressTrend } from "../../data";
+import { fmtMiliar } from "../../data";
 import { todayISO, fmtTanggal } from "../../utils/format";
 import { getSetting } from "../../utils/settings";
 import { shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
@@ -34,7 +33,7 @@ import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto"
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { canonPrioritas } from "../../utils/scope";
 import ProjectAddModal from "../../components/ProjectAddModal";
-import { FilterPopover } from "../../components/FilterPopover";
+import { AnimatePresence, motion } from "framer-motion";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
@@ -72,7 +71,6 @@ const TYPE_ID: Record<string, string> = { "New Build": "Bangun Baru", Repair: "R
    ?status=Dalam Proses lalu ditolak `known` di bawah dan reset diam-diam ke
    "Semua" - pill-nya terlihat berfungsi tapi tidak memfilter apa pun. */
 const statusOptions = ["Semua", "Sedang Berjalan", "Dalam Proses", "Tertunda", "Batal", "Terlambat", "Selesai"];
-const branchOptions = ["Samarinda", "Balikpapan", "Banjarmasin"];
 const prioritasTone: Record<string, "gray" | "blue" | "amber" | "red"> = {
   Rendah: "gray",
   Sedang: "blue",
@@ -99,6 +97,7 @@ export default function Projects() {
   const [prioritasFilter, setPrioritasFilter] = useState("Semua");
   const [pmFilter, setPmFilter] = useState("Semua");
   const [q, setQ] = useState("");
+  const [showFilter, setShowFilter] = useState(false);
   /* Default: proyek terbaru paling atas (P9). Versi lama `key: null` dengan
      `dir: "asc"` membuat daftar urut tak tertentu, dan kolom `createdAt`
      yang diklik pertama kali menghasilkan ASC = terlama dulu, berlawanan
@@ -185,6 +184,7 @@ export default function Projects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects]);
 
+  const activeFilters = [filter, tahapFilter, statusFilter, prioritasFilter, pmFilter].filter((v) => v !== "Semua").length;
   const pmOptions = [...new Set(projects.map((p) => String(p.manager ?? "")).filter(Boolean))].sort();
   const resetFilters = () => { setFilter("Semua"); setStatusFilter("Semua"); setTahapFilter("Semua"); setBranchFilter("Semua"); setPrioritasFilter("Semua"); setPmFilter("Semua"); setQ(""); };
 
@@ -200,7 +200,12 @@ export default function Projects() {
   });
 
   const totalBudget = list.reduce((s, p) => s + Number(p.budget || 0), 0);
-  const inProgress = list.filter((p) => p.status !== "Selesai").length;
+  /* "Berjalan" = bukan Selesai dan bukan Batal (dulu Batal ikut terhitung),
+     sehingga Selesai + Berjalan + Batal = Total. */
+  const isBatal = (p: StoreItem): boolean => /batal/i.test(String(p.status));
+  const doneCount = list.filter((p) => p.status === "Selesai").length;
+  const inProgress = list.filter((p) => p.status !== "Selesai" && !isBatal(p)).length;
+  const onHold = list.filter((p) => /tunda/i.test(String(p.status))).length;
   const delayed = list.filter((p) => p.status === "Terlambat").length;
   const avgProgress = list.length ? Math.round(list.reduce((s, p) => s + projectProgressOf(p, data.wbsByProject, data.boq), 0) / list.length) : 0;
   /* Pengurutan tanggal lewat `createdAtOf`/`lastTouchedAt`, bukan field mentah:
@@ -250,10 +255,10 @@ export default function Projects() {
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.prjKpiTotal} value={String(projects.length)} hint={S.prjKpiTotalHint} icon={<Anchor className="h-5 w-5" />} chip="navy" spark={sparkProjects} />
-        <KpiCard label={S.prjKpiActive} value={String(inProgress)} delta={S.prjKpiLate.replace("{n}", String(delayed))} deltaDirection="down" icon={<Clock className="h-5 w-5" />} chip="amber" spark={activeProjectTrend} />
-        <KpiCard label={S.prjKpiContract} value={fmtMiliar(totalBudget)} delta={S.prjKpiContractHint} deltaDirection="up" icon={<Wallet className="h-5 w-5" />} chip="teal" spark={contractValueTrend} />
-        <KpiCard label={S.prjKpiAvg} value={`${avgProgress}%`} delta={S.prjKpiAvgHint} deltaDirection="flat" icon={<TrendingUp className="h-5 w-5" />} chip="violet" spark={avgProgressTrend} />
+        <KpiCard tone="blue" label={S.prjKpiTotal} value={String(list.length)} hint={S.prjKpiTotalSub.replace("{d}", String(doneCount)).replace("{r}", String(inProgress))} icon={<Anchor className="h-5 w-5" />} />
+        <KpiCard tone="orange" label={S.prjKpiActive} value={String(inProgress)} hint={S.prjKpiActiveSub.replace("{n}", String(onHold)).replace("{l}", String(delayed))} icon={<Clock className="h-5 w-5" />} />
+        <KpiCard tone="green" label={S.prjKpiContract} value={fmtMiliar(totalBudget)} hint={S.prjKpiContractHint} icon={<Wallet className="h-5 w-5" />} />
+        <KpiCard tone={delayed > 0 ? "red" : "blue"} label={S.prjKpiAvg} value={`${avgProgress}%`} hint={S.prjKpiAvgHint} icon={<TrendingUp className="h-5 w-5" />} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -264,78 +269,40 @@ export default function Projects() {
           ariaLabel={S.searchProjectAria}
           className="min-w-52 flex-1 sm:max-w-xs"
         />
-        <FilterPopover
-          activeCount={[
-            filter !== "Semua",
-            tahapFilter !== "Semua",
-            branchFilter !== "Semua",
-            statusFilter !== "Semua",
-            prioritasFilter !== "Semua",
-            pmFilter !== "Semua",
-          ].filter(Boolean).length}
-          initial={{ type: filter, tahap: tahapFilter, branch: branchFilter, status: statusFilter, prioritas: prioritasFilter, pm: pmFilter }}
-          onReset={resetFilters}
-          onApply={(d) => {
-            setFilter(d.type);
-            setTahapFilter(d.tahap);
-            setBranchFilter(d.branch);
-            setStatusFilter(d.status);
-            setPrioritasFilter(d.prioritas);
-            setPmFilter(d.pm);
-          }}
-        >
-          {(draft, setDraft) => (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-1">
-                {filters.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setDraft({ ...draft, type: f })}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      draft.type === f ? "bg-navy-700 text-white" : "bg-white border border-steel-200 text-steel-600 hover:bg-steel-100"
-                    }`}
-                  >
-                    {f === "Semua" ? "Semua tipe" : TYPE_ID[f] ?? f}
-                  </button>
-                ))}
-              </div>
-              <Field label={S.prjFieldTahap}>
-                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterTahapAria} value={draft.tahap} onChange={(e) => setDraft({ ...draft, tahap: e.target.value })}>
-                  <option value="Semua">{S.prjAllTahap}</option>
-                  {TAHAP.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </Field>
-              <Field label={S.branchLabel}>
-                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterCabangAria} value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })}>
-                  <option value="Semua">{S.prjAllCabang}</option>
-                  {branchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </Field>
-              <Field label={S.statusLabel}>
-                <StatusChips
-                  value={draft.status}
-                  onChange={(status) => setDraft({ ...draft, status })}
-                  options={statusOptions.map((status) => ({ value: status, label: status === "Semua" ? S.prjAllStatus : status }))}
-                  ariaLabel={S.prjFilterStatusAria}
-                />
-              </Field>
-              <Field label={S.prjFieldPrioritas}>
-                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterPrioritasAria} value={draft.prioritas} onChange={(e) => setDraft({ ...draft, prioritas: e.target.value })}>
-                  <option value="Semua">{S.prjAllPrioritas}</option>
-                  {PRIORITAS.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </Field>
-              <Field label={S.prjFieldPm}>
-                <select className="input w-full py-1.5 text-sm" aria-label={S.prjFilterPmAria} value={draft.pm} onChange={(e) => setDraft({ ...draft, pm: e.target.value })}>
-                  <option value="Semua">{S.prjAllPm}</option>
-                  {pmOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </Field>
-            </div>
-          )}
-        </FilterPopover>
+<button type="button" className="btn-secondary" aria-expanded={showFilter} onClick={() => setShowFilter((v) => !v)}>
+          <Filter className="h-4 w-4" /> {S.prjFilterBtn}{activeFilters > 0 ? ` (${activeFilters})` : ""}
+        </button>
+        {activeFilters > 0 && <button type="button" className="text-xs font-medium text-ocean-600 hover:underline" onClick={resetFilters}>{S.prjFilterReset}</button>}
         <span className="ml-auto text-xs text-steel-400">{S.prjCount.replace("{n}", String(list.length))}</span>
       </div>
+      {/* Filter sebagai deret chip (PRJ-05): langsung berlaku tanpa tombol Terapkan. */}
+      <AnimatePresence initial={false}>
+        {showFilter && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mb-4 space-y-2 rounded-xl border border-steel-200 bg-white p-3">
+              {([
+                [S.statusLabel, statusFilter, setStatusFilter, statusOptions.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllStatus : v }))],
+                [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...TAHAP].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : v }))],
+                [S.prjFieldTipe, filter, setFilter, filters.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTipe : TYPE_ID[v] ?? v }))],
+                [S.prjFieldPrioritas, prioritasFilter, setPrioritasFilter, ["Semua", ...PRIORITAS].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPrioritas : v }))],
+                [S.prjFieldPm, pmFilter, setPmFilter, ["Semua", ...pmOptions].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPm : v }))],
+              ] as const).map(([label, value, set, options]) => (
+                <div key={label} className="flex flex-wrap items-center gap-2">
+                  <span className="w-20 shrink-0 text-xs font-medium text-steel-500">{label}</span>
+                  <StatusChips value={value} onChange={set} options={options} ariaLabel={label} />
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
 
       <Card>
         <div className="overflow-x-auto">
