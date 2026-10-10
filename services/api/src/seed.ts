@@ -30,7 +30,7 @@ export async function runSeed(): Promise<void> {
       // Demo top-up hanya untuk WBS seed murni tanpa histori (lihat topUpDemoWbsHistory).
       const next = topUpDemoWbsHistory(w.projectId, exists[0].data);
       if (next) {
-        await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [next, w.projectId]);
+        await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ? AND data = ?", [next, w.projectId, exists[0].data]);
         inserted += 1;
       } else {
         skipped += 1;

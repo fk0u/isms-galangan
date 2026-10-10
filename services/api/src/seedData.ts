@@ -244,7 +244,7 @@ export function topUpDemoWbsHistory(projectId: string, existingJson: string): st
   if (!demo) return null;
   let rows: Array<Record<string, unknown>>;
   try { rows = JSON.parse(existingJson) as Array<Record<string, unknown>>; } catch { return null; }
-  if (!Array.isArray(rows)) return null;
+  if (!Array.isArray(rows) || rows.some((r) => r === null || typeof r !== "object")) return null;
   const names = rows.map((r) => String(r.task ?? ""));
   const template = WBS_TEMPLATE.map(([task]) => task);
   if (names.length !== template.length || names.some((n, i) => n !== template[i])) return null;

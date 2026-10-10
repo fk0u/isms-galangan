@@ -60,8 +60,8 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | todo | |
 | F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | todo | |
 | F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | review | Branch `feat/F3-G-02-material-unit-conversion`; gate penuh dan preview UI lulus |
-| F3-G-03 | Barang keluar: eceran & potongan | P0 | F3-G-inventori.md | | todo | |
-| F3-G-04 | BOM terima & keluar barang | P0 | F3-G-inventori.md | | todo | |
+| F3-G-03 | Barang keluar: eceran & potongan | P0 | F3-G-inventori.md | Claude | review | feat/F3-G-inventori — eceran (kemasan terbuka/openBase) & potongan plat; server `POST /api/inventory/:id/issue` (probe 5/5), util `probe:stock-issue` 9/9; stok tampil "6 drum (1.150 L)" |
+| F3-G-04 | BOM terima & keluar barang | P0 | F3-G-inventori.md | Claude | review | feat/F3-G-inventori — tab Terima & Keluar: checklist PO → receive transaksional, checklist permintaan proyek, Additional wajib alasan; retur tanpa vendor |
 | F3-G-05 | Pergerakan: 2 grafik tren, kolom Dari/Ke, slow & dead stock | P1 | F3-G-inventori.md | | todo | |
 | F3-G-06 | Sembunyikan surat jalan | P2 | F3-G-inventori.md | | todo | |
 | F3-G-07 | Auto-refresh tanpa tombol Muat ulang | P1 | F3-G-inventori.md | | todo | |

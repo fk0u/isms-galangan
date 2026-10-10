@@ -80,7 +80,8 @@ export function registerAdminRoutes(app: FastifyInstance): void {
         const exists = await q<{ project_id: string; data: string }>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [w.projectId]);
         if (exists.length > 0) {
           const next = topUpDemoWbsHistory(w.projectId, exists[0].data);
-          if (next) { await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ?", [next, w.projectId]); inserted += 1; } else skipped += 1;
+          // Bersyarat pada data asal: PUT WBS bersamaan tidak boleh tertimpa.
+          if (next) { await exec("UPDATE wbs_by_project SET data = ? WHERE project_id = ? AND data = ?", [next, w.projectId, exists[0].data]); inserted += 1; } else skipped += 1;
           continue;
         }
         await exec("INSERT INTO wbs_by_project (project_id, data) VALUES (?, ?)", [w.projectId, JSON.stringify(w.wbs)]);

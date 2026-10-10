@@ -5,7 +5,7 @@ import { normalizeRole } from "./policy.js";
 
 type Data = Record<string, unknown>;
 
-export const SPK_FIELDS = ["value", "scope", "targetDate", "sub", "project", "penaltyPct", "paymentScheme", "taxPct", "retPct"] as const;
+export const SPK_FIELDS = ["value", "scope", "date", "targetDate", "sub", "project", "penaltyPct", "paymentScheme", "taxPct", "retPct"] as const;
 const SPK_EDITORS = new Set(["procurement", "direktur", "developer"]);
 
 export function canEditSpk(role: unknown): boolean {
@@ -14,7 +14,11 @@ export function canEditSpk(role: unknown): boolean {
 
 /** null = boleh; selain itu pesan penolakan (403). */
 export function spkLockError(table: string, before: Data | null, after: Data | null, role: unknown): string | null {
-  if (table !== "workOrders" || !before || !after || canEditSpk(role)) return null;
+  if (table !== "workOrders" || canEditSpk(role)) return null;
+  // Menerbitkan atau menghapus SPK juga wewenang procurement, bukan hanya mengubahnya.
+  if (!before && after) return "SPK/WO hanya bisa diterbitkan procurement";
+  if (before && !after) return "SPK/WO hanya bisa dihapus procurement";
+  if (!before || !after) return null;
   const changed = SPK_FIELDS.filter((k) => JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null));
   return changed.length > 0 ? `Field SPK (${changed.join(", ")}) hanya bisa diubah procurement` : null;
 }
