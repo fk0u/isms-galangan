@@ -218,6 +218,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     clearJwt();
     sessionStorage.removeItem(SESSION_KEY);
+    // Keluar juga mengakhiri mode "lihat sebagai peran" (token akun asal ikut dibuang).
+    sessionStorage.removeItem("isms.demo.origin");
     /* Cache tanggal-hapus bersifat per-tab dan tidak tahu batas sesi. Tanpa
        ini user berikutnya yang memakai tab sama bisa membaca tanggal hapus
        milik user sebelumnya. */

@@ -1122,6 +1122,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     /* Lihat resyncCollections: epoch saat berangkat menentukan apakah hasil
        tarikan boleh menimpa apa adanya. */
     const epochAtStart: Record<string, number> = {};
+    const forbidden = new Set<string>();
     await Promise.all(
       ARRAY_KEYS.map(async (key) => {
         if (key === "wbsByProject" || key === "teamByProject") return;
@@ -1131,7 +1132,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const rows = await remoteRepository(key).list();
           /* Hasil yang mengosongkan koleksi kode ditolak (lihat acceptPull). */
           if (acceptPull(key, rows)) pulled[key] = rows;
-        } catch {
+        } catch (err) {
+          /* 403 = peran ini memang tidak berhak (RBAC), bukan gangguan:
+             kosongkan supaya cache milik peran/sesi lain tidak ikut tampil. */
+          if (err instanceof ApiError && err.status === 403) { forbidden.add(key as string); return; }
           /* Koleksi ini tetap memakai cache lokal. Kegagalan sengaja tidak
              diynylagakan ke UI di sini: resync penuh dipanggil saat boot, dan
              badge "offline" yang menyala karena satu koleksi gagal akan
@@ -1178,6 +1182,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         next.teamByProject = teamNext;
       }
+      /* 403 = di luar hak peran: ganti paksa jadi kosong (bukan merge), termasuk
+         cache turunan proyek, supaya data sesi/peran lain tidak tetap terlihat. */
+      for (const k of forbidden) (next as unknown as Record<string, unknown>)[k] = [];
+      if (forbidden.has("projects")) { next.wbsByProject = {}; next.teamByProject = {}; }
       return next;
     });
     const projectIds = ((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => p.id);
@@ -1237,6 +1245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     /* Epoch tiap koleksi SAAT request berangkat. Hasil tarikan yang tiba
        setelah epoch naik tidak boleh menimpa apa adanya - lihat applyPulled. */
     const epochAtStart: Record<string, number> = {};
+    const forbidden = new Set<string>();
     /* Koleksi yang gagal dicatat, bukan ditelan diam-diam. Tanpa ini halaman
        menampilkan cache lokal seolah-olah itu data server terkini. */
     const failed: CollectionKey[] = [];
@@ -1255,7 +1264,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return;
           }
           pulled[key] = rows;
-        } catch {
+        } catch (err) {
+          // 403 = di luar hak peran (RBAC): kosong, bukan "gagal memuat".
+          if (err instanceof ApiError && err.status === 403) { forbidden.add(key as string); return; }
           /* koleksi ini tetap memakai cache lokal */
           failed.push(key);
         }
@@ -1278,6 +1289,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const local = prev.activities ?? [];
         next.activities = applyPulled(local, serverActivities).slice(0, ACTIVITIES_CAP);
       }
+      /* 403 = di luar hak peran: ganti paksa jadi kosong (bukan merge), termasuk
+         cache turunan proyek, supaya data sesi/peran lain tidak tetap terlihat. */
+      for (const k of forbidden) (next as unknown as Record<string, unknown>)[k] = [];
+      if (forbidden.has("projects")) { next.wbsByProject = {}; next.teamByProject = {}; }
       return next;
     });
     return failed;

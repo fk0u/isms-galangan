@@ -37,6 +37,12 @@ export const n_demo = {
     show: "Tampilkan tombol",
     close: "Tutup",
     next: "Langkah berikutnya",
+    roleTitle: "Lihat sebagai peran",
+    roleNow: "Sekarang: {name} · {role}",
+    rolePick: "Pilih peran…",
+    roleSwitch: "Ganti",
+    roleBack: "Kembali ke akun asal",
+    roleHint: "Menu, tombol, dan akses data mengikuti hak peran. Setiap perpindahan tercatat di audit.",
   },
   en: {
     fab: "Demo",
@@ -58,6 +64,12 @@ export const n_demo = {
     show: "Show button",
     close: "Close",
     next: "Next step",
+    roleTitle: "View as role",
+    roleNow: "Now: {name} · {role}",
+    rolePick: "Pick a role…",
+    roleSwitch: "Switch",
+    roleBack: "Back to original account",
+    roleHint: "Menus, buttons, and data access follow the role's rights. Every switch is audited.",
   },
 };
 
@@ -87,9 +99,9 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Mekanik meminta barang; stok kurang otomatis menjadi Purchase Request.",
       steps: [
         { title: "Tambah sparepart dari inventori", hint: "Pilih barang, lihat stok; jumlah melebihi stok → peringatan PR.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Daftar permintaan barang", hint: "Semua permintaan proyek: dipenuhi dari stok, menunggu PO, sebagian. MR-2026-002 menunggu PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Daftar permintaan barang", hint: "Semua permintaan proyek: dipenuhi dari stok, menunggu PO/stok, sebagian. MR-2026-002 menunggu stok (PO-2026-118 sedang dikirim).", to: "/procurement?tab=Permintaan" },
         { title: "Purchase Request otomatis", hint: "Kekurangan stok muncul sebagai PR berstatus Diajukan, tertaut ke permintaannya.", to: "/procurement?tab=PR" },
-        { title: "Penuhi dari stok", hint: "Setelah barang masuk gudang, klik 'Penuhi dari stok' — status jadi Sebagian / Selesai.", to: "/procurement?tab=Permintaan" },
+        { title: "Penuhi dari stok", hint: "Bila stok tersedia, 'Penuhi dari stok' mengeluarkan sisanya; saat PO diterima, permintaan terpenuhi otomatis.", to: "/procurement?tab=Permintaan" },
         { title: "Pergerakan stok", hint: "Barang keluar tercatat dengan referensi proyek & WBS.", to: "/inventori?tab=Pergerakan" },
         { title: "Update progres WBS dengan material", hint: "Material WBS memakai alur yang sama — stok tidak pernah minus.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
@@ -101,6 +113,26 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
         { title: "Ajukan service dari WBS", hint: "Tab Service → Tambah: pilih WBS, teknisi dari karyawan, item BoQ (biaya terisi otomatis).", to: "/proyek/RP-2026-003?tab=Service" },
         { title: "Persetujuan procurement", hint: "Setujui, atau tolak dengan alasan. SRV-006 (dan service yang baru diajukan) menunggu di sini.", to: "/procurement?tab=Persetujuan%20Service" },
         { title: "Mulai & selesaikan service", hint: "Tombol Mulai baru muncul setelah disetujui; biaya service Selesai masuk biaya proyek (tab WBS & Anggaran).", to: "/proyek/RP-2026-003?tab=Service" },
+      ],
+    },
+    {
+      id: "po", title: "PO sebagian & ganti vendor", minutes: 3,
+      summary: "Vendor kirim sebagian, sisanya dialihkan ke vendor lain; permintaan proyek terpenuhi otomatis.",
+      steps: [
+        { title: "Terima sebagian PO-2026-118", hint: "Tab PO Besar → Terima barang, isi 12 dari 20. Permintaan MR-2026-002 langsung terpenuhi dari stok.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Vendor tidak sanggup", hint: "Lainnya → Vendor tidak sanggup untuk sisa 8 (wajib alasan). Status jadi Dibatalkan Sebagian.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Alihkan ke vendor lain", hint: "Pilih vendor dari riwayat harga (termurah ditandai); PO baru masuk alur persetujuan.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Cek permintaan barang", hint: "Status permintaan & stok terbarui otomatis tanpa input ulang.", to: "/procurement?tab=Permintaan" },
+      ],
+    },
+    {
+      id: "rbac", title: "Hak akses per peran", minutes: 3,
+      summary: "Satu sistem, 14 peran: tiap peran hanya melihat & mengubah modulnya.",
+      steps: [
+        { title: "Pindah ke Procurement", hint: "Bagian 'Lihat sebagai peran' di atas → Staff Procurement. Sidebar hanya berisi modul procurement.", to: "/dashboard" },
+        { title: "Pindah ke Gudang", hint: "Kepala Gudang menerima barang & memenuhi permintaan, tapi tidak bisa membuat PO.", to: "/inventori" },
+        { title: "Pindah ke Viewer (klien)", hint: "Hanya baca: menu terbatas dan setiap simpan ditolak server (403).", to: "/proyek" },
+        { title: "Kembali ke Direktur", hint: "Tombol 'Kembali ke akun asal'. Semua perpindahan ada di audit log.", to: "/dashboard" },
       ],
     },
     {
@@ -148,9 +180,9 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Mechanics request items; shortages become Purchase Requests automatically.",
       steps: [
         { title: "Add a sparepart from inventory", hint: "Pick an item, see its stock; asking for more shows the PR warning.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Material request list", hint: "Every project request: from stock, awaiting PO, partial. MR-2026-002 is awaiting PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Material request list", hint: "Every project request: from stock, awaiting PO/stock, partial. MR-2026-002 awaits stock (PO-2026-118 is in transit).", to: "/procurement?tab=Permintaan" },
         { title: "Automatic Purchase Request", hint: "The shortage appears as a Submitted PR linked to its request.", to: "/procurement?tab=PR" },
-        { title: "Fulfill from stock", hint: "Once goods arrive, click 'Fulfill from stock' — status becomes Partial / Complete.", to: "/procurement?tab=Permintaan" },
+        { title: "Fulfill from stock", hint: "With stock available, 'Fulfill from stock' issues the rest; receiving the PO fulfills requests automatically.", to: "/procurement?tab=Permintaan" },
         { title: "Stock movements", hint: "Issued items are logged with project & WBS reference.", to: "/inventori?tab=Pergerakan" },
         { title: "WBS progress with material", hint: "WBS material uses the same flow — stock never goes negative.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
@@ -162,6 +194,26 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
         { title: "Submit a service from WBS", hint: "Service tab → Add: pick WBS, technician from employees, BoQ item (cost fills in).", to: "/proyek/RP-2026-003?tab=Service" },
         { title: "Procurement approval", hint: "Approve, or reject with a reason. SRV-006 (and any newly submitted service) waits here.", to: "/procurement?tab=Persetujuan%20Service" },
         { title: "Start & finish the service", hint: "Start appears only after approval; completed service cost goes into project cost (WBS & Budget tab).", to: "/proyek/RP-2026-003?tab=Service" },
+      ],
+    },
+    {
+      id: "po", title: "Partial PO & vendor switch", minutes: 3,
+      summary: "A vendor ships part, the rest moves to another vendor; project requests are fulfilled automatically.",
+      steps: [
+        { title: "Receive part of PO-2026-118", hint: "Big PO tab → Receive goods, enter 12 of 20. Request MR-2026-002 is fulfilled from stock right away.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Vendor cannot supply", hint: "More → Vendor cannot supply for the remaining 8 (reason required). Status becomes Partially cancelled.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Move to another vendor", hint: "Pick a vendor from price history (cheapest flagged); the new PO goes through approval.", to: "/procurement?tab=PO%20Besar%20(Kantor)" },
+        { title: "Check material requests", hint: "Request status and stock update automatically, no re-entry.", to: "/procurement?tab=Permintaan" },
+      ],
+    },
+    {
+      id: "rbac", title: "Access by role", minutes: 3,
+      summary: "One system, 14 roles: each role sees and changes only its modules.",
+      steps: [
+        { title: "Switch to Procurement", hint: "'View as role' above → Procurement staff. The sidebar shows only procurement modules.", to: "/dashboard" },
+        { title: "Switch to Warehouse", hint: "Warehouse head receives goods and fulfills requests but cannot create POs.", to: "/inventori" },
+        { title: "Switch to Viewer (client)", hint: "Read-only: limited menus and every save is rejected by the server (403).", to: "/proyek" },
+        { title: "Back to Director", hint: "'Back to original account'. Every switch is in the audit log.", to: "/dashboard" },
       ],
     },
     {

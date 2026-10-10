@@ -31,6 +31,8 @@ import { n_proc } from "../../i18n/n_proc";
 import { FilterPopover } from "../../components/FilterPopover";
 import { n_mr } from "../../i18n/n_mr";
 import MaterialRequestsTab from "./MaterialRequestsTab";
+import { poIsMultiItem, poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
+import { useAuth } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
 /* Tab baru F3-J-01/F3-J-04 punya pencarian sendiri: filter bersama disembunyikan. */
@@ -52,6 +54,8 @@ const PO_NEXT: Record<string, string[]> = {
   Dikirim: ["Diterima Sebagian", "Diterima"],
   "Diterima Sebagian": ["Diterima"],
   Diterima: [],
+  // F3-J-02: sisa yang tidak sanggup dikirim vendor dibatalkan/dialihkan.
+  "Dibatalkan Sebagian": [],
   Ditolak: [],
 };
 
@@ -71,6 +75,7 @@ const poStatus: Record<string, "green" | "amber" | "blue" | "gray"> = {
   "Dalam Pengiriman": "amber",
   "Diterima Sebagian": "blue",
   Diterima: "green",
+  "Dibatalkan Sebagian": "amber",
   Ditolak: "gray",
   Draft: "gray",
 };
@@ -286,6 +291,8 @@ const PROC_COLS: CollectionKey[] = ["activities", "inventory", "materialRequests
 export default function Procurement() {
   const busy = useBusy();
   const { data, add, update, remove, log, inBranch } = useStore();
+  const poActions = usePoActions();
+  const { user } = useAuth();
   const { locale } = useT();
   const S = n_proc[locale];
   const modAlert = useModuleAlert("procurement");
@@ -388,6 +395,13 @@ export default function Procurement() {
   const [confirmApprove, setConfirmApprove] = useState<StoreItem | null>(null);
   const [confirmRejectPo, setConfirmRejectPo] = useState<StoreItem | null>(null);
   const [recvPo, setRecvPo] = useState<StoreItem | null>(null);
+  /* F3-J-02: vendor tidak sanggup & pengalihan vendor. */
+  const [cannotFor, setCannotFor] = useState<StoreItem | null>(null);
+  const [cannotQty, setCannotQty] = useState("");
+  const [cannotReason, setCannotReason] = useState("");
+  const [reassignFor, setReassignFor] = useState<StoreItem | null>(null);
+  const [reassignVendor, setReassignVendor] = useState("");
+  const [reassignPrice, setReassignPrice] = useState("");
   const [recvItem, setRecvItem] = useState("");
   const [recvQty, setRecvQty] = useState("");
   const [recvNoFaktur, setRecvNoFaktur] = useState("");
@@ -440,7 +454,7 @@ export default function Procurement() {
 
   /* Filter satu pola (cari + status) mengikuti tab aktif. */
   const STATUS_OPSI: Record<string, string[]> = {
-    "PO Besar (Kantor)": ["Semua", "Draft", "Diajukan", "Disetujui", "Dikirim", "Diterima Sebagian", "Diterima", "Ditolak"],
+    "PO Besar (Kantor)": ["Semua", "Draft", "Diajukan", "Disetujui", "Dikirim", "Diterima Sebagian", "Diterima", "Dibatalkan Sebagian", "Ditolak"],
     "PO Kecil (Workshop)": ["Semua", "Diajukan", "Disetujui", "Diterima", "Ditolak"],
     RFQ: ["Semua", "Draf", "Draft", "Terkirim", "Evaluasi", "Diputuskan"],
     PR: ["Semua", "Draft", "Menunggu Approval", "RFQ", "Diajukan", "Disetujui", "Sudah PO", "Ditolak"],
@@ -529,7 +543,7 @@ export default function Procurement() {
   const pickNotif = (rowId: string) => pickNotifIds([rowId]);
   useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds);
 
-  const openPo = purchaseOrders.filter((p) => normPo(p.status) !== "Diterima").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const openPo = purchaseOrders.filter((p) => !["Diterima", "Dibatalkan Sebagian", "Ditolak"].includes(normPo(p.status))).reduce((s, p) => s + Number(p.amount || 0), 0);
   const pendingPr = requisitions.filter((r) => PR_PENDING.includes(r.status)).length;
 
   const plafonPakai = (vendorName: string, excludeId?: string): number =>
@@ -552,7 +566,7 @@ export default function Procurement() {
     if (!p) return null;
     const sisa = Number(p.budget || 0) - Number(p.actual || 0);
     const aktif = purchaseOrders
-      .filter((o) => o.project === projectId && !["Ditolak", "Diterima"].includes(normPo(o.status)) && o.id !== excludeId)
+      .filter((o) => o.project === projectId && !["Ditolak", "Diterima", "Dibatalkan Sebagian"].includes(normPo(o.status)) && o.id !== excludeId)
       .reduce((s, o) => s + Number(o.amount || 0), 0);
     return { sisa, aktif };
   };
@@ -952,7 +966,7 @@ export default function Procurement() {
   const openRecv = (po: StoreItem) => {
     setRecvPo(po);
     setRecvItem(po.itemId ?? "");
-    setRecvQty(po.qty ? String(po.qty) : "");
+    setRecvQty(Number(po.qty || 0) > 0 ? String(poOpenQty(po)) : "");
     setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
     setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : "");
     setRecvDendaPct("0.1");
@@ -966,30 +980,45 @@ export default function Procurement() {
     return Math.round(Math.min(Number(recvPo.amount || 0) * 0.05, Number(recvPo.amount || 0) * (pct / 100) * recvLate));
   })();
 
-  const confirmRecv = async (mode: "penuh" | "sebagian") => {
-    if (!recvPo) return;    const qty = Number(recvQty);
+  const confirmCannot = async () => {
+    if (!cannotFor) return;
+    const qty = Number(cannotQty);
+    if (!qty || qty <= 0 || qty > poOpenQty(cannotFor)) { toast(n_mr[locale].poCannotQtyErr.replace("{n}", fmtJumlah(poOpenQty(cannotFor))), "info"); return; }
+    if (!cannotReason.trim()) { toast(n_mr[locale].poReasonReq, "info"); return; }
+    try {
+      await poActions.vendorCannotFulfill(cannotFor, qty, cannotReason.trim(), user?.name ?? "");
+      toast(n_mr[locale].poCannotDone.replace("{n}", fmtJumlah(qty)).replace("{po}", String(cannotFor.id)));
+      setCannotFor(null);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
+  const confirmReassign = async () => {
+    if (!reassignFor) return;
+    if (!reassignVendor.trim()) { toast(n_mr[locale].poVendorReq, "info"); return; }
+    try {
+      const price = parseRupiah(reassignPrice);
+      const newId = await poActions.reassign(reassignFor, reassignVendor.trim(), price > 0 ? price : undefined, user?.name ?? "");
+      toast(n_mr[locale].poReassignDone.replace("{n}", newId).replace("{v}", reassignVendor.trim()));
+      setReassignFor(null);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
+  /* F3-J-02: status PO (Diterima / Diterima Sebagian / Dibatalkan Sebagian)
+     dihitung dari kuantitas, bukan dipilih pengguna. Stok, movement, status,
+     dan pemenuhan permintaan proyek berjalan lewat usePoActions().receive
+     (endpoint transaksional saat tersambung server). */
+  const confirmRecv = async () => {
+    if (!recvPo) return;
+    const qty = Number(recvQty);
     if (!qty || qty <= 0) { toast(S.tRecvQty, "info"); return; }
     const orderedQty = Number(recvPo.qty || 0);
-    if (orderedQty > 0 && Number(recvPo.receivedQty || 0) + qty > orderedQty) { toast(S.tRecvOver.replace("{a}", String(orderedQty)).replace("{b}", String(Number(recvPo.receivedQty || 0))), "info"); return; }
+    if (orderedQty > 0 && qty > poOpenQty(recvPo)) { toast(S.tRecvOver.replace("{a}", String(orderedQty)).replace("{b}", String(Number(recvPo.receivedQty || 0) + Number(recvPo.cancelledQty || 0))), "info"); return; }
     const isBig = recvPo.poType !== "Kecil";
     if (isBig && (!recvNoFaktur.trim() || !recvTglFaktur)) { toast(S.tFakturWajib, "info"); return; }
     if (!isBig && !recvNoFaktur.trim()) { toast(S.tNotaWajib, "info"); return; }
     const invItem = invList.find((i) => i.id === recvItem);
     if (!invItem) { toast(isBig ? S.tPilihItem : S.tKecilItem, "info"); return; }
     try {
-      if (invItem) {
-      const unitPrice = orderedQty > 0 ? Number(recvPo.amount || 0) / orderedQty : 0;
-      const oldStock = Number(invItem.stock || 0);
-      const oldAvg = Number(invItem.avgCost) > 0 ? Number(invItem.avgCost) : Number(invItem.cost || 0);
-      const invPatch: Record<string, unknown> = { stock: oldStock + qty };
-      if (unitPrice > 0 && oldStock + qty > 0) {
-        invPatch.avgCost = Math.round(((oldStock * oldAvg + qty * unitPrice) / (oldStock + qty)) * 100) / 100;
-      }
-      await update("inventory", invItem.id, invPatch);
-      await add("movements", {
-        item: invItem.name, itemId: invItem.id, type: "Penerimaan", qty, by: recvPo.id, date: todayISO(), tone: "in",
-      }, { action: "menerima barang", target: `${invItem.name} × ${qty} (${recvPo.id})`, module: "Procurement" });
-    }
     /* Denda: hari telat × % per hari dari nilai PO, dibatasi 5%. */
     const prevDenda = Number(recvPo.dendaRp || 0);
     let dendaRp = prevDenda;
@@ -999,15 +1028,8 @@ export default function Procurement() {
       dendaRp = Math.round(Math.min(Number(recvPo.amount || 0) * 0.05, Number(recvPo.amount || 0) * (pct / 100) * late));
     }
     const dendaBaru = Math.max(0, dendaRp - prevDenda);
-    await update("purchaseOrders", recvPo.id, {
-      itemId: invItem ? invItem.id : recvPo.itemId,
-      item: invItem ? invItem.name : recvPo.item,
-      qty: recvPo.qty ?? qty,
-      receivedQty: Number(recvPo.receivedQty || 0) + qty,
-      status: mode === "penuh" ? "Diterima" : "Diterima Sebagian",
-      noFaktur: recvNoFaktur.trim(),
-      tglFaktur: recvTglFaktur,
-      dendaRp,
+    const outcome = await poActions.receive(recvPo, {
+      qty, itemId: invItem.id, noFaktur: recvNoFaktur.trim(), tglFaktur: recvTglFaktur, dendaRp, actor: user?.name,
     });
     /* Auto-AP dari penerimaan (3-way match PO-terima-invoice): hutang vendor terbentuk saat terima.
        Idempoten: kunci po PERSIS sama dengan yang ditulis ("ID / docNo"), dicek ke
@@ -1037,15 +1059,18 @@ export default function Procurement() {
       log("auto-hutang penerimaan barang", `${recvPo.id} → hutang ${recvPo.vendor} ${fmtRupiah(apTotal)}`, "Procurement");
     }
     if (late > 0 && dendaRp > 0) log("denda keterlambatan", `${recvPo.id}: telat ${late} hari → ${fmtRupiah(dendaRp)}`, "Procurement");
-    toast(`${recvPo.id} ${mode === "penuh" ? S.tRecvPenuh : S.tRecvSebagian}${invItem ? S.tRecvStok.replace("{a}", invItem.name).replace("{b}", String(qty)) : ""}${dendaRp > 0 ? S.tRecvDenda.replace("{n}", fmtRupiah(dendaRp)) : ""}`);
+    toast(`${recvPo.id} ${outcome.status === "Diterima" ? S.tRecvPenuh : S.tRecvSebagian}${S.tRecvStok.replace("{a}", invItem.name).replace("{b}", String(qty))}${dendaRp > 0 ? S.tRecvDenda.replace("{n}", fmtRupiah(dendaRp)) : ""}`);
+    if (outcome.fulfilled.length > 0) {
+      toast(n_mr[locale].poAutoFulfilled.replace("{n}", outcome.fulfilled.map((f) => f.id).join(", ")));
+    }
     setRecvPo(null);
     setRecvItem("");
     setRecvQty("");
     setRecvNoFaktur("");
     setRecvTglFaktur("");
     setRecvDendaPct("0.1");
-    } catch {
-      toast(S.tRecvFail.replace("{n}", recvPo.id), "info");
+    } catch (e) {
+      toast(e instanceof Error && e.message ? e.message : S.tRecvFail.replace("{n}", recvPo.id), "info");
     }
   };
 
@@ -1103,7 +1128,7 @@ export default function Procurement() {
     const st = normPo(editPo.status);
     /* Kunci status: setelah Dikirim, baris jadi acuan penerima barang dan
        sudah bisa jadi hutang - mengubahnya berartiDisconnect riwayat. */
-    if (st === "Dikirim" || st === "Diterima Sebagian" || st === "Diterima" || st === "Ditolak") {
+    if (st === "Dikirim" || st === "Diterima Sebagian" || st === "Diterima" || st === "Dibatalkan Sebagian" || st === "Ditolak") {
       toast(
         locale === "en"
           ? `PO ${editPo.id} is already ${st} - use Amandemen or Retur instead.`
@@ -1202,7 +1227,7 @@ export default function Procurement() {
         <button className="btn-secondary text-xs" onClick={() => setPoDetail(po)}>{locale === "en" ? "Detail" : "Detail"}</button>
         {/* Ubah hanya sebelum Dikirim: sesudah itu baris PO adalah acuan
             penerima barang dan sudah bisa jadi hutang. */}
-        {st !== "Dikirim" && st !== "Diterima Sebagian" && st !== "Diterima" && st !== "Ditolak" && (
+        {st !== "Dikirim" && st !== "Diterima Sebagian" && st !== "Diterima" && st !== "Dibatalkan Sebagian" && st !== "Ditolak" && (
           <button
             className="btn-secondary text-xs"
             aria-label={`${locale === "en" ? "Edit" : "Ubah"} ${po.id}`}
@@ -1234,9 +1259,23 @@ export default function Procurement() {
         {st === "Disetujui" && (
           <button className="btn-primary text-xs" onClick={() => doPoStatus(po, "Dikirim")}><Send className="h-3.5 w-3.5" /> {S.btnKirim} - {locale === "en" ? "next" : "lanjut"}</button>
         )}
-        {(st === "Dikirim" || st === "Diterima Sebagian") && (
+        {(st === "Dikirim" || st === "Diterima Sebagian") && poOpenQty(po) > 0 && (
           <button className="btn-primary text-xs" onClick={() => openRecv(po)}>{S.btnTerima} - {locale === "en" ? "stock in" : "stok masuk"}</button>
         )}
+        {poPendingReassign(po) > 0 && (
+          <button className="btn-primary text-xs" onClick={() => { setReassignFor(po); setReassignVendor(""); setReassignPrice(""); }}>
+            {n_mr[locale].poReassignBtn.replace("{n}", fmtJumlah(poPendingReassign(po)))}
+          </button>
+        )}
+        {Number(po.qty || 0) > 0 && (Number(po.receivedQty || 0) > 0 || Number(po.cancelledQty || 0) > 0) && (
+          <span className="text-[11px] text-steel-500">
+            {n_mr[locale].poProgress.replace("{r}", fmtJumlah(Number(po.receivedQty || 0))).replace("{q}", fmtJumlah(Number(po.qty))).replace("{c}", fmtJumlah(Number(po.cancelledQty || 0)))}
+          </span>
+        )}
+        {Array.isArray(po.reassignedTo) && (po.reassignedTo as string[]).length > 0 && (
+          <span className="text-[11px] text-steel-500">→ {(po.reassignedTo as string[]).join(", ")}</span>
+        )}
+        {po.reassignedFrom ? <span className="text-[11px] text-steel-500">{n_mr[locale].poFrom.replace("{n}", String(po.reassignedFrom))}</span> : null}
         {st === "Diterima" && !po.evaluated && (
           <button className="btn-primary text-xs" aria-label={S.ariaNilaiVendor.replace("{n}", po.id)} onClick={() => { setEvalPo(po); setEvalQ(""); setEvalD(""); setEvalP(""); }}>
             <Star className="h-3.5 w-3.5" /> {S.btnNilai}
@@ -1248,15 +1287,17 @@ export default function Procurement() {
             {(st === "Diajukan") && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-rose-600 hover:bg-steel-50" aria-label={S.ariaTolakN.replace("{n}", po.id)} onClick={() => setConfirmRejectPo(po)}><X className="mr-1 inline h-3.5 w-3.5" />{S.btnTolak}</button>
             )}
-            {(st === "Dikirim") && (
-              <button className="rounded-lg px-2 py-1.5 text-left text-xs text-steel-600 hover:bg-steel-50" onClick={() => openRecv(po)}>{S.btnTerimaSebagian}</button>
+            {(st === "Disetujui" || st === "Dikirim" || st === "Diterima Sebagian") && Number(po.qty || 0) > 0 && poOpenQty(po) > 0 && !poIsMultiItem(po) && (
+              <button className="rounded-lg px-2 py-1.5 text-left text-xs text-rose-600 hover:bg-steel-50" onClick={() => { setCannotFor(po); setCannotQty(String(poOpenQty(po))); setCannotReason(""); }}>
+                {n_mr[locale].poCannotBtn}
+              </button>
             )}
             {(st === "Disetujui" || st === "Dikirim") && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-steel-600 hover:bg-steel-50" aria-label={S.ariaAmandemen.replace("{n}", po.id)} onClick={() => { setAmendPo(po); setAmendForm({ name: "", qty: "1", unit: "pcs", price: "", note: "" }); }}>
                 {S.btnAmandemen}
               </button>
             )}
-            {st === "Diterima" && (
+            {(st === "Diterima" || (st === "Dibatalkan Sebagian" && Number(po.receivedQty || 0) > Number(po.returnedQty || 0))) && (
               <button className="rounded-lg px-2 py-1.5 text-left text-xs text-steel-600 hover:bg-steel-50" aria-label={S.ariaRetur.replace("{n}", po.id)} onClick={() => { setRetPo(po); setRetQty(""); setRetNote(""); }}>
                 {S.btnRetur}
               </button>
@@ -2189,8 +2230,7 @@ const sparkVendors = useMemo(() => {
       <Modal open={recvPo !== null} onClose={() => setRecvPo(null)} title={S.mRecvT.replace("{n}", recvPo?.id ?? "")} subtitle={S.mRecvS}
         footer={<>
           <button className="btn-secondary" onClick={() => setRecvPo(null)}>{S.btnBatal}</button>
-          <AsyncButton className="btn-secondary" onAction={() => confirmRecv("sebagian")}>{S.btnTerimaSebagian}</AsyncButton>
-          <AsyncButton className="btn-primary" onAction={() => confirmRecv("penuh")}>{S.btnTerimaPenuh}</AsyncButton>
+          <AsyncButton className="btn-primary" onAction={confirmRecv}>{n_mr[locale].poReceiveBtn}</AsyncButton>
         </>}>
         <div className="space-y-3">
           <Field label={S.itemTujuan} hint={recvPo?.poType === "Kecil" ? S.hintKecilOps : undefined}>
@@ -2199,6 +2239,11 @@ const sparkVendors = useMemo(() => {
               {invList.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
             </select>
           </Field>
+          {recvPo && Number(recvPo.qty || 0) > 0 && (
+            <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">
+              {n_mr[locale].poQtySummary.replace("{q}", fmtJumlah(Number(recvPo.qty))).replace("{r}", fmtJumlah(Number(recvPo.receivedQty || 0))).replace("{c}", fmtJumlah(Number(recvPo.cancelledQty || 0))).replace("{o}", fmtJumlah(poOpenQty(recvPo)))}
+            </p>
+          )}
           <Field label={S.qtyDiterimaF}><NumInput min={0} className="input" value={recvQty} onChange={(e) => setRecvQty(e.target.value)} /></Field>
           <FormGrid>
             <Field label={S.noFaktur} hint={recvPo?.poType === "Kecil" ? S.hintOpsKecil : S.hintWajibBesar}>
@@ -2216,6 +2261,57 @@ const sparkVendors = useMemo(() => {
                   <NumInput min={0} max={5} step={0.1} className="input" value={recvDendaPct} onChange={(e) => setRecvDendaPct(e.target.value)} />
                 </Field>
               </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* F3-J-02: vendor tidak sanggup memenuhi sisa PO */}
+      <Modal open={cannotFor !== null} onClose={() => setCannotFor(null)} title={n_mr[locale].poCannotTitle.replace("{n}", String(cannotFor?.id ?? ""))} subtitle={String(cannotFor?.vendor ?? "")}
+        footer={<><button className="btn-secondary" onClick={() => setCannotFor(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={confirmCannot}>{n_mr[locale].poCannotConfirm}</AsyncButton></>}>
+        <div className="space-y-3">
+          {cannotFor && (
+            <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">
+              {n_mr[locale].poQtySummary.replace("{q}", fmtJumlah(Number(cannotFor.qty || 0))).replace("{r}", fmtJumlah(Number(cannotFor.receivedQty || 0))).replace("{c}", fmtJumlah(Number(cannotFor.cancelledQty || 0))).replace("{o}", fmtJumlah(poOpenQty(cannotFor)))}
+            </p>
+          )}
+          <FormGrid>
+            <Field label={n_mr[locale].poCannotQty}><NumInput min={0} className="input" value={cannotQty} onChange={(e) => setCannotQty(e.target.value)} /></Field>
+            <Field label={n_mr[locale].poCannotReason}><input className="input" maxLength={500} value={cannotReason} onChange={(e) => setCannotReason(e.target.value)} placeholder={n_mr[locale].poCannotReasonPh} /></Field>
+          </FormGrid>
+          <p className="text-xs text-steel-500">{n_mr[locale].poCannotHint}</p>
+        </div>
+      </Modal>
+
+      {/* F3-J-02: alihkan qty yang batal ke vendor lain (PO baru, menunggu persetujuan) */}
+      <Modal open={reassignFor !== null} onClose={() => setReassignFor(null)} title={n_mr[locale].poReassignTitle.replace("{n}", String(reassignFor?.id ?? ""))} subtitle={reassignFor ? n_mr[locale].poReassignSub.replace("{n}", fmtJumlah(poPendingReassign(reassignFor))).replace("{i}", String(reassignFor.item ?? "")) : ""}
+        footer={<><button className="btn-secondary" onClick={() => setReassignFor(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={confirmReassign}>{n_mr[locale].poReassignConfirm}</AsyncButton></>}>
+        <div className="space-y-3">
+          <Field label={n_mr[locale].poVendorNew}>
+            <select className="input" value={reassignVendor} onChange={(e) => {
+              setReassignVendor(e.target.value);
+              const h = reassignFor ? vendorPriceHistory(purchaseOrders, reassignFor).find((x) => x.vendor === e.target.value) : undefined;
+              // Tanpa riwayat: kosongkan supaya harga vendor sebelumnya tidak ikut terkirim.
+              setReassignPrice(h ? String(h.unitPrice) : "");
+            }}>
+              <option value="">{n_mr[locale].poVendorPick}</option>
+              {vendors.filter((v) => String(v.name ?? "") !== String(reassignFor?.vendor ?? "")).map((v) => <option key={String(v.id)} value={String(v.name)}>{String(v.name)}</option>)}
+            </select>
+          </Field>
+          <Field label={n_mr[locale].poUnitPrice} hint={n_mr[locale].poUnitPriceHint}>
+            <MoneyInput className="input" value={reassignPrice} onChange={setReassignPrice} />
+          </Field>
+          {reassignFor && vendorPriceHistory(purchaseOrders, reassignFor).length > 0 && (
+            <div>
+              <p className="mb-1 text-xs font-semibold text-navy-900">{n_mr[locale].poPriceHistory}</p>
+              <ul className="divide-y divide-steel-100 rounded-lg border border-steel-200 text-xs">
+                {vendorPriceHistory(purchaseOrders, reassignFor).map((h, i) => (
+                  <li key={h.vendor} className="flex items-center justify-between px-3 py-1.5">
+                    <span>{h.vendor}{i === 0 ? <Badge tone="green" className="ml-2">{S.cheapest}</Badge> : null}</span>
+                    <span className="tabular-nums text-steel-600">{fmtRupiah(h.unitPrice)} · {fmtTanggal(h.date)}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

@@ -74,7 +74,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `sel
 | F3-I-04 | SPK terkunci kecuali procurement | P0 | F3-I-subkon.md | | todo | |
 | F3-I-05 | Termin: tabel, skema, pajak | P0 | F3-I-subkon.md | | todo | |
 | F3-J-01 | Material request sebagai penghubung | P0 | F3-J-procurement.md | Claude | review | koleksi `materialRequests` + tab Procurement "Permintaan Barang" + fulfill (`probe:material` 17/17) |
-| F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | | todo | |
+| F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | Claude | review | feat/F3-J-02-po-partial-rbac-demo — level PO (qty/receivedQty/cancelledQty/reassignedQty), `probe:po-partial` 13/13 |
 | F3-J-03 | RFQ: perbandingan harga & track record, tanpa tender | P1 | F3-J-procurement.md | | todo | |
 | F3-J-04 | Approval service oleh procurement | P0 | F3-J-procurement.md | Claude | review | tab Procurement "Persetujuan Service" + `POST /api/services/:id/approval` (audit `service_approval`) |
 | F3-K-01 | Hapus tab Drawing | P1 | F3-K-qc-safety.md | agent | review | Branch `feat/F3-K-01-hide-drawing-tab`; gate penuh + build web/API lulus; cek browser dilewati sesuai arahan; menunggu re-review independen Benson |

@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (486 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (488 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -448,7 +448,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "qty": 20,
       "unit": "pcs",
       "itemId": "INV-005",
-      "status": "Menunggu Approval",
+      "status": "Sudah PO",
       "sourceRequestIds": [
         "MR-2026-002"
       ],
@@ -7545,6 +7545,61 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "amount": 210000000,
       "status": "Dikirim",
       "date": "2026-07-30"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2026-118",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Anoda Zink",
+      "itemId": "INV-005",
+      "vendor": "PT Jotun Indonesia",
+      "req": "PR-2026-211",
+      "qty": 20,
+      "amount": 4200000,
+      "receivedQty": 0,
+      "returnedQty": 0,
+      "status": "Dikirim",
+      "date": "2026-10-06",
+      "eta": "2026-10-14",
+      "project": "RP-2026-003",
+      "lines": [
+        {
+          "name": "Anoda Zink",
+          "qty": 20,
+          "unit": "pcs",
+          "price": 210000
+        }
+      ]
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2026-098",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Anoda Zink",
+      "itemId": "INV-005",
+      "vendor": "PT Steel Rig",
+      "req": "-",
+      "qty": 30,
+      "amount": 6000000,
+      "receivedQty": 30,
+      "returnedQty": 0,
+      "status": "Diterima",
+      "date": "2026-05-12",
+      "project": "-",
+      "lines": [
+        {
+          "name": "Anoda Zink",
+          "qty": 30,
+          "unit": "pcs",
+          "price": 200000
+        }
+      ]
     }
   },
   {
