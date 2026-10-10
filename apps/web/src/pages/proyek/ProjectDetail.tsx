@@ -1503,7 +1503,8 @@ const createWarranty = async (wbsTask?: string) => {
                 {(() => {
                   const pv = project.budget;
                   const ev = Math.round((project.budget * project.progress) / 100);
-                  const ac = project.actual;
+                  // AC = biaya aktual + equipment + service Selesai (lihat hppWithEquip).
+                  const ac = hppWithEquip;
                   const spi = pv > 0 ? ev / pv : 0;
                   const cpi = ac > 0 ? ev / ac : 0;
                   const eac = cpi > 0 ? Math.round(ac / cpi) : ac;

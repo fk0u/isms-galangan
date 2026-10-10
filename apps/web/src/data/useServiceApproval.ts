@@ -21,6 +21,8 @@ export function canApproveService(role: string | undefined): boolean {
 export function useServiceApproval(): (id: string, approval: ServiceApproval, note: string, actor: string) => Promise<void> {
   const { data, update, log, resyncCollections } = useStore();
   return useCallback(async (id, approval, note, actor) => {
+    // Batas sama dengan validasi server (z.string().max(500)).
+    if (note.length > 500) throw new Error("Alasan maksimal 500 karakter");
     if (isBackendConfigured() && getJwt() !== null) {
       await apiFetch(`/api/services/${encodeURIComponent(id)}/approval`, {
         method: "POST", body: JSON.stringify({ approval, ...(note ? { note } : {}) }),

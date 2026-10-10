@@ -23,11 +23,10 @@ export function registerServiceApprovalRoutes(app: FastifyInstance): void {
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
     try {
-      const svc = await setServiceApproval(id, parsed.data.approval, req.user?.role, requestActor(req), parsed.data.note ?? "");
-      await writeAudit({
+      const svc = await setServiceApproval(id, parsed.data.approval, req.user?.role, requestActor(req), parsed.data.note ?? "", () => writeAudit({
         actor: requestActor(req), action: "service_approval", table: "services",
         rowId: id, diff: { approval: parsed.data.approval, note: parsed.data.note ?? "" }, ip: requestIp(req),
-      });
+      }, { required: true }));
       return ok(svc);
     } catch (err) {
       if (err instanceof ServiceError) return reply.status(err.status).send(fail(err.message, err.code));

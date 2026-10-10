@@ -75,10 +75,18 @@ async function main(): Promise<void> {
   assert("penuhi sisa dari stok → Selesai, stok 5 → 3", fOk.statusCode === 200 && mr2b?.status === "Selesai" && mr2b.shortage === 0 && (await stockOf()) === 3, fOk.body);
   const spAfter = (await q<{ data: string }>("SELECT data FROM spareparts WHERE id = ?", [d2.sparepartId ?? ""]))[0];
   assert("sparepart ikut terpenuhi", (JSON.parse(spAfter?.data ?? "{}") as { fulfillment?: { shortage: number } }).fulfillment?.shortage === 0);
+  const prAfter = (await q<{ data: string }>("SELECT data FROM requisitions WHERE id = ?", [d2.requisitionId ?? ""]))[0];
+  assert("PR sumber dibatalkan setelah dipenuhi dari stok", (JSON.parse(prAfter?.data ?? "{}") as { status?: string }).status === "Dibatalkan");
   const fAgain = await fulfill(dir, mr2Id);
   assert("penuhi ulang yang sudah selesai → 409", fAgain.statusCode === 409, fAgain.body);
   const crudMr = await app.inject({ method: "POST", url: "/api/materialRequests", headers: { authorization: `Bearer ${dir}` }, payload: { data: { projectId: project.id, itemId } } });
   assert("buat permintaan lewat CRUD → 422", crudMr.statusCode === 422, crudMr.body);
+  const delMr = await app.inject({ method: "DELETE", url: `/api/materialRequests/${mr2Id}`, headers: { authorization: `Bearer ${dir}` } });
+  assert("hapus permintaan lewat CRUD → 409", delMr.statusCode === 409, delMr.body);
+  const proyek = await tokenFor("proyek");
+  if (!proyek) throw new Error("Butuh akun proyek hasil seed");
+  const wbsByProyek = await call(proyek, { itemId, qty: 1, purpose: "wbs" });
+  assert("peran proyek meminta material WBS → 403", wbsByProyek.statusCode === 403, wbsByProyek.body);
   await exec("UPDATE inventory SET data = json_set(data, '$.stock', 0) WHERE id = ?", [itemId]);
 
   const r3 = await call(dir, { itemId, qty: 1, purpose: "wbs" });
@@ -99,7 +107,8 @@ async function main(): Promise<void> {
   await exec("DELETE FROM spareparts WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM materialRequests WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
-  await exec("DELETE FROM audit_log WHERE action IN ('material_request', 'material_fulfill') AND diff LIKE ?", [`%${itemId}%`]);
+  await exec("DELETE FROM audit_log WHERE action = 'material_request' AND diff LIKE ?", [`%${itemId}%`]);
+  await exec("DELETE FROM audit_log WHERE action = 'material_fulfill' AND row_id = ?", [mr2Id]);
 
   console.log(`\n${passed}/${total} pemeriksaan alur material lolos.`);
   await app.close();

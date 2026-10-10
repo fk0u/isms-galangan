@@ -137,6 +137,9 @@ export interface FulfillResult {
   status: MrStatus;
 }
 
+/* PR yang belum diproses procurement (boleh dikurangi otomatis). */
+const PR_OPEN = new Set(["Draft", "Diajukan", "Menunggu Approval"]);
+
 /** Penuhi sisa permintaan dari stok (setelah barang PO masuk gudang). */
 export function useFulfillMaterialRequest(): (id: string, actor?: string) => Promise<FulfillResult> {
   const { data, add, update, resyncCollections } = useStore();
@@ -144,7 +147,7 @@ export function useFulfillMaterialRequest(): (id: string, actor?: string) => Pro
   return useCallback(async (id: string, actor?: string): Promise<FulfillResult> => {
     if (isBackendConfigured() && getJwt() !== null) {
       const res = await apiFetch<FulfillResult>(`/api/material-requests/${encodeURIComponent(id)}/fulfill`, { method: "POST" });
-      await resyncCollections(["materialRequests", "inventory", "movements", "spareparts", "activities"]);
+      await resyncCollections(["materialRequests", "inventory", "movements", "spareparts", "requisitions", "activities"]);
       return res;
     }
     const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
@@ -176,6 +179,15 @@ export function useFulfillMaterialRequest(): (id: string, actor?: string) => Pro
         fulfillment: { ...f, issued, shortage, status: shortage === 0 ? "Dari stok" : "Sebagian" },
       });
     }
+    // Sama dengan server: PR sumber yang belum diproses ikut dikurangi.
+    const prId = String(mr.requisitionId ?? "");
+    const pr = prId ? (data.requisitions ?? []).find((x) => String(x.id) === prId) : undefined;
+    if (pr && PR_OPEN.has(String(pr.status ?? ""))) {
+      const unitPrice = Number(pr.qty) > 0 ? Number(pr.amount ?? 0) / Number(pr.qty) : 0;
+      await update("requisitions", prId, shortage === 0
+        ? { qty: 0, amount: 0, status: "Dibatalkan", note: `${String(pr.note ?? "")} — dipenuhi dari stok (${id})`.trim() }
+        : { qty: shortage, amount: Math.round(unitPrice * shortage) });
+    }
     return { id, given, issued, shortage, status };
-  }, [data.materialRequests, data.inventory, data.spareparts, add, update, resyncCollections]);
+  }, [data.materialRequests, data.inventory, data.spareparts, data.requisitions, add, update, resyncCollections]);
 }

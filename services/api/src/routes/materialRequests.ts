@@ -27,11 +27,13 @@ export function registerMaterialRequestRoutes(app: FastifyInstance): void {
     /* Peminta barang cukup punya hak tulis pergerakan barang (mekanik, gudang,
        manager…) atau sparepart proyek (peran proyek). Hak ubah stok inventori
        TIDAK dibutuhkan — justru server yang mengurangi stok secara terkontrol. */
-    if (!can(req.user?.role, "movements", "w") && !can(req.user?.role, "spareparts", "w")) {
-      return reply.status(403).send(fail("Peran ini tidak boleh meminta barang dari gudang", "FORBIDDEN"));
-    }
     const parsed = BodySchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
+    const role = req.user?.role;
+    const allowed = can(role, "movements", "w") || (parsed.data.purpose === "sparepart" && can(role, "spareparts", "w"));
+    if (!allowed) {
+      return reply.status(403).send(fail("Peran ini tidak boleh meminta barang dari gudang", "FORBIDDEN"));
+    }
     const { id } = req.params as { id: string };
     try {
       const result = await requestMaterial({ ...parsed.data, projectId: id, actor: requestActor(req) });

@@ -37,8 +37,10 @@ export default function MaterialRequestsTab() {
     () => [...(data.materialRequests ?? [])].sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")) || String(b.id).localeCompare(String(a.id))),
     [data.materialRequests],
   );
+  // Status tampilan (termasuk "Menunggu stok" turunan) ikut bisa dicari.
   const shown = all.filter((m) => (filter === "Semua" || Number(m.shortage ?? 0) > 0)
-    && rowMatches(m, q, ["id", "projectId", "item", "requestedBy", "status", "requisitionId", "wbsTask"]));
+    && rowMatches({ ...m, shownStatus: mrDisplayStatus(m, data.requisitions ?? []) } as StoreItem, q,
+      ["id", "projectId", "item", "requestedBy", "shownStatus", "requisitionId", "wbsTask"]));
   const openCount = all.filter((m) => Number(m.shortage ?? 0) > 0).length;
   const prCount = all.filter((m) => String(m.requisitionId ?? "") !== "").length;
 

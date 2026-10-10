@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (484 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (486 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -444,7 +444,10 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "item": "Anoda Zink",
       "by": "Agus S.",
-      "amount": 94000000,
+      "amount": 4200000,
+      "qty": 20,
+      "unit": "pcs",
+      "itemId": "INV-005",
       "status": "Menunggu Approval",
       "sourceRequestIds": [
         "MR-2026-002"
@@ -7257,7 +7260,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Scheduled",
       "technician": "Sari Wulandari",
       "cost": 75000000,
-      "wbsTask": "Outfitting - Machinery",
+      "wbsTask": "Outfitting — Machinery",
       "approval": "Diajukan"
     }
   },
@@ -7304,7 +7307,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Scheduled",
       "technician": "Agus Setiawan",
       "cost": 95000000,
-      "wbsTask": "Outfitting - Piping",
+      "wbsTask": "Outfitting — Piping",
       "approval": "Diajukan"
     }
   },
@@ -7800,6 +7803,44 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
   },
   {
     "table": "movements",
+    "id": "M-MR-001",
+    "branch": "",
+    "data": {
+      "item": "Cat Epoxy Primer",
+      "itemId": "INV-003",
+      "type": "Pengeluaran",
+      "qty": 20,
+      "unit": "liter",
+      "by": "Rudi Hartono (WBS: Outfitting — Machinery)",
+      "date": "2026-10-02",
+      "tone": "out",
+      "ref": {
+        "projectId": "RP-2026-003",
+        "materialRequestId": "MR-2026-001"
+      }
+    }
+  },
+  {
+    "table": "movements",
+    "id": "M-MR-003",
+    "branch": "",
+    "data": {
+      "item": "Baut Marine M20",
+      "itemId": "INV-007",
+      "type": "Pengeluaran",
+      "qty": 400,
+      "unit": "pcs",
+      "by": "Fajar Nugroho (WBS: Hull Assembly)",
+      "date": "2026-10-07",
+      "tone": "out",
+      "ref": {
+        "projectId": "NB-2025-012",
+        "materialRequestId": "MR-2026-003"
+      }
+    }
+  },
+  {
+    "table": "movements",
     "id": "M-0901",
     "branch": "",
     "data": {
@@ -8139,14 +8180,16 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "item": "Cat Epoxy Primer",
       "unit": "liter",
       "purpose": "wbs",
-      "wbsTask": "Outfitting - Machinery",
+      "wbsTask": "Outfitting — Machinery",
       "requested": 20,
       "issued": 20,
       "shortage": 0,
       "status": "Dipenuhi dari stok",
       "requestedBy": "Rudi Hartono",
       "date": "2026-10-02",
-      "movementIds": [],
+      "movementIds": [
+        "M-MR-001"
+      ],
       "requisitionId": null,
       "sparepartId": null,
       "note": ""
@@ -8162,7 +8205,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "item": "Anoda Zink",
       "unit": "pcs",
       "purpose": "wbs",
-      "wbsTask": "Outfitting - Machinery",
+      "wbsTask": "Outfitting — Machinery",
       "requested": 20,
       "issued": 0,
       "shortage": 20,
@@ -8192,7 +8235,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Dipenuhi dari stok",
       "requestedBy": "Fajar Nugroho",
       "date": "2026-10-07",
-      "movementIds": [],
+      "movementIds": [
+        "M-MR-003"
+      ],
       "requisitionId": null,
       "sparepartId": null,
       "note": ""

@@ -12,7 +12,7 @@
  *   - tidak bisa In Progress/Done sebelum Disetujui;
  *   - biaya yang berbeda dari harga item BoQ wajib disertai alasan. */
 import { q, exec, withTx } from "./db.js";
-import { normalizeRole } from "./policy.js";
+import { can, normalizeRole } from "./policy.js";
 
 type Data = Record<string, unknown>;
 interface Row { id: string; data: string; updated_at: string }
@@ -39,9 +39,29 @@ export function canApproveService(role: string | undefined): boolean {
   return APPROVER_ROLES.has(normalizeRole(role));
 }
 
-/** Service baru dari CRUD: selalu menunggu persetujuan. */
+/* Field milik endpoint persetujuan — tidak boleh ditulis lewat CRUD. */
+const SERVER_OWNED = ["approval", "approvedBy", "approvedAt", "approvalNote"] as const;
+
+function hasProject(d: Data): boolean {
+  return String(d.projectId ?? "").trim() !== "";
+}
+
+/** Service proyek baru dari CRUD: selalu menunggu persetujuan. Service kapal
+ *  (tanpa proyek) tidak memakai alur persetujuan procurement. */
 export function normalizeNewService(data: Data): Data {
-  return { ...data, status: "Scheduled", approval: "Diajukan" };
+  const clean: Data = { ...data };
+  for (const k of SERVER_OWNED) delete clean[k];
+  return hasProject(clean) ? { ...clean, status: "Scheduled", approval: "Diajukan" } : clean;
+}
+
+/* WBS proyek tersimpan di wbs_by_project; proyek tanpa baris WBS tidak divalidasi. */
+async function wbsTaskError(projectId: string, task: string): Promise<string | null> {
+  const rows = await q<{ data: string }>("SELECT data FROM wbs_by_project WHERE project_id = ?", [projectId]);
+  if (!rows[0]) return null;
+  try {
+    const tasks = (JSON.parse(rows[0].data) as { task?: unknown }[]).map((w) => String(w.task ?? ""));
+    return tasks.includes(task) ? null : `Pekerjaan WBS "${task}" tidak ada di proyek ${projectId}`;
+  } catch { return null; }
 }
 
 async function boqPrice(boqRef: string): Promise<number | null> {
@@ -55,16 +75,23 @@ async function boqPrice(boqRef: string): Promise<number | null> {
 
 /** Validasi tulis CRUD untuk services & materialRequests. null = boleh. */
 export async function serviceGuardError(table: string, before: Data | null, after: Data | null): Promise<string | null> {
-  if (table === "materialRequests" && after) {
-    return "Permintaan barang hanya dibuat/diubah lewat endpoint material request";
+  if (table === "materialRequests") {
+    // Riwayat pemenuhan barang tidak boleh diubah/dihapus lewat CRUD generik.
+    return after ? "Permintaan barang hanya dibuat/diubah lewat endpoint material request"
+      : before ? "Permintaan barang tidak bisa dihapus — riwayat pemenuhan harus utuh" : null;
   }
   if (table !== "services" || !after) return null;
 
-  if (!before && String(after.projectId ?? "").trim() !== "" && String(after.wbsTask ?? "").trim() === "") {
-    return "Service proyek wajib memilih pekerjaan WBS";
-  }
-  if (before && approvalOf(before) !== approvalOf(after)) {
+  if (before && SERVER_OWNED.some((k) => JSON.stringify(before[k] ?? null) !== JSON.stringify(after[k] ?? null))) {
     return "Persetujuan service hanya lewat POST /api/services/:id/approval";
+  }
+  const projectId = String(after.projectId ?? "").trim();
+  const wbsTask = String(after.wbsTask ?? "").trim();
+  const wbsTouched = !before || before.wbsTask !== after.wbsTask || before.projectId !== after.projectId;
+  if (projectId && wbsTouched) {
+    if (!wbsTask) return "Service proyek wajib memilih pekerjaan WBS";
+    const err = await wbsTaskError(projectId, wbsTask);
+    if (err) return err;
   }
   const st = String(after.status ?? "");
   if ((st === "In Progress" || st === "Done") && approvalOf(after) !== "Disetujui") {
@@ -82,7 +109,10 @@ export async function serviceGuardError(table: string, before: Data | null, afte
 }
 
 /** Ubah persetujuan. Approver: Diajukan → Disetujui/Ditolak. Pengaju: Ditolak → Diajukan. */
-export async function setServiceApproval(id: string, next: ServiceApproval, role: string | undefined, actor: string, note: string): Promise<Data> {
+export async function setServiceApproval(
+  id: string, next: ServiceApproval, role: string | undefined, actor: string, note: string,
+  audit: (svc: Data) => Promise<void>,
+): Promise<Data> {
   return withTx(async () => {
     const rows = await q<Row>("SELECT id, data, updated_at FROM services WHERE id = ?", [id]);
     const row = rows[0];
@@ -90,6 +120,8 @@ export async function setServiceApproval(id: string, next: ServiceApproval, role
     const data = JSON.parse(row.data) as Data;
     const cur = approvalOf(data);
     if (next === "Diajukan") {
+      // Pengajuan ulang oleh pihak yang boleh mengubah service (proyek/manager) atau approver.
+      if (!can(role, "services", "w") && !canApproveService(role)) throw new ServiceError(403, "Peran ini tidak boleh mengajukan service", "FORBIDDEN");
       if (cur !== "Ditolak") throw new ServiceError(409, `Service berstatus ${cur}; hanya yang Ditolak bisa diajukan ulang`, "INVALID_TRANSITION");
     } else {
       if (!canApproveService(role)) throw new ServiceError(403, "Hanya procurement yang bisa menyetujui/menolak service", "FORBIDDEN");
@@ -107,6 +139,8 @@ export async function setServiceApproval(id: string, next: ServiceApproval, role
       JSON.stringify(updated), now, id, row.updated_at,
     ]);
     if (res.changes !== 1) throw new ServiceError(409, "Service berubah oleh pengguna lain — muat ulang", "STALE");
+    // Audit di transaksi yang sama: gagal tulis audit = keputusan dibatalkan.
+    await audit({ id, ...updated });
     return { id, ...updated };
   });
 }

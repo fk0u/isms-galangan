@@ -373,9 +373,11 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
     setForm(EMPTY_SP);
   };
 
+  // Proyek service yang sedang diubah (tab kapal hanya mengirim vesselId).
+  const svcProjectId = projectId || String(editSvc?.projectId ?? "");
   const svcWbsOptions = useMemo(
-    () => (projectId ? wbsFor(projectId).map((w) => String(w.task)) : []),
-    [projectId, wbsFor],
+    () => (svcProjectId ? wbsFor(svcProjectId).map((w) => String(w.task)) : []),
+    [svcProjectId, wbsFor],
   );
   /* Item dari surat BoQ yang sudah Digantikan/Ditolak tidak relevan lagi
      (revisi menyalin item → nama ganda di dropdown). */
@@ -430,8 +432,12 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       setEditSvc(null);
       return;
     }
-    await add("services", { projectId: projectId ?? "", vesselId: vesselId ?? "", ...payload, status: "Scheduled", approval: "Diajukan" }, { action: "mengajukan service", module: "Service" });
-    toast(S.spsSvcSubmitted);
+    // Hanya service proyek yang perlu persetujuan procurement; service kapal langsung terjadwal.
+    await add("services", {
+      projectId: projectId ?? "", vesselId: vesselId ?? "", ...payload, status: "Scheduled",
+      ...(projectId ? { approval: "Diajukan" } : {}),
+    }, { action: projectId ? "mengajukan service" : "menambahkan service", module: "Service" });
+    toast(projectId ? S.spsSvcSubmitted : S.spsToastSvcAdd);
     setShowAddSvc(false);
     setSvcForm(EMPTY_SVC);
   };
@@ -697,7 +703,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
                 {["Overhaul", "Inspection", "Repair", "Drydock", "Survey"].map((t) => <option key={t} value={t}>{svcTypeLabel(t)}</option>)}
               </select>
             </Field>
-            {(projectId || (editSvc && editSvc.projectId)) && (
+            {svcProjectId && (
               <Field label={S.spsSvcWbs}>
                 <select className="input" value={svcForm.wbsTask} onChange={(e) => setSvcForm({ ...svcForm, wbsTask: e.target.value })}>
                   <option value="">{S.spsSvcWbsPh}</option>
@@ -747,7 +753,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
               <input className="input" value={svcForm.costReason} onChange={(e) => setSvcForm({ ...svcForm, costReason: e.target.value })} placeholder={S.spsSvcCostReasonPh} />
             </Field>
           )}
-          {!editSvc && <p className="text-xs text-steel-500">{S.spsSvcApprovalHint}</p>}
+          {!editSvc && projectId && <p className="text-xs text-steel-500">{S.spsSvcApprovalHint}</p>}
         </div>
       </Modal>
 

@@ -596,6 +596,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const doomed = rows[0] as Row;
     const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
+    const deleteGuard = await serviceGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
+    if (deleteGuard) return reply.status(409).send(fail(deleteGuard, "LOCKED"));
     if (deleteLock) return reply.status(409).send(fail(deleteLock, "LOCKED"));
     const usages = await findUsages(table, id);
     if (usages.length > 0) {

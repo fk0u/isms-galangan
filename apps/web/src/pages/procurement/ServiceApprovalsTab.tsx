@@ -31,7 +31,8 @@ export default function ServiceApprovalsTab() {
     [data.services],
   );
   const pending = projectServices.filter((s) => approvalOf(s) === "Diajukan");
-  const history = projectServices.filter((s) => s.approval !== undefined && approvalOf(s) !== "Diajukan");
+  // Riwayat termasuk service lama tanpa field approval (dianggap disetujui).
+  const history = projectServices.filter((s) => approvalOf(s) !== "Diajukan");
   const list = (view === "pending" ? pending : history)
     .filter((s) => rowMatches(s, q, ["id", "projectId", "description", "technician", "wbsTask"]))
     .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
@@ -81,7 +82,7 @@ export default function ServiceApprovalsTab() {
       </div>
 
       {list.length === 0 ? (
-        <EmptyState icon={<ClipboardCheck className="h-6 w-6" />} title={T.svcEmptyT} subtitle={T.svcEmptyS} />
+        <EmptyState icon={<ClipboardCheck className="h-6 w-6" />} title={view === "pending" ? T.svcEmptyT : T.svcHistEmptyT} subtitle={view === "pending" ? T.svcEmptyS : T.svcHistEmptyS} />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
@@ -145,7 +146,7 @@ export default function ServiceApprovalsTab() {
         </>}
       >
         <Field label={T.rejectReason}>
-          <textarea className="input" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={T.rejectPh} />
+          <textarea className="input" rows={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={T.rejectPh} />
         </Field>
       </Modal>
     </div>

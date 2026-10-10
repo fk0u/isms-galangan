@@ -81,11 +81,11 @@ async function issueFromStock(
   row: Row, item: Data, stock: number, give: number, now: string,
   movement: { itemName: string; unit: string; by: string; ref: Data; note: string },
 ): Promise<string> {
-  /* Syarat updated_at sama: dua permintaan bersamaan tidak bisa sama-sama lolos.
-     Pakai jumlah baris terubah, bukan membaca ulang updated_at (dua permintaan
-     di milidetik yang sama punya `now` identik). */
-  const res = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
-    JSON.stringify({ ...item, stock: stock - give }), now, row.id, row.updated_at,
+  /* Compare-and-set pada updated_at DAN isi data: dua permintaan di milidetik
+     yang sama bisa punya updated_at identik, tapi isi stoknya pasti berbeda
+     setelah salah satunya menulis. Jumlah baris terubah menentukan menang/kalah. */
+  const res = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
+    JSON.stringify({ ...item, stock: stock - give }), now, row.id, row.updated_at, row.data,
   ]);
   if (res.changes !== 1) throw new MaterialError(409, "Stok berubah oleh permintaan lain — coba lagi", "STALE");
   const movementId = newId("M");
@@ -178,6 +178,9 @@ export async function requestMaterial(input: MaterialRequestInput): Promise<Mate
   });
 }
 
+/* PR yang belum diproses procurement (boleh dikurangi otomatis). */
+const PR_OPEN = new Set(["Draft", "Diajukan", "Menunggu Approval"]);
+
 export interface FulfillResult {
   id: string;
   given: number;
@@ -226,11 +229,31 @@ export async function fulfillMaterialRequest(id: string, actor: string): Promise
       if (sp[0]) {
         const d = parse(sp[0]);
         const f = (d.fulfillment ?? {}) as Data;
-        await exec("UPDATE spareparts SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify({
+        const spRes = await exec("UPDATE spareparts SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [JSON.stringify({
           ...d,
           ...(shortage === 0 ? { status: "Sedang", usedDate: now.slice(0, 10) } : {}),
           fulfillment: { ...f, issued, shortage, status: shortage === 0 ? "Dari stok" : "Sebagian" },
-        }), now, spId]);
+        }), now, spId, sp[0].updated_at]);
+        if (spRes.changes !== 1) throw new MaterialError(409, "Sparepart berubah oleh pengguna lain — muat ulang", "STALE");
+      }
+    }
+
+    /* PR sumber yang belum diproses procurement dikurangi sesuai sisa, supaya
+       barang yang sudah keluar dari stok tidak ikut dibeli. PR yang sudah
+       disetujui/RFQ/PO dibiarkan: pengadaan sudah berjalan. */
+    const prId = String(mr.requisitionId ?? "");
+    if (prId) {
+      const pr = await q<Row>("SELECT id, branch, data, updated_at FROM requisitions WHERE id = ?", [prId]);
+      const prData = pr[0] ? parse(pr[0]) : null;
+      if (pr[0] && prData && PR_OPEN.has(String(prData.status ?? ""))) {
+        const unitPrice = Number(prData.qty) > 0 ? Number(prData.amount ?? 0) / Number(prData.qty) : 0;
+        const nextPr: Data = shortage === 0
+          ? { ...prData, qty: 0, amount: 0, status: "Dibatalkan", note: `${String(prData.note ?? "")} — dipenuhi dari stok (${id})`.trim() }
+          : { ...prData, qty: shortage, amount: Math.round(unitPrice * shortage) };
+        const prRes = await exec("UPDATE requisitions SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
+          JSON.stringify(nextPr), now, prId, pr[0].updated_at,
+        ]);
+        if (prRes.changes !== 1) throw new MaterialError(409, "PR berubah oleh pengguna lain — muat ulang", "STALE");
       }
     }
     return { id, given: give, issued, shortage, status, movementId };
