@@ -28,6 +28,16 @@ import { subActiveTrend, subContractTrend, woTrend, ratingTrend } from "../../da
 import { FilterPopover } from "../../components/FilterPopover";
 import { useT } from "../../i18n/LanguageContext";
 import { n_crm } from "../../i18n/n_crm";
+import { n_sub } from "../../i18n/n_sub";
+import { n_prj } from "../../i18n/n_prj";
+import { PhotoUploader, type PhotoUploadItem } from "../../components/PhotoUploader";
+import { ChangeHistory } from "../../components/ChangeHistory";
+import { useAuth } from "../../auth/auth";
+import { buildTermins, DEFAULT_TAX_RATES, type TerminSchemeType } from "../../utils/termin";
+
+/* F3-I-04: field SPK hanya diubah procurement (server juga menolak, lihat workOrderGuard.ts). */
+const SPK_EDITORS = new Set(["procurement", "direktur", "developer"]);
+type SchemePartForm = { label: string; pct: string; amount: string };
 
 const toneMap: Record<string, "green" | "blue" | "amber" | "red" | "gray" | "navy"> = {
   Aktif: "green",
@@ -141,6 +151,11 @@ export default function Subcontractor() {
   const { data, add, update, remove, log, branch } = useStore();
   const { locale } = useT();
   const S = n_crm[locale];
+  const T = n_sub[locale];
+  const P = n_prj[locale];
+  const { user } = useAuth();
+  /* Mode demo lokal tanpa peran server → izinkan; tersambung → ikut peran. */
+  const canSpk = !user?.role || SPK_EDITORS.has(String(user.role).toLowerCase());
   const subcontractors = data.subcontractors;
   const workOrders = data.workOrders;
   const payments = data.termins;
@@ -169,14 +184,16 @@ export default function Subcontractor() {
   const [msSub, setMsSub] = useState<StoreItem | null>(null);
   const [msForm, setMsForm] = useState({ title: "", pct: "", due: "" });
   const [showWo, setShowWo] = useState(false);
-  const [woForm, setWoForm] = useState({ sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1" });
+  const EMPTY_WO = { sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1", value: "", wbsTask: "", schemeType: "Kontan" as TerminSchemeType, parts: [{ label: "", pct: "", amount: "" }] as SchemePartForm[], taxPct: "2", taxOther: "", retPct: "5" };
+  const [woForm, setWoForm] = useState(EMPTY_WO);
+  const [progPhotos, setProgPhotos] = useState<PhotoUploadItem[]>([]);
   const [woProg, setWoProg] = useState<StoreItem | null>(null);
   const [progMs, setProgMs] = useState<string[]>([]);
   const [progNote, setProgNote] = useState("");
   const [progPct, setProgPct] = useState("");
   // Ubah WO (scope/target) + ubah termin Draf (milestone/amount).
   const [woEdit, setWoEdit] = useState<StoreItem | null>(null);
-  const [woEditForm, setWoEditForm] = useState({ scope: "", targetDate: "" });
+  const [woEditForm, setWoEditForm] = useState({ scope: "", targetDate: "", value: "" });
   const [termEdit, setTermEdit] = useState<StoreItem | null>(null);
   const [termEditForm, setTermEditForm] = useState({ milestone: "", amount: "" });
   const [confirmFinish, setConfirmFinish] = useState<{ id: string; v: number; note: string; ms: string[]; milestones?: unknown[] } | null>(null);
@@ -377,13 +394,43 @@ export default function Subcontractor() {
     if (!woForm.targetDate) { toast(S.tWoTargetRequired, "info"); return; }
     const penaltyPct = Number(woForm.penaltyPct);
     if (!Number.isFinite(penaltyPct) || penaltyPct < 0 || penaltyPct > 5) { toast(S.tPenaltyRange, "info"); return; }
-    const created = await add("workOrders", { sub: woForm.sub, project: woForm.project, scope: woForm.scope.trim(), progress: 0, status: "Dalam Proses", date: todayISO(), targetDate: woForm.targetDate, penaltyPct, branch: branchOfProject(woForm.project) },
-      { action: "menerbitkan WO", module: "Subkontraktor" });
-    toast(S.tWoIssued.replace("{n}", created.id));
+    const value = parseRupiah(woForm.value);
+    if (!value || value <= 0) { toast(T.valueReq, "info"); return; }
+    const scheme = woScheme();
+    const built = buildTermins(value, scheme);
+    if (!built.ok) { toast(built.error, "info"); return; }
+    const taxPct = woTaxPct();
+    const retPct = Number(woForm.retPct);
+    if (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 100 || !Number.isFinite(retPct) || retPct < 0 || retPct > 100) { toast(S.tTaxRange, "info"); return; }
+    const branchId = branchOfProject(woForm.project);
+    const created = await add("workOrders", {
+      sub: woForm.sub, project: woForm.project, scope: woForm.scope.trim(), progress: 0, status: "Dalam Proses", date: todayISO(),
+      targetDate: woForm.targetDate, penaltyPct, branch: branchId, value,
+      ...(woForm.wbsTask ? { wbsTask: woForm.wbsTask } : {}),
+      paymentScheme: scheme, taxPct, retPct, progressLog: [],
+    }, { action: "menerbitkan WO", module: "Subkontraktor" });
+    /* F3-I-05: termin dibuat otomatis sesuai skema (Draf), total = nilai SPK persis. */
+    for (const line of built.lines) {
+      await add("termins", {
+        sub: woForm.sub, woId: created.id, project: woForm.project, milestone: line.label, progress: `${created.id} (0%)`,
+        amount: line.amount, pphPct: taxPct, retPct, status: "Draf", date: todayISO(), branch: branchId, fromScheme: scheme.type,
+      }, { action: "membuat termin dari skema", module: "Subkontraktor" });
+    }
+    toast(T.termsCreated.replace("{n}", created.id).replace("{k}", String(built.lines.length)));
     setShowWo(false);
-    setWoForm({ sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1" });
+    setWoForm(EMPTY_WO);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
+
+  const woScheme = () => ({
+    type: woForm.schemeType,
+    parts: woForm.schemeType === "Kontan" ? [] : woForm.parts.map((p) => ({
+      label: p.label.trim(), pct: Number(p.pct) || undefined, amount: parseRupiah(p.amount) || undefined,
+    })),
+  });
+  const woTaxPct = (): number => (woForm.taxPct === "other" ? Number(woForm.taxOther) : Number(woForm.taxPct));
+  // Tarif pajak: daftar standar + tarif lama PPh subkon (0,5% final) agar data lama tetap terbaca.
+  const taxRates = [...new Set([...DEFAULT_TAX_RATES, ...PPH_SUBKON_OPTIONS])].sort((a, b) => a - b);
 
   const recordPenalty = async (w: StoreItem) => {
     try {
@@ -402,7 +449,7 @@ export default function Subcontractor() {
   // Ubah WO: scope + target (WO berjalan saja, bukan Selesai).
   const openWoEdit = (w: StoreItem) => {
     setWoEdit(w);
-    setWoEditForm({ scope: String(w.scope ?? ""), targetDate: String(w.targetDate ?? "") });
+    setWoEditForm({ scope: String(w.scope ?? ""), targetDate: String(w.targetDate ?? ""), value: String(w.value ?? "") });
   };
 
   const saveWoEdit = async () => {
@@ -411,7 +458,8 @@ export default function Subcontractor() {
     if (!woEditForm.scope.trim()) { toast(S.tWoFieldsRequired, "info"); return; }
     if (!woEditForm.targetDate) { toast(S.tWoTargetRequired, "info"); return; }
     try {
-      await update("workOrders", woEdit.id, { scope: woEditForm.scope.trim(), targetDate: woEditForm.targetDate });
+      const value = parseRupiah(woEditForm.value);
+      await update("workOrders", woEdit.id, { scope: woEditForm.scope.trim(), targetDate: woEditForm.targetDate, ...(value > 0 ? { value } : {}) });
       log("mengubah WO", `${woEdit.id} · scope/target`, "Subkontraktor");
       toast(S.tProgressTo.replace("{a}", woEdit.id).replace("{b}", String(effProgress(woEdit))));
       setWoEdit(null);
@@ -479,12 +527,22 @@ export default function Subcontractor() {
 
   const applyWoProgress = async (id: string, v: number, note: string, doneMs?: string[], milestones?: unknown[]) => {
     try {
+    /* F3-I-03: setiap update tercatat di progressLog (foto + catatan) —
+       ditampilkan sebagai riwayat WO dan di feed Monitoring. */
+    const prev = workOrders.find((w) => w.id === id);
+    const prevLog = Array.isArray(prev?.progressLog) ? (prev?.progressLog as unknown[]) : [];
+    const entry = {
+      id: `wo-log-${Date.now()}`, date: new Date().toISOString(), by: user?.name || "User",
+      from: effProgress(prev), to: v, note: note || undefined, photos: progPhotos.map((p) => p.url),
+    };
     await update("workOrders", id, {
       progress: v,
       status: v >= 100 ? "Selesai" : "Dalam Proses",
       ...(doneMs ? { doneMs } : {}),
       ...(milestones ? { milestones } : {}),
+      progressLog: [...prevLog, entry],
     });
+    setProgPhotos([]);
     log("mengupdate progres", `${id} → ${v}%${note ? ` - ${note}` : ""}`, "Subkontraktor");
     toast(S.tProgressTo.replace("{a}", id).replace("{b}", String(v)));
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
@@ -993,7 +1051,8 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={["Subkontraktor", "Work Order", "Termin & Pembayaran", "Timesheet", "Kepatuhan K3"]} active={tab} onChange={setTab} labels={{ Subkontraktor: S.tabSub, "Work Order": S.tabWo, "Termin & Pembayaran": S.tabTermin, Timesheet: S.tabTimesheet, "Kepatuhan K3": S.tabK3 }} />
+        {/* F3-I-01: tab Timesheet disembunyikan (koleksi & data tetap). */}
+        <Tabs tabs={["Subkontraktor", "Work Order", "Termin & Pembayaran", "Kepatuhan K3"]} active={tab} onChange={setTab} labels={{ Subkontraktor: S.tabSub, "Work Order": S.tabWo, "Termin & Pembayaran": S.tabTermin, Timesheet: S.tabTimesheet, "Kepatuhan K3": S.tabK3 }} />
         <div className="p-4">
           {tab === "Subkontraktor" && (
             <div className="space-y-4">
@@ -1125,19 +1184,31 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               <div className="mb-3 flex justify-end">
                 <button className="btn-secondary text-xs" onClick={() => setShowWo(true)}><Plus className="h-3.5 w-3.5" /> {S.issueWoBtn}</button>
               </div>
-              <div className="space-y-3">
-                {woPager.slice(workOrders).map((w) => (
-                  <Card key={w.id} className="p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="font-mono text-sm font-semibold text-navy-900 shrink-0">{w.id}</div>
-                        <div className="min-w-0 text-sm text-steel-600">
-                          <p className="truncate" title={`${w.sub} · ${w.project}`}>{w.sub} · {w.project}</p>
-                          <p className="text-xs text-steel-500 truncate" title={String(w.scope)}>{w.scope}</p>
-                          {w.date && <p className="text-xs text-steel-400">{fmtTanggal(w.date)}</p>}
-                          {w.targetDate && <p className="text-xs text-steel-500">{S.targetPenalty.replace("{a}", fmtTanggal(String(w.targetDate))).replace("{b}", String(Number(w.penaltyPct || 0)))}</p>}
-                          {Number(w.rate || 0) > 0 && <p className="text-xs text-steel-500">{S.ratePerHour.replace("{n}", fmtRupiah(Number(w.rate)))}</p>}
-                          {(() => {
+              {/* F3-I-02: tabel WO rinci (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status). */}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[980px]">
+                  <thead>
+                    <tr>{[T.colWo, T.colSub, T.colVessel, T.colProject, T.colWork, T.colValue, T.colProgress, T.colStatus, T.colAction].map((h) => <th key={h} className="th">{h}</th>)}</tr>
+                  </thead>
+                  <tbody className="divide-y divide-steel-100">
+                {woPager.slice(workOrders).map((w) => {
+                  const proj = projectOptions.find((p) => p.id === w.project);
+                  const subRow = subcontractors.find((x) => sameName(x.name, String(w.sub ?? "")));
+                  const value = Number(w.value ?? 0) || Number(subRow?.contract ?? 0);
+                  return (
+                  <tr key={w.id} className="align-top">
+                    <td className="td">
+                      <p className="font-mono text-sm font-semibold text-navy-900">{w.id}</p>
+                      {w.date && <p className="text-xs text-steel-400">{fmtTanggal(w.date)}</p>}
+                    </td>
+                    <td className="td text-sm text-steel-700">{w.sub}</td>
+                    <td className="td text-sm text-steel-700">{String(proj?.vessel ?? "-")}</td>
+                    <td className="td font-mono text-xs text-steel-600">{w.project}</td>
+                    <td className="td max-w-64">
+                      <p className="text-sm text-navy-900">{w.scope}</p>
+                      {w.wbsTask ? <p className="text-xs text-steel-500">WBS: {String(w.wbsTask)}</p> : null}
+                      {w.targetDate && <p className="text-xs text-steel-500">{S.targetPenalty.replace("{a}", fmtTanggal(String(w.targetDate))).replace("{b}", String(Number(w.penaltyPct || 0)))}</p>}
+                      {(() => {
                             if (Number(w.progress || 0) >= 100 || !w.targetDate) return null;
                             const late = daysLate(String(w.targetDate));
                             if (late <= 0) return null;
@@ -1152,14 +1223,17 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                               </p>
                             );
                           })()}
-                        </div>
+                    </td>
+                    <td className="td text-sm font-semibold tabular-nums text-navy-900">{value > 0 ? fmtRupiah(value) : "-"}{!w.value && value > 0 ? <span className="block text-[11px] font-normal text-steel-400">kontrak subkon</span> : null}</td>
+                    <td className="td">
+                      <div className="flex items-center gap-2">
+                        <ProgressBar value={effProgress(w)} className="w-20" tone={w.status === "Selesai" ? "green" : "navy"} />
+                        <span className="text-xs font-medium">{effProgress(w)}%</span>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <ProgressBar value={effProgress(w)} className="w-24" tone={w.status === "Selesai" ? "green" : "navy"} />
-                          <span className="text-xs font-medium">{effProgress(w)}%</span>
-                        </div>
-                        <Badge tone={toneMap[w.status] ?? "gray"}>{w.status}</Badge>
+                    </td>
+                    <td className="td"><Badge tone={toneMap[w.status] ?? "gray"}>{w.status}</Badge></td>
+                    <td className="td">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         {/* SPK resmi. Hanya dari server: dokumen ini dirakit dari
                             baris work order + kontrak subkontraktor, jadi mesin
                             lokal lama tidak punya cacah untuk dokumen ini. */}
@@ -1173,7 +1247,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                         {w.status !== "Selesai" && (
                           <button className="btn-secondary text-xs" aria-label={S.updateProgAria.replace("{n}", w.id)} onClick={() => { setWoProg(w); setProgMs(doneMsOf(w)); setProgNote(""); setProgPct(String(effProgress(w))); }}>{S.updateBtn}</button>
                         )}
-                        {w.status !== "Selesai" && (
+                        {w.status !== "Selesai" && canSpk && (
                           <button className="btn-secondary text-xs" aria-label={`${locale === "en" ? "Edit" : "Ubah"} ${w.id}`} onClick={() => openWoEdit(w)}>{locale === "en" ? "Edit" : "Ubah"}</button>
                         )}
                         {Number(w.progress || 0) < 100 && w.targetDate && daysLate(String(w.targetDate)) > 0 && !w.penaltyAt && (
@@ -1185,9 +1259,12 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                           <span className="text-xs text-steel-400" title={woUsages(w).join(", ")}>{locale === "en" ? "Locked" : "Terkunci"}</span>
                         )}
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </td>
+                  </tr>
+                  );
+                })}
+                  </tbody>
+                </table>
                 {workOrders.length === 0 && <p className="py-6 text-center text-sm text-steel-400">{S.emptyWo}</p>}
                 {woPager.bar}
               </div>
@@ -1214,7 +1291,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface sticky top-0 z-10">
-                    <tr><SortTh label={S.sortTermin} sortKey="termin" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortSub} sortKey="sub" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortWoProg} sortKey="wo" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortValue} sortKey="nilai" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortPph} sortKey="pph" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortRetensi} sortKey="retensi" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortNeto} sortKey="neto" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.dateLabel} sortKey="tanggal" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.actionLabel}</th></tr>
+                    <tr><SortTh label={S.sortTermin} sortKey="termin" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{T.colProject}</th><SortTh label={S.sortSub} sortKey="sub" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortWoProg} sortKey="wo" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortValue} sortKey="nilai" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortPph} sortKey="pph" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortRetensi} sortKey="retensi" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortNeto} sortKey="neto" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.dateLabel} sortKey="tanggal" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.actionLabel}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
                     {sortRows(payments, sort, (p, key) =>
@@ -1225,6 +1302,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                       return (
                       <tr key={p.id} id={notifRowId(String(p.id))} className={rowHighlightClass({ id: String(p.id), flash, notified: notified.has(String(p.id)), base: "hover:bg-surface" })}>
                         <td className="td font-mono font-medium text-navy-900">{p.id}</td>
+                        <td className="td font-mono text-xs text-steel-600">{String(p.project ?? wo?.project ?? "-")}</td>
                         <td className="td text-steel-600 truncate" title={String(p.sub)}>{p.sub}</td>
                         <td className="td font-mono text-xs text-steel-500">{p.progress}{p.milestone ? <span className="block text-steel-400">{S.msPrefix.replace("{n}", String(p.milestone))}</span> : null}</td>
                         <td className="td font-semibold">{fmtMiliar(p.amount)}</td>
@@ -1551,9 +1629,77 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           </FormGrid>
           <Field label={S.scopeJobLabel}><input className="input" value={woForm.scope} onChange={(e) => setWoForm({ ...woForm, scope: e.target.value })} placeholder={S.scopeJobPh} /></Field>
           <FormGrid>
+            <Field label={T.valueLabel}><MoneyInput className="input" value={woForm.value} onChange={(v) => setWoForm({ ...woForm, value: v })} /></Field>
+            <Field label={T.wbsLabel}>
+              <select className="input" value={woForm.wbsTask} onChange={(e) => setWoForm({ ...woForm, wbsTask: e.target.value })} disabled={!woForm.project}>
+                <option value="">{T.wbsNone}</option>
+                {(woForm.project ? (data.wbsByProject?.[woForm.project] ?? []) : []).map((w) => <option key={String(w.task)} value={String(w.task)}>{String(w.task)}</option>)}
+              </select>
+            </Field>
+          </FormGrid>
+          <FormGrid>
             <Field label={S.targetDoneLabel}><input type="date" className="input" value={woForm.targetDate} onChange={(e) => setWoForm({ ...woForm, targetDate: e.target.value })} /></Field>
             <Field label={S.penaltyLabel} hint={S.penaltyHint}><NumInput min={0} max={5} step={0.1} className="input" value={woForm.penaltyPct} onChange={(e) => setWoForm({ ...woForm, penaltyPct: e.target.value })} /></Field>
           </FormGrid>
+          {/* F3-I-05: skema pembayaran → termin otomatis */}
+          <Field label={T.schemeLabel}>
+            <select className="input" value={woForm.schemeType} onChange={(e) => setWoForm({ ...woForm, schemeType: e.target.value as TerminSchemeType, parts: [{ label: e.target.value === "DP" ? "DP 1" : "Tahap 1", pct: "", amount: "" }] })}>
+              <option value="Kontan">{T.schemeKontan}</option>
+              <option value="Persentase">{T.schemePct}</option>
+              <option value="DP">{T.schemeDp}</option>
+            </select>
+          </Field>
+          {woForm.schemeType !== "Kontan" && (
+            <div className="space-y-2">
+              {woForm.parts.map((part, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <Field label={T.partLabel}><input className="input" value={part.label} onChange={(e) => setWoForm({ ...woForm, parts: woForm.parts.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} /></Field>
+                  <div className="w-20"><Field label={T.partPct}><NumInput min={0} max={100} step={0.01} className="input" value={part.pct} onChange={(e) => setWoForm({ ...woForm, parts: woForm.parts.map((x, j) => (j === i ? { ...x, pct: e.target.value, amount: "" } : x)) })} /></Field></div>
+                  {woForm.schemeType === "DP" && (
+                    <Field label={T.partAmount}><MoneyInput className="input" value={part.amount} onChange={(v) => setWoForm({ ...woForm, parts: woForm.parts.map((x, j) => (j === i ? { ...x, amount: v, pct: "" } : x)) })} /></Field>
+                  )}
+                  {woForm.parts.length > 1 && (
+                    <button type="button" className="btn-secondary mb-0.5 h-9 px-2 text-xs" onClick={() => setWoForm({ ...woForm, parts: woForm.parts.filter((_, j) => j !== i) })}>{T.removePart}</button>
+                  )}
+                </div>
+              ))}
+              <button type="button" className="btn-secondary text-xs" onClick={() => setWoForm({ ...woForm, parts: [...woForm.parts, { label: `${woForm.schemeType === "DP" ? "DP" : "Tahap"} ${woForm.parts.length + 1}`, pct: "", amount: "" }] })}>
+                <Plus className="h-3.5 w-3.5" /> {T.addPart}
+              </button>
+            </div>
+          )}
+          <FormGrid>
+            <Field label={T.taxLabel}>
+              <select className="input" value={woForm.taxPct} onChange={(e) => setWoForm({ ...woForm, taxPct: e.target.value })}>
+                {taxRates.map((r) => <option key={r} value={String(r)}>{r}%</option>)}
+                <option value="other">{T.taxOther}</option>
+              </select>
+            </Field>
+            {woForm.taxPct === "other"
+              ? <Field label={T.taxOtherPct}><NumInput min={0} max={100} step={0.01} className="input" value={woForm.taxOther} onChange={(e) => setWoForm({ ...woForm, taxOther: e.target.value })} /></Field>
+              : <Field label={T.retLabel}><NumInput min={0} max={100} className="input" value={woForm.retPct} onChange={(e) => setWoForm({ ...woForm, retPct: e.target.value })} /></Field>}
+          </FormGrid>
+          {(() => {
+            const value = parseRupiah(woForm.value);
+            if (!value) return null;
+            const built = buildTermins(value, woScheme());
+            if (!built.ok) return <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">{built.error}</p>;
+            const tax = woTaxPct();
+            return (
+              <div className="rounded-lg border border-steel-200 p-3">
+                <p className="mb-1.5 text-xs font-semibold text-navy-900">{T.preview}</p>
+                <ul className="space-y-1 text-xs">
+                  {built.lines.map((l) => (
+                    <li key={l.label} className="flex justify-between gap-2">
+                      <span className="text-steel-600">{l.label}</span>
+                      <span className="tabular-nums text-navy-900">{fmtRupiah(l.amount)} <span className="text-steel-400">· neto {fmtRupiah(Math.round(l.amount * (1 - (tax + Number(woForm.retPct || 0)) / 100)))}</span></span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-[11px] text-steel-500">{T.previewTotal.replace("{a}", fmtRupiah(built.lines.reduce((t, l) => t + l.amount, 0))).replace("{b}", fmtRupiah(value))}</p>
+              </div>
+            );
+          })()}
         </div>
       </Modal>
 
@@ -1562,6 +1708,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         footer={<><button className="btn-secondary" onClick={() => setWoEdit(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWoEdit}>{S.saveBtn}</button></>}>
         <div className="space-y-3">
           <Field label={S.scopeJobLabel}><input className="input" value={woEditForm.scope} onChange={(e) => setWoEditForm({ ...woEditForm, scope: e.target.value })} placeholder={S.scopeJobPh} /></Field>
+          <Field label={T.valueLabel}><MoneyInput className="input" value={woEditForm.value} onChange={(v) => setWoEditForm({ ...woEditForm, value: v })} /></Field>
           <Field label={S.targetDoneLabel}><input type="date" className="input" value={woEditForm.targetDate} onChange={(e) => setWoEditForm({ ...woEditForm, targetDate: e.target.value })} /></Field>
         </div>
       </Modal>
@@ -1639,6 +1786,25 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           <Field label={S.noteLabel} hint={S.progNoteHint}>
             <input className="input" value={progNote} onChange={(e) => setProgNote(e.target.value)} placeholder={S.progNotePh} />
           </Field>
+          <Field label={T.photos}>
+            <PhotoUploader
+              value={progPhotos}
+              onChange={setProgPhotos}
+              labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: P.detPhotoImage }}
+              onUploadError={() => toast(P.detPhotoUploadError, "info")}
+            />
+          </Field>
+          {woProg && (
+            <ChangeHistory
+              entries={(Array.isArray(woProg.progressLog) ? (woProg.progressLog as Record<string, unknown>[]) : []).map((h) => ({
+                id: String(h.id ?? h.date), actor: String(h.by ?? "-"), date: String(h.date ?? ""), action: T.progAction,
+                before: h.from !== undefined ? `${String(h.from)}%` : undefined, after: h.to !== undefined ? `${String(h.to)}%` : undefined,
+                note: h.note ? String(h.note) : undefined, photos: Array.isArray(h.photos) ? (h.photos as unknown[]).map(String) : [],
+              })).reverse()}
+              locale={locale}
+              labels={{ title: T.historyTitle, loading: P.detHistoryLoading, empty: P.detHistoryEmpty, error: P.detHistoryError, serverUnavailable: P.detHistoryUnavailable, before: P.detHistoryBefore, after: P.detHistoryAfter, redacted: P.detHistoryRedacted }}
+            />
+          )}
         </div>
       </Modal>
 
@@ -1690,10 +1856,8 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 {/* Sumber tarif dari PPH_SUBKON_OPTIONS. Versi lama menulis
                     0.5 dan 2 langsung di sini, jadi konstantanya mati dan
                     kalau tarifnya berubah keduanya bisa berbeda. */}
-                {PPH_SUBKON_OPTIONS.map((rate) => (
-                  <option key={rate} value={String(rate)}>
-                    {rate}%{rate === 0.5 ? " Final (cth Pak Yusuf)" : " PPh 23"}
-                  </option>
+                {taxRates.map((rate) => (
+                  <option key={rate} value={String(rate)}>{rate}%</option>
                 ))}
               </select>
             </Field>

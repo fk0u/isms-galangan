@@ -177,6 +177,10 @@ function makeProcurementMatrix(): Record<string, Action[]> {
     requisitions: [...RWD],
     materialRequests: [...R_ONLY],
     services: [...R_ONLY],
+    // F3-I-04: procurement penerbit/pengubah SPK & termin subkon.
+    workOrders: [...RW],
+    subcontractors: [...R_ONLY],
+    termins: [...RW],
     rfqs: [...RWD],
     purchaseOrders: [...RWD],
     vendors: [...RWD],

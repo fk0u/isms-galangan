@@ -10,6 +10,7 @@ import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
+import { spkLockError } from "../workOrderGuard.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -556,6 +557,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchLock) return reply.status(409).send(fail(patchLock, "LOCKED"));
     const patchGuard = await serviceGuardError(table, oldData, merged);
     if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
+    const spkLock = spkLockError(table, oldData, merged, req.user?.role);
+    if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const changedRange = table === "dockSlots" && (
