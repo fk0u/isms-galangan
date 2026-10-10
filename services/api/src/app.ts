@@ -26,6 +26,8 @@ import { registerServiceApprovalRoutes } from "./routes/serviceApproval.js";
 import { registerPoFulfillmentRoutes } from "./routes/poFulfillment.js";
 import { registerDemoSwitchRoutes } from "./routes/demoSwitch.js";
 import { registerInventoryIssueRoutes } from "./routes/inventoryIssue.js";
+import { registerPublicLeaveRoutes } from "./routes/publicLeave.js";
+import { registerAttendanceIngestRoutes } from "./routes/attendanceIngest.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerChangeOrderRoutes } from "./routes/changeOrders.js";
 
@@ -395,6 +397,8 @@ export function buildApp(): FastifyInstance {
   registerInventoryIssueRoutes(app);
   registerChangeOrderRoutes(app);
   registerEventRoutes(app);
+  registerPublicLeaveRoutes(app);
+  registerAttendanceIngestRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {
     return reply.status(404).send(fail("Not found", "NOT_FOUND"));

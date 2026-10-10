@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { Award, BadgeCheck, Download, Eye, Lock, Network, Plus, Users, Pencil, Trash2, Printer } from "lucide-react";
 import {
   Badge,
@@ -44,6 +45,7 @@ import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { SB_KOP } from "../../utils/sb";
+import { apiFetch, isBackendConfigured } from "../../services/http";
 import { useT } from "../../i18n/LanguageContext";
 import { n_qc } from "../../i18n/n_qc";
 
@@ -278,6 +280,17 @@ export default function HR() {
   const [delTraining, setDelTraining] = useState<StoreItem | null>(null);
   const [certTarget, setCertTarget] = useState<StoreItem | null>(null);
   const [certForm, setCertForm] = useState({ name: "", expires: todayISO() });
+
+  /* ---------- QR cuti mandiri ---------- */
+  const [leaveQr, setLeaveQr] = useState<string | null>(null);
+  const leaveQrUrl = leaveQr ? `${window.location.origin}/f/cuti/${leaveQr}` : "";
+  const openLeaveQr = async (rotate: boolean): Promise<void> => {
+    if (!isBackendConfigured()) { toast(E.qrServerOnly, "info"); return; }
+    try {
+      const res = await apiFetch<{ token: string }>(rotate ? "/api/leave-qr/rotate" : "/api/leave-qr", rotate ? { method: "POST" } : undefined);
+      setLeaveQr(res.token);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
 
   /* ---------- surat ---------- */
   const [showSurat, setShowSurat] = useState(false);
@@ -1406,9 +1419,12 @@ const finishTraining = async (t: StoreItem) => {
               <Plus className="h-4 w-4" /> {S.btnTambahKaryawan}
             </button>
           ) : tab === "Cuti & Izin" ? (
+            <>
+            <button className="btn-secondary" onClick={() => void openLeaveQr(false)}>{E.qrBtn}</button>
             <button className="btn-primary-gradient" onClick={() => { setLeaveEditId(null); setLeaveForm({ employeeId: "", type: "Tahunan", from: todayISO(), to: todayISO(), note: "", fileUrl: "" }); setShowLeave(true); }}>
               <Plus className="h-4 w-4" /> {S.btnAjukanCuti}
             </button>
+            </>
           ) : tab === "Mutasi" ? (
             <button className="btn-primary-gradient" onClick={() => setShowMutasi(true)}>
               <Plus className="h-4 w-4" /> {S.btnCatatMutasi}
@@ -2285,6 +2301,20 @@ const finishTraining = async (t: StoreItem) => {
           <Field label={S.fNamaCert}><input className="input" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} placeholder={S.phCert} /></Field>
           <Field label={S.fBerlaku}><input type="date" className="input" value={certForm.expires} onChange={(e) => setCertForm({ ...certForm, expires: e.target.value })} /></Field>
         </div>
+      </Modal>
+
+      {/* ---------- modal QR cuti mandiri (F3-L-06) ---------- */}
+      <Modal open={leaveQr !== null} onClose={() => setLeaveQr(null)} title={E.qrModalTitle} subtitle={E.qrModalHint}
+        footer={<>
+          <button className="btn-secondary" title={E.qrRotateHint} onClick={() => void openLeaveQr(true)}>{E.qrRotate}</button>
+          <button className="btn-primary" onClick={() => { void navigator.clipboard?.writeText(leaveQrUrl).then(() => toast(E.qrCopied)); }}>{E.qrCopy}</button>
+        </>}>
+        {leaveQr !== null && (
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-2xl bg-white p-4"><QRCodeSVG value={leaveQrUrl} size={220} /></div>
+            <p className="break-all text-center font-mono text-xs text-steel-500">{leaveQrUrl}</p>
+          </div>
+        )}
       </Modal>
 
       {/* ---------- modal surat ---------- */}

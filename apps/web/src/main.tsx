@@ -10,6 +10,7 @@ import { SecurityGuards } from "./security/watermark";
 import AppShell from "./layouts/AppShell";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+const CutiQr = lazyPage(() => import("./pages/publik/CutiQr"));
 const Analytics = lazyPage(() => import("./pages/Analytics"));
 const Projects = lazyPage(() => import("./pages/proyek/Projects"));
 const ProjectDetail = lazyPage(() => import("./pages/proyek/ProjectDetail"));
@@ -102,6 +103,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Publik (tanpa login): pengajuan cuti dari QR bengkel. */}
+            <Route path="/f/cuti/:token" element={<Suspense fallback={null}><CutiQr /></Suspense>} />
             <Route
               element={
                 <RequireAuth>
