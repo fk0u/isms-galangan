@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -64,7 +65,26 @@ export async function q<T = Record<string, unknown>>(sql: string, params: unknow
   return stmt.all(...(params as unknown[])) as T[];
 }
 
+/* F4-03: sumber event realtime. Setiap tulis yang benar-benar mengubah baris
+   memancarkan nama tabelnya; routes/events.ts meneruskannya ke klien (SSE).
+   ponytail: EventEmitter in-process = satu instans API. Bila diskalakan ke
+   beberapa instans, ganti dengan Redis pub/sub. */
+export const dbEvents = new EventEmitter();
+dbEvents.setMaxListeners(0);
+const WRITE_RE = /^\s*(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+[`"]?(\w+)/i;
+function noteWrite(sql: string, res: ExecResult): ExecResult {
+  if (res.changes > 0) {
+    const m = WRITE_RE.exec(sql);
+    if (m) dbEvents.emit("write", m[1]);
+  }
+  return res;
+}
+
 export async function exec(sql: string, params: unknown[] = []): Promise<ExecResult> {
+  return noteWrite(sql, await execRaw(sql, params));
+}
+
+async function execRaw(sql: string, params: unknown[] = []): Promise<ExecResult> {
   const currentTx = txStorage.getStore();
   if (currentTx) {
     return currentTx.exec(sql, params);

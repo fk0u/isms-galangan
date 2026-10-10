@@ -51,9 +51,12 @@ export async function migrate(): Promise<void> {
     const recorded = applied.get(file);
     if (recorded !== undefined) {
       if (recorded !== checksum) {
-        console.warn(
-          `[migrate] checksum mismatch for ${file} (recorded ${recorded.slice(0, 12)} vs current ${checksum.slice(0, 12)}); file changed since applied — skipping re-apply`,
-        );
+        /* S-07: migrasi yang sudah diterapkan tidak boleh berubah diam-diam -
+           skema di DB tidak lagi cocok dengan berkasnya. Gagal keras; jalan
+           keluar darurat hanya lewat MIGRATE_ALLOW_DRIFT=true. */
+        const msg = `[migrate] checksum mismatch for ${file} (recorded ${recorded.slice(0, 12)} vs current ${checksum.slice(0, 12)})`;
+        if (process.env.MIGRATE_ALLOW_DRIFT !== "true") throw new Error(`${msg} — berkas migrasi berubah setelah diterapkan`);
+        console.warn(`${msg}; MIGRATE_ALLOW_DRIFT aktif — dilewati`);
       } else {
         console.log(`[migrate] skip ${file} (already applied)`);
       }

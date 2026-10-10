@@ -26,6 +26,7 @@ import { registerServiceApprovalRoutes } from "./routes/serviceApproval.js";
 import { registerPoFulfillmentRoutes } from "./routes/poFulfillment.js";
 import { registerDemoSwitchRoutes } from "./routes/demoSwitch.js";
 import { registerInventoryIssueRoutes } from "./routes/inventoryIssue.js";
+import { registerEventRoutes } from "./routes/events.js";
 import { registerChangeOrderRoutes } from "./routes/changeOrders.js";
 
 const LoginSchema = z.object({
@@ -326,7 +327,7 @@ export function buildApp(): FastifyInstance {
 
   app.get("/api/auth/me", { preHandler: [requireAuth] }, async (req) => {
     const permissions = permissionsFor(req.user?.role);
-    return ok({ user: req.user, permissions });
+    return ok({ user: req.user, permissions, ip: requestIp(req) });
   });
 
   // Heartbeat sesi (FE: tiap 60 dtk saat JWT ada). Upsert baris user.
@@ -393,6 +394,7 @@ export function buildApp(): FastifyInstance {
   registerDemoSwitchRoutes(app);
   registerInventoryIssueRoutes(app);
   registerChangeOrderRoutes(app);
+  registerEventRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {
     return reply.status(404).send(fail("Not found", "NOT_FOUND"));
