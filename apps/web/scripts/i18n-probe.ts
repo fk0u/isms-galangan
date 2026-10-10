@@ -27,6 +27,6 @@ for (const [file, mod] of Object.entries(modules)) {
     }
   }
 }
-if (total === 0) { console.error("FAIL  tidak ada modul i18n yang terbaca"); process.exit(1); }
-if (failed > 0) { console.error(`${failed}/${total} modul i18n tidak simetris.`); process.exit(1); }
+if (total === 0) throw new Error("FAIL  tidak ada modul i18n yang terbaca");
+if (failed > 0) throw new Error(`${failed}/${total} modul i18n tidak simetris.`);
 console.log(`Semua ${total} modul i18n simetris ID/EN.`);
