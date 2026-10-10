@@ -68,11 +68,11 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; PR #33 tetap terbuka/tanpa merge; Cubic P2 ekspor umur pakai dan P3 comparator bersama ditangani; P3 notifikasi kini reset pencarian/filter lalu mengatur paginator setelah hasil filter baru; probe regresi lulus; `npm run check` lulus (DB sementara bermigrasi + seed sintetis); UI demo diperiksa |
 | F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | | todo | |
 | F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | | todo | |
-| F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | | todo | |
-| F3-I-02 | Work Order rinci | P0 | F3-I-subkon.md | | todo | |
-| F3-I-03 | Update progres WO dengan foto & histori | P0 | F3-I-subkon.md | | todo | |
-| F3-I-04 | SPK terkunci kecuali procurement | P0 | F3-I-subkon.md | | todo | |
-| F3-I-05 | Termin: tabel, skema, pajak | P0 | F3-I-subkon.md | | todo | |
+| F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | Claude | sebagian | feat/F3-I-subkon — tab Timesheet disembunyikan; hapus evaluasi kinerja & StatusChips belum |
+| F3-I-02 | Work Order rinci | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — tabel WO (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status), Nilai SPK & WBS di form |
+| F3-I-03 | Update progres WO dengan foto & histori | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — modal progres + foto + riwayat (progressLog), tampil di feed Monitoring |
+| F3-I-04 | SPK terkunci kecuali procurement | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — server menolak ubah field SPK selain procurement (`probe:wo-spk` 4/4) |
+| F3-I-05 | Termin: tabel, skema, pajak | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — skema Kontan/Persentase/DP → termin otomatis, Pajak pilihan %, kolom Proyek (`probe:termin` 8/8) |
 | F3-J-01 | Material request sebagai penghubung | P0 | F3-J-procurement.md | Claude | review | koleksi `materialRequests` + tab Procurement "Permintaan Barang" + fulfill (`probe:material` 17/17) |
 | F3-J-02 | PO terpenuhi sebagian & pengalihan vendor | P0 | F3-J-procurement.md | Claude | review | feat/F3-J-02-po-partial-rbac-demo — level PO (qty/receivedQty/cancelledQty/reassignedQty), `probe:po-partial` 13/13 |
 | F3-J-03 | RFQ: perbandingan harga & track record, tanpa tender | P1 | F3-J-procurement.md | | todo | |
