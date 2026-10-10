@@ -99,7 +99,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Service dari pekerjaan WBS, biaya dari BoQ, wajib disetujui sebelum dikerjakan.",
       steps: [
         { title: "Ajukan service dari WBS", hint: "Tab Service → Tambah: pilih WBS, teknisi dari karyawan, item BoQ (biaya terisi otomatis).", to: "/proyek/RP-2026-003?tab=Service" },
-        { title: "Persetujuan procurement", hint: "Setujui, atau tolak dengan alasan. SRV-003 & SRV-006 menunggu.", to: "/procurement?tab=Persetujuan%20Service" },
+        { title: "Persetujuan procurement", hint: "Setujui, atau tolak dengan alasan. SRV-006 (dan service yang baru diajukan) menunggu di sini.", to: "/procurement?tab=Persetujuan%20Service" },
         { title: "Mulai & selesaikan service", hint: "Tombol Mulai baru muncul setelah disetujui; biaya service Selesai masuk biaya proyek (tab WBS & Anggaran).", to: "/proyek/RP-2026-003?tab=Service" },
       ],
     },
@@ -160,7 +160,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Services come from WBS work, cost from BoQ, and need approval before work starts.",
       steps: [
         { title: "Submit a service from WBS", hint: "Service tab → Add: pick WBS, technician from employees, BoQ item (cost fills in).", to: "/proyek/RP-2026-003?tab=Service" },
-        { title: "Procurement approval", hint: "Approve, or reject with a reason. SRV-003 & SRV-006 are waiting.", to: "/procurement?tab=Persetujuan%20Service" },
+        { title: "Procurement approval", hint: "Approve, or reject with a reason. SRV-006 (and any newly submitted service) waits here.", to: "/procurement?tab=Persetujuan%20Service" },
         { title: "Start & finish the service", hint: "Start appears only after approval; completed service cost goes into project cost (WBS & Budget tab).", to: "/proyek/RP-2026-003?tab=Service" },
       ],
     },
