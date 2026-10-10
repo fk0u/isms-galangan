@@ -6,9 +6,9 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { requireAuth } from "../auth.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
-import { withTx } from "../db.js";
+import { q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
-import { permissionsFor } from "../policy.js";
+import { can, permissionsFor } from "../policy.js";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXT = new Set([".png", ".jpg", ".jpeg", ".pdf", ".xlsx", ".xls", ".csv", ".txt"]);
@@ -97,6 +97,20 @@ export function uploadsRoot(): string {
   return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
 }
 
+const PRIVATE_FIELDS = ["ktpUrl", "ijazahUrl"];
+/** true bila URL berkas dipakai sebagai KTP/ijazah seorang karyawan. */
+export async function isPrivateFile(url: string): Promise<boolean> {
+  const rows = await q<{ data: string }>("SELECT data FROM employees", []);
+  for (const r of rows) {
+    if (!r.data.includes(url)) continue; // saringan murah sebelum JSON.parse
+    try {
+      const d = JSON.parse(r.data) as Record<string, unknown>;
+      if (PRIVATE_FIELDS.some((f) => String(d[f] ?? "").endsWith(url))) return true;
+    } catch { /* baris rusak dilewati */ }
+  }
+  return false;
+}
+
 export function registerFileRoutes(app: FastifyInstance): void {
   void app.register(multipart, {
     limits: { fileSize: MAX_BYTES, files: 1 },
@@ -109,7 +123,18 @@ export function registerFileRoutes(app: FastifyInstance): void {
   app.addHook("onRequest", async (req, reply) => {
     const url = req.url.split("?")[0] ?? "";
     if ((req.method === "GET" || req.method === "HEAD") && (url === "/files" || url.startsWith("/files/"))) {
-      return requireAuth(req, reply);
+      await requireAuth(req, reply);
+      if (reply.sent) return reply;
+      /* F4-05 (UU PDP): berkas pribadi - foto KTP & ijazah karyawan - hanya
+         untuk peran yang boleh mengubah data karyawan (HR, direktur).
+         Sensitivitas diturunkan dari PEMAKAIAN berkas (field ktpUrl/ijazahUrl),
+         bukan dari flag saat unggah, sehingga tidak bisa terlewat oleh klien.
+         ponytail: memindai tabel employees per permintaan berkas; pindahkan
+         ke tabel metadata berindeks bila jumlah karyawan ribuan. */
+      if (!can(req.user?.role, "employees", "w") && (await isPrivateFile(url))) {
+        return reply.status(403).send(fail("Berkas pribadi karyawan hanya dapat dibuka HR", "FORBIDDEN"));
+      }
+      return undefined;
     }
     return undefined;
   });
