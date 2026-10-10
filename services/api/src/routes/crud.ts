@@ -457,6 +457,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     // F3-D-02: service wajib WBS & persetujuan; materialRequests hanya lewat endpoint.
     const createGuard = await serviceGuardError(table, null, rowData);
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
+    const spkCreate = spkLockError(table, null, rowData, req.user?.role);
+    if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const drydockDateValidation = table === "dockSlots" ? drydockDateError(rowData) : null;
@@ -601,6 +603,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
     const deleteGuard = await serviceGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
     if (deleteGuard) return reply.status(409).send(fail(deleteGuard, "LOCKED"));
+    const spkDelete = spkLockError(table, toJson(doomed).data as Record<string, unknown>, null, req.user?.role);
+    if (spkDelete) return reply.status(403).send(fail(spkDelete, "FORBIDDEN"));
     if (deleteLock) return reply.status(409).send(fail(deleteLock, "LOCKED"));
     const usages = await findUsages(table, id);
     if (usages.length > 0) {

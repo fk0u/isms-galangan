@@ -401,6 +401,7 @@ export default function Subcontractor() {
     if (!built.ok) { toast(built.error, "info"); return; }
     const taxPct = woTaxPct();
     const retPct = Number(woForm.retPct);
+    if (woForm.taxPct === "other" && woForm.taxOther.trim() === "") { toast(S.tTaxRange, "info"); return; }
     if (!Number.isFinite(taxPct) || taxPct < 0 || taxPct > 100 || !Number.isFinite(retPct) || retPct < 0 || retPct > 100) { toast(S.tTaxRange, "info"); return; }
     const branchId = branchOfProject(woForm.project);
     const created = await add("workOrders", {
@@ -459,6 +460,12 @@ export default function Subcontractor() {
     if (!woEditForm.targetDate) { toast(S.tWoTargetRequired, "info"); return; }
     try {
       const value = parseRupiah(woEditForm.value);
+      /* Termin sudah dibuat dari nilai lama: mengubah nilai SPK tanpa menyesuaikan
+         termin membuat total termin ≠ nilai kontrak. */
+      if (value > 0 && value !== Number(woEdit.value ?? 0) && payments.some((t) => t.woId === woEdit.id && t.status !== "Ditolak")) {
+        toast(T.valueHasTerms, "info");
+        return;
+      }
       await update("workOrders", woEdit.id, { scope: woEditForm.scope.trim(), targetDate: woEditForm.targetDate, ...(value > 0 ? { value } : {}) });
       log("mengubah WO", `${woEdit.id} · scope/target`, "Subkontraktor");
       toast(S.tProgressTo.replace("{a}", woEdit.id).replace("{b}", String(effProgress(woEdit))));
@@ -1182,7 +1189,9 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           {tab === "Work Order" && (
             <div>
               <div className="mb-3 flex justify-end">
-                <button className="btn-secondary text-xs" onClick={() => setShowWo(true)}><Plus className="h-3.5 w-3.5" /> {S.issueWoBtn}</button>
+                {canSpk
+                  ? <button className="btn-secondary text-xs" onClick={() => setShowWo(true)}><Plus className="h-3.5 w-3.5" /> {S.issueWoBtn}</button>
+                  : <span className="text-xs text-steel-500">{T.spkLocked}</span>}
               </div>
               {/* F3-I-02: tabel WO rinci (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status). */}
               <div className="overflow-x-auto">
@@ -1245,7 +1254,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                           {locale === "en" ? "SPK" : "SPK"}
                         </button>
                         {w.status !== "Selesai" && (
-                          <button className="btn-secondary text-xs" aria-label={S.updateProgAria.replace("{n}", w.id)} onClick={() => { setWoProg(w); setProgMs(doneMsOf(w)); setProgNote(""); setProgPct(String(effProgress(w))); }}>{S.updateBtn}</button>
+                          <button className="btn-secondary text-xs" aria-label={S.updateProgAria.replace("{n}", w.id)} onClick={() => { setWoProg(w); setProgPhotos([]); setProgMs(doneMsOf(w)); setProgNote(""); setProgPct(String(effProgress(w))); }}>{S.updateBtn}</button>
                         )}
                         {w.status !== "Selesai" && canSpk && (
                           <button className="btn-secondary text-xs" aria-label={`${locale === "en" ? "Edit" : "Ubah"} ${w.id}`} onClick={() => openWoEdit(w)}>{locale === "en" ? "Edit" : "Ubah"}</button>
@@ -1675,10 +1684,11 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 <option value="other">{T.taxOther}</option>
               </select>
             </Field>
-            {woForm.taxPct === "other"
-              ? <Field label={T.taxOtherPct}><NumInput min={0} max={100} step={0.01} className="input" value={woForm.taxOther} onChange={(e) => setWoForm({ ...woForm, taxOther: e.target.value })} /></Field>
-              : <Field label={T.retLabel}><NumInput min={0} max={100} className="input" value={woForm.retPct} onChange={(e) => setWoForm({ ...woForm, retPct: e.target.value })} /></Field>}
+            <Field label={T.retLabel}><NumInput min={0} max={100} className="input" value={woForm.retPct} onChange={(e) => setWoForm({ ...woForm, retPct: e.target.value })} /></Field>
           </FormGrid>
+          {woForm.taxPct === "other" && (
+            <Field label={T.taxOtherPct}><NumInput min={0} max={100} step={0.01} className="input" value={woForm.taxOther} onChange={(e) => setWoForm({ ...woForm, taxOther: e.target.value })} /></Field>
+          )}
           {(() => {
             const value = parseRupiah(woForm.value);
             if (!value) return null;
@@ -1723,7 +1733,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       </Modal>
 
       {/* Modal progres WO = milestone checklist + input numerik (tanpa slider, terintegrasi termin/timesheet) */}
-      <Modal open={woProg !== null} onClose={() => setWoProg(null)} title={S.progTitle.replace("{n}", woProg?.id ?? "")}
+      <Modal open={woProg !== null} onClose={() => { setWoProg(null); setProgPhotos([]); }} title={S.progTitle.replace("{n}", woProg?.id ?? "")}
         subtitle={woProg ? `${woProg.sub} · ${woProg.project} · saat ini ${effProgress(woProg)}%` : ""}
         footer={<><button className="btn-secondary" onClick={() => setWoProg(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWoProgress}>{S.saveBtn}</button></>}>
         <div className="space-y-3">
@@ -1857,7 +1867,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                     0.5 dan 2 langsung di sini, jadi konstantanya mati dan
                     kalau tarifnya berubah keduanya bisa berbeda. */}
                 {taxRates.map((rate) => (
-                  <option key={rate} value={String(rate)}>{rate}%</option>
+                  <option key={rate} value={String(rate)}>{rate}%{rate === 0.5 ? " (PPh final)" : ""}</option>
                 ))}
               </select>
             </Field>

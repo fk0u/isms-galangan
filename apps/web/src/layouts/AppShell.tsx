@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, type ComponentType } from "react"
 import { NavLink, Outlet, Link, matchPath, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Anchor,
   Boxes,
   Wallet,
   Users,
@@ -435,9 +434,7 @@ export default function AppShell() {
   const renderSidebar = (mini: boolean) => (
     <div className="flex h-full flex-col border-r border-steel-200 bg-white text-navy-900">
       <div className={`flex h-14 items-center gap-2.5 px-4 ${mini ? "justify-center px-3" : ""}`}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ocean-500 text-white shadow-soft">
-          <Anchor className="h-5 w-5" />
-        </div>
+        <img src="/logo-sb.png" alt="Logo perusahaan" width={32} height={32} className="h-8 w-8 shrink-0 object-contain" />
         {!mini && (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">ISMS Galangan</p>
