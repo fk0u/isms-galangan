@@ -1093,3 +1093,53 @@ export const pipelineTrend = mk([42, 45, 44, 48, 47, 51, 49, 53, 55, 58, 60, 61]
 export const winRateTrend = mk([58, 60, 59, 62, 61, 63, 64, 65, 64, 66, 67, 68]);
 export const wonTrend = mk([28, 30, 29, 33, 32, 36, 34, 38, 40, 43, 46, 49]);
 export const activeEmployeeTrend = mk([232, 238, 242, 238, 242, 246, 244, 250, 254, 258, 262, 266]);
+
+/* ====== KUESIONER QC & HSE (F3-K-02, ADR-0009) ======
+   Template berbobot; isi K3 final menyusul diskusi dengan K3 kapal (Q13) dan
+   bisa diganti lewat editor template tanpa coding. */
+export interface ChecklistItemDef { id: string; text: string; type: "ya_tidak" | "skala_1_5" | "pilihan" | "teks"; weight: number; options?: { label: string; score: number }[] }
+export interface ChecklistTemplateDef { id: string; name: string; scope: "QC" | "HSE"; target: "pekerjaan" | "pekerja"; sections: { title: string; items: ChecklistItemDef[] }[] }
+
+export const seedChecklistTemplates: ChecklistTemplateDef[] = [
+  {
+    id: "CLT-QC-LAS", name: "Inspeksi pengelasan lambung", scope: "QC", target: "pekerjaan",
+    sections: [
+      { title: "Persiapan", items: [
+        { id: "prep-wps", text: "WPS tersedia dan sesuai sambungan", type: "ya_tidak", weight: 2 },
+        { id: "prep-fit", text: "Fit-up & gap sesuai toleransi", type: "skala_1_5", weight: 2 },
+        { id: "prep-clean", text: "Permukaan bersih dari karat/cat", type: "ya_tidak", weight: 1 },
+      ] },
+      { title: "Hasil las", items: [
+        { id: "weld-visual", text: "Visual las (undercut, porositas, spatter)", type: "skala_1_5", weight: 3 },
+        { id: "weld-ndt", text: "Hasil NDT", type: "pilihan", weight: 3, options: [{ label: "Lolos", score: 1 }, { label: "Repair minor", score: 0.5 }, { label: "Gagal", score: 0 }] },
+        { id: "weld-note", text: "Catatan inspektur", type: "teks", weight: 0 },
+      ] },
+    ],
+  },
+  {
+    id: "CLT-QC-COAT", name: "Inspeksi coating lambung", scope: "QC", target: "pekerjaan",
+    sections: [
+      { title: "Surface preparation", items: [
+        { id: "coat-sa", text: "Standar blasting Sa 2.5 tercapai", type: "ya_tidak", weight: 3 },
+        { id: "coat-profile", text: "Profil permukaan sesuai spesifikasi", type: "skala_1_5", weight: 2 },
+      ] },
+      { title: "Aplikasi", items: [
+        { id: "coat-dft", text: "DFT per lapisan sesuai spesifikasi", type: "pilihan", weight: 3, options: [{ label: "Sesuai", score: 1 }, { label: "Di bawah minimum", score: 0.3 }, { label: "Tidak diukur", score: 0 }] },
+        { id: "coat-cure", text: "Waktu curing antar-lapisan dipatuhi", type: "ya_tidak", weight: 2 },
+      ] },
+    ],
+  },
+  {
+    id: "CLT-HSE-PEKERJA", name: "Kepatuhan K3 pekerja", scope: "HSE", target: "pekerja",
+    sections: [
+      { title: "APD", items: [
+        { id: "apd-helm", text: "Helm, sepatu, dan kacamata dipakai", type: "ya_tidak", weight: 2 },
+        { id: "apd-harness", text: "Full body harness saat bekerja di ketinggian", type: "ya_tidak", weight: 3 },
+      ] },
+      { title: "Perilaku kerja", items: [
+        { id: "work-permit", text: "Izin kerja (hot work / confined space) tersedia", type: "ya_tidak", weight: 3 },
+        { id: "work-house", text: "Kerapian area kerja", type: "skala_1_5", weight: 1 },
+      ] },
+    ],
+  },
+];

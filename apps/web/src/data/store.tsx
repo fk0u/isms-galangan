@@ -27,6 +27,7 @@ import {
   seedBoq as seedBoq,
   seedBoqDocs,
   seedMaterialRequests,
+  seedChecklistTemplates,
 } from "./index";
 import { COA_EXCEL, ASET_EXCEL } from "./financeExcel";
 import {
@@ -160,6 +161,8 @@ export interface StoreShape {
   /** Surat BoQ per nomor surat (ADR-0006). Kosong di seed lokal; diisi dari API. */
   boqDocs: StoreItem[];
   materialRequests: StoreItem[];
+  checklistTemplates: StoreItem[];
+  checklistResponses: StoreItem[];
   wbsByProject: Record<string, WbsItem[]>;
   teamByProject: Record<string, string[]>;
 }
@@ -339,6 +342,8 @@ function buildSeeds(): StoreShape {
       assets: clone(seedAssets),
       boqDocs: clone(seedBoqDocs) as StoreItem[],
       materialRequests: clone(seedMaterialRequests) as StoreItem[],
+      checklistTemplates: clone(seedChecklistTemplates) as StoreItem[],
+      checklistResponses: [],
 wbsByProject: {},
      teamByProject: clone(seedTeamByProject),
    };
@@ -493,6 +498,8 @@ const PREFIX: Record<string, string> = {
     assets: "AST",
     boqDocs: "BQD",
     materialRequests: "MR",
+    checklistTemplates: "CLT",
+    checklistResponses: "CLR",
  };
 
 const ARRAY_KEYS: (keyof StoreShape)[] = [
@@ -504,7 +511,7 @@ const ARRAY_KEYS: (keyof StoreShape)[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties",
-  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
 ];
 
 function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
@@ -710,7 +717,7 @@ const OFFLINE_COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
 ];
 
 /* Hidrasi cache offline dari IndexedDB saat boot. Berjalan sebelum resync
