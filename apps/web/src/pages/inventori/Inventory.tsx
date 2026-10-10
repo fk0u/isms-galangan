@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { rebindLegacyMonthSeries } from "../../utils/monthAxis";
+import { getSetting } from "../../utils/settings";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Plus,
@@ -13,7 +13,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Repeat,
-  RefreshCw,
   Barcode,
   BookmarkPlus,
   ListChecks,
@@ -78,7 +77,7 @@ import { n_inv } from "../../i18n/n_inv";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
-import { stockTrend, itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
+import { itemTrend, lowStockTrend, stockValueTrend, warehouseTrend } from "../../data";
 import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMaterialForm";
 import ReceiveIssueTab from "./tabs/ReceiveIssueTab";
 import { n_recv } from "../../i18n/n_recv";
@@ -367,10 +366,21 @@ function agingBucket(days: number): string {
 
 const AGING_BUCKETS = ["0-30 hari", "31-90 hari", "91-180 hari", ">180 hari", "Belum ada barang masuk"];
 
+/* INV-02: warna badge tetap per kategori; kategori baru dapat warna stabil
+   dari hash nama supaya tidak berubah antar-render. */
+const CAT_TONES = ["blue", "teal", "amber", "violet", "red", "green", "gray"] as const;
+const CAT_TONE: Record<string, (typeof CAT_TONES)[number]> = { Baja: "blue", Cat: "teal", Pipa: "amber", Listrik: "violet", Consumable: "gray", Sparepart: "green" };
+function catTone(category: string): (typeof CAT_TONES)[number] {
+  if (CAT_TONE[category]) return CAT_TONE[category];
+  let h = 0;
+  for (const ch of category) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return CAT_TONES[h % CAT_TONES.length];
+}
+
 export default function Inventory() {
   const { locale } = useT();
   const S = n_inv[locale];
-  const { data, add, update, remove, log, branch, resync } = useStore();
+  const { data, add, update, remove, log, branch, resyncCollections } = useStore();
   /* Batch modul per tab: Inventory butuh 8 koleksi. Tanpa ini halaman ini
      memanggil resync() penuh (50+ koleksi) tiap dibuka lewat tombol refresh
      PageHeader, padahal isinya hanya butuh sebagian. */
@@ -379,6 +389,16 @@ export default function Inventory() {
     "documents", "settings", "purchaseOrders", "payables", "warehouses", "materialRequests", "spareparts",
   ];
   useModuleSync(INV_COLS);
+  /* INV-01: tanpa tombol "Muat ulang". Selama realtime (F4-03) belum ada,
+     tiga koleksi stok ditarik ulang tiap 30 detik saat tab terlihat. */
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      if (document.visibilityState === "visible") void resyncCollections(["inventory", "movements", "warehouses"]).catch(() => {});
+    }, 30000);
+    return () => window.clearInterval(t);
+  }, [resyncCollections]);
+  /* INV-09: surat jalan disembunyikan lewat setting; kode & PDF tetap ada. */
+  const showSj = getSetting(data, "SHOW_SURAT_JALAN", 0) === 1;
   // Cabang movement: dari proyek tertaut (cocokkan teks ke id/vessel) atau fallback global.
   const moveBranch = (hay: string): string => String(
     (data.projects ?? []).find((p) => hay.includes(String(p.id)) || (p.vessel && hay.includes(String(p.vessel))))?.branch
@@ -624,20 +644,22 @@ export default function Inventory() {
      pergantian bulan. Filter tahun memakai `key` YYYY-MM dari sumbu,
      bukan memotong 4 karakter terakhir dari label yang sudah dirender:
      begitu locale atau format label berubah, filternya ikut rusak. */
-  const invTrend = useMemo(
-    () => rebindLegacyMonthSeries(stockTrend, { locale: locale as "id" | "en" })
-      .map((r) => ({ label: r.bln, key: r.key, year: Number(r.key.slice(0, 4)), nilai: Number(r.nilai || 0) })),
-    [locale],
-  );
-  const [trendYear, setTrendYear] = useState("Semua");
-  const trendYears = useMemo(
-    () => Array.from(new Set(invTrend.map((d) => d.year))).sort((a, b) => b - a),
-    [invTrend],
-  );
-  const trendShown = useMemo(
-    () => (trendYear === "Semua" ? invTrend : invTrend.filter((d) => d.year === Number(trendYear))),
-    [invTrend, trendYear],
-  );
+  const R = n_recv[locale];
+  /* 12 bulan terakhir, berakhir di bulan berjalan. */
+  const moveTrend = useMemo(() => {
+    const now = new Date();
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - 11 + i, 1));
+      return { key: d.toISOString().slice(0, 7), label: d.toLocaleDateString(locale === "en" ? "en-GB" : "id-ID", { month: "short", year: "2-digit", timeZone: "UTC" }), masuk: 0, keluar: 0 };
+    });
+    const byKey = new Map(months.map((m) => [m.key, m]));
+    for (const mv of data.movements) {
+      const m = byKey.get(String(mv.date ?? "").slice(0, 7));
+      if (!m) continue;
+      if (mv.tone === "in") m.masuk += 1; else if (mv.tone === "out") m.keluar += 1;
+    }
+    return months;
+  }, [data.movements, locale]);
 
 /* Gudang: koleksi `warehouses` (CRUD) + fallback settings.WAREHOUSE_CAP.
      capacityOf() sudah menangani kedua sumber, jadi tab Stok per Gudang tetap
@@ -1923,7 +1945,6 @@ if (k === "mattype") return matTypeOf(i);
         icon={<Warehouse className="h-5 w-5" />}
         actions={
           <div className="flex items-center gap-2">
-            <AsyncButton className="btn-secondary" title={locale === "en" ? "Reload data from backend" : "Muat ulang data dari backend"} onAction={async () => { await resync(); toast(locale === "en" ? "Data refreshed" : "Data dimuat ulang"); }}><RefreshCw className="h-4 w-4" /> {locale === "en" ? "Refresh" : "Muat ulang"}</AsyncButton>
             <button className="btn-secondary" onClick={openPick}><ListChecks className="h-4 w-4" /> {S.pickTitle}</button>
             <button className="btn-primary-gradient" onClick={() => { setForm(emptyForm); setEditing(null); setMaterialFormStep(0); setConversionEdited(false); setShowAdd(true); }}><Plus className="h-4 w-4" /> {S.btnNew}</button>
           </div>
@@ -1967,7 +1988,7 @@ if (k === "mattype") return matTypeOf(i);
       </div>
 
       <div className="card">
-        <Tabs tabs={["Katalog", "Terima & Keluar", "Stok per Gudang", "BOM", "Pergerakan", "Tonase & Surat Jalan", "Analisis"]} active={tab} onChange={setTab} labels={{ "Terima & Keluar": n_recv[locale].tab, Katalog: S.tabKatalog, "Stok per Gudang": S.tabWh, BOM: S.tabBom, Pergerakan: S.tabMoves, "Tonase & Surat Jalan": S.tabTonase, Analisis: S.tabAnalisis }} />
+        <Tabs tabs={["Katalog", "Terima & Keluar", "Stok per Gudang", "BOM", "Pergerakan", "Tonase & Surat Jalan"]} active={tab} onChange={setTab} labels={{ "Terima & Keluar": n_recv[locale].tab, Katalog: S.tabKatalog, "Stok per Gudang": S.tabWh, BOM: S.tabBom, Pergerakan: S.tabMoves, "Tonase & Surat Jalan": showSj ? S.tabTonase : R.tabTonaseOnly }} />
         <div className="p-4">
           {tab === "Terima & Keluar" && <ReceiveIssueTab />}
           {tab === "Katalog" && (
@@ -2161,7 +2182,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface sticky top-0 z-10">
-                    <tr><SortTh label={S.thMaterial} sortKey="material" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.catLbl} sortKey="kategori" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "Type" : "Jenis"} sortKey="mattype" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thQty} sortKey="qty" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thVolume} sortKey="volume" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thTotal} sortKey="total" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thAbc} sortKey="abc" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thRak} sortKey="rak" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.binLbl} sortKey="bin" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.thAksi}</th></tr>
+                    <tr><SortTh label={S.thMaterial} sortKey="material" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.catLbl} sortKey="kategori" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "Type" : "Jenis"} sortKey="mattype" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thQty} sortKey="qty" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thVolume} sortKey="volume" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thTotal} sortKey="total" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thRak} sortKey="rak" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.thAksi}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
 {pager.slice(sorted).map((i) => {
@@ -2169,7 +2190,6 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           `stock <= minStock` polos. Kategori lead-time panjang
                           dapat lebih awal peringatan; kategori jasa (tanpa stok
                           fisik) tidak pernah amber. */
-                       const warn = warnLevelOf(i);
                        const badge = katalogBadge(i);
                        const minWh = effectiveMinStock(i);
                        const reserved = reservedQty(i);
@@ -2182,7 +2202,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                             <p className="text-xs text-steel-500 font-mono">{i.sku}</p>
                             {reserved > 0 && <p className="text-xs text-amber-600">Reservasi {fmtJumlah(reserved)} {i.unit}</p>}
                           </td>
-                          <td className="td"><Badge tone="gray">{i.category}</Badge></td>
+                          <td className="td"><Badge tone={catTone(String(i.category))}>{i.category}</Badge></td>
                           <td className="td"><Badge tone={matTone(matTypeOf(i))}>{matLabel(matTypeOf(i))}{isEceran(i) ? " · Eceran" : ""}</Badge></td>
                           <td className="td font-semibold text-navy-900">
                             {/* Kemasan terbuka dihitung sebagai satu kemasan: "3 drum (550 L)". */}
@@ -2192,21 +2212,14 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           </td>
                           <td className="td text-steel-600">{fmtJumlah(Number(i.volume ?? 0))}</td>
                           <td className="td font-semibold text-navy-900">{fmtRupiah(Number(i.stock) * effCost(i))}</td>
-                          <td className="td"><Badge tone={abc[i.id] === "A" ? "red" : abc[i.id] === "B" ? "amber" : "gray"}>{abc[i.id]}</Badge></td>
                           <td className="td">
                             <Badge tone={badge.tone} title={
                               minWh <= 0
                                 ? (locale === "en" ? "No minimum set" : "Minimum stok belum diisi")
                                 : `${fmtJumlah(Number(i.stock))} ${String(i.unit ?? "")} dari minimum ${fmtJumlah(minWh)} ${String(i.unit ?? "")}`
                             }>{locale === "en" ? badge.textEn : badge.text}</Badge>
-                            {warn.level === "critical" && (
-                              <p className="mt-0.5 text-[11px] text-rose-600">
-                                {locale === "en" ? "needs PR now" : "perlu PR sekarang"}
-                              </p>
-                            )}
                           </td>
                           <td className="td text-steel-600 font-mono text-xs truncate" title={rackText(i)}>{rackText(i)}</td>
-                          <td className="td text-steel-600 font-mono text-xs truncate" title={binOf(i) || "-"}>{binOf(i) || "-"}</td>
                           <td className="td text-xs text-steel-600">{createdAtOf(i) !== null ? fmtTanggal(createdAtOf(i)) : <span className="text-steel-400">-</span>}</td>
                           <td className="td text-xs text-steel-600">{lastTouchedAt(i) !== null ? fmtTanggal(lastTouchedAt(i)) : <span className="text-steel-400">-</span>}</td>
                           <td className="td">
@@ -2523,26 +2536,26 @@ penuh per kategori - dengan 10 kategori berproblem, strip
 
           {tab === "Pergerakan" && (
             <div className="space-y-4">
-              <Card>
-                <CardHeader title={S.trendT} subtitle={S.trendS} action={
-                  <select className="input w-auto py-1.5 text-xs" value={trendYear} onChange={(e) => setTrendYear(e.target.value)} aria-label={locale === "en" ? "Filter year" : "Filter tahun"}>
-                    <option value="Semua">{locale === "en" ? "All years" : "Semua tahun"}</option>
-                    {trendYears.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                } />
-                <div className="h-44 p-4 pt-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendShown} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                      <defs><linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0A0A0A" stopOpacity={0.3} /><stop offset="95%" stopColor="#0A0A0A" stopOpacity={0} /></linearGradient></defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
-                      <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Area type="monotone" dataKey="nilai" stroke="#0A0A0A" strokeWidth={2.5} fill="url(#invGrad)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+              {/* INV-07: dua tren (masuk & keluar) per bulan, dihitung dari
+                  transaksi yang benar-benar tercatat - bukan nilai stok seed. */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {([["masuk", R.trendIn, "#047857"], ["keluar", R.trendOut, "#b45309"]] as const).map(([key, title, color]) => (
+                  <Card key={key}>
+                    <CardHeader title={title} subtitle={R.trendSub} />
+                    <div className="h-44 p-4 pt-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={moveTrend} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                          <XAxis dataKey="label" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                          <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip content={<ChartTooltip formatter={(v) => `${v} ${R.trendUnit}`} />} />
+                          <Area type="monotone" dataKey={key} stroke={color} strokeWidth={2.5} fill={color} fillOpacity={0.12} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+                ))}
+              </div>
               <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500" title={locale === "en" ? "Goods in = stock received · Goods out = stock issued" : "Barang masuk = stok diterima · Barang keluar = stok dikeluarkan"}>
                 {locale === "en" ? "Goods in = stock received · Goods out = stock issued" : "Barang masuk = stok diterima · Barang keluar = stok dikeluarkan"}
               </p>
@@ -2556,7 +2569,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface sticky top-0 z-10">
-                    <tr><SortTh label={S.thTx} sortKey="transaksi" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.itemLbl} sortKey="item" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thType} sortKey="tipe" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.jumlahLbl} sortKey="jumlah" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "From warehouse" : "Dari Gudang"} sortKey="dari" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "To warehouse" : "Ke Gudang"} sortKey="ke" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "Detail" : "Detail Transaksi"} sortKey="info" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thRef} sortKey="referensi" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thTotalCol} sortKey="total" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.dateLbl} sortKey="tanggal" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><th className="th">{S.thAksi}</th></tr>
+                    <tr><SortTh label={S.thTx} sortKey="transaksi" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.itemLbl} sortKey="item" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thType} sortKey="tipe" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.jumlahLbl} sortKey="jumlah" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={R.colFrom} sortKey="dari" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={R.colTo} sortKey="ke" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={locale === "en" ? "Detail" : "Detail Transaksi"} sortKey="info" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thRef} sortKey="referensi" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.thTotalCol} sortKey="total" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><SortTh label={S.dateLbl} sortKey="tanggal" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} /><th className="th">{S.thAksi}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
                     {movPager.slice(movSorted).map((m) => {
@@ -2676,6 +2689,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   </button>
                 </div>
               </Card>
+              {showSj && <>
               <Card className="p-5">
                 <CardHeader title={S.sjT} subtitle={S.sjS} />
                 <div className="mt-3 space-y-3">
@@ -2855,8 +2869,9 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   </button>
                 </div>
               </Card>
+              </>}
             </div>
-            <Card className="mt-4 p-5">
+            {showSj && <Card className="mt-4 p-5">
               <CardHeader title={locale === "en" ? "Issued DOs" : "DO Terbit"} subtitle={locale === "en" ? "Print + linked delivery note" : "Cetak + Surat Jalan tertaut"} />
               <div className="mt-2 space-y-2">
                 {doDocs.map((d) => (
@@ -2880,11 +2895,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 ))}
                 {doDocs.length === 0 && <p className="text-xs text-steel-400">-</p>}
               </div>
-            </Card>
+            </Card>}
             </>
           )}
 
-          {tab === "Analisis" && (
+          {tab === "Pergerakan" && (
             <div className="space-y-4">
               {/* ==== KLASIFIKASI WARNING PER KATEGORI ====
                   Pindah dari Katalog ke sini. Di Katalog hanya ada strip

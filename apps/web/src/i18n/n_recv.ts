@@ -1,6 +1,13 @@
 /* Teks tab Inventori "Terima & Keluar" (F3-G-03, F3-G-04). */
 export const n_recv = {
   id: {
+    trendIn: "Tren Barang Masuk",
+    trendOut: "Tren Barang Keluar",
+    trendSub: "Jumlah transaksi per bulan, 12 bulan terakhir",
+    trendUnit: "transaksi",
+    colFrom: "Dari",
+    colTo: "Ke",
+    tabTonaseOnly: "Tonase",
     tab: "Terima & Keluar",
     inTitle: "Terima barang dari PO",
     inSub: "Centang baris PO yang datang, sesuaikan jumlah, lalu terima. Stok, pergerakan, status PO, dan permintaan proyek terkait diperbarui otomatis.",
@@ -44,6 +51,13 @@ export const n_recv = {
     stockShort: "Stok tidak cukup",
   },
   en: {
+    trendIn: "Goods In Trend",
+    trendOut: "Goods Out Trend",
+    trendSub: "Transactions per month, last 12 months",
+    trendUnit: "transactions",
+    colFrom: "From",
+    colTo: "To",
+    tabTonaseOnly: "Tonnage",
     tab: "Receive & Issue",
     inTitle: "Receive goods from POs",
     inSub: "Tick the PO lines that arrived, adjust quantities, then receive. Stock, movements, PO status, and linked project requests update automatically.",
