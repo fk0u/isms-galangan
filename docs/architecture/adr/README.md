@@ -19,5 +19,6 @@ Format: konteks → opsi → keputusan → konsekuensi. ADR tidak diedit setelah
 | [0013](0013-design-system-swiss-industrial.md) | Design system "Swiss Industrial" (putih netral + aksen merah) | Superseded by 0014 |
 | [0014](0014-design-system-minimal-modern.md) | Design system "Minimal Modern" (putih netral + aksen merah) | Accepted |
 | [0015](0015-material-request-dan-persetujuan-service.md) | Koleksi `materialRequests` & persetujuan service lewat field `approval` | Accepted |
+| [0016](0016-demo-lihat-sebagai-peran.md) | "Lihat sebagai peran" untuk demo RBAC | Accepted |
 
 Template ADR baru: salin [`template.md`](template.md).

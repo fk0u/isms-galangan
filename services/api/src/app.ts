@@ -23,6 +23,8 @@ import { registerPdfRoutes } from "./routes/pdf.js";
 import { registerBoqDocRoutes } from "./routes/boqDocs.js";
 import { registerMaterialRequestRoutes } from "./routes/materialRequests.js";
 import { registerServiceApprovalRoutes } from "./routes/serviceApproval.js";
+import { registerPoFulfillmentRoutes } from "./routes/poFulfillment.js";
+import { registerDemoSwitchRoutes } from "./routes/demoSwitch.js";
 
 const LoginSchema = z.object({
   username: z.string().min(1),
@@ -368,6 +370,8 @@ export function buildApp(): FastifyInstance {
   registerBoqDocRoutes(app);
   registerMaterialRequestRoutes(app);
   registerServiceApprovalRoutes(app);
+  registerPoFulfillmentRoutes(app);
+  registerDemoSwitchRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {
     return reply.status(404).send(fail("Not found", "NOT_FOUND"));

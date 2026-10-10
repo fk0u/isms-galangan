@@ -244,6 +244,17 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
   { username: "direktur@galangan.com", name: "Direktur", role: "direktur", email: "direktur@galangan.com" },
   { username: "manager@galangan.com", name: "Manager", role: "manager", email: "manager@galangan.com" },
   { username: "proyek@galangan.com", name: "Staff Proyek", role: "proyek", email: "proyek@galangan.com" },
+  /* Akun demo per peran Q2 supaya setiap modul bisa diperagakan sesuai haknya
+     (lihat "Lihat sebagai peran" di routes/demoSwitch.ts). Nama sintetis. */
+  { username: "finance@galangan.com", name: "Staff Keuangan", role: "finance", email: "finance@galangan.com" },
+  { username: "hr@galangan.com", name: "Staff HR", role: "hr", email: "hr@galangan.com" },
+  { username: "procurement@galangan.com", name: "Staff Procurement", role: "procurement", email: "procurement@galangan.com" },
+  { username: "gudang@galangan.com", name: "Kepala Gudang", role: "gudang", email: "gudang@galangan.com" },
+  { username: "mekanik@galangan.com", name: "Mekanik", role: "mekanik", email: "mekanik@galangan.com" },
+  { username: "qc@galangan.com", name: "Inspektur QC", role: "qc", email: "qc@galangan.com" },
+  { username: "subkon@galangan.com", name: "Mitra Subkon", role: "subkon", email: "subkon@galangan.com" },
+  { username: "equipment@galangan.com", name: "Staff Equipment", role: "equipment", email: "equipment@galangan.com" },
+  { username: "drydock@galangan.com", name: "Dockmaster", role: "drydock", email: "drydock@galangan.com" },
 ];
 
 export async function seedUsers(

@@ -1131,7 +1131,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const rows = await remoteRepository(key).list();
           /* Hasil yang mengosongkan koleksi kode ditolak (lihat acceptPull). */
           if (acceptPull(key, rows)) pulled[key] = rows;
-        } catch {
+        } catch (err) {
+          /* 403 = peran ini memang tidak berhak (RBAC), bukan gangguan:
+             kosongkan supaya cache milik peran/sesi lain tidak ikut tampil. */
+          if (err instanceof ApiError && err.status === 403) { pulled[key] = []; return; }
           /* Koleksi ini tetap memakai cache lokal. Kegagalan sengaja tidak
              diynylagakan ke UI di sini: resync penuh dipanggil saat boot, dan
              badge "offline" yang menyala karena satu koleksi gagal akan
@@ -1255,7 +1258,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return;
           }
           pulled[key] = rows;
-        } catch {
+        } catch (err) {
+          // 403 = di luar hak peran (RBAC): kosong, bukan "gagal memuat".
+          if (err instanceof ApiError && err.status === 403) { pulled[key] = []; return; }
           /* koleksi ini tetap memakai cache lokal */
           failed.push(key);
         }

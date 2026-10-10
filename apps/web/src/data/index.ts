@@ -655,6 +655,11 @@ export const purchaseOrders = [
   { id: "PO-2026-115", item: "Aux Engine MAK", vendor: "PT Indo Diesel", req: "PR-2026-201", amount: 1700000000, status: "Diterima", date: "2026-07-05" },
   { id: "PO-2026-116", item: "Cat Epoxy", vendor: "PT Jotun Indonesia", req: "PR-2026-207", amount: 480000000, status: "Menunggu Persetujuan", date: "2026-07-28" },
   { id: "PO-2026-117", item: "Wire Rope", vendor: "PT Steel Rig", req: "PR-2026-209", amount: 210000000, status: "Dikirim", date: "2026-07-30" },
+  /* F3-J-02 demo: PO Anoda Zink untuk MR-2026-002 (PR-2026-211) sedang dikirim —
+     peragakan terima sebagian, vendor tidak sanggup, lalu alihkan ke vendor lain.
+     PO-2026-098 = riwayat harga vendor lain untuk item yang sama. */
+  { id: "PO-2026-118", poType: "Besar", item: "Anoda Zink", itemId: "INV-005", vendor: "PT Jotun Indonesia", req: "PR-2026-211", qty: 20, amount: 4200000, receivedQty: 0, returnedQty: 0, status: "Dikirim", date: "2026-10-06", eta: "2026-10-14", project: "RP-2026-003", lines: [{ name: "Anoda Zink", qty: 20, unit: "pcs", price: 210000 }] },
+  { id: "PO-2026-098", poType: "Besar", item: "Anoda Zink", itemId: "INV-005", vendor: "PT Steel Rig", req: "-", qty: 30, amount: 6000000, receivedQty: 30, returnedQty: 0, status: "Diterima", date: "2026-05-12", project: "-", lines: [{ name: "Anoda Zink", qty: 30, unit: "pcs", price: 200000 }] },
   // RawData FORMAT PO MATERIAL: 06/PO-SB/SMD/I/2024, WF 250/150/200,
   // subtotal 25.055.000 + PPN 11% = 27.811.050 (include).
   { id: "PO-SB-2024-006", item: "Besi WF (250/150/200)", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2024-006", amount: 27811050, qty: 23, unit: "btg", status: "Diterima", date: "2024-01-26", docNo: "06/PO-SB/SMD/I/2024", vessel: "U/STOCK", includePpn: true, tujuan: "stok", receivedQty: 23, lines: [{ name: "Besi WF 250", qty: 10, unit: "btg", price: 1150000 }, { name: "Besi WF 150", qty: 8, unit: "btg", price: 850000 }, { name: "Besi WF 200", qty: 5, unit: "btg", price: 1351000 }] },

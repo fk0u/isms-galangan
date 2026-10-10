@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
 import {
@@ -122,6 +122,10 @@ export default function ProjectDetail() {
      movement dicatat otomatis. */
   const invList = data.inventory ?? [];
   const { user: session } = useAuth();
+  /* Turunan otomatis (progres dari WBS, risiko otomatis, status Terlambat)
+     menulis ke server. Peran yang hanya boleh membaca proyek (viewer, QC,
+     finance, …) tidak boleh memicu tulis saat sekadar membuka halaman. */
+  const canAutoWrite = hasPermission(session?.permissions, "projects", "w");
   /* Printer PDF: BAST disusun server dari baris `bast` + relasi proyek/WO,
      jadi tidak ada jalur lokal untuk dokumen ini. */
   const pdfDoc = usePdfDoc();
@@ -380,7 +384,7 @@ if (from === "Desain" && to === "Produksi") {
   };
 
   useEffect(() => {
-    if (!project) return;
+    if (!project || !canAutoWrite) return;
     // Hanya proyek dengan WBS nyata (tersimpan) yang progresnya diturunkan
     // otomatis - template fallback tidak boleh menimpa progres seed/manual.
     if (!data.wbsByProject?.[project.id]) return;
@@ -408,7 +412,7 @@ if (from === "Desain" && to === "Produksi") {
 
 // Terlambat otomatis dari due (P8: bisa di-override manual).
     useEffect(() => {
-      if (!project) return;
+      if (!project || !canAutoWrite) return;
       const today = todayISO();
       // Override sudah tidak relevan (mis. end diperbaiki) → clear.
       if (shouldClearOverride(project as Record<string, unknown>, today, isOverdue as (p: Record<string, unknown>, t: string) => boolean)) {

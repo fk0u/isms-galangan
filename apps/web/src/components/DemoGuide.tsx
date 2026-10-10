@@ -15,6 +15,7 @@ import { ArrowLeft, ArrowRight, Check, EyeOff, Eye, Play, RotateCcw, X } from "l
 import { useT } from "../i18n/LanguageContext";
 import { demoScenarios, n_demo } from "../i18n/n_demo";
 import { toast } from "./ui";
+import DemoRoleSwitcher from "./DemoRoleSwitcher";
 
 const KEY_HIDDEN = "isms.demo.hidden";
 const KEY_PROGRESS = "isms.demo.progress";
@@ -160,6 +161,7 @@ export default function DemoGuide() {
             <div className="flex-1 overflow-y-auto px-2 py-2">
               {!scenario ? (
                 <>
+                  <DemoRoleSwitcher />
                   <p className="px-2 pb-1 pt-1 text-xs font-medium text-steel-400">{T.scenarios}</p>
                   <ul className="space-y-1">
                     {scenarios.map((s, i) => {
