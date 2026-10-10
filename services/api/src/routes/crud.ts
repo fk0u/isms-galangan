@@ -11,6 +11,7 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
+import { loanOverlapError } from "../bookingGuard.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
@@ -459,6 +460,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    const loanCreate = await loanOverlapError(table, null, rowData);
+    if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
     const domainError = assertDomain(table, rowData);
     if (domainError) return reply.status(422).send(fail(domainError, "UNPROCESSABLE"));
     const drydockDateValidation = table === "dockSlots" ? drydockDateError(rowData) : null;
@@ -561,6 +564,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
     const spkLock = spkLockError(table, oldData, merged, req.user?.role);
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
+    const loanPatch = await loanOverlapError(table, id, merged);
+    if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const changedRange = table === "dockSlots" && (

@@ -66,8 +66,8 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-G-06 | Sembunyikan surat jalan | P2 | F3-G-inventori.md | | todo | |
 | F3-G-07 | Auto-refresh tanpa tombol Muat ulang | P1 | F3-G-inventori.md | | todo | |
 | F3-H-01 | Form & tabel equipment | P0 | F3-H-equipment.md | agent | review | branch `feat/F3-H-01-equipment-form-table`; PR #33 tetap terbuka/tanpa merge; Cubic P2 ekspor umur pakai dan P3 comparator bersama ditangani; P3 notifikasi kini reset pencarian/filter lalu mengatur paginator setelah hasil filter baru; probe regresi lulus; `npm run check` lulus (DB sementara bermigrasi + seed sintetis); UI demo diperiksa |
-| F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | | todo | |
-| F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | | todo | |
+| F3-H-02 | Tab & kartu ringkasan | P0 | F3-H-equipment.md | Claude | review | feat/F3-H-equipment — tab Daftar Equipment + Utilisasi; kartu Total · Sedang terpakai · Dalam maintenance |
+| F3-H-03 | Delegasi peminjaman | P0 | F3-H-equipment.md | Claude | review | feat/F3-H-equipment — panel Delegasi (peminjaman → bookings, maintenance → maintenances), status turunan, server 409 bila bentrok (`probe:equipment-loan` 7/7) |
 | F3-I-01 | Bersihkan modul | P1 | F3-I-subkon.md | Claude | sebagian | feat/F3-I-subkon — tab Timesheet disembunyikan; hapus evaluasi kinerja & StatusChips belum |
 | F3-I-02 | Work Order rinci | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — tabel WO (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status), Nilai SPK & WBS di form |
 | F3-I-03 | Update progres WO dengan foto & histori | P0 | F3-I-subkon.md | Claude | review | feat/F3-I-subkon — modal progres + foto + riwayat (progressLog), tampil di feed Monitoring |
