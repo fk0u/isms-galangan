@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (710 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (725 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -5783,6 +5783,47 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     }
   },
   {
+    "table": "trials",
+    "id": "TRIAL-002",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-007",
+      "parameter": "Dock trial & uji mesin bantu",
+      "tanggal": "2026-10-09",
+      "hasil": "Berjalan",
+      "punchList": [
+        "Kebocoran kecil seal pompa bilga"
+      ],
+      "baRef": "",
+      "kondisi": "Perlu Perbaiki"
+    }
+  },
+  {
+    "table": "warranties",
+    "id": "WRT-2026-001",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "RP-2026-002",
+      "vessel": "TB Mitra Raya 09",
+      "start": "2026-07-15",
+      "months": 12,
+      "status": "Aktif"
+    }
+  },
+  {
+    "table": "warranties",
+    "id": "WRT-2026-002",
+    "branch": "Samarinda",
+    "data": {
+      "projectId": "RP-2026-008",
+      "vessel": "BG MHKL 35",
+      "wbsTask": "Hull Assembly",
+      "start": "2026-09-01",
+      "months": 6,
+      "status": "Aktif"
+    }
+  },
+  {
     "table": "requests",
     "id": "REQ-2026-001",
     "branch": "",
@@ -10398,6 +10439,263 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Aktif",
       "join": "2019-01-10",
       "certs": []
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-009",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000009",
+      "name": "Yoga Pratama",
+      "role": "Welder",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2021-03-15",
+      "certs": [],
+      "tipe": "Kontrak",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 2,
+      "ptkpStatus": "K/2",
+      "education": "SMA/SMK",
+      "basic": 5200000,
+      "contractEnd": "2027-01-28"
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-010",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000010",
+      "name": "Bayu Saputra",
+      "role": "Welder",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2022-06-01",
+      "certs": [],
+      "tipe": "Kontrak",
+      "gender": "L",
+      "marital": "TK",
+      "dependents": 0,
+      "ptkpStatus": "TK/0",
+      "education": "SMA/SMK",
+      "basic": 5000000,
+      "contractEnd": "2027-02-28"
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-011",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000011",
+      "name": "Rizky Ramadhan",
+      "role": "Fitter",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2019-09-09",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 1,
+      "ptkpStatus": "K/1",
+      "education": "SMA/SMK",
+      "basic": 5600000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-012",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000012",
+      "name": "Eko Purnomo",
+      "role": "Mekanik",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2017-04-18",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 3,
+      "ptkpStatus": "K/3",
+      "education": "D3",
+      "basic": 6400000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-013",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000013",
+      "name": "Dimas Anggara",
+      "role": "Mekanik",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2023-02-01",
+      "certs": [],
+      "tipe": "Kontrak",
+      "gender": "L",
+      "marital": "TK",
+      "dependents": 0,
+      "ptkpStatus": "TK/0",
+      "education": "SMA/SMK",
+      "basic": 5100000,
+      "contractEnd": "2027-05-28"
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-014",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000014",
+      "name": "Joko Susilo",
+      "role": "Operator Crane",
+      "dept": "Equipment",
+      "status": "Aktif",
+      "join": "2016-10-10",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 2,
+      "ptkpStatus": "K/2",
+      "education": "SMA/SMK",
+      "basic": 6000000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-015",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000015",
+      "name": "Wahyu Hidayat",
+      "role": "Operator Forklift",
+      "dept": "Equipment",
+      "status": "Aktif",
+      "join": "2024-01-08",
+      "certs": [],
+      "tipe": "Outsourcing",
+      "gender": "L",
+      "marital": "TK",
+      "dependents": 1,
+      "ptkpStatus": "TK/1",
+      "education": "SMP",
+      "basic": 4300000,
+      "contractEnd": "2027-07-28"
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-016",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000016",
+      "name": "Nur Aini",
+      "role": "Staf HR",
+      "dept": "SDM",
+      "status": "Aktif",
+      "join": "2018-07-23",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "P",
+      "marital": "K",
+      "dependents": 1,
+      "ptkpStatus": "K/1",
+      "education": "S1",
+      "basic": 6800000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-017",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000017",
+      "name": "Putri Maharani",
+      "role": "Staf Gudang",
+      "dept": "Gudang",
+      "status": "Aktif",
+      "join": "2020-11-02",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "P",
+      "marital": "TK",
+      "dependents": 0,
+      "ptkpStatus": "TK/0",
+      "education": "D3",
+      "basic": 5400000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-018",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000018",
+      "name": "Irfan Maulana",
+      "role": "Kepala Gudang",
+      "dept": "Gudang",
+      "status": "Aktif",
+      "join": "2015-05-05",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 2,
+      "ptkpStatus": "K/2",
+      "education": "S1",
+      "basic": 7900000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-019",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000019",
+      "name": "Slamet Riyadi",
+      "role": "Dock Master",
+      "dept": "Drydock",
+      "status": "Aktif",
+      "join": "2013-01-14",
+      "certs": [],
+      "tipe": "Tetap",
+      "gender": "L",
+      "marital": "K",
+      "dependents": 3,
+      "ptkpStatus": "K/3",
+      "education": "D4",
+      "basic": 8600000
+    }
+  },
+  {
+    "table": "employees",
+    "id": "EMP-020",
+    "branch": "Samarinda",
+    "data": {
+      "username": "6474010101000020",
+      "name": "Teguh Wibowo",
+      "role": "Helper",
+      "dept": "Produksi",
+      "status": "Aktif",
+      "join": "2026-08-03",
+      "certs": [],
+      "tipe": "Training",
+      "gender": "L",
+      "marital": "TK",
+      "dependents": 0,
+      "ptkpStatus": "TK/0",
+      "education": "SMP",
+      "basic": 3600000,
+      "contractEnd": "2026-03-28"
     }
   },
   {

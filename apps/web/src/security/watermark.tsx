@@ -1,3 +1,4 @@
+import { apiFetch, getJwt, isBackendConfigured } from "../services/http";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../auth/auth";
 
@@ -46,15 +47,13 @@ interface Geo {
   country: string;
 }
 
+/* S-04: IP diambil dari backend sendiri, bukan layanan pihak ketiga
+   (ipapi.co) - tidak ada data pemakai yang keluar dari sistem. Kota/negara
+   sengaja tidak lagi ditampilkan. */
 async function fetchGeo(signal: AbortSignal): Promise<Geo> {
-  const res = await fetch("https://ipapi.co/json/", { signal });
-  if (!res.ok) throw new Error("geo fail");
-  const j = (await res.json()) as Record<string, unknown>;
-  return {
-    ip: String(j.ip ?? "?"),
-    city: String(j.city ?? ""),
-    country: String(j.country_code ?? j.country_name ?? ""),
-  };
+  if (!isBackendConfigured() || getJwt() === null) return { ip: "-", city: "", country: "" };
+  const me = await apiFetch<{ ip?: string }>("/api/auth/me", { signal });
+  return { ip: String(me.ip ?? "-"), city: "", country: "" };
 }
 
 /* ---------- tile SVG watermark ---------- */

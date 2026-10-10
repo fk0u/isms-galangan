@@ -2136,7 +2136,10 @@ const createWarranty = async (wbsTask?: string) => {
           {tab === "Subkon" && (
             <div className="space-y-4">
               <Card className="p-4">
-                <h3 className="mb-3 text-sm font-semibold text-navy-900">{S.detSubkonTitle.replace("{n}", String(subkonList.length))}</h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-navy-900">{S.detSubkonTitle.replace("{n}", String(subkonList.length))}</h3>
+                  <Link to="/subkontraktor" className="text-xs font-medium text-ocean-600 hover:underline">{S.detSubkonOpen}</Link>
+                </div>
                 {subkonList.length === 0 ? (
                   <p className="text-xs text-steel-400">{S.detNoSubkon}</p>
                 ) : (
@@ -2162,6 +2165,7 @@ const createWarranty = async (wbsTask?: string) => {
                                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                                     <span className="font-mono text-xs font-semibold text-navy-900">{w.id}</span>
                                     <span className="text-xs text-steel-600">{String(w.scope ?? "")}</span>
+                                    {Number(w.value || 0) > 0 && <span className="text-xs font-semibold tabular-nums text-navy-900">{fmtRupiah(Number(w.value))}</span>}
                                     <Badge tone={w.status === "Selesai" ? "green" : "blue"}>{w.progress}%</Badge>
                                   </div>
                                   {woTerms.length > 0 && (
@@ -2248,7 +2252,10 @@ const createWarranty = async (wbsTask?: string) => {
                       {w.wbsTask && <p className="text-xs text-ocean-700">{w.wbsTask}</p>}
                       <p className="text-xs text-steel-500">{S.detWarRow.replace("{a}", fmtTanggal(String(w.start ?? ""))).replace("{b}", String(w.months ?? 12)).replace("{c}", String(w.status ?? "Aktif"))}</p>
                     </div>
-                    <StatusBadge status={String(w.status ?? "Aktif")} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={String(w.status ?? "Aktif")} />
+                      <button className="btn-secondary text-xs" onClick={() => void pdfDoc.request({ kind: "garansi", id: String(w.id), locale }, `Garansi-${String(w.id)}`, false)}>{S.detWarPrint}</button>
+                    </div>
                   </div>
                 ))}
                 {warrantyList.length === 0 && <p className="text-xs text-steel-400">{S.detNoWar}</p>}

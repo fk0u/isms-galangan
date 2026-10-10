@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, HardHat, FileSignature, Star, Receipt, Pencil, Trash2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
-import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, ProgressBar, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, usePager, toast, SearchBox, rowMatches,
+import { Plus, HardHat, FileSignature, Receipt, Pencil, Trash2 } from "lucide-react";
+import { Card, PageHeader, Badge, KpiCard, Tabs, ProgressBar, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, usePager, toast, SearchBox, rowMatches,
   NumInput, MoneyInput, FlowStrip,
   AsyncButton,
   FileUploadButton,
@@ -24,8 +23,8 @@ import { getSetting } from "../../utils/settings";
 import { PPH_SUBKON_OPTIONS } from "../../utils/sb";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
-import { subActiveTrend, subContractTrend, woTrend, ratingTrend } from "../../data";
-import { FilterPopover } from "../../components/FilterPopover";
+import { subActiveTrend, subContractTrend, woTrend } from "../../data";
+import { StatusChips } from "../../components/StatusChips";
 import { useT } from "../../i18n/LanguageContext";
 import { n_crm } from "../../i18n/n_crm";
 import { n_sub } from "../../i18n/n_sub";
@@ -139,10 +138,6 @@ function k3Score(k3: unknown): number {
   return 60;
 }
 
-function shortSub(name: unknown): string {
-  const s = String(name ?? "");
-  return s.replace(/^(PT|CV)\s+/i, "").split(" ").slice(0, 2).join(" ");
-}
 
 /* Batch koleksi modul Subkontraktor untuk useModuleSync (pengganti resync penuh). */
 const SUB_COLS: CollectionKey[] = ["activities", "employees", "incidents", "payables", "projects", "subcontractors", "termins", "timesheets", "workOrders"];
@@ -165,7 +160,6 @@ export default function Subcontractor() {
   const [tab, setTab] = useState("Subkontraktor");
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
   const [sort2, setSort2] = useState<SortState>({ key: null, dir: "asc" });
-  const [typeFilter, setTypeFilter] = useState("Semua");
   const [subQ, setSubQ] = useState("");
   const [subStatus, setSubStatus] = useState("Semua");
   const modAlert = useModuleAlert("subkontraktor");
@@ -231,9 +225,7 @@ export default function Subcontractor() {
   const [rateForm, setRateForm] = useState({ wo: "", rate: "" });
 
   const runningWo = workOrders.filter((w) => w.status !== "Selesai").length;
-  const avgRating = subcontractors.length ? Math.round(subcontractors.reduce((s, x) => s + Number(x.rating || 0), 0) / subcontractors.length) : 0;
   const filteredSubs = subcontractors.filter((s) => {
-    if (typeFilter !== "Semua" && String(s.contractType ?? "Borongan") !== typeFilter) return false;
     if (subStatus !== "Semua" && normSub(s.status) !== subStatus) return false;
     return rowMatches(s, subQ, ["name", "services", "contractType", "status", "k3", "id"]);
   });
@@ -491,45 +483,6 @@ export default function Subcontractor() {
       toast(locale === "en" ? `Term ${termEdit.id} updated` : `Termin ${termEdit.id} diubah`);
       setTermEdit(null);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
-  };
-
-  /* Grafik evaluasi dari skor aktual (rating + konversi K3 per subkontraktor).
-     Metric diperjelas: rating = subcontractors.rating (0-100),
-     k3 = k3Score(sub.k3) dari grade A+/A/B+/B/C, plus konteks kontrak/WO/termin. */
-  const evalChart = subcontractors.map((s) => {
-    const activeWo = workOrders.filter((w) => sameName(w.sub, String(s.name ?? "")) && w.status !== "Selesai").length;
-    const lunas = payments.filter((t) => sameName(t.sub, String(s.name ?? "")) && normTerm(String(t.status ?? "")) === "Lunas").length;
-    return {
-      name: shortSub(s.name),
-      full: String(s.name ?? ""),
-      rating: Number(s.rating || 0),
-      k3: k3Score(s.k3),
-      k3Grade: String(s.k3 ?? "-"),
-      contract: Number(s.contract || 0),
-      activeWo,
-      lunas,
-    };
-  });
-
-  const EvalTooltip = ({ active, payload }: { active?: boolean; payload?: { payload?: Record<string, unknown>; value?: number | string; name?: string; color?: string; dataKey?: string }[] }) => {
-    if (!active || !payload || payload.length === 0) return null;
-    const p = (payload[0]?.payload ?? {}) as Record<string, unknown>;
-    return (
-      <div className="max-w-64 rounded-xl border border-steel-200 bg-white/95 px-3 py-2 text-xs shadow-lift">
-        <p className="mb-1 font-bold text-navy-900">{String(p.full ?? "-")}</p>
-        <p className="text-steel-600">Rating aktual: <b className="text-navy-900">{String(p.rating)} </b><span className="text-steel-400">(subcontractors.rating 0–100)</span></p>
-        <p className="text-steel-600">Skor K3: <b className="text-navy-900">{String(p.k3)}</b><span className="text-steel-400"> (grade {String(p.k3Grade)} → A+95/A90/B+82/B78/C65)</span></p>
-        <p className="mt-1 border-t border-steel-100 pt-1 text-steel-500">
-          Kontrak {fmtMiliar(Number(p.contract || 0))} · {String(p.activeWo)} WO aktif · {String(p.lunas)} termin Lunas
-        </p>
-        {payload.map((e, i) => (
-          <p key={i} className="flex items-center gap-1.5 text-steel-600">
-            <span className="h-2 w-2 rounded-full" style={{ background: e.color }} />
-            {e.dataKey === "rating" ? "Rating aktual" : `K3 (grade ${String(p.k3Grade)})`}: <b className="ml-auto text-navy-900">{String(e.value)}</b>
-          </p>
-        ))}
-      </div>
-    );
   };
 
   const applyWoProgress = async (id: string, v: number, note: string, doneMs?: string[], milestones?: unknown[]) => {
@@ -1054,7 +1007,6 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <KpiCard label={S.kpiActiveSubs} value={String(subcontractors.filter((s) => s.status === "Aktif").length)} icon={<HardHat className="h-5 w-5" />} chip="navy" spark={subActiveTrend} hint={S.kpiActiveSubsHint} />
         <KpiCard label={S.kpiActiveContracts} value={fmtMiliar(subcontractors.reduce((s, x) => s + Number(x.contract || 0), 0))} icon={<FileSignature className="h-5 w-5" />} chip="teal" spark={subContractTrend} />
         <KpiCard label={S.kpiRunningWo} value={String(runningWo)} hint={S.kpiRunningWoHint} icon={<HardHat className="h-5 w-5" />} chip="amber" spark={woTrend} />
-        <KpiCard label={S.kpiAvgRating} value={`${avgRating}%`} delta={S.kpiRatingDelta} deltaDirection="up" icon={<Star className="h-5 w-5" />} chip="violet" spark={ratingTrend} />
       </div>
 
       <div className="mt-4 card">
@@ -1063,24 +1015,6 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <div className="p-4">
           {tab === "Subkontraktor" && (
             <div className="space-y-4">
-              <Card>
-                <CardHeader title={S.evalTitle} subtitle={`${S.evalSub} · Rating = subcontractors.rating · K3 = konversi grade (A+95/A90/B+82/B78/C65)`} />
-                <div className="h-52 p-4 pt-0 sm:h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={evalChart} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#8F8F8F" axisLine={false} tickLine={false} interval={0} />
-                      <YAxis domain={[0, 100]} stroke="#8F8F8F" axisLine={false} tickLine={false} />
-                      <Tooltip content={<EvalTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => v === "rating" ? (locale === "en" ? "Actual rating (0-100)" : "Rating aktual (0-100)") : `K3 (skor konversi grade)`} />
-                      <ReferenceLine y={80} stroke="#E61919" strokeDasharray="5 5" label={{ value: "Target 80", position: "insideTopRight", fontSize: 10, fill: "#E61919" }} />
-                      <Bar dataKey="rating" name="rating" fill="#0A0A0A" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating} (subcontractors.rating), K3 ${pl.k3} (grade ${pl.k3Grade})`); }} style={{ cursor: "pointer" }} />
-                      <Bar dataKey="k3" name="k3" fill="#F04848" radius={[3, 3, 0, 0]} barSize={16} onClick={(d) => { const pl = (d as unknown as { payload?: { full?: string; rating?: number; k3?: number; k3Grade?: string } }).payload; if (pl?.full) toast(`${pl.full} — rating aktual ${pl.rating}, K3 ${pl.k3} (grade ${pl.k3Grade} → A+95/A90/B+82/B78/C65)`); }} style={{ cursor: "pointer" }} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="px-4 pb-3 text-[11px] text-steel-400">Asal angka: bar navy = `rating` tersimpan per subkontraktor; bar amber = `k3Score(k3)` dari grade K3. Hover untuk kontrak, WO aktif & termin Lunas. Klik bar untuk rincian.</p>
-              </Card>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <SearchBox
                   value={subQ}
@@ -1089,28 +1023,13 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                   ariaLabel={S.subSearchAria}
                   className="min-w-52 flex-1 sm:max-w-xs"
                 />
-                <FilterPopover
-                  activeCount={[subStatus !== "Semua", typeFilter !== "Semua"].filter(Boolean).length}
-                  initial={{ status: subStatus, tipe: typeFilter }}
-                  onReset={() => { setSubQ(""); setSubStatus("Semua"); setTypeFilter("Semua"); }}
-                  onApply={(d) => { setSubStatus(d.status); setTypeFilter(d.tipe); }}
-                >
-                  {(draft, setDraft) => (
-                    <div className="space-y-3">
-                      <Field label={S.statusLabel}>
-                        <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
-                          {["Semua", "Aktif", "Kualifikasi", "Blacklist"].map((s) => <option key={s} value={s}>{s === "Semua" ? S.allStatus : s}</option>)}
-                        </select>
-                      </Field>
-                      <Field label={S.contractTypeLabel}>
-                        <select className="input w-full" value={draft.tipe} onChange={(e) => setDraft({ ...draft, tipe: e.target.value })}>
-                          {["Semua", ...CONTRACT_TYPES].map((t) => <option key={t} value={t}>{t === "Semua" ? S.allTypes : t}</option>)}
-                        </select>
-                      </Field>
-                    </div>
-                  )}
-                </FilterPopover>
-                {(subQ.trim() !== "" || subStatus !== "Semua" || typeFilter !== "Semua") && (
+<StatusChips
+                  value={subStatus}
+                  onChange={setSubStatus}
+                  options={["Semua", "Aktif", "Kualifikasi", "Blacklist"].map((v) => ({ value: v, label: v === "Semua" ? S.allStatus : v }))}
+                  ariaLabel={S.statusLabel}
+                />
+                {(subQ.trim() !== "" || subStatus !== "Semua") && (
                   <span className="text-xs text-steel-400">
                     {S.subFilterActive.replace("{n}", String(filteredSubs.length))}
                   </span>
@@ -1143,10 +1062,6 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                     <p className="mt-1.5 text-xs text-steel-500">BG {s.noBG} · {fmtRupiah(Number(s.bgValue || 0))}{s.bgExpiry ? ` · exp ${fmtTanggal(String(s.bgExpiry))}` : ""}</p>
                   ) : null}
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-lg bg-surface p-2.5">
-                      <p className="text-xs text-steel-500">{S.scRatingLabel}</p>
-                      <p className="font-semibold text-navy-900">{s.rating}%</p>
-                    </div>
                     <div className="rounded-lg bg-surface p-2.5">
                       <p className="text-xs text-steel-500">{S.scK3Label}</p>
                       <p className="font-semibold text-navy-900">{s.k3}</p>

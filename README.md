@@ -39,21 +39,28 @@ Perintah di atas meng-install dependensi kedua paket dan menyalin `.env.example`
 ```bash
 cd services/api && npm run migrate && npm run seed && npm run dev
 ```
-Isi `JWT_SECRET` di `services/api/.env` dulu (≥ 32 karakter acak). Akun dev dibuat oleh `npm run seed` — lihat output terminal.
-
-> Sampai task [F0-03](docs/handoff/F0-setup.md) selesai, `.env` belum dimuat otomatis; jalankan dengan `node --env-file=.env` atau export variabelnya manual.
+Sebelum itu isi `services/api/.env` (dimuat otomatis oleh semua skrip npm):
+- `JWT_SECRET` — wajib, ≥ 32 karakter acak.
+- Akun dev: `npm run seed` membuat satu akun per peran. Password tiap akun diambil dari `SEED_PASSWORD_<PERAN>` (mis. `SEED_PASSWORD_DIREKTUR`); bila kosong, password acak dicetak sekali di terminal. Di `NODE_ENV=production` akun seed baru bisa login bila `ALLOW_SEED_LOGIN=true`. Jangan menaruh password di README, kode, atau commit.
 
 **Frontend** (port 5173):
 ```bash
 cd apps/web && npm run dev
 ```
-Isi `VITE_API_URL=http://localhost:3000` di `apps/web/.env` agar tersambung ke backend; kosong = mode lokal (data seed di browser).
+Isi `VITE_API_URL=http://localhost:3000` di `apps/web/.env` agar tersambung ke backend; kosong = mode lokal (data seed di browser, tanpa login server).
+
+Login: buka `http://localhost:5173`, masuk dengan akun peran (username `<peran>@galangan.com`).
 
 **Cek kualitas** (wajib hijau sebelum merge):
 ```bash
 npm run check
 ```
-Menjalankan type-check + probe render 28 halaman + probe domain (frontend) dan type-check + probe PDF + probe pagination (backend).
+Menjalankan type-check, lint, probe render halaman dan probe domain (frontend), lalu type-check, lint, dan probe PDF/keamanan/alur bisnis (backend). Probe backend membaca DB, jadi DB harus sudah dimigrasi dan di-seed. Untuk tidak menyentuh DB kerja, pakai DB sementara:
+```bash
+cd services/api && SQLITE_PATH=/tmp/isms-check.db npm run migrate && SQLITE_PATH=/tmp/isms-check.db npm run seed && cd ../.. && SQLITE_PATH=/tmp/isms-check.db npm run check
+```
+
+**Deploy & operasi:** [docs/runbook/](docs/runbook/) (backup harian, pemulihan). Naskah demo per alur: [docs/demo/](docs/demo/).
 
 ## Modul
 

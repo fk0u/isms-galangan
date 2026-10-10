@@ -32,8 +32,10 @@
     "probe:project-add": "vite build --ssr scripts/project-add-probe.tsx --outDir node_modules/.cache/project-add-probe --emptyOutDir --logLevel error && node node_modules/.cache/project-add-probe/project-add-probe.js",
     "probe:progress": "vite build --ssr scripts/project-progress-probe.ts --outDir node_modules/.cache/project-progress-probe --emptyOutDir --logLevel error && node node_modules/.cache/project-progress-probe/project-progress-probe.js",
     "probe:wbs": "vite build --ssr scripts/wbs-flow-probe.ts --outDir node_modules/.cache/wbs-flow-probe --emptyOutDir --logLevel error && node node_modules/.cache/wbs-flow-probe/wbs-flow-probe.js",
-    "lint": "eslint .",
-    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion && npm run probe:drydock-dates && npm run probe:equipment-notif && npm run probe:qc-deep-link && npm run probe:termin && npm run probe:stock-issue && npm run probe:hr-rules"
+    "lint": "eslint . --max-warnings=74",
+    "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm test && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion && npm run probe:drydock-dates && npm run probe:equipment-notif && npm run probe:qc-deep-link && npm run probe:termin && npm run probe:stock-issue && npm run probe:hr-rules && npm run probe:i18n",
+    "test": "vitest run",
+    "probe:i18n": "vite build --ssr scripts/i18n-probe.ts --outDir node_modules/.cache/i18n-probe --emptyOutDir --logLevel error && node node_modules/.cache/i18n-probe/i18n-probe.js"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -44,7 +46,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.71.1",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@google/model-viewer": "^4.3.1",

@@ -60,6 +60,11 @@ const SETTINGS: SeedRow[] = [
   S("SET-EQLAB","EQUIP_LABOR_RATE_PER_DAY",1100000,"Tarif tenaga servis / hari (Rp)","Equipment"),
   S("SET-TARIFKWH","TARIF_LISTRIK_KWH",1650,"Tarif listrik (Rp/kWh)","Equipment"),
   S("SET-TARIFAIR","TARIF_AIR_M3",15000,"Tarif air (Rp/m3)","Equipment"),
+  S("SET-RISKTBL","SHOW_RISK_TABLE",0,"Tampilkan tabel risiko di detail proyek (0/1)","Modul"),
+  S("SET-SJ","SHOW_SURAT_JALAN",0,"Tampilkan surat jalan/DO di Inventori (0/1)","Modul"),
+  /* Kop surat PDF (F3-L-05). Nilai = JSON objek; kunci yang diisi menimpa kop
+     bawaan: name, line1, hq, addr1, addr2, hp. "{}" = pakai kop bawaan. */
+  { table: "settings", id: "SET-KOP", branch: "Samarinda", data: { key: "COMPANY_KOP", value: "{}", label: "Kop surat PDF (JSON: name, line1, hq, addr1, addr2, hp)", group: "Perusahaan" } },
 ];
 
 const COA: Array<[string, string, string, string]> = [

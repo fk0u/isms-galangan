@@ -18,6 +18,10 @@ function isSetupTokenValid(expected: string | undefined, provided: unknown): boo
 
 export function registerAdminRoutes(app: FastifyInstance): void {
   app.post("/api/admin/seed", async (req, reply) => {
+    // S-08: di produksi endpoint ini mati; seed hanya lewat CLI di server.
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_ADMIN_SEED !== "true") {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     const check = seedLimiter(getClientIp(req));
     if (!check.allowed) {
       reply.header("Retry-After", String(check.retryAfterSec));

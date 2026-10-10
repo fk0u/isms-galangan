@@ -13,6 +13,7 @@ import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError } from "../dockFit.js";
+import { scopedProjectIds } from "../teamScope.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
@@ -380,6 +381,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       where.push(getDialect() === "mysql" ? "LOCATE(?, data) > 0" : "instr(data, ?) > 0");
       params.push(query.q);
     }
+    if (table === "projects") {
+      const scope = await scopedProjectIds(req.user);
+      if (scope !== null) {
+        if (scope.size === 0) where.push("1 = 0");
+        else { where.push(`id IN (${[...scope].map(() => "?").join(",")})`); params.push(...scope); }
+      }
+    }
     const limit = parseLimit(query.limit);
     const offset = parseOffset(query.offset);
     const cursor = parseCursor(query.after);
@@ -429,6 +437,11 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const { id } = req.params as { id: string };
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    if (table === "projects") {
+      // Di luar lingkup tim = 404, sama seperti tidak ada (tidak membocorkan keberadaan).
+      const scope = await scopedProjectIds(req.user);
+      if (scope !== null && !scope.has(id)) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     return ok(toJson(rows[0] as Row));
   });
 

@@ -210,6 +210,18 @@ export default function KaryawanDetail() {
   const skillLevels = (emp.skillLevels && typeof emp.skillLevels === "object" ? emp.skillLevels : {}) as Record<string, SkillLevel>;
   const allSkills = [...new Set(data.employees.flatMap((e) => getSkills(e)))].sort();
 
+  /* PIN cuti (F3-L-06) dikirim ke server dan di-hash di sana; tidak pernah
+     disimpan di data karyawan maupun di browser. */
+  const setLeavePin = async (): Promise<void> => {
+    const pin = window.prompt(E.pinPrompt.replace("{n}", String(emp.name)))?.trim();
+    if (pin === undefined) return;
+    if (!/^\d{6}$/.test(pin)) { toast(E.pinBad, "info"); return; }
+    try {
+      await apiFetch(`/api/employees/${String(emp.id)}/leave-pin`, { method: "POST", body: JSON.stringify({ pin }) });
+      toast(E.pinSaved.replace("{n}", String(emp.name)));
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
   const saveSkill = async () => {
     const extra = skillInput.split(",").map((s) => s.trim()).filter(Boolean);
     if (extra.length === 0) {
@@ -516,6 +528,9 @@ export default function KaryawanDetail() {
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlBasic}</dt><dd className="font-medium">{fmtRupiah(Number(emp.basic || 0))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.fAllow}</dt><dd className="font-medium">{fmtRupiah(sumAllowances(emp.allowances))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlAkun}</dt><dd className="font-medium"><AkunLogin employeeId={String(emp.id)} /></dd></div>
+            {isBackendConfigured() && (
+              <div className="flex justify-end pt-2"><button type="button" className="btn-secondary text-xs" onClick={() => void setLeavePin()}>{E.pinBtn}</button></div>
+            )}
           </dl>
           {/* Riwayat kontrak dari arsip surat (F3-L-05): terbaru di atas. */}
           <h3 className="mt-4 text-sm font-semibold text-navy-900">{E.contractHistory}</h3>

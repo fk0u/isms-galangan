@@ -610,6 +610,7 @@ export const seedBast: StoreItem[] = [
 
 export const seedTrials: StoreItem[] = [
   { id: "TRIAL-001", projectId: "RP-2026-003", parameter: "Speed & bollard pull trial", tanggal: "2026-08-20", hasil: "Lulus", punchList: [], baRef: "BAST-SMD-2026-002" },
+  { id: "TRIAL-002", projectId: "RP-2026-007", parameter: "Dock trial & uji mesin bantu", tanggal: "2026-10-09", hasil: "Berjalan", punchList: ["Kebocoran kecil seal pompa bilga"], baRef: "", kondisi: "Perlu Perbaiki" },
 ];
 export const seedRequests: StoreItem[] = [
   { id: "REQ-2026-001", vessel: "TB Karya Bahari 12", client: "PT Karya Bahari Sejahtera", kind: "Repair Request", scope: "Overhaul main engine + coating lambung", value: 4200000000, status: "Baru", date: "2026-08-01" },
@@ -781,4 +782,11 @@ export const seedTerminsDemo: StoreItem[] = [
   { id: "TRM-2026-051", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "DP 1", progress: "WO-2026-061 (0%)", amount: 180000000, pphPct: 2, retPct: 5, status: "Disetujui", date: "2026-09-28", fromScheme: "DP" },
   { id: "TRM-2026-052", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "DP 2", progress: "WO-2026-061 (0%)", amount: 180000000, pphPct: 2, retPct: 5, status: "Draf", date: "2026-09-28", fromScheme: "DP" },
   { id: "TRM-2026-053", sub: "CV Pengecatan Marine", woId: "WO-2026-061", project: "RP-2026-003", milestone: "Pelunasan", progress: "WO-2026-061 (0%)", amount: 240000000, pphPct: 2, retPct: 5, status: "Draf", date: "2026-09-28", fromScheme: "DP" },
+];
+
+/* F5-03: garansi/DLP untuk proyek yang sudah selesai, supaya tab Terkait dan
+   cetak kartu garansi punya contoh. */
+export const seedWarranties: StoreItem[] = [
+  { id: "WRT-2026-001", projectId: "RP-2026-002", vessel: "TB Mitra Raya 09", start: "2026-07-15", months: 12, status: "Aktif", branch: "Samarinda" },
+  { id: "WRT-2026-002", projectId: "RP-2026-008", vessel: "BG MHKL 35", wbsTask: "Hull Assembly", start: "2026-09-01", months: 6, status: "Aktif", branch: "Samarinda" },
 ];

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import type { ReactElement } from "react";
@@ -10,32 +10,33 @@ import { SecurityGuards } from "./security/watermark";
 import AppShell from "./layouts/AppShell";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";
-import Projects from "./pages/proyek/Projects";
-import ProjectDetail from "./pages/proyek/ProjectDetail";
-import Inventory from "./pages/inventori/Inventory";
-import Finance from "./pages/keuangan/Finance";
-import HR from "./pages/sdm/HR";
-import CRM from "./pages/crm/CRM";
-import Procurement from "./pages/procurement/Procurement";
-import QCSafety from "./pages/qc/QCSafety";
-import Drydock from "./pages/drydock/Drydock";
-import Subcontractor from "./pages/subkontraktor/Subcontractor";
-import Vessels from "./pages/kapal/Vessels";
-import VesselDetail from "./pages/kapal/VesselDetail";
-import EquipmentPage from "./pages/equipment/Equipment";
-import Documents from "./pages/dokumen/Documents";
-import Absensi from "./pages/absensi/Absensi";
-import Payroll from "./pages/payroll/Payroll";
-import Laporan from "./pages/laporan/Laporan";
-import Monitoring from "./pages/proyek/Monitoring";
-import BomDetail from "./pages/inventori/BomDetail";
-import KaryawanDetail from "./pages/sdm/KaryawanDetail";
-import QuotationDetail from "./pages/crm/QuotationDetail";
-import Settings from "./pages/pengaturan/Settings";
-import Peran from "./pages/pengaturan/Peran";
-import Notifikasi from "./pages/notifikasi/Notifikasi";
-import Audit from "./pages/audit/Audit";
+const CutiQr = lazyPage(() => import("./pages/publik/CutiQr"));
+const Analytics = lazyPage(() => import("./pages/Analytics"));
+const Projects = lazyPage(() => import("./pages/proyek/Projects"));
+const ProjectDetail = lazyPage(() => import("./pages/proyek/ProjectDetail"));
+const Inventory = lazyPage(() => import("./pages/inventori/Inventory"));
+const Finance = lazyPage(() => import("./pages/keuangan/Finance"));
+const HR = lazyPage(() => import("./pages/sdm/HR"));
+const CRM = lazyPage(() => import("./pages/crm/CRM"));
+const Procurement = lazyPage(() => import("./pages/procurement/Procurement"));
+const QCSafety = lazyPage(() => import("./pages/qc/QCSafety"));
+const Drydock = lazyPage(() => import("./pages/drydock/Drydock"));
+const Subcontractor = lazyPage(() => import("./pages/subkontraktor/Subcontractor"));
+const Vessels = lazyPage(() => import("./pages/kapal/Vessels"));
+const VesselDetail = lazyPage(() => import("./pages/kapal/VesselDetail"));
+const EquipmentPage = lazyPage(() => import("./pages/equipment/Equipment"));
+const Documents = lazyPage(() => import("./pages/dokumen/Documents"));
+const Absensi = lazyPage(() => import("./pages/absensi/Absensi"));
+const Payroll = lazyPage(() => import("./pages/payroll/Payroll"));
+const Laporan = lazyPage(() => import("./pages/laporan/Laporan"));
+const Monitoring = lazyPage(() => import("./pages/proyek/Monitoring"));
+const BomDetail = lazyPage(() => import("./pages/inventori/BomDetail"));
+const KaryawanDetail = lazyPage(() => import("./pages/sdm/KaryawanDetail"));
+const QuotationDetail = lazyPage(() => import("./pages/crm/QuotationDetail"));
+const Settings = lazyPage(() => import("./pages/pengaturan/Settings"));
+const Peran = lazyPage(() => import("./pages/pengaturan/Peran"));
+const Notifikasi = lazyPage(() => import("./pages/notifikasi/Notifikasi"));
+const Audit = lazyPage(() => import("./pages/audit/Audit"));
 import { ErrorBoundary } from "./components/ui";
 import { ApiError } from "./services/http";
 
@@ -70,11 +71,25 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
  * kasus normal, karena componentDidUpdate hanya bereaksi saat state.error
  * sudah terisi.
  */
+/* F4-06: halaman dimuat per rute. Setelah deploy, tab lama bisa meminta
+   chunk yang sudah tidak ada di server - muat ulang SEKALI agar mengambil
+   index.html baru, bukan menampilkan layar galat. */
+function lazyPage<T extends { default: React.ComponentType }>(load: () => Promise<T>) {
+  return lazy(() => load().then((m) => { sessionStorage.removeItem("isms.chunk.reload"); return m; }).catch((err: unknown) => {
+    if (sessionStorage.getItem("isms.chunk.reload") !== "1") {
+      sessionStorage.setItem("isms.chunk.reload", "1");
+      window.location.reload();
+      return new Promise<T>(() => {}); // menunggu reload
+    }
+    throw err;
+  }));
+}
+
 function Guard({ title, children }: { title: string; children: ReactElement }) {
   const { pathname, search } = useLocation();
   return (
     <ErrorBoundary title={title} resetKey={`${pathname}${search}`}>
-      {children}
+      <Suspense fallback={<div className="p-6 text-sm text-steel-400" role="status" aria-busy="true">…</div>}>{children}</Suspense>
     </ErrorBoundary>
   );
 }
@@ -88,6 +103,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            {/* Publik (tanpa login): pengajuan cuti dari QR bengkel. */}
+            <Route path="/f/cuti/:token" element={<Suspense fallback={null}><CutiQr /></Suspense>} />
             <Route
               element={
                 <RequireAuth>

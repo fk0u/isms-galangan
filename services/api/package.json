@@ -37,6 +37,11 @@
     "probe:material": "tsx --env-file-if-exists=.env scripts/material-flow-probe.ts",
     "probe:service": "tsx --env-file-if-exists=.env scripts/service-flow-probe.ts",
     "probe:po-partial": "tsx --env-file-if-exists=.env scripts/po-partial-probe.ts",
+    "probe:public-leave": "tsx scripts/public-leave-probe.ts",
+    "probe:attendance-ingest": "tsx scripts/attendance-ingest-probe.ts",
+    "probe:files-privacy": "tsx scripts/files-privacy-probe.ts",
+    "probe:team-scope": "tsx scripts/team-scope-probe.ts",
+    "probe:events": "tsx scripts/events-probe.ts",
     "probe:dock-fit": "tsx scripts/dock-fit-probe.ts",
     "probe:backup": "tsx --env-file-if-exists=.env scripts/backup-restore-probe.ts",
     "probe:concurrency": "tsx --env-file-if-exists=.env scripts/concurrency-probe.ts",
@@ -49,8 +54,9 @@
     "probe:boq": "tsx --env-file-if-exists=.env scripts/boq-docs-probe.ts",
     "probe:drydock": "tsx --env-file-if-exists=.env scripts/drydock-booking-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
-    "lint": "eslint .",
-    "check": "tsc --noEmit && npm run lint && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit"
+    "lint": "eslint . --max-warnings=29",
+    "check": "tsc --noEmit && npm run lint && npm test && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
@@ -71,6 +77,7 @@
     "eslint": "^9.39.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.71.1"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^3.2.7"
   }
 }

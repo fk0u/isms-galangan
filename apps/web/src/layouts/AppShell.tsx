@@ -46,11 +46,13 @@ import { buildModuleAlertItems, badgeCount, countByLevel, type ModuleAlertKey } 
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import { remoteRepository } from "../services/repositories";
+import { useRealtime } from "../data/useRealtime";
 import { recentModuleSync, useFailedCollections, useModuleSyncing } from "../data/useModuleSync";
 import { getJwt, isBackendConfigured } from "../services/http";
 
 export default function AppShell() {
   const { user, logout } = useAuth();
+  useRealtime(Boolean(user));
   const { t, locale, setLocale } = useT();
   const { data, reset, branch, setBranch, backendMode, backendError, pendingSync, pushPending, resync } = useStore();
   /* Cabang yang boleh diakses akun ini, dari claim JWT (`/api/auth/me`).

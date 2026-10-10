@@ -84,6 +84,7 @@ function otStatusOf(a: StoreItem): string {
 }
 
 import MonthlyRecap from "./MonthlyRecap";
+import DeviceImport from "./DeviceImport";
 import { n_emp } from "../../i18n/n_emp";
 
 export default function Absensi() {
@@ -472,6 +473,7 @@ export default function Absensi() {
       />
 
       <div className="card">
+        <DeviceImport />
         <Tabs tabs={["Bulanan", "Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap }} />
         <div className="p-4">
           {tab === "Bulanan" && <MonthlyRecap />}

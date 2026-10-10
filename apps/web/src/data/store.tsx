@@ -37,7 +37,7 @@ import {
   seedAttendance, seedAttendanceMonth, seedChecklistResponses, seedWorkOrdersDemo, seedTerminsDemo, seedPayroll, seedTaxPeriods, seedRfqs, seedChangeOrders,
   seedRisks, seedLeaves, seedTrainings, seedTimesheets, seedDrawings,
   seedToolbox, seedCalibrations, seedCommunications, seedContracts, seedBast,
-  seedTrials, seedRequests, seedClientPos,
+  seedTrials, seedRequests, seedClientPos, seedWarranties,
   seedWarehouses, seedMaintenances, seedLetters,
 } from "./seeds";
 
@@ -236,6 +236,9 @@ const seedSettings: StoreItem[] = [
   { id: "SET-EQLAB", key: "EQUIP_LABOR_RATE_PER_DAY", value: loadedLaborRatePerDay("welder"), label: "Tarif tenaga servis / hari (Rp)", group: "Equipment" },
   { id: "SET-TARIFKWH", key: "TARIF_LISTRIK_KWH", value: 1650, label: "Tarif listrik (Rp/kWh)", group: "Equipment" },
   { id: "SET-TARIFAIR", key: "TARIF_AIR_M3", value: 15000, label: "Tarif air (Rp/m3)", group: "Equipment" },
+  { id: "SET-RISKTBL", key: "SHOW_RISK_TABLE", value: 0, label: "Tampilkan tabel risiko di detail proyek (0/1)", group: "Modul" },
+  { id: "SET-SJ", key: "SHOW_SURAT_JALAN", value: 0, label: "Tampilkan surat jalan/DO di Inventori (0/1)", group: "Modul" },
+  { id: "SET-KOP", key: "COMPANY_KOP", value: "{}", label: "Kop surat PDF (JSON: name, line1, hq, addr1, addr2, hp)", group: "Perusahaan" },
   { id: "SET-ALCERT60", key: "ALERT_CERT_60", value: 60, label: "Alert sertifikat warning H- (hari)", group: "Alert" },
   { id: "SET-ALCERT30", key: "ALERT_CERT_30", value: 30, label: "Alert sertifikat critical H- (hari)", group: "Alert" },
   { id: "SET-ALMS", key: "ALERT_MILESTONE_DAYS", value: 7, label: "Alert milestone H- (hari)", group: "Alert" },
@@ -323,7 +326,7 @@ function buildSeeds(): StoreShape {
      timesheets: clone(seedTimesheets),
      drawings: clone(seedDrawings),
      toolbox: clone(seedToolbox),
-     warranties: [],
+     warranties: clone(seedWarranties),
      calibrations: clone(seedCalibrations),
        communications: clone(seedCommunications),
         contracts: clone(seedContracts),
