@@ -39,7 +39,6 @@ import { exportExcel } from "../../utils/export";
 import { cmpJam, fmtJam24, norm24 } from "../../utils/time24";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 
-const SHIFTS = ["Pagi", "Siang", "Malam"];
 const STATUS = ["Hadir", "Izin", "Sakit", "Cuti", "Alpa"];
 
 /* Jam masuk acuan per shift untuk hitung telat (bukan hardcoded 08:00). */
@@ -84,15 +83,19 @@ function otStatusOf(a: StoreItem): string {
   return Number(a.overtime || 0) > 0 ? "Diajukan" : "-";
 }
 
+import MonthlyRecap from "./MonthlyRecap";
+import { n_emp } from "../../i18n/n_emp";
+
 export default function Absensi() {
   const { data, add, update, remove, log, branch, setBranch, inBranch } = useStore();
   const { locale } = useT();
   const S = n_misc[locale];
-  const [tab, setTab] = useState("Catat");
+  // F3-L-07: halaman langsung membuka rekap bulanan.
+  const [tab, setTab] = useState("Bulanan");
 
   /* ---------- catat ---------- */
   const [date, setDate] = useState(todayISO());
-  const [shift, setShift] = useState("Pagi");
+  const shift = "Pagi"; // F3-L-07: shift dihapus dari UI, nilai tetap untuk kompatibilitas data.
   const [rows, setRows] = useState<Record<string, CatatRow>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dupeCount, setDupeCount] = useState(0);
@@ -469,8 +472,9 @@ export default function Absensi() {
       />
 
       <div className="card">
-        <Tabs tabs={["Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Catat: S.tabRecord, Rekap: S.tabRecap }} />
+        <Tabs tabs={["Bulanan", "Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap }} />
         <div className="p-4">
+          {tab === "Bulanan" && <MonthlyRecap />}
           {tab === "Catat" && (
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -478,13 +482,7 @@ export default function Absensi() {
                   {S.dateFieldLabel}
                   <input type="date" className="input w-auto" value={date} onChange={(e) => setDate(e.target.value)} />
                 </label>
-                <label className="flex items-center gap-2 text-sm text-steel-600">
-                  {S.shiftLabel}
-                  <select className="input w-auto" value={shift} onChange={(e) => setShift(e.target.value)}>
-                    {SHIFTS.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                  <span className="text-xs text-steel-400">Masuk {SHIFT_START[shift] ?? "08:00"} · telat dihitung per shift</span>
-                </label>
+                {/* F3-L-07: tanpa shift — jam kerja standar dari pengaturan; nilai shift lama tetap "Pagi". */}
                 <select className="input w-auto" value={branch} onChange={(e) => setBranch(e.target.value)} aria-label={S.branchFilterShortAria}>
                   <option value="SEMUA">{S.allBranches}</option>
                   {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}

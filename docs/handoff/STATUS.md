@@ -82,12 +82,12 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-K-03 | Inspeksi per proyek | P0 | F3-K-qc-safety.md | Claude | review | feat/F3-K-qc — tab Inspeksi Proyek: proyek → WBS → kuesioner → skor & riwayat; skor < ambang → tawaran NCR |
 | F3-K-04 | HSE: kuesioner pekerja | P1 | F3-K-qc-safety.md | | todo | |
 | F3-L-01 | Tabel karyawan & tab | P1 | F3-L-sdm-absensi.md | agent | jalan | |
-| F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | | todo | |
+| F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — tipe, pendidikan, jenis kelamin, status kawin, tanggungan → PTKP otomatis (utils/ptkp.ts), kontrak, foto/KTP/ijazah; `probe:hr-rules` |
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | todo | |
 | F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | todo | |
-| F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | | todo | |
+| F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — rekap bulanan karyawan × tanggal (filter bulan & tahun), tanpa shift, lembur otomatis dengan batas harian/mingguan (utils/overtime.ts) |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | todo | |
 | F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | agent | review | Branch feat/F3-M-01-detail-data-kapal; basis origin/main e984be5; PR #38; root check + build lulus; UI diverifikasi |
 | F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | todo | |
