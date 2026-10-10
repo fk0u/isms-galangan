@@ -112,7 +112,7 @@ export const seedRequisitions: StoreItem[] = [
   { id: "PR-2026-203", item: "Pelat Baja AH36", by: "Fajar N.", amount: 4120000000, status: "Sudah PO" },
   { id: "PR-2026-207", item: "Cat Epoxy", by: "Rudi H.", amount: 480000000, status: "Menunggu Approval" },
   { id: "PR-2026-209", item: "Wire Rope", by: "Sari W.", amount: 210000000, status: "RFQ" },
-  { id: "PR-2026-211", item: "Anoda Zink", by: "Agus S.", amount: 94000000, status: "Menunggu Approval" },
+  { id: "PR-2026-211", item: "Anoda Zink", by: "Agus S.", amount: 4200000, qty: 20, unit: "pcs", itemId: "INV-005", status: "Menunggu Approval", sourceRequestIds: ["MR-2026-002"], projectId: "RP-2026-003" },
   // RawData: PR yang menjadi PO-SB (CONTOH HUTANG + FORMAT PO).
   { id: "PR-SB-2024-006", item: "Besi WF (250/150/200)", by: "Fajar N.", amount: 27811050, status: "Sudah PO" },
   { id: "PR-SB-2026-004", item: "PLAT 14MM", by: "Agus S.", amount: 36341622, status: "Sudah PO" },

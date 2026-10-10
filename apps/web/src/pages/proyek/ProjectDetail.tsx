@@ -618,7 +618,16 @@ const createWarranty = async (wbsTask?: string) => {
      sebagai "committed" - bukan dicampur ke realized. */
   const equipCost = equipmentCostSummary(pid, data.bookings, data.maintenances, data.equipment);
   const equipHasCost = equipCost.totalRealized > 0 || equipCost.totalCommitted > 0;
-  const hppWithEquip = Number(project.actual ?? 0) + equipCost.totalRealized;
+  /* F3-D-02: biaya service yang sudah Selesai ikut dibebankan ke biaya proyek. */
+  const serviceCostDone = (data.services ?? [])
+    .filter((sv) => String(sv.projectId ?? "") === pid && String(sv.status ?? "") === "Done")
+    .reduce((sum, sv) => sum + (Number(sv.cost) || 0), 0);
+  // Komitmen: service disetujui yang sedang berjalan/terjadwal (belum dibebankan).
+  const serviceCostCommitted = (data.services ?? [])
+    .filter((sv) => String(sv.projectId ?? "") === pid && ["Scheduled", "In Progress"].includes(String(sv.status ?? ""))
+      && String(sv.approval ?? "Disetujui") === "Disetujui")
+    .reduce((sum, sv) => sum + (Number(sv.cost) || 0), 0);
+  const hppWithEquip = Number(project.actual ?? 0) + equipCost.totalRealized + serviceCostDone;
 
   // SATU angka grand invoice: grandTotal bila ada, else amount dikurangi retensi.
   const invGrand = (i: StoreItem): number => {
@@ -1494,7 +1503,8 @@ const createWarranty = async (wbsTask?: string) => {
                 {(() => {
                   const pv = project.budget;
                   const ev = Math.round((project.budget * project.progress) / 100);
-                  const ac = project.actual;
+                  // AC = biaya aktual + equipment + service Selesai (lihat hppWithEquip).
+                  const ac = hppWithEquip;
                   const spi = pv > 0 ? ev / pv : 0;
                   const cpi = ac > 0 ? ev / ac : 0;
                   const eac = cpi > 0 ? Math.round(ac / cpi) : ac;
@@ -1526,6 +1536,24 @@ const createWarranty = async (wbsTask?: string) => {
                 </div>
               </Card>
             </div>
+
+            {/* F3-D-02: biaya service masuk biaya proyek (Selesai = realisasi). */}
+            <Card className="mt-4 p-5">
+              <h3 className="mb-1 text-sm font-semibold text-navy-900">{S.detSvcCostTitle}</h3>
+              <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {([
+                  [S.detSvcCostDone, serviceCostDone],
+                  [S.detSvcCostCommitted, serviceCostCommitted],
+                  [S.detSvcCostTotal, hppWithEquip],
+                ] as [string, number][]).map(([label, v]) => (
+                  <div key={label} className="rounded-xl border border-steel-100 p-2.5">
+                    <p className="text-[11px] text-steel-500">{label}</p>
+                    <p className="text-sm font-semibold tabular-nums text-navy-900">{fmtRupiah(v)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-steel-500">{S.detSvcCostHint}</p>
+            </Card>
 
             {/* ==== BIAYA EQUIPMENT YANG DIBEBANKAN KE HPP PROYEK ====
                 Booking equipment (alokasi) + material maintenanceequipment
@@ -1643,8 +1671,8 @@ const createWarranty = async (wbsTask?: string) => {
                   {/* Efek ke EAC: CPI dengan AC + equipment, bukan AC saja. */}
                   <p className="mt-4 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">
                     {locale === "en"
-                      ? `Actual cost used in EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} = ${fmtRupiah(hppWithEquip)}.`
-                      : `Biaya aktual dipakai untuk EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} = ${fmtRupiah(hppWithEquip)}.`}
+                      ? `Actual cost used in EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + services ${fmtRupiah(serviceCostDone)} = ${fmtRupiah(hppWithEquip)}.`
+                      : `Biaya aktual dipakai untuk EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + service ${fmtRupiah(serviceCostDone)} = ${fmtRupiah(hppWithEquip)}.`}
                     {equipCost.maintenanceCommitted > 0 && (
                       <span className="block text-amber-600">
                         {locale === "en"

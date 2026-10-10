@@ -12,6 +12,7 @@ import type { ServiceRecord, Sparepart } from "../../data";
 import { SearchSelect } from "../../components/SearchSelect";
 import { useMaterialRequest } from "../../data/useMaterialRequest";
 import { useAuth } from "../../auth/auth";
+import { approvalOf, useServiceApproval } from "../../data/useServiceApproval";
 
 export type SparepartServiceView = "3d" | "service" | "sparepart" | "all";
 
@@ -38,7 +39,8 @@ interface Props {
 export default function SparepartServiceSection({ projectId, vesselId, view = "all" }: Props) {
   const { locale } = useT();
   const S = n_prj[locale];
-  const { data, add, update, remove, log } = useStore();
+  const { data, add, update, remove, log, wbsFor } = useStore();
+  const setServiceApproval = useServiceApproval();
   const requestMaterial = useMaterialRequest();
   const { user } = useAuth();
   const [spTab, setSpTab] = useState("Semua");
@@ -50,7 +52,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
   const [showAddSvc, setShowAddSvc] = useState(false);
   const [editSvc, setEditSvc] = useState<SvcExt | null>(null);
   const [delSvc, setDelSvc] = useState<SvcExt | null>(null);
-  const [svcForm, setSvcForm] = useState({ type: "Repair" as ServiceRecord["type"], description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled" as ServiceRecord["status"], boqRef: "" });
+  const [svcForm, setSvcForm] = useState({ type: "Repair" as ServiceRecord["type"], description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled" as ServiceRecord["status"], boqRef: "", wbsTask: "", costReason: "" });
   const [svcStatus, setSvcStatus] = useState<string>("Semua");
   const [svcQ, setSvcQ] = useState("");
   const [cancelFor, setCancelFor] = useState<SvcExt | null>(null);
@@ -107,11 +109,13 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       cost: String(s.cost ?? ""),
       status: (s.status === "Batal" ? "Scheduled" : s.status) as ServiceRecord["status"],
       boqRef: String(s.boqRef ?? ""),
+      wbsTask: String(s.wbsTask ?? ""),
+      costReason: String(s.costReason ?? ""),
     });
   };
 
   const EMPTY_SP = { name: "", partNumber: "", category: "Mechanical", status: "Akan" as "Akan" | "Sedang" | "Selesai", cost: "", notes: "", technician: "", usedDate: "", warrantyUntil: "", poRef: "", invItemId: "", qty: "1" };
-  const EMPTY_SVC = { type: "Repair" as ServiceRecord["type"], description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled" as ServiceRecord["status"], boqRef: "" };
+  const EMPTY_SVC = { type: "Repair" as ServiceRecord["type"], description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled" as ServiceRecord["status"], boqRef: "", wbsTask: "", costReason: "" };
 
   /* Tombol "Tambah" harus membuka form KOSONG. Versi lama memakai state form
      yang sama dengan form edit, jadi data item terakhir ikut terbawa. */
@@ -189,7 +193,10 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
   const spLbl: Record<string, string> = { Semua: S.filterAll, Akan: S.spAkan, Sedang: S.spSedang, Selesai: S.spSelesai };
 
   const advanceService = async (s: SvcExt, next: SvcExt["status"]) => {
-    await update("services", s.id, { status: next });
+    if (approvalOf(s as unknown as Record<string, unknown>) !== "Disetujui") { toast(S.spsNeedApproval, "info"); return; }
+    try {
+      await update("services", s.id, { status: next });
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); return; }
     log("mengubah status service", `${s.id} → ${next}`, "Service");
     toast(next === "Done" ? S.spsToastSvcDone : S.spsToastSvcStart);
   };
@@ -366,33 +373,73 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
     setForm(EMPTY_SP);
   };
 
+  // Proyek service yang sedang diubah (tab kapal hanya mengirim vesselId).
+  const svcProjectId = projectId || String(editSvc?.projectId ?? "");
+  const svcWbsOptions = useMemo(
+    () => (svcProjectId ? wbsFor(svcProjectId).map((w) => String(w.task)) : []),
+    [svcProjectId, wbsFor],
+  );
+  /* Item dari surat BoQ yang sudah Digantikan/Ditolak tidak relevan lagi
+     (revisi menyalin item → nama ganda di dropdown). */
+  const svcBoqItems = useMemo(() => {
+    if (!projectId) return [];
+    const deadDocs = new Set((data.boqDocs ?? [])
+      .filter((d) => ["Digantikan", "Ditolak"].includes(String(d.status ?? "")))
+      .map((d) => String(d.id)));
+    return (data.boq ?? []).filter((b) => String(b.projectId ?? "") === projectId && !deadDocs.has(String(b.boqDocId ?? "")));
+  }, [data.boq, data.boqDocs, projectId]);
+  const svcBoqItem = svcBoqItems.find((b) => String(b.id) === svcForm.boqRef);
+  const svcBoqPrice = svcBoqItem ? Number(svcBoqItem.totalPrice ?? 0) || 0 : null;
+  /* Teknisi dari data karyawan bila peran ini boleh membacanya; selain itu input bebas. */
+  const techOptions = useMemo(
+    () => (data.employees ?? []).filter((e) => String(e.status ?? "Aktif") === "Aktif").map((e) => ({
+      value: String(e.name ?? e.id), label: String(e.name ?? e.id), subLabel: String(e.role ?? e.dept ?? ""),
+    })),
+    [data.employees],
+  );
+
+  const resubmitService = async (s: SvcExt) => {
+    try {
+      await setServiceApproval(s.id, "Diajukan", "", user?.name ?? "");
+      toast(S.spsSvcSubmitted);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
   const saveService = async () => {
     if (!svcForm.description.trim()) { toast(S.spsToastSvcDesc, "info"); return; }
     if (!projectId && !vesselId && !editSvc) { toast(S.spsToastSvcCtx, "info"); return; }
-const payload = {
+    // F3-D-02: service proyek berasal dari pekerjaan WBS.
+    const svcProject = editSvc ? String(editSvc.projectId ?? "") : (projectId ?? "");
+    if (svcProject && !svcForm.wbsTask) { toast(S.spsSvcWbsReq, "info"); return; }
+    const cost = parseRupiah(svcForm.cost);
+    if (svcBoqPrice !== null && cost !== svcBoqPrice && !svcForm.costReason.trim()) { toast(S.spsSvcCostReasonReq, "info"); return; }
+    /* Status kerja TIDAK diubah dari form: berpindah lewat tombol Mulai/Selesai
+       yang dijaga persetujuan procurement. */
+    const payload = {
         date: svcForm.date,
         type: svcForm.type,
         description: svcForm.description.trim(),
-        status: svcForm.status,
         technician: svcForm.technician.trim() || "Belum ditentukan",
-        cost: parseRupiah(svcForm.cost),
+        cost,
+        wbsTask: svcForm.wbsTask,
+        costReason: svcBoqPrice !== null && cost !== svcBoqPrice ? svcForm.costReason.trim() : "",
         ...(svcForm.boqRef ? { boqRef: svcForm.boqRef } : {}),
       };
     if (editSvc) {
-      /* Bila status awal "Batal", JANGAN ubah status saat edit -
-         membatalkan service tak sengaja adalah bug integritas data nyata. */
-      const wasCancelled = String(editSvc.status) === "Batal";
-      const patch = wasCancelled ? { ...payload, status: "Batal" as const } : payload;
-      await update("services", editSvc.id, patch);
+      await update("services", editSvc.id, payload);
       log("mengubah service", `${editSvc.id} · ${payload.description}`, "Service");
       toast(locale === "en" ? "Service updated" : "Service diperbarui");
       setEditSvc(null);
       return;
     }
-    await add("services", { projectId: projectId ?? "", vesselId: vesselId ?? "", ...payload }, { action: "menambahkan service", module: "Service" });
-    toast(S.spsToastSvcAdd);
+    // Hanya service proyek yang perlu persetujuan procurement; service kapal langsung terjadwal.
+    await add("services", {
+      projectId: projectId ?? "", vesselId: vesselId ?? "", ...payload, status: "Scheduled",
+      ...(projectId ? { approval: "Diajukan" } : {}),
+    }, { action: projectId ? "mengajukan service" : "menambahkan service", module: "Service" });
+    toast(projectId ? S.spsSvcSubmitted : S.spsToastSvcAdd);
     setShowAddSvc(false);
-    setSvcForm({ type: "Repair", description: "", date: new Date().toISOString().slice(0, 10), technician: "", cost: "", status: "Scheduled", boqRef: "" });
+    setSvcForm(EMPTY_SVC);
   };
 
   const modelCard = show3d ? (
@@ -519,13 +566,25 @@ const payload = {
                     <button className="btn-secondary px-2 py-1 text-xs text-rose-600" onClick={() => setDelSvc(s)}>{locale === "en" ? "Delete" : "Hapus"}</button>
                   </div>
                 </div>
-                <p className="text-xs text-steel-500">{s.date} · {s.technician} · {fmtRupiah(s.cost)}</p>
+                <p className="text-xs text-steel-500">{s.date} · {s.technician} · {fmtRupiah(s.cost)}{s.wbsTask ? ` · WBS: ${s.wbsTask}` : ""}</p>
+                {s.status !== "Batal" && s.status !== "Done" && (() => {
+                  const apv = approvalOf(s as unknown as Record<string, unknown>);
+                  if (apv === "Diajukan") return <p className="mt-1"><Badge tone="amber">{S.spsApvPending}</Badge></p>;
+                  if (apv === "Ditolak") return (
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <Badge tone="red">{S.spsApvRejected}</Badge>
+                      {s.approvalNote ? <span className="text-xs text-rose-600">{s.approvalNote}</span> : null}
+                      <button className="btn-secondary px-2 py-0.5 text-xs" onClick={() => resubmitService(s)}>{S.spsResubmit}</button>
+                    </div>
+                  );
+                  return s.approvedBy ? <p className="mt-1 text-xs text-steel-500">{S.spsApvApprovedBy.replace("{by}", String(s.approvedBy))}</p> : null;
+                })()}
                 {s.status === "Batal" && s.cancelReason && (
                   <p className="mt-1 text-xs text-rose-600">{S.spsCancelReasonLbl.replace("{a}", s.cancelReason)}</p>
                 )}
                 {s.status !== "Done" && s.status !== "Batal" && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {s.status === "Scheduled" && (
+                    {s.status === "Scheduled" && approvalOf(s as unknown as Record<string, unknown>) === "Disetujui" && (
                       <button className="rounded bg-ocean-100 px-2 py-0.5 text-xs font-semibold text-ocean-700 hover:bg-ocean-200" onClick={() => advanceService(s, "In Progress")}>{S.spsStartBtn}</button>
                     )}
                     {s.status === "In Progress" && (
@@ -644,33 +703,57 @@ const payload = {
                 {["Overhaul", "Inspection", "Repair", "Drydock", "Survey"].map((t) => <option key={t} value={t}>{svcTypeLabel(t)}</option>)}
               </select>
             </Field>
-            <Field label={S.statusLabel}>
-              <select className="input" value={svcForm.status} onChange={(e) => setSvcForm({ ...svcForm, status: e.target.value as ServiceRecord["status"] })}>
-                <option value="Scheduled">Dijadwalkan</option>
-                <option value="In Progress">Sedang</option>
-                <option value="Done">Selesai</option>
-              </select>
-            </Field>
+            {svcProjectId && (
+              <Field label={S.spsSvcWbs}>
+                <select className="input" value={svcForm.wbsTask} onChange={(e) => setSvcForm({ ...svcForm, wbsTask: e.target.value })}>
+                  <option value="">{S.spsSvcWbsPh}</option>
+                  {svcWbsOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
           </FormGrid>
           <Field label={S.prjScopeDesc}><input className="input" value={svcForm.description} onChange={(e) => setSvcForm({ ...svcForm, description: e.target.value })} placeholder={S.spsSvcDescPh} /></Field>
           <FormGrid>
             <Field label={S.dateField}><input type="date" className="input" value={svcForm.date} onChange={(e) => setSvcForm({ ...svcForm, date: e.target.value })} /></Field>
-            <Field label={S.spsSvcTech}><input className="input" value={svcForm.technician} onChange={(e) => setSvcForm({ ...svcForm, technician: e.target.value })} placeholder={S.spsTechPh} /></Field>
+            <Field label={S.spsSvcTech}>
+              {techOptions.length > 0 ? (
+                <SearchSelect
+                  value={svcForm.technician}
+                  onChange={(v) => setSvcForm({ ...svcForm, technician: v })}
+                  options={techOptions}
+                  placeholder={S.spsSvcTechPick}
+                  ariaLabel={S.spsSvcTech}
+                />
+              ) : (
+                <input className="input" value={svcForm.technician} onChange={(e) => setSvcForm({ ...svcForm, technician: e.target.value })} placeholder={S.spsTechPh} />
+              )}
+            </Field>
           </FormGrid>
-          <Field label={S.spsSvcCost}><MoneyInput className="input" value={svcForm.cost} onChange={(v) => setSvcForm({ ...svcForm, cost: v })} /></Field>
-          {/* D12: referensi opsional ke item BoQ project ini. */}
-          {projectId && (() => {
-            const boqItems = (data.boq ?? []).filter((b) => String(b.projectId ?? "") === projectId);
-            if (boqItems.length === 0) return null;
-            return (
-              <Field label={S.spsSvcBoqRef}>
-                <select className="input" value={svcForm.boqRef} onChange={(e) => setSvcForm({ ...svcForm, boqRef: e.target.value })}>
-                  <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
-                  {boqItems.map((b) => <option key={b.id} value={b.id}>{String(b.name ?? b.id)}</option>)}
-                </select>
-              </Field>
-            );
-          })()}
+          {/* Biaya mengikuti item BoQ terkait; berbeda harga wajib alasan (F3-D-02). */}
+          {svcBoqItems.length > 0 && (
+            <Field label={S.spsSvcBoqRef}>
+              <select
+                className="input"
+                value={svcForm.boqRef}
+                onChange={(e) => {
+                  const b = svcBoqItems.find((x) => String(x.id) === e.target.value);
+                  setSvcForm({ ...svcForm, boqRef: e.target.value, ...(b ? { cost: String(Number(b.totalPrice ?? 0) || 0), costReason: "" } : {}) });
+                }}
+              >
+                <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
+                {svcBoqItems.map((b) => <option key={b.id} value={b.id}>{String(b.name ?? b.id)} · {fmtRupiah(Number(b.totalPrice ?? 0))}</option>)}
+              </select>
+            </Field>
+          )}
+          <Field label={S.spsSvcCost} hint={svcBoqPrice !== null ? S.spsSvcBoqPrice.replace("{v}", fmtRupiah(svcBoqPrice)) : undefined}>
+            <MoneyInput className="input" value={svcForm.cost} onChange={(v) => setSvcForm({ ...svcForm, cost: v })} />
+          </Field>
+          {svcBoqPrice !== null && parseRupiah(svcForm.cost) !== svcBoqPrice && (
+            <Field label={S.spsSvcCostReason}>
+              <input className="input" value={svcForm.costReason} onChange={(e) => setSvcForm({ ...svcForm, costReason: e.target.value })} placeholder={S.spsSvcCostReasonPh} />
+            </Field>
+          )}
+          {!editSvc && projectId && <p className="text-xs text-steel-500">{S.spsSvcApprovalHint}</p>}
         </div>
       </Modal>
 

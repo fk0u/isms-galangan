@@ -6,7 +6,7 @@ import { requireAuth } from "../auth.js";
 import { can } from "../policy.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { fail, ok } from "../envelope.js";
-import { MaterialError, requestMaterial } from "../materialRequests.js";
+import { MaterialError, fulfillMaterialRequest, requestMaterial } from "../materialRequests.js";
 
 const BodySchema = z.object({
   itemId: z.string().min(1).max(128),
@@ -25,13 +25,15 @@ const BodySchema = z.object({
 export function registerMaterialRequestRoutes(app: FastifyInstance): void {
   app.post("/api/projects/:id/material-requests", { preHandler: [requireAuth] }, async (req, reply) => {
     /* Peminta barang cukup punya hak tulis pergerakan barang (mekanik, gudang,
-       proyek, manager…). Hak ubah stok inventori TIDAK dibutuhkan — justru
-       server yang mengurangi stok di sini secara terkontrol. */
-    if (!can(req.user?.role, "movements", "w")) {
-      return reply.status(403).send(fail("Peran ini tidak boleh meminta barang dari gudang", "FORBIDDEN"));
-    }
+       manager…) atau sparepart proyek (peran proyek). Hak ubah stok inventori
+       TIDAK dibutuhkan — justru server yang mengurangi stok secara terkontrol. */
     const parsed = BodySchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
+    const role = req.user?.role;
+    const allowed = can(role, "movements", "w") || (parsed.data.purpose === "sparepart" && can(role, "spareparts", "w"));
+    if (!allowed) {
+      return reply.status(403).send(fail("Peran ini tidak boleh meminta barang dari gudang", "FORBIDDEN"));
+    }
     const { id } = req.params as { id: string };
     try {
       const result = await requestMaterial({ ...parsed.data, projectId: id, actor: requestActor(req) });
@@ -42,6 +44,25 @@ export function registerMaterialRequestRoutes(app: FastifyInstance): void {
         rowId: result.movementId ?? result.requisitionId ?? "-", diff: { projectId: id, ...result }, ip: requestIp(req),
       });
       return reply.status(201).send(ok(result));
+    } catch (err) {
+      if (err instanceof MaterialError) return reply.status(err.status).send(fail(err.message, err.code));
+      throw err;
+    }
+  });
+
+  /* Penuhi sisa permintaan dari stok — tugas gudang (hak tulis movements). */
+  app.post("/api/material-requests/:id/fulfill", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!can(req.user?.role, "movements", "w")) {
+      return reply.status(403).send(fail("Hanya gudang yang boleh mengeluarkan barang", "FORBIDDEN"));
+    }
+    const { id } = req.params as { id: string };
+    try {
+      const result = await fulfillMaterialRequest(id, requestActor(req));
+      await writeAudit({
+        actor: requestActor(req), action: "material_fulfill", table: "materialRequests",
+        rowId: id, diff: result, ip: requestIp(req),
+      });
+      return ok(result);
     } catch (err) {
       if (err instanceof MaterialError) return reply.status(err.status).send(fail(err.message, err.code));
       throw err;

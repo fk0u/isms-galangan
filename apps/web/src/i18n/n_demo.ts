@@ -83,13 +83,24 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       ],
     },
     {
-      id: "material", title: "Alur material: gudang → procurement", minutes: 3,
+      id: "material", title: "Alur material: gudang → procurement", minutes: 4,
       summary: "Mekanik meminta barang; stok kurang otomatis menjadi Purchase Request.",
       steps: [
         { title: "Tambah sparepart dari inventori", hint: "Pilih barang, lihat stok; jumlah melebihi stok → peringatan PR.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Purchase Request otomatis", hint: "Kekurangan stok muncul sebagai PR berstatus Diajukan.", to: "/procurement?tab=PR" },
+        { title: "Daftar permintaan barang", hint: "Semua permintaan proyek: dipenuhi dari stok, menunggu PO, sebagian. MR-2026-002 menunggu PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Purchase Request otomatis", hint: "Kekurangan stok muncul sebagai PR berstatus Diajukan, tertaut ke permintaannya.", to: "/procurement?tab=PR" },
+        { title: "Penuhi dari stok", hint: "Setelah barang masuk gudang, klik 'Penuhi dari stok' — status jadi Sebagian / Selesai.", to: "/procurement?tab=Permintaan" },
         { title: "Pergerakan stok", hint: "Barang keluar tercatat dengan referensi proyek & WBS.", to: "/inventori?tab=Pergerakan" },
         { title: "Update progres WBS dengan material", hint: "Material WBS memakai alur yang sama — stok tidak pernah minus.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
+      ],
+    },
+    {
+      id: "service", title: "Service & persetujuan procurement", minutes: 3,
+      summary: "Service dari pekerjaan WBS, biaya dari BoQ, wajib disetujui sebelum dikerjakan.",
+      steps: [
+        { title: "Ajukan service dari WBS", hint: "Tab Service → Tambah: pilih WBS, teknisi dari karyawan, item BoQ (biaya terisi otomatis).", to: "/proyek/RP-2026-003?tab=Service" },
+        { title: "Persetujuan procurement", hint: "Setujui, atau tolak dengan alasan. SRV-003 & SRV-006 menunggu.", to: "/procurement?tab=Persetujuan%20Service" },
+        { title: "Mulai & selesaikan service", hint: "Tombol Mulai baru muncul setelah disetujui; biaya service Selesai masuk biaya proyek (tab WBS & Anggaran).", to: "/proyek/RP-2026-003?tab=Service" },
       ],
     },
     {
@@ -133,13 +144,24 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       ],
     },
     {
-      id: "material", title: "Material flow: warehouse → procurement", minutes: 3,
+      id: "material", title: "Material flow: warehouse → procurement", minutes: 4,
       summary: "Mechanics request items; shortages become Purchase Requests automatically.",
       steps: [
         { title: "Add a sparepart from inventory", hint: "Pick an item, see its stock; asking for more shows the PR warning.", to: "/proyek/RP-2026-003?tab=Sparepart" },
-        { title: "Automatic Purchase Request", hint: "The shortage appears as a Submitted PR.", to: "/procurement?tab=PR" },
+        { title: "Material request list", hint: "Every project request: from stock, awaiting PO, partial. MR-2026-002 is awaiting PO.", to: "/procurement?tab=Permintaan" },
+        { title: "Automatic Purchase Request", hint: "The shortage appears as a Submitted PR linked to its request.", to: "/procurement?tab=PR" },
+        { title: "Fulfill from stock", hint: "Once goods arrive, click 'Fulfill from stock' — status becomes Partial / Complete.", to: "/procurement?tab=Permintaan" },
         { title: "Stock movements", hint: "Issued items are logged with project & WBS reference.", to: "/inventori?tab=Pergerakan" },
         { title: "WBS progress with material", hint: "WBS material uses the same flow — stock never goes negative.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
+      ],
+    },
+    {
+      id: "service", title: "Service & procurement approval", minutes: 3,
+      summary: "Services come from WBS work, cost from BoQ, and need approval before work starts.",
+      steps: [
+        { title: "Submit a service from WBS", hint: "Service tab → Add: pick WBS, technician from employees, BoQ item (cost fills in).", to: "/proyek/RP-2026-003?tab=Service" },
+        { title: "Procurement approval", hint: "Approve, or reject with a reason. SRV-003 & SRV-006 are waiting.", to: "/procurement?tab=Persetujuan%20Service" },
+        { title: "Start & finish the service", hint: "Start appears only after approval; completed service cost goes into project cost (WBS & Budget tab).", to: "/proyek/RP-2026-003?tab=Service" },
       ],
     },
     {

@@ -55,6 +55,40 @@ async function main(): Promise<void> {
   const sp = (await q<{ data: string }>("SELECT data FROM spareparts WHERE id = ?", [d2.sparepartId ?? ""]))[0];
   assert("sparepart tercatat dengan status pemenuhan", !!sp && (JSON.parse(sp.data) as { fulfillment?: { status: string } }).fulfillment?.status === "Sebagian");
 
+  const mrOf = async (id: string) => {
+    const r = (await q<{ data: string }>("SELECT data FROM materialRequests WHERE id = ?", [id]))[0];
+    return r ? (JSON.parse(r.data) as { status: string; issued: number; shortage: number }) : null;
+  };
+  const mr2Id = (r2.json().data as { materialRequestId: string }).materialRequestId;
+  const mr2 = await mrOf(mr2Id);
+  assert("permintaan barang tercatat (Sebagian diterima)", mr2?.status === "Sebagian diterima" && mr2.shortage === 2);
+  const prSrc = JSON.parse(pr?.data ?? "{}") as { sourceRequestIds?: string[] };
+  assert("PR menyimpan sourceRequestIds", prSrc.sourceRequestIds?.[0] === mr2Id);
+
+  const fulfill = (token: string, id: string) => app.inject({ method: "POST", url: `/api/material-requests/${id}/fulfill`, headers: { authorization: `Bearer ${token}` } });
+  const fNone = await fulfill(dir, mr2Id);
+  assert("penuhi saat stok 0 → 409", fNone.statusCode === 409, fNone.body);
+  // Barang PO masuk gudang: stok 5.
+  await exec("UPDATE inventory SET data = json_set(data, '$.stock', 5) WHERE id = ?", [itemId]);
+  const fOk = await fulfill(dir, mr2Id);
+  const mr2b = await mrOf(mr2Id);
+  assert("penuhi sisa dari stok → Selesai, stok 5 → 3", fOk.statusCode === 200 && mr2b?.status === "Selesai" && mr2b.shortage === 0 && (await stockOf()) === 3, fOk.body);
+  const spAfter = (await q<{ data: string }>("SELECT data FROM spareparts WHERE id = ?", [d2.sparepartId ?? ""]))[0];
+  assert("sparepart ikut terpenuhi", (JSON.parse(spAfter?.data ?? "{}") as { fulfillment?: { shortage: number } }).fulfillment?.shortage === 0);
+  const prAfter = (await q<{ data: string }>("SELECT data FROM requisitions WHERE id = ?", [d2.requisitionId ?? ""]))[0];
+  assert("PR sumber dibatalkan setelah dipenuhi dari stok", (JSON.parse(prAfter?.data ?? "{}") as { status?: string }).status === "Dibatalkan");
+  const fAgain = await fulfill(dir, mr2Id);
+  assert("penuhi ulang yang sudah selesai → 409", fAgain.statusCode === 409, fAgain.body);
+  const crudMr = await app.inject({ method: "POST", url: "/api/materialRequests", headers: { authorization: `Bearer ${dir}` }, payload: { data: { projectId: project.id, itemId } } });
+  assert("buat permintaan lewat CRUD → 422", crudMr.statusCode === 422, crudMr.body);
+  const delMr = await app.inject({ method: "DELETE", url: `/api/materialRequests/${mr2Id}`, headers: { authorization: `Bearer ${dir}` } });
+  assert("hapus permintaan lewat CRUD → 409", delMr.statusCode === 409, delMr.body);
+  const proyek = await tokenFor("proyek");
+  if (!proyek) throw new Error("Butuh akun proyek hasil seed");
+  const wbsByProyek = await call(proyek, { itemId, qty: 1, purpose: "wbs" });
+  assert("peran proyek meminta material WBS → 403", wbsByProyek.statusCode === 403, wbsByProyek.body);
+  await exec("UPDATE inventory SET data = json_set(data, '$.stock', 0) WHERE id = ?", [itemId]);
+
   const r3 = await call(dir, { itemId, qty: 1, purpose: "wbs" });
   const d3 = r3.json().data as { issued: number; shortage: number; status: string; movementId: string | null };
   assert("stok habis → PR penuh (Menunggu PO), tanpa movement", r3.statusCode === 201 && d3.issued === 0 && d3.shortage === 1 && d3.status === "Menunggu PO" && d3.movementId === null, r3.body);
@@ -71,8 +105,10 @@ async function main(): Promise<void> {
   await exec("DELETE FROM movements WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM requisitions WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM spareparts WHERE data LIKE ?", [`%${itemId}%`]);
+  await exec("DELETE FROM materialRequests WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
   await exec("DELETE FROM audit_log WHERE action = 'material_request' AND diff LIKE ?", [`%${itemId}%`]);
+  await exec("DELETE FROM audit_log WHERE action = 'material_fulfill' AND row_id = ?", [mr2Id]);
 
   console.log(`\n${passed}/${total} pemeriksaan alur material lolos.`);
   await app.close();

@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (480 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (486 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -444,8 +444,15 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "item": "Anoda Zink",
       "by": "Agus S.",
-      "amount": 94000000,
-      "status": "Menunggu Approval"
+      "amount": 4200000,
+      "qty": 20,
+      "unit": "pcs",
+      "itemId": "INV-005",
+      "status": "Menunggu Approval",
+      "sourceRequestIds": [
+        "MR-2026-002"
+      ],
+      "projectId": "RP-2026-003"
     }
   },
   {
@@ -7252,7 +7259,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "description": "Coating thickness check",
       "status": "Scheduled",
       "technician": "Sari Wulandari",
-      "cost": 75000000
+      "cost": 75000000,
+      "wbsTask": "Outfitting — Machinery",
+      "approval": "Diajukan"
     }
   },
   {
@@ -7283,6 +7292,23 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "In Progress",
       "technician": "Fajar Nugroho",
       "cost": 320000000
+    }
+  },
+  {
+    "table": "services",
+    "id": "SRV-006",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-005",
+      "vesselId": "V-004",
+      "date": "2026-10-12",
+      "type": "Repair",
+      "description": "Perbaikan sistem kemudi hidrolik",
+      "status": "Scheduled",
+      "technician": "Agus Setiawan",
+      "cost": 95000000,
+      "wbsTask": "Outfitting — Piping",
+      "approval": "Diajukan"
     }
   },
   {
@@ -7777,6 +7803,44 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
   },
   {
     "table": "movements",
+    "id": "M-MR-001",
+    "branch": "",
+    "data": {
+      "item": "Cat Epoxy Primer",
+      "itemId": "INV-003",
+      "type": "Pengeluaran",
+      "qty": 20,
+      "unit": "liter",
+      "by": "Rudi Hartono (WBS: Outfitting — Machinery)",
+      "date": "2026-10-02",
+      "tone": "out",
+      "ref": {
+        "projectId": "RP-2026-003",
+        "materialRequestId": "MR-2026-001"
+      }
+    }
+  },
+  {
+    "table": "movements",
+    "id": "M-MR-003",
+    "branch": "",
+    "data": {
+      "item": "Baut Marine M20",
+      "itemId": "INV-007",
+      "type": "Pengeluaran",
+      "qty": 400,
+      "unit": "pcs",
+      "by": "Fajar Nugroho (WBS: Hull Assembly)",
+      "date": "2026-10-07",
+      "tone": "out",
+      "ref": {
+        "projectId": "NB-2025-012",
+        "materialRequestId": "MR-2026-003"
+      }
+    }
+  },
+  {
+    "table": "movements",
     "id": "M-0901",
     "branch": "",
     "data": {
@@ -8104,6 +8168,79 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedAt": "2026-07-15",
       "note": "Surat BoQ demo Rev 0.",
       "total": 320000000
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-001",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-003",
+      "item": "Cat Epoxy Primer",
+      "unit": "liter",
+      "purpose": "wbs",
+      "wbsTask": "Outfitting — Machinery",
+      "requested": 20,
+      "issued": 20,
+      "shortage": 0,
+      "status": "Dipenuhi dari stok",
+      "requestedBy": "Rudi Hartono",
+      "date": "2026-10-02",
+      "movementIds": [
+        "M-MR-001"
+      ],
+      "requisitionId": null,
+      "sparepartId": null,
+      "note": ""
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-002",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-005",
+      "item": "Anoda Zink",
+      "unit": "pcs",
+      "purpose": "wbs",
+      "wbsTask": "Outfitting — Machinery",
+      "requested": 20,
+      "issued": 0,
+      "shortage": 20,
+      "status": "Menunggu PO",
+      "requestedBy": "Agus Setiawan",
+      "date": "2026-10-05",
+      "movementIds": [],
+      "requisitionId": "PR-2026-211",
+      "sparepartId": null,
+      "note": "Penggantian anoda lambung"
+    }
+  },
+  {
+    "table": "materialRequests",
+    "id": "MR-2026-003",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-007",
+      "item": "Baut Marine M20",
+      "unit": "pcs",
+      "purpose": "wbs",
+      "wbsTask": "Hull Assembly",
+      "requested": 400,
+      "issued": 400,
+      "shortage": 0,
+      "status": "Dipenuhi dari stok",
+      "requestedBy": "Fajar Nugroho",
+      "date": "2026-10-07",
+      "movementIds": [
+        "M-MR-003"
+      ],
+      "requisitionId": null,
+      "sparepartId": null,
+      "note": ""
     }
   },
   {
