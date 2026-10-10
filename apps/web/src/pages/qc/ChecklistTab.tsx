@@ -32,10 +32,10 @@ export default function ChecklistTab() {
   const canManage = hasPermission(user?.permissions, "checklistTemplates", "w");
   const canInspect = hasPermission(user?.permissions, "checklistResponses", "w");
   const threshold = getSetting(data, "QC_SCORE_THRESHOLD", 70);
-  const [view, setView] = useState<"projects" | "templates">("projects");
+  const [view, setView] = useState<"projects" | "workers" | "templates">("projects");
   const [pid, setPid] = useState<string | null>(null);
   const [openHist, setOpenHist] = useState<string | null>(null);
-  const [inspect, setInspect] = useState<{ pid: string; task: string } | null>(null);
+  const [inspect, setInspect] = useState<{ pid: string; task: string; empId?: string } | null>(null);
   const [tplId, setTplId] = useState("");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<{ score: number; id: string; task: string; tpl: string; pid: string } | null>(null);
@@ -49,6 +49,11 @@ export default function ChecklistTab() {
   const respOf = (projectId: string, task?: string) => responses
     .filter((r) => String(r.projectId ?? "") === projectId && (task === undefined || String(r.wbsTask ?? "") === task))
     .sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
+  /* F3-K-04: kuesioner HSE per pekerja - respons tanpa proyek, ber-employeeId. */
+  const workers = useMemo(() => inBranch(data.employees ?? []).filter((e) => String(e.status ?? "Aktif") === "Aktif"), [data.employees, inBranch]);
+  const hseOf = (empId: string) => (data.checklistResponses ?? [])
+    .filter((r) => String(r.employeeId ?? "") === empId)
+    .sort((a, b) => String(b.at ?? "").localeCompare(String(a.at ?? "")));
   const tpl = templates.find((t) => String(t.id) === tplId);
   const preview = tpl ? scoreChecklist(tpl as unknown as ScTemplate, answers) : null;
 
@@ -59,12 +64,14 @@ export default function ChecklistTab() {
     try {
       const created = await add("checklistResponses", {
         templateId: String(tpl.id), templateName: String(tpl.name), scope: String(tpl.scope ?? "QC"),
-        projectId: inspect.pid, wbsTask: inspect.task, answers, score: preview.score,
+        projectId: inspect.pid, wbsTask: inspect.empId ? "" : inspect.task, answers, score: preview.score,
+        ...(inspect.empId ? { employeeId: inspect.empId, employeeName: inspect.task } : {}),
         inspector: user?.name ?? "-", at: new Date().toISOString(),
       }, { action: "inspeksi kuesioner", target: `${inspect.pid} · ${inspect.task}`, module: "QC" });
       const score = Number(created.score ?? preview.score);
       toast(T.saved.replace("{s}", String(score)));
-      setResult({ score, id: String(created.id), task: inspect.task, tpl: String(tpl.name), pid: inspect.pid });
+      // Tawaran NCR hanya untuk inspeksi pekerjaan; skor pekerja bukan ketidaksesuaian produk.
+      if (!inspect.empId) setResult({ score, id: String(created.id), task: inspect.task, tpl: String(tpl.name), pid: inspect.pid });
       setInspect(null); setAnswers({}); setTplId("");
     } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
   };
@@ -124,7 +131,7 @@ export default function ChecklistTab() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="mr-auto text-sm text-steel-600">{T.intro}</p>
-        <div className="inline-flex rounded-lg border border-steel-200 p-0.5">{seg("projects", T.viewProjects)}{seg("templates", `${T.viewTemplates} (${templates.length})`)}</div>
+        <div className="inline-flex rounded-lg border border-steel-200 p-0.5">{seg("projects", T.viewProjects)}{seg("workers", T.viewWorkers)}{seg("templates", `${T.viewTemplates} (${templates.length})`)}</div>
       </div>
 
       {result && result.score < threshold && (
@@ -203,6 +210,29 @@ export default function ChecklistTab() {
         </div>
       )}
 
+      {view === "workers" && (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead><tr>{[T.colWorker, T.colInspections, T.colLast, T.colAvg, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
+            <tbody className="divide-y divide-steel-100">
+              {workers.map((e) => {
+                const rs = hseOf(String(e.id));
+                const avg = rs.length ? Math.round(rs.reduce((s, r) => s + Number(r.score ?? 0), 0) / rs.length) : null;
+                return (
+                  <tr key={String(e.id)}>
+                    <td className="td"><p className="text-sm font-semibold text-navy-900">{String(e.name ?? "")}</p><p className="text-xs text-steel-500">{String(e.role ?? "")} · {String(e.dept ?? "")}</p></td>
+                    <td className="td tabular-nums">{rs.length}</td>
+                    <td className="td">{rs[0] ? <><Badge tone={scoreTone(Number(rs[0].score), threshold)}>{String(rs[0].score)}</Badge><span className="ml-2 text-xs text-steel-500">{fmtTanggal(String(rs[0].at ?? "").slice(0, 10))}</span></> : <span className="text-steel-400">-</span>}</td>
+                    <td className="td tabular-nums">{avg ?? "-"}</td>
+                    <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => { setInspect({ pid: "", task: String(e.name ?? e.id), empId: String(e.id) }); setAnswers({}); setTplId(""); }}>{T.fill}</button>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {view === "templates" && (
         <div>
           <div className="mb-3 flex items-center justify-between">
@@ -243,7 +273,7 @@ export default function ChecklistTab() {
           <Field label={T.template}>
             <select className="input" value={tplId} onChange={(e) => { setTplId(e.target.value); setAnswers({}); }}>
               <option value="">{T.pickTemplate}</option>
-              {templates.filter((t) => String(t.scope ?? "QC") === "QC").map((t) => <option key={String(t.id)} value={String(t.id)}>{String(t.name)}</option>)}
+              {templates.filter((t) => (inspect?.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC")).map((t) => <option key={String(t.id)} value={String(t.id)}>{String(t.name)}</option>)}
             </select>
           </Field>
           {tpl && ((tpl.sections ?? []) as { title?: string; items?: (ScItem & { text?: string })[] }[]).map((s, si) => (

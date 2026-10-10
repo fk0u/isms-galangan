@@ -1,6 +1,7 @@
 import type { ReactNode, InputHTMLAttributes, ButtonHTMLAttributes, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, Component, type ErrorInfo } from "react";
 import { useT } from "../i18n/LanguageContext";
+import { n_misc } from "../i18n/n_misc";
 import { statusLabel } from "../i18n/status";
 import { norm24 } from "../utils/time24";
 import { maskTimeDigits, shouldEmitTime } from "../utils/timeMask";
@@ -11,6 +12,9 @@ import {
   ArrowUpRight,
   Minus,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   X,
   CheckCircle2,
   Info,
@@ -1275,7 +1279,7 @@ export function SortTh({
       >
         {label}
         <span className={`text-[10px] ${active ? "text-ocean-600" : "text-steel-300"}`} aria-hidden>
-          {active ? (sort.dir === "asc" ? "â–²" : "â–¼") : "â‡…"}
+          {active ? (sort.dir === "asc" ? "â–²" : "â–¼") : "⇅"}
         </span>
       </button>
     </th>
@@ -1425,7 +1429,45 @@ export function AsyncButton({
 
 /* ============ P A G E R ============ */
 
-export function usePager(total: number, defaultSize = 100): {
+/** Bilah pagination bersama (ETC-07): info "1-25 dari 312", ukuran halaman,
+ *  awal / sebelumnya / maks 5 nomor / berikutnya / akhir. Di layar sempit
+ *  hanya sebelumnya-berikutnya + info. */
+export function Pager({ page, pages, size, total, loading = false, onGo, onSize }: {
+  page: number; pages: number; size: number; total: number; loading?: boolean;
+  onGo: (p: number) => void; onSize: (n: number) => void;
+}) {
+  const { locale } = useT();
+  const P = n_misc[locale];
+  const first = Math.max(1, Math.min(page - 2, pages - 4));
+  const nums = Array.from({ length: Math.min(5, pages) }, (_, i) => first + i);
+  const nav = "btn-secondary px-2 py-1 disabled:opacity-40";
+  return (
+    <div className="flex flex-wrap items-center gap-2 py-2 text-xs text-steel-500">
+      <span className="tabular-nums">
+        {loading ? P.pagerLoading : P.pagerInfo.replace("{a}", String(total === 0 ? 0 : (page - 1) * size + 1)).replace("{b}", String(Math.min(page * size, total))).replace("{n}", String(total))}
+      </span>
+      {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-ocean-500" aria-hidden />}
+      <nav className="ml-auto flex items-center gap-1" aria-label={P.pagerNav}>
+        <button type="button" className={`${nav} hidden sm:inline-flex`} disabled={loading || page <= 1} onClick={() => onGo(1)} aria-label={P.pagerFirst}><ChevronsLeft className="h-3.5 w-3.5" /></button>
+        <button type="button" className={nav} disabled={loading || page <= 1} onClick={() => onGo(page - 1)} aria-label={P.pagerPrev}><ChevronLeft className="h-3.5 w-3.5" /></button>
+        <span className="hidden items-center gap-1 sm:flex">
+          {nums.map((n) => (
+            <button key={n} type="button" disabled={loading} aria-current={n === page ? "page" : undefined} onClick={() => onGo(n)}
+              className={`min-w-7 rounded-lg px-2 py-1 font-semibold tabular-nums ${n === page ? "bg-navy-900 text-white" : "text-steel-600 hover:bg-steel-100"}`}>{n}</button>
+          ))}
+        </span>
+        <span className="px-1 font-semibold tabular-nums text-navy-900 sm:hidden">{page} / {pages}</span>
+        <button type="button" className={nav} disabled={loading || page >= pages} onClick={() => onGo(page + 1)} aria-label={P.pagerNext}><ChevronRight className="h-3.5 w-3.5" /></button>
+        <button type="button" className={`${nav} hidden sm:inline-flex`} disabled={loading || page >= pages} onClick={() => onGo(pages)} aria-label={P.pagerLast}><ChevronsRight className="h-3.5 w-3.5" /></button>
+        <select className="input ml-1 !w-auto px-1.5 py-1 text-xs" value={size} aria-label={P.pagerSize} disabled={loading} onChange={(e) => onSize(Number(e.target.value))}>
+          {[...new Set([10, 25, 50, 100, size])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{P.pagerPer.replace("{n}", String(n))}</option>)}
+        </select>
+      </nav>
+    </div>
+  );
+}
+
+export function usePager(total: number, defaultSize = 25): {
   page: number;
   size: number;
   pages: number;
@@ -1441,30 +1483,7 @@ export function usePager(total: number, defaultSize = 100): {
   const slice = <T,>(rows: T[]): T[] => rows.slice((safe - 1) * size, safe * size);
   const reset = () => setPage(1);
   const go = (p: number) => setPage(Math.min(Math.max(1, p), pages));
-  const bar = (
-    <div className="flex flex-wrap items-center gap-2 py-2 text-xs text-steel-500">
-      <span>
-        {total === 0 ? "0 dari 0" : `${(safe - 1) * size + 1}-${Math.min(safe * size, total)} dari ${total}`}
-      </span>
-      <span className="ml-auto flex items-center gap-1">
-        <button className="btn-secondary px-2 py-1" disabled={safe <= 1} onClick={() => go(1)}>Â«</button>
-        <button className="btn-secondary px-2 py-1" disabled={safe <= 1} onClick={() => go(safe - 1)}>â€¹</button>
-        <span className="px-1 font-semibold text-navy-900">{safe} / {pages}</span>
-        <button className="btn-secondary px-2 py-1" disabled={safe >= pages} onClick={() => go(safe + 1)}>â€º</button>
-        <button className="btn-secondary px-2 py-1" disabled={safe >= pages} onClick={() => go(pages)}>Â»</button>
-        <select
-          className="input ml-1 !w-auto px-1.5 py-1 text-xs"
-          value={size}
-          aria-label="Baris per halaman"
-          onChange={(e) => { setSize(Number(e.target.value)); setPage(1); }}
-        >
-          {[10, 25, 50, 100, 200].map((n) => (
-            <option key={n} value={n}>{n}/hal</option>
-          ))}
-        </select>
-      </span>
-    </div>
-  );
+  const bar = <Pager page={safe} pages={pages} size={size} total={total} onGo={go} onSize={(n) => { setSize(n); setPage(1); }} />;
   return { page: safe, size, pages, slice, reset, go, bar };
 }
 
@@ -1509,7 +1528,7 @@ export function useServerPager<T>(
   const loadRef = useRef(load);
   loadRef.current = load;
 
-  /* Filter berubah â†’ kembali ke halaman 1 sebelum fetch berikutnya. */
+  /* Filter berubah -> kembali ke halaman 1 sebelum fetch berikutnya. */
   const [fk, setFk] = useState(filterKey);
   if (enabled && fk !== filterKey) {
     setFk(filterKey);
@@ -1551,43 +1570,14 @@ export function useServerPager<T>(
   }, [enabled, safe, size, filterKey]);
 
   const go = (p: number) => setPage(Math.min(Math.max(1, p), pages));
-  const bar = (
-    <div className="flex flex-wrap items-center gap-2 py-2 text-xs text-steel-500">
-      <span>
-        {loading
-          ? "Memuatâ€¦"
-          : total === 0
-            ? "0 dari 0"
-            : `${(safe - 1) * size + 1}-${Math.min(safe * size, total)} dari ${total}`}
-      </span>
-      {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-ocean-500" aria-hidden />}
-      <span className="ml-auto flex items-center gap-1">
-        <button className="btn-secondary px-2 py-1" disabled={loading || safe <= 1} onClick={() => go(1)}>Â«</button>
-        <button className="btn-secondary px-2 py-1" disabled={loading || safe <= 1} onClick={() => go(safe - 1)}>â€¹</button>
-        <span className="px-1 font-semibold text-navy-900">{safe} / {pages}</span>
-        <button className="btn-secondary px-2 py-1" disabled={loading || safe >= pages} onClick={() => go(safe + 1)}>â€º</button>
-        <button className="btn-secondary px-2 py-1" disabled={loading || safe >= pages} onClick={() => go(pages)}>Â»</button>
-        <select
-          className="input ml-1 !w-auto px-1.5 py-1 text-xs"
-          value={size}
-          aria-label="Baris per halaman"
-          disabled={loading}
-          onChange={(e) => { setSize(Number(e.target.value)); setPage(1); }}
-        >
-          {[10, 25, 50, 100, 200].map((n) => (
-            <option key={n} value={n}>{n}/hal</option>
-          ))}
-        </select>
-      </span>
-    </div>
-  );
+  const bar = <Pager page={safe} pages={pages} size={size} total={total} loading={loading} onGo={go} onSize={(n) => { setSize(n); setPage(1); }} />;
   return { page: safe, size, pages, total, rows, loading, go, bar };
 }
 
 /* ============ N U M I N P U T ============ */
 
-/** Buang nol di depan agar tidak nyangkut: "0" â†’ "" (user ketik ulang bersih),
- *  "007" â†’ "7". Desimal ("0.5") tetap utuh. */
+/** Buang nol di depan agar tidak nyangkut: "0" → "" (user ketik ulang bersih),
+ *  "007" → "7". Desimal ("0.5") tetap utuh. */
 function stripLeadingZero(v: string): string {
   if (!v) return v;
   if (v === "0") return "";
@@ -1773,13 +1763,13 @@ import { uploadFile } from "../services/upload";
 import { BASE, getJwt } from "../services/http";
 import { toAbsoluteUrl } from "../services/files";
 
-/** Normalisasi URL lama relatif (/files/...) â†’ absolut terhadap BASE backend.
+/** Normalisasi URL lama relatif (/files/...) → absolut terhadap BASE backend.
  *  URL absolut / blob: / object-URL dikembalikan apa adanya. */
 export function absUrl(url: unknown): string {
   return toAbsoluteUrl(url);
 }
 
-/** Gambar dengan inisial bila tanpa foto + loader JWT (fetch blob â†’ object URL).
+/** Gambar dengan inisial bila tanpa foto + loader JWT (fetch blob → object URL).
  *  Cocok untuk foto yang dilindungi auth backend; URL lama relatif dinormalisasi. */
 export function SecureImg({
   src,
@@ -1802,7 +1792,7 @@ export function SecureImg({
     setFailed(false);
     setObj(null);
     if (!raw || /^(blob:|data:)/i.test(raw)) return;
-    // URL absolut same-origin / backend ber-JWT â†’ ambil via fetch blob.
+    // URL absolut same-origin / backend ber-JWT → ambil via fetch blob.
     let revoke = "";
     let cancelled = false;
     // Aset publik dimuat langsung oleh <img> — token tidak dikirim, tanpa fetch ganda.
@@ -1898,13 +1888,13 @@ export function FlowStrip({
               </span>
             )}
             {i < steps.length - 1 && (
-              <span aria-hidden className="text-steel-300">â†’</span>
+              <span aria-hidden className="text-steel-300">→</span>
             )}
           </span>
         );
       })}
       {idx < 0 && (
-        <span className="text-xs text-steel-400">Status â€œ{current}â€ di luar alur baku</span>
+        <span className="text-xs text-steel-400">Status “{current}” di luar alur baku</span>
       )}
     </div>
   );

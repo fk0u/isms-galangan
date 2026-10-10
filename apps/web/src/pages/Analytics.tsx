@@ -809,13 +809,11 @@ const saveScenario = () => {
         ...fishbones.flatMap((f) => f.sebab.map((s) => [f.tulang, s] as (string | number)[])),
       ];
       /* Lewat util terpusat: sanitasi formula + lebar kolom otomatis + header menempel. */
+      void [fc, sc, rx]; // sheet prediktif/preskriptif tidak lagi diekspor (ANL-02)
       await exportExcelSheets([
         { name: "KPI", rows: kpi },
         { name: "Drilldown", rows: drill },
-        { name: "Forecast", rows: fc },
-        { name: "Skenario", rows: sc },
         { name: "Profit", rows: pf },
-        { name: "Preskriptif", rows: rx },
         { name: "Utilisasi", rows: util },
         { name: "Inventory", rows: inv },
         { name: "Rev Bulanan", rows: revBulanan },
@@ -869,7 +867,9 @@ const exportPdfReport = async () => {
         }
       />
 
-      <Tabs tabs={["Deskriptif", "Diagnostik", "Prediktif", "Preskriptif", "Profitabilitas"]} active={tab} onChange={setTab} labels={{ Deskriptif: S.tabDescriptive, Diagnostik: S.tabDiagnostic, Prediktif: S.tabPredictive, Preskriptif: S.tabPrescriptive, Profitabilitas: S.tabProfitability }} />
+      {/* ANL-02: tab Prediktif & Preskriptif dihapus dari navigasi. Blok render
+          dan hitungannya masih ada di bawah (tak terjangkau) - dibersihkan di F6-02. */}
+      <Tabs tabs={["Deskriptif", "Diagnostik", "Profitabilitas"]} active={tab} onChange={setTab} labels={{ Deskriptif: S.tabDescriptive, Diagnostik: S.tabDiagnostic, Prediktif: S.tabPredictive, Preskriptif: S.tabPrescriptive, Profitabilitas: S.tabProfitability }} />
 
       {/* ==== KONTROL RENTANG BULAN ====
           Dulu tidak ada kontrol sama sekali: semua grafik rentang-bulan
