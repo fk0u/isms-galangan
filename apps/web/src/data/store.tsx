@@ -37,7 +37,7 @@ import {
   seedAttendance, seedAttendanceMonth, seedChecklistResponses, seedWorkOrdersDemo, seedTerminsDemo, seedPayroll, seedTaxPeriods, seedRfqs, seedChangeOrders,
   seedRisks, seedLeaves, seedTrainings, seedTimesheets, seedDrawings,
   seedToolbox, seedCalibrations, seedCommunications, seedContracts, seedBast,
-  seedTrials, seedRequests, seedClientPos,
+  seedTrials, seedRequests, seedClientPos, seedWarranties,
   seedWarehouses, seedMaintenances, seedLetters,
 } from "./seeds";
 
@@ -323,7 +323,7 @@ function buildSeeds(): StoreShape {
      timesheets: clone(seedTimesheets),
      drawings: clone(seedDrawings),
      toolbox: clone(seedToolbox),
-     warranties: [],
+     warranties: clone(seedWarranties),
      calibrations: clone(seedCalibrations),
        communications: clone(seedCommunications),
         contracts: clone(seedContracts),

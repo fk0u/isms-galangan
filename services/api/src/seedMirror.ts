@@ -50,6 +50,7 @@ const MAP: Array<[string, string]> = [
   ["seedContracts", "contracts"],
   ["seedBast", "bast"],
   ["seedTrials", "trials"],
+  ["seedWarranties", "warranties"],
   ["seedRequests", "requests"],
   ["seedClientPos", "clientPos"],
   /* Batch terakhir (migrations/006_batch_akhir.sql). Tanpa baris ini, gudang /

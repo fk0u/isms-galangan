@@ -49,6 +49,19 @@ export async function runSeed(): Promise<void> {
     await exec("INSERT INTO team_by_project (project_id, data) VALUES (?, ?)", [t.projectId, JSON.stringify(t.memberIds)]);
     inserted += 1;
   }
+  /* F5-03: tahap demo untuk proyek yang SUDAH ada di DB. Seed bersifat
+     insert-if-missing, jadi field baru tidak pernah sampai ke baris lama;
+     di sini diisi hanya bila `tahap` masih kosong (tidak menimpa isian user). */
+  const DEMO_TAHAP: Record<string, string> = { "RP-2026-007": "Trial", "RP-2026-002": "Handover", "RP-2026-008": "Handover" };
+  for (const [pid, tahap] of Object.entries(DEMO_TAHAP)) {
+    const rows = await q<{ data: string }>("SELECT data FROM projects WHERE id = ?", [pid]);
+    if (rows.length === 0) continue;
+    try {
+      const d = JSON.parse(rows[0].data) as Record<string, unknown>;
+      if (String(d.tahap ?? "") !== "") continue;
+      await exec("UPDATE projects SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify({ ...d, tahap }), new Date().toISOString(), pid]);
+    } catch { /* baris rusak dilewati */ }
+  }
   // Tautkan akun seed ke karyawan (default; bisa diubah via /api/users).
   // Peran lapangan ditautkan ke anggota tim proyek (TEAM_SEED) supaya
   // Monitoring "proyek saya" (F3-E-02) bisa diperagakan.
