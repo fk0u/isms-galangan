@@ -133,6 +133,14 @@ export function useApproveMaterialRequest(): (id: string, actor?: string) => Pro
   const { data, add, update, resyncCollections } = useStore();
 
   return useCallback(async (id: string, actor?: string): Promise<FulfillResult> => {
+    /* Tersambung server: keputusan dan pemotongan stok dilakukan server dalam
+       satu transaksi (ADR-0018); browser tidak boleh mengubah stok sendiri. */
+    if (isBackendConfigured() && getJwt() !== null) {
+      const res = await apiFetch<{ id: string; issued: number; shortage: number; status: MrStatus }>(
+        `/api/material-requests/${encodeURIComponent(id)}/approval`, { method: "POST", body: JSON.stringify({ decision: "approve" }) });
+      await resyncCollections(["materialRequests", "inventory", "movements", "spareparts", "requisitions", "activities"]);
+      return { id: res.id, given: res.issued, issued: res.issued, shortage: res.shortage, status: res.status };
+    }
     const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
     if (!mr) throw new Error(`Permintaan ${id} tidak ditemukan`);
     const item = (data.inventory ?? []).find((i) => String(i.id) === String(mr.itemId));
@@ -191,6 +199,11 @@ export function useRejectMaterialRequest(): (id: string, reason?: string, actor?
   const { data, update, resyncCollections } = useStore();
 
   return useCallback(async (id: string, reason?: string, actor?: string): Promise<void> => {
+    if (isBackendConfigured() && getJwt() !== null) {
+      await apiFetch(`/api/material-requests/${encodeURIComponent(id)}/approval`, { method: "POST", body: JSON.stringify({ decision: "reject", note: reason ?? "" }) });
+      await resyncCollections(["materialRequests", "requisitions", "spareparts", "activities"]);
+      return;
+    }
     const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
     if (!mr) throw new Error(`Permintaan ${id} tidak ditemukan`);
     const today = todayISO();

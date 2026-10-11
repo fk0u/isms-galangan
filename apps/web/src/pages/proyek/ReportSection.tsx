@@ -174,7 +174,7 @@ export default function ReportSection({ projectId }: Props) {
                 {/* #84: persentase tertinggi dulu; bila sama, yang paling baru diperbarui di atas. */}
                 {wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "status", "materialUsed", "completedBy", "completionDate"]))
                   .map((w) => ({ w, last: (w.history ?? []).reduce((m, h) => (String(h.date ?? "") > m ? String(h.date ?? "") : m), "") }))
-                  .sort((x, y) => (Number(y.w.progress) || 0) - (Number(x.w.progress) || 0) || y.last.localeCompare(x.last))
+                  .sort((x, y) => (Number(y.w.progress) || 0) - (Number(x.w.progress) || 0) || y.last.localeCompare(x.last) || String(x.w.task).localeCompare(String(y.w.task)))
                   .map(({ w }) => (
                   <div key={w.task}>
                     <div className="flex justify-between text-xs"><span className="font-medium text-navy-900">{w.task}</span><span className="text-steel-500">{w.progress}%</span></div>

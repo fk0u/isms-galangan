@@ -43,6 +43,11 @@ import { projectProgressOf } from "../../utils/projectProgress";
 export const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
 export const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
 
+/** #70: nilai data tetap "Desain"; yang tampil ke pengguna "Perencanaan" / "Planning". */
+export function tahapLabel(tahap: string, locale: string): string {
+  return tahap === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : tahap;
+}
+
 export function tahapOf(p: StoreItem): string {
   return TAHAP.includes(p.tahap) ? p.tahap : "Produksi";
 }
@@ -311,7 +316,7 @@ export default function Projects() {
           >
             <div className="mb-4 space-y-2 rounded-xl border border-steel-200 bg-white p-3">
               {([
-                [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...TAHAP].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : v }))],
+                [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...TAHAP].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : tahapLabel(v, locale) }))],
                 [S.prjFieldTipe, filter, setFilter, filters.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTipe : TYPE_ID[v] ?? v }))],
                 [S.prjFieldPrioritas, prioritasFilter, setPrioritasFilter, ["Semua", ...PRIORITAS].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPrioritas : v }))],
                 [S.prjFieldPm, pmFilter, setPmFilter, ["Semua", ...pmOptions].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPm : v }))],
@@ -389,7 +394,7 @@ export default function Projects() {
                           Versi lama menempelkan teks "Edit hanya di detail" dan
                           link "Kelola di detail" di sini; keduanya hilang dari
                           layar dan baris tetap bisa diklik untuk masuk detail. */}
-                      <Badge tone="navy">{tahapOf(p)}</Badge>
+                      <Badge tone="navy">{tahapLabel(tahapOf(p), locale)}</Badge>
                     </td>
                     <td className="td">
                       <Badge tone={prioritasTone[canonPrioritas(p.prioritas)] ?? "blue"}>{canonPrioritas(p.prioritas)}</Badge>

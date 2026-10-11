@@ -6,7 +6,7 @@ import { requireAuth } from "../auth.js";
 import { can } from "../policy.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { fail, ok } from "../envelope.js";
-import { MaterialError, fulfillMaterialRequest, requestMaterial } from "../materialRequests.js";
+import { MaterialError, fulfillMaterialRequest, requestMaterial, decideMaterialRequest } from "../materialRequests.js";
 
 const BodySchema = z.object({
   itemId: z.string().min(1).max(128),
@@ -21,6 +21,8 @@ const BodySchema = z.object({
     warrantyUntil: z.string().max(32).optional(),
   }).optional(),
 });
+
+const DecisionSchema = z.object({ decision: z.enum(["approve", "reject"]), note: z.string().trim().max(500).optional() });
 
 export function registerMaterialRequestRoutes(app: FastifyInstance): void {
   app.post("/api/projects/:id/material-requests", { preHandler: [requireAuth] }, async (req, reply) => {
@@ -44,6 +46,29 @@ export function registerMaterialRequestRoutes(app: FastifyInstance): void {
         rowId: result.movementId ?? result.requisitionId ?? "-", diff: { projectId: id, ...result }, ip: requestIp(req),
       });
       return reply.status(201).send(ok(result));
+    } catch (err) {
+      if (err instanceof MaterialError) return reply.status(err.status).send(fail(err.message, err.code));
+      throw err;
+    }
+  });
+
+  /* Keputusan gudang (ADR-0018): setujui → barang keluar; tolak → wajib alasan.
+     Hanya peran yang boleh mengubah inventori (gudang, direktur, developer) -
+     peminta barang tidak bisa menyetujui permintaannya sendiri. */
+  app.post("/api/material-requests/:id/approval", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!can(req.user?.role, "inventory", "w")) {
+      return reply.status(403).send(fail("Hanya gudang yang boleh menyetujui pengeluaran barang", "FORBIDDEN"));
+    }
+    const parsed = DecisionSchema.safeParse(req.body);
+    if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
+    const { id } = req.params as { id: string };
+    try {
+      const result = await decideMaterialRequest(id, parsed.data.decision, requestActor(req), parsed.data.note ?? "");
+      await writeAudit({
+        actor: requestActor(req), action: parsed.data.decision === "approve" ? "material_approve" : "material_reject",
+        table: "materialRequests", rowId: id, diff: { ...result, note: parsed.data.note ?? "" }, ip: requestIp(req),
+      });
+      return ok(result);
     } catch (err) {
       if (err instanceof MaterialError) return reply.status(err.status).send(fail(err.message, err.code));
       throw err;

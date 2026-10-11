@@ -739,7 +739,8 @@ if (k === "mattype") return matTypeOf(i);
     if (k === "gudang") return `${movementFlow(m).from} ${movementFlow(m).to}`;
     if (k === "referensi") return String(m.by ?? "");
     if (k === "info") return String(`${m.supplier ?? ""} ${m.purpose ?? ""} ${m.pic ?? ""}`);
-    if (k === "tanggal") return String(m.date ?? "");
+    // Tanggal sama → id sebagai penentu urutan yang tetap (transaksi lebih baru ber-id lebih besar).
+    if (k === "tanggal") return `${String(m.date ?? "")}|${String(m.id ?? "")}`;
     return String(m.id ?? "");
   }), [movFiltered, sort3]);
   useEffect(() => {
