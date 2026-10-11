@@ -79,9 +79,9 @@ import {
    matchHist() dipakai semua tabel bertanggal; tabel Excel statis diberi badge pembanding.
    SALDO memakai helper as-of (kasAsOfReport / plMonthly s.d. tanggal), bukan
    matchHist - lihat catatan di kasAsOfReport. */
-export type HistMode = "Semua" | "Hari" | "Bulan" | "Tahun";
-export interface HistFilter { mode: HistMode; hari: string; bulan: string; tahun: string }
-export const emptyHist = (): HistFilter => ({ mode: "Semua", hari: "", bulan: "", tahun: "" });
+export type HistMode = "Semua" | "Hari" | "Bulan" | "Tahun" | "Rentang";
+export interface HistFilter { mode: HistMode; hari: string; bulan: string; tahun: string; dari: string; sampai: string }
+export const emptyHist = (): HistFilter => ({ mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" });
 
 /** Encode/decode filter untuk URL: "bulan:2026-06", "tahun:2026", "hari:2026-06-15".
  *  Tanpa ini, pilihan "Juni 2026" hilang saat reload dan tidak bisa dibagikan
@@ -90,6 +90,7 @@ export function histToParam(f: HistFilter): string {
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return `bulan:${f.bulan}`;
   if (f.mode === "Tahun" && /^\d{4}$/.test(f.tahun)) return `tahun:${f.tahun}`;
   if (f.mode === "Hari" && /^\d{4}-\d{2}-\d{2}$/.test(f.hari)) return `hari:${f.hari}`;
+  if (f.mode === "Rentang" && rentangValid(f)) return `rentang:${f.dari}..${f.sampai}`;
   return "";
 }
 export function histFromParam(raw: string | null | undefined): HistFilter {
@@ -99,10 +100,19 @@ export function histFromParam(raw: string | null | undefined): HistFilter {
      pola YYYY-MM-DD, padahal keduanya tanggal yang tidak ada. Filter dengan
      tanggal acuan salah lebih berbahaya daripada filter kosong - angka yang
      tampil terlihat sah, hanya bukan yang benar. */
-  if (k === "bulan" && bulanValid(v)) return { mode: "Bulan", hari: "", bulan: v, tahun: "" };
-  if (k === "tahun" && /^\d{4}$/.test(v)) return { mode: "Tahun", hari: "", bulan: "", tahun: v };
-  if (k === "hari" && hariValid(v)) return { mode: "Hari", hari: v, bulan: "", tahun: "" };
+  if (k === "bulan" && bulanValid(v)) return { ...emptyHist(), mode: "Bulan", bulan: v };
+  if (k === "tahun" && /^\d{4}$/.test(v)) return { ...emptyHist(), mode: "Tahun", tahun: v };
+  if (k === "hari" && hariValid(v)) return { ...emptyHist(), mode: "Hari", hari: v };
+  if (k === "rentang") {
+    const [dari = "", sampai = ""] = v.split("..");
+    const f: HistFilter = { ...emptyHist(), mode: "Rentang", dari, sampai };
+    if (rentangValid(f)) return f;
+  }
   return emptyHist();
+}
+/** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
+function rentangValid(f: HistFilter): boolean {
+  return hariValid(f.dari) && hariValid(f.sampai) && f.dari <= f.sampai;
 }
 function bulanValid(v: string): boolean {
   if (!/^\d{4}-\d{2}$/.test(v)) return false;
@@ -138,6 +148,7 @@ export function matchHist(dateISO: unknown, f: HistFilter): boolean {
   if (f.mode === "Hari") return !!f.hari && s === f.hari;
   if (f.mode === "Bulan") return !!f.bulan && s.slice(0, 7) === f.bulan;
   if (f.mode === "Tahun") return !!f.tahun && s.slice(0, 4) === f.tahun;
+  if (f.mode === "Rentang") return rentangValid(f) && s >= f.dari && s <= f.sampai;
   return true;
 }
 export function matchHistPeriod(periodYM: unknown, f: HistFilter): boolean {
@@ -147,6 +158,8 @@ export function matchHistPeriod(periodYM: unknown, f: HistFilter): boolean {
   if (f.mode === "Hari") return !!f.hari && s === f.hari.slice(0, 7);
   if (f.mode === "Bulan") return !!f.bulan && s === f.bulan;
   if (f.mode === "Tahun") return !!f.tahun && s.slice(0, 4) === f.tahun;
+  // Periode bulanan ikut bila bulannya beririsan dengan rentang.
+  if (f.mode === "Rentang") return rentangValid(f) && s >= f.dari.slice(0, 7) && s <= f.sampai.slice(0, 7);
   return true;
 }
 /* Filter historikal: UTAMA per bulan (input month), opsi per tanggal
@@ -162,12 +175,19 @@ export function HistFilterBar({ value, onChange, idPrefix }: { value: HistFilter
     { id: "Bulan", label: T.histMonth },
     { id: "Hari", label: T.histDay },
     { id: "Tahun", label: T.histYear },
+    { id: "Rentang", label: T.histRange },
   ];
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-steel-200 bg-surface px-3 py-2">
       <span className="text-xs font-semibold text-steel-500">{T.histLabel}</span>
       {modes.map((m) => (
-        <button key={m.id} type="button" onClick={() => onChange({ ...value, mode: m.id })}
+        <button key={m.id} type="button" onClick={() => onChange(
+          /* Filter hidup di URL; rentang kosong tidak bisa dikodekan dan akan
+             kembali ke "Semua". Beri nilai awal: awal bulan ini s.d. hari ini. */
+          m.id === "Rentang" && !rentangValid(value)
+            ? { ...value, mode: m.id, dari: `${todayISO().slice(0, 7)}-01`, sampai: todayISO() }
+            : { ...value, mode: m.id },
+        )}
           aria-pressed={value.mode === m.id}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${value.mode === m.id ? "bg-navy-700 text-white" : "bg-white text-steel-600 hover:bg-steel-100"}`}>
           {m.label}
@@ -186,6 +206,13 @@ export function HistFilterBar({ value, onChange, idPrefix }: { value: HistFilter
           className="input w-24 py-1.5 text-xs font-mono" value={value.tahun}
           onChange={(e) => onChange({ ...value, tahun: e.target.value.replace(/\D/g, "").slice(0, 4) })}
           aria-label={T.histYearAria} placeholder={LATEST_SNAPSHOT.slice(0, 4)} />
+      )}
+      {value.mode === "Rentang" && (
+        <>
+          <input id={`${idPrefix}-dari`} type="date" className="input w-auto py-1.5 text-xs" value={value.dari} max={value.sampai || undefined} onChange={(e) => onChange({ ...value, dari: e.target.value })} aria-label={T.histFrom} />
+          <span aria-hidden className="text-xs text-steel-400">–</span>
+          <input id={`${idPrefix}-sampai`} type="date" className="input w-auto py-1.5 text-xs" value={value.sampai} min={value.dari || undefined} onChange={(e) => onChange({ ...value, sampai: e.target.value })} aria-label={T.histTo} />
+        </>
       )}
       {value.mode !== "Semua" && (
         <button type="button" className="text-xs font-semibold text-ocean-600 hover:underline" onClick={() => onChange(emptyHist())}>{T.histReset}</button>
@@ -408,6 +435,7 @@ export function liveAsOf(f: HistFilter, lastDate = ""): string {
   if (f.mode === "Hari" && /^\d{4}-\d{2}-\d{2}$/.test(f.hari)) return f.hari;
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return akhirBulan(f.bulan);
   if (f.mode === "Tahun" && /^\d{4}$/.test(f.tahun)) return `${f.tahun}-12-31`;
+  if (f.mode === "Rentang" && rentangValid(f)) return f.sampai;
   /* Mode "Semua": memakai transaksi terakhir yang benar-benar ada. Damanya
      konstanta "2026-08-31" yang tadinya ditulis di sini: data yang masuk
      setelah Agustus 2026 tidak pernah ikut terhitung dan tidak ada yang
@@ -1216,7 +1244,7 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
               ] as (string | number)[]),
               [],
               ["As-of", kasAsOf],
-              ["Periode", kasHist.mode === "Semua" ? "Semua" : `${kasHist.mode} ${kasHist.bulan || kasHist.tahun || kasHist.hari}`],
+              ["Periode", kasHist.mode === "Semua" ? "Semua" : `${kasHist.mode} ${kasHist.bulan || kasHist.tahun || kasHist.hari || `${kasHist.dari}..${kasHist.sampai}`}`],
             ],
           },
           {

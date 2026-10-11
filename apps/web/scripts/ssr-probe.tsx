@@ -323,22 +323,24 @@ try {
     j("2026-05-20", "4-101", "1-1101", 200),
     j("2026-06-05", "1-1101", "5-101", 300),
   ];
-  const juni = { mode: "Bulan", hari: "", bulan: "2026-06", tahun: "" } as const;
+  const juni = { mode: "Bulan", hari: "", bulan: "2026-06", tahun: "", dari: "", sampai: "" } as const;
   const empty: Record<string, number> = {};
 
   /* liveAsOf: akhir bulan yang BENAR - bukan tanggal 31 untuk semua bulan.
      Juni hanya 30 hari, jadi `${bulan}-31` menghasilkan tanggal yang tidak
      ada dan badge di UI menampilkannya ke pengguna. */
   if (liveAsOf({ ...juni }) !== "2026-06-30") asof.push(`as-of bulan: ${liveAsOf({ ...juni })}`);
-  if (liveAsOf({ mode: "Bulan", hari: "", bulan: "2026-02", tahun: "" }) !== "2026-02-28") asof.push("as-of Februari tidak ikut tahun kabisat");
-  if (liveAsOf({ mode: "Bulan", hari: "", bulan: "2024-02", tahun: "" }) !== "2024-02-29") asof.push("as-of Februari 2024 bukan 29 (tahun kabisat)");
-  if (liveAsOf({ mode: "Tahun", hari: "", bulan: "", tahun: "2026" }) !== "2026-12-31") asof.push("as-of tahun bukan 31 Desember");
+  if (liveAsOf({ mode: "Bulan", hari: "", bulan: "2026-02", tahun: "", dari: "", sampai: "" }) !== "2026-02-28") asof.push("as-of Februari tidak ikut tahun kabisat");
+  if (liveAsOf({ mode: "Bulan", hari: "", bulan: "2024-02", tahun: "", dari: "", sampai: "" }) !== "2024-02-29") asof.push("as-of Februari 2024 bukan 29 (tahun kabisat)");
+  if (liveAsOf({ mode: "Tahun", hari: "", bulan: "", tahun: "2026", dari: "", sampai: "" }) !== "2026-12-31") asof.push("as-of tahun bukan 31 Desember");
+  /* Mode Rentang (FIN dari-sampai): saldo as-of = tanggal "sampai". */
+  if (liveAsOf({ mode: "Rentang", hari: "", bulan: "", tahun: "", dari: "2026-06-10", sampai: "2026-07-05" }) !== "2026-07-05") asof.push("as-of rentang bukan tanggal sampai");
 
   /* Mode "Semua" TIDAK boleh memakai konstanta. Versi lama return
      "2026-08-31" apa pun datanya, jadi transaksi setelah Agustus 2026 tidak
      pernah ikut terhitung dan tidak ada yang memberi tahu. Sekarang
      mengikuti transaksi terakhir yang benar-benar ada. */
-  const semua = { mode: "Semua", hari: "", bulan: "", tahun: "" } as const;
+  const semua = { mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" } as const;
   if (liveAsOf(semua) !== "") asof.push("mode Semua tanpa data seharusnya kosong, bukan konstanta");
   if (liveAsOf(semua, "2026-11-14") !== "2026-11-14") asof.push(`mode Semua memakai data terakhir: dapat ${liveAsOf(semua, "2026-11-14")}`);
   if (liveAsOf(semua, "bukan tanggal") !== "") asof.push("tanggal rusak tidak boleh jadi as-of");
@@ -351,8 +353,8 @@ try {
      penerima membuka halaman dengan angka orang lain tanpa sadar. */
   const codec: [string, HistFilter][] = [
     ["bulan:2026-06", { ...juni }],
-    ["tahun:2026", { mode: "Tahun", hari: "", bulan: "", tahun: "2026" }],
-    ["hari:2026-06-15", { mode: "Hari", hari: "2026-06-15", bulan: "", tahun: "" }],
+    ["tahun:2026", { mode: "Tahun", hari: "", bulan: "", tahun: "2026", dari: "", sampai: "" }],
+    ["hari:2026-06-15", { mode: "Hari", hari: "2026-06-15", bulan: "", tahun: "", dari: "", sampai: "" }],
   ];
   for (const [param, want] of codec) {
     if (histToParam(want) !== param) asof.push(`encode ${param}: dapat ${histToParam(want)}`);
@@ -381,11 +383,11 @@ try {
   if (rep.hitung !== 1) asof.push(`baris terhitung: dapat ${rep.hitung}, harus 1 (hanya Juni)`);
 
   /* Saldo benar-benar bergerak seiring tanggal: Mei lebih kecil dari Juni. */
-  const mei = kasAsOfReport(journals as never, liveAsOf({ mode: "Bulan", hari: "", bulan: "2026-05", tahun: "" }), { mode: "Bulan", hari: "", bulan: "2026-05", tahun: "" }, empty, KAS_BANK);
+  const mei = kasAsOfReport(journals as never, liveAsOf({ mode: "Bulan", hari: "", bulan: "2026-05", tahun: "", dari: "", sampai: "" }), { mode: "Bulan", hari: "", bulan: "2026-05", tahun: "", dari: "", sampai: "" }, empty, KAS_BANK);
   if (!((mei.saldo["1-1101"] ?? 0) < (rep.saldo["1-1101"] ?? 0))) asof.push("saldo Mei tidak lebih kecil dari saldo Juni");
 
   /* Opening balance snapshot hanya boleh dipakai untuk bulan snapshot. */
-  const withOpening = kasAsOfReport(journals as never, "2026-08-31", { mode: "Semua", hari: "", bulan: "", tahun: "" }, { "1-1101": 1000 }, KAS_BANK);
+  const withOpening = kasAsOfReport(journals as never, "2026-08-31", { mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" }, { "1-1101": 1000 }, KAS_BANK);
   if (Math.abs((withOpening.saldo["1-1101"] ?? 0) - 1600) > 0.5) asof.push(`opening balance tidak ditambahkan: ${withOpening.saldo["1-1101"] ?? 0}`);
 
   /* Jurnal Void tidak boleh mengubah saldo. */

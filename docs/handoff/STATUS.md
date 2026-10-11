@@ -43,7 +43,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-C-01 | Migrasi & API boqDocs | P0 | F3-C-boq-change-order.md | agent | selesai | PR (lihat progress) |
 | F3-C-02 | Migrasi data lama | P0 | F3-C-boq-change-order.md | agent | selesai | PR #22 merged ke main via squash commit `33816fc`; re-review PENGUJI dan semua checks lulus |
 | F3-C-03 | UI list & detail surat BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
-| F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | sebagian | kind boq + arsip dokumen otomatis saat Disetujui; perapian tab Dokumen per tipe belum |
+| F3-C-04 | PDF & dokumen | P1 | F3-C-boq-change-order.md | | selesai | PDF boq, arsip dokumen otomatis, tab Dokumen dikelompokkan per tipe |
 | F3-C-05 | Change Order lewat owner & terhubung BoQ | P0 | F3-C-boq-change-order.md | Claude | review | feat/F3-C-05-change-order — keputusan owner & apply lewat endpoint; apply membuat revisi BoQ + memperbarui anggaran (`probe:change-order` 9/9) |
 | F3-D-01 | Tambah sparepart dari inventori | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-C-03-boq-ui-material-demo |
 | F3-D-02 | Service: dari WBS, teknisi, biaya BoQ, approval | P0 | F3-D-service-sparepart.md | Claude | review | feat/F3-D-02-service-approval-mr (`probe:service` 14/14, ADR-0015) |
@@ -58,7 +58,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-F-03 | Waiting list dock | P1 | F3-F-drydock.md | | selesai | waiting list = proyek aktif tanpa slot |
 | F3-F-04 | Form booking slot | P0 | F3-F-drydock.md | agent | review | PR #29 OPEN; branch `feat/F3-F-04-drydock-booking-form`; pada head `d9a5ff2`, P1 rollover dan dua P2 sebelumnya tertutup (probe tanggal 21/21, checks 5/5). P2 reschedule baru diperbaiki: modal pindah memakai `DateInput` ISO tanpa batas 0–90; validasi tanggal/bentrok/kapasitas dipertahankan; probe menambah kasus sebelum hari ini dan >90. Root `npm run check` lulus pada SQLite sementara dimigrasi/seed dengan `JWT_SECRET` uji sementara; web production build lulus (warning chunk >500 kB dan warning lint yang sudah ada). Semua checks GitHub lulus 5/5 pada head kode `43f48b8`. Smoke test UI manual ID/EN belum dilakukan karena preview menolak host yang dicoba; `allowedHosts` tidak diubah dan tidak ada screenshot. Setelah head final dilaporkan, pemilik task akan meneruskan re-review read-only Benson via Group; jangan tetapkan reviewer resmi GitHub dan jangan merge ke `main` |
 | F3-F-05 | Jadwalkan maintenance | P1 | F3-F-drydock.md | | selesai | PR batch P1 (10 Okt) |
-| F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | sebagian | badge kategori, kolom Kelas/Bin dihapus; selector impor belum dipindah ke sebelah Scan |
+| F3-G-01 | Katalog dirapikan | P1 | F3-G-inventori.md | | selesai | badge kategori, kolom Kelas/Bin dihapus, impor/template sebaris dengan Scan |
 | F3-G-02 | Tambah material + konversi satuan | P0 | F3-G-inventori.md | agent | review | Branch `feat/F3-G-02-material-unit-conversion`; gate penuh dan preview UI lulus |
 | F3-G-03 | Barang keluar: eceran & potongan | P0 | F3-G-inventori.md | Claude | review | feat/F3-G-inventori — eceran (kemasan terbuka/openBase) & potongan plat; server `POST /api/inventory/:id/issue` (probe 5/5), util `probe:stock-issue` 9/9; stok tampil "6 drum (1.150 L)" |
 | F3-G-04 | BOM terima & keluar barang | P0 | F3-G-inventori.md | Claude | review | feat/F3-G-inventori — tab Terima & Keluar: checklist PO → receive transaksional, checklist permintaan proyek, Additional wajib alasan; retur tanpa vendor |
@@ -90,9 +90,9 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — rekap bulanan karyawan × tanggal (filter bulan & tahun), tanpa shift, lembur otomatis dengan batas harian/mingguan (utils/overtime.ts) |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | selesai | ingest per alat (API key) + impor CSV; adaptor merk menunggu Q14 |
 | F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | agent | review | Branch feat/F3-M-01-detail-data-kapal; basis origin/main e984be5; PR #38; root check + build lulus; UI diverifikasi |
-| F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | sebagian | tab, sheet, dan kode mati dihapus; filter rentang bulan belum |
+| F3-M-02 | Analitik: date picker, hapus prediktif & preskriptif | P1 | F3-M-lainnya.md | | selesai | tab & kode prediktif/preskriptif dihapus; rentang bulan dari-sampai (input month) |
 | F3-M-03 | Dashboard: report perlu perhatian per kategori | P1 | F3-M-lainnya.md | agent | review | branch feat/F3-M-03-dashboard-attention-categories; `npm run check` hijau; review independen bersih |
-| F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | todo | |
+| F3-M-04 | Keuangan: tanggal & sort (sisa F1/F2 lama) | P2 | F3-M-lainnya.md | | selesai | terverifikasi: semua tabel sudah SortTh; ditambah mode Rentang tanggal di filter periode (Kas & Bank, Buku Besar, Neraca, Laba Rugi) |
 | F4-01 | Concurrency atomik | P0 | F4-integritas.md | Claude | review | feat/F4-F5-production-readiness — PATCH bersyarat (updated_at + data), 409 STALE dengan data terbaru (`probe:concurrency` 3/3); baseUpdatedAt wajib per koleksi belum |
 | F4-02 | Transaksi untuk operasi multi-langkah | P0 | F4-integritas.md | agent | selesai | PR #4 |
 | F4-03 | Realtime perubahan data | P1 | F4-integritas.md | | selesai | SSE /api/events + hook useRealtime; satu instans (lihat komentar ponytail) |

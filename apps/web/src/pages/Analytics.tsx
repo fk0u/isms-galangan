@@ -215,7 +215,22 @@ export default function Analytics() {
      Dihitung ulang setiap render supaya pergantian bulan saat tab terbuka
      langsung terasa (versi lama memakai useMemo dengan deps [] sehingga
      sumbu beku selama sesi). */
-  const axis = useMemo(() => monthAxis({ months: monthCount, locale }), [monthCount, locale]);
+  /* ANL-01: rentang bulan bebas (dari-sampai). Bila keduanya diisi dan sah,
+     sumbu memakai rentang itu; bila tidak, tombol 3/6/12 bulan yang berlaku. */
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const rangeMonths = useMemo(() => {
+    const ym = /^(\d{4})-(\d{2})$/;
+    const a = ym.exec(rangeFrom);
+    const b = ym.exec(rangeTo);
+    if (!a || !b) return 0;
+    const n = (Number(b[1]) * 12 + Number(b[2])) - (Number(a[1]) * 12 + Number(a[2])) + 1;
+    return n >= 1 && n <= 36 ? n : 0;
+  }, [rangeFrom, rangeTo]);
+  const axis = useMemo(
+    () => (rangeMonths > 0 ? monthAxis({ months: rangeMonths, start: rangeFrom, locale }) : monthAxis({ months: monthCount, locale })),
+    [monthCount, rangeMonths, rangeFrom, locale],
+  );
   const axisLabel = fmtMonthRange(axis);
   /* What-if dikendalikan dari Pengaturan (grup Analytics) - otomatis dipakai forecast. */
   const growth = getSetting(data, "WHATIF_GROWTH", 0);
@@ -802,10 +817,10 @@ const exportPdfReport = async () => {
               <button
                 key={n}
                 type="button"
-                onClick={() => setMonthCount(n)}
-                aria-pressed={monthCount === n}
+                onClick={() => { setMonthCount(n); setRangeFrom(""); setRangeTo(""); }}
+                aria-pressed={rangeMonths === 0 && monthCount === n}
                 className={`px-2.5 py-1 text-xs font-medium transition-colors ${
-                  monthCount === n
+                  rangeMonths === 0 && monthCount === n
                     ? "bg-navy-900 text-white"
                     : "bg-white text-steel-600 hover:bg-steel-100"
                 }`}
@@ -814,6 +829,12 @@ const exportPdfReport = async () => {
               </button>
             ))}
           </div>
+          <span className="flex items-center gap-1 text-xs text-steel-600">
+            <input type="month" className="input w-auto px-2 py-1 text-xs" value={rangeFrom} max={rangeTo || undefined} onChange={(e) => setRangeFrom(e.target.value)} aria-label={S.rangeFrom} />
+            <span aria-hidden>–</span>
+            <input type="month" className="input w-auto px-2 py-1 text-xs" value={rangeTo} min={rangeFrom || undefined} onChange={(e) => setRangeTo(e.target.value)} aria-label={S.rangeTo} />
+            {(rangeFrom !== "" || rangeTo !== "") && <button type="button" className="text-ocean-600 hover:underline" onClick={() => { setRangeFrom(""); setRangeTo(""); }}>{S.rangeReset}</button>}
+          </span>
           <span className="text-xs text-steel-500">
             {locale === "en" ? "Window" : "Jendela"}: {axisLabel}
           </span>
