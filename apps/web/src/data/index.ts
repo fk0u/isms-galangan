@@ -741,20 +741,6 @@ export const marginSeries = [
   { month: "Ags", margin: 28.6 },
 ];
 
-export const cashflowSeries = [
-  { month: "Sep", masuk: 4.4, keluar: 4.8 },
-  { month: "Okt", masuk: 5.2, keluar: 4.4 },
-  { month: "Nov", masuk: 5.9, keluar: 5.0 },
-  { month: "Des", masuk: 6.6, keluar: 5.9 },
-  { month: "Jan", masuk: 5.4, keluar: 5.9 },
-  { month: "Feb", masuk: 6.8, keluar: 6.1 },
-  { month: "Mar", masuk: 5.0, keluar: 5.7 },
-  { month: "Apr", masuk: 7.7, keluar: 6.8 },
-  { month: "Mei", masuk: 7.1, keluar: 7.4 },
-  { month: "Jun", masuk: 8.6, keluar: 7.8 },
-  { month: "Jul", masuk: 9.4, keluar: 8.3 },
-  { month: "Ags", masuk: 10.1, keluar: 8.6 },
-];
 
 export const utilSeries = [
   { month: "Sep", drydock: 72, equipment: 61 },
@@ -1082,9 +1068,6 @@ export const seedBoqDocs: BoQDoc[] = [
 const M12 = ["Sep", "Okt", "Nov", "Des", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags"];
 const mk = (vs: number[]) => M12.map((name, i) => ({ name, v: vs[i] ?? vs[vs.length - 1] }));
 
-export const activeProjectTrend = mk([6, 7, 6, 8, 7, 8, 6, 9, 8, 10, 10, 11]);
-export const contractValueTrend = mk([98, 104, 101, 112, 108, 115, 110, 121, 118, 126, 131, 138]);
-export const avgProgressTrend = mk([38, 40, 41, 43, 44, 47, 49, 52, 55, 58, 61, 63]);
 export const itemTrend = mk([142, 145, 148, 152, 155, 159, 162, 166, 170, 174, 178, 182]);
 export const lowStockTrend = mk([9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3]);
 export const warehouseTrend = mk([4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8]);
@@ -1092,10 +1075,7 @@ export const stockValueTrend = stockTrend.map((d) => ({ name: d.month, v: d.nila
 export const subActiveTrend = mk([9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15]);
 export const subContractTrend = mk([18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
 export const woTrend = mk([3, 4, 3, 5, 4, 5, 6, 5, 6, 7, 6, 7]);
-export const ratingTrend = mk([82, 83, 83, 84, 84, 85, 85, 86, 86, 87, 87, 88]);
 export const equipTotalTrend = mk([22, 23, 23, 24, 24, 25, 25, 26, 26, 27, 27, 28]);
-export const maintTrend = mk([4, 3, 4, 3, 3, 2, 3, 2, 2, 2, 1, 2]);
-export const serviceDueTrend = mk([5, 4, 5, 4, 3, 4, 3, 3, 2, 3, 2, 2]);
 export const certExpireTrend = mk([12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 7]);
 export const certifiedTrend = mk([74, 75, 75, 76, 77, 78, 78, 79, 80, 81, 81, 82]);
 export const ncrTrend = mk([7, 6, 7, 6, 5, 5, 4, 4, 4, 3, 3, 3]);

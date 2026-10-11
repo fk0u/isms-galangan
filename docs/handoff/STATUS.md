@@ -85,7 +85,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-L-02 | Data karyawan lengkap | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — tipe, pendidikan, jenis kelamin, status kawin, tanggungan → PTKP otomatis (utils/ptkp.ts), kontrak, foto/KTP/ijazah; `probe:hr-rules` |
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
-| F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | selesai | kop dari setting COMPANY_KOP (JSON); logo gambar belum |
+| F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | selesai | form kop surat di Pengaturan (setting COMPANY_KOP); logo gambar belum |
 | F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | sebagian | QR + NIK + PIN, endpoint publik ber-rate-limit, ADR-0017; lampiran dari halaman publik sengaja tidak ada |
 | F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — rekap bulanan karyawan × tanggal (filter bulan & tahun), tanpa shift, lembur otomatis dengan batas harian/mingguan (utils/overtime.ts) |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | selesai | ingest per alat (API key) + impor CSV; adaptor merk menunggu Q14 |
@@ -105,8 +105,8 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F5-03 | Data demo yang bercerita | P0 | F5-demo.md | Claude | selesai | 20 karyawan lengkap PTKP, proyek tahap Trial & Handover + garansi |
 | F5-04 | Skenario demo per modul | P0 | F5-demo.md | Claude | review | `docs/demo/` 13 alur (langkah klik, data, hasil) + panel Demo di aplikasi; uji kering 2× oleh presenter belum |
 | F5-05 | Audit ulang | P0 | F5-demo.md | Claude | review | `docs/log/audit-ulang.md` — security probe 0 VULN K/T; T20/T21/T26/T27 ditutup; Lighthouse belum |
-| F6-01 | Deteksi kode mati dengan knip | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
-| F6-02 | Hapus file, export, dan dependensi tak terpakai | P1 | F6-cleanup.md | PEMBERSIH | todo | malam H3 |
+| F6-01 | Deteksi kode mati dengan knip | P1 | F6-cleanup.md | PEMBERSIH | selesai | knip di apps/web (npm run knip); laporan 11 Okt: 1 file, 42 export, 19 tipe tak terpakai; api belum |
+| F6-02 | Hapus file, export, dan dependensi tak terpakai | P1 | F6-cleanup.md | PEMBERSIH | sebagian | dihapus: services/index.ts + 7 seri data demo mati; export tak terpakai lain belum (banyak dipakai internal) |
 | F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | sebagian | probe simetri ID/EN masuk check; penghapusan kunci mati belum |
 | F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | selesai | --max-warnings 74 (web) / 29 (api) |
 | F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |
