@@ -3,14 +3,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
 import { useAuth, demoUsers } from "../auth/auth";
-import { useStore } from "../data/store";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import { toast } from "../components/ui";
 
 export default function Login() {
   const { login } = useAuth();
-  const { resync } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
@@ -20,9 +18,8 @@ export default function Login() {
   const [shake, setShake] = useState(0);
   const [fails, setFails] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
-  // busy: null | "auth" (menghubungi server) | "sync" (menarik data).
-  // Bedakan "sedang proses" vs "jaringan mati" + cegah double-submit.
-  const [busy, setBusy] = useState<null | "auth" | "sync">(null);
+  // Mencegah double-submit selama autentikasi; sinkronisasi dilakukan per modul.
+  const [busy, setBusy] = useState<null | "auth">(null);
   const { t, locale } = useT();
   const S = n_misc[locale];
 
@@ -67,8 +64,6 @@ export default function Login() {
     setFails(0);
     setLockedUntil(0);
     toast(t.auth.welcome);
-    setBusy("sync");
-    await resync().catch(() => undefined);
     setBusy(null);
     navigate(from, { replace: true });
   };
@@ -87,8 +82,6 @@ export default function Login() {
       setFails(0);
       setLockedUntil(0);
       toast(`${t.auth.asUser} ${found?.name ?? t.auth.demoAccount}`);
-      setBusy("sync");
-      await resync().catch(() => undefined);
       setBusy(null);
       navigate(from, { replace: true });
     } else {
@@ -223,7 +216,7 @@ export default function Login() {
               ) : (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {busy === "auth" ? S.lgConnecting : S.lgSyncing}
+                  {S.lgConnecting}
                 </>
               )}
             </button>

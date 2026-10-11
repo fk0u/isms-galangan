@@ -116,7 +116,7 @@ function isBackendPage(v: unknown): v is BackendPage {
 }
 
 /** Adapter HTTP: dipakai otomatis saat VITE_API_URL diisi. */
-export function remoteRepository(resource: string): Repository {
+export function remoteRepository(resource: string, request: typeof apiFetch = apiFetch): Repository {
   const base = `/api/${resource}`;
   /* Kumpulkan halaman sambil men-DE-DUP per id.
      Paginasi OFFSET memang rapuh: kalau ada INSERT atau DELETE di tengah
@@ -154,7 +154,7 @@ export function remoteRepository(resource: string): Repository {
          * anotasi TypeScript memberi TS7022 "implicitly any" padahal tidak
          * ada `any` di mana pun. */
         const qs: string = `limit=${limit}${cursor === null ? "" : `&after=${encodeURIComponent(cursor)}`}`;
-        const page: BackendRow[] | BackendPage = await apiFetch<BackendRow[] | BackendPage>(
+        const page: BackendRow[] | BackendPage = await request<BackendRow[] | BackendPage>(
           `${base}?${qs}`,
           { background: true },
         );
@@ -183,7 +183,7 @@ export function remoteRepository(resource: string): Repository {
         const params = new URLSearchParams(baseParams);
         params.set("limit", String(limit));
         params.set("offset", String(offset));
-        const page = await apiFetch<BackendRow[] | BackendPage>(`${base}?${params.toString()}`, { background: true });
+        const page = await request<BackendRow[] | BackendPage>(`${base}?${params.toString()}`, { background: true });
         if (Array.isArray(page)) return collect((page as BackendRow[]).map(rowToItem), limit);
         if (!isBackendPage(page)) return [];
         const rows = Array.isArray(page.rows) ? page.rows : [];
@@ -203,7 +203,7 @@ export function remoteRepository(resource: string): Repository {
       if (opts?.branch?.trim()) params.set("branch", opts.branch.trim());
       params.set("limit", String(size));
       params.set("offset", String((page - 1) * size));
-      const res = await apiFetch<BackendRow[] | BackendPage>(`${base}?${params.toString()}`, { background: true });
+      const res = await request<BackendRow[] | BackendPage>(`${base}?${params.toString()}`, { background: true });
       /* BE lawas mengembalikan array polos tanpa total - anggap satu halaman. */
       if (Array.isArray(res)) {
         const rows = res.map(rowToItem);
@@ -215,18 +215,18 @@ export function remoteRepository(resource: string): Repository {
       return { rows, total, page, size, pages: Math.max(1, Math.ceil(total / size)) };
     },
     async create(item) {
-      const row = await apiFetch<BackendRow>(base, { method: "POST", body: JSON.stringify(itemToCreateBody(item)) });
+      const row = await request<BackendRow>(base, { method: "POST", body: JSON.stringify(itemToCreateBody(item)) });
       return rowToItem(row);
     },
     async patch(id, patch) {
-      const row = await apiFetch<BackendRow>(`${base}/${encodeURIComponent(id)}`, {
+      const row = await request<BackendRow>(`${base}/${encodeURIComponent(id)}`, {
         method: "PATCH",
         body: JSON.stringify(patchToUpdateBody(patch)),
       });
       return rowToItem(row);
     },
     async remove(id) {
-      await apiFetch<unknown>(`${base}/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await request<unknown>(`${base}/${encodeURIComponent(id)}`, { method: "DELETE" });
     },
   };
 }

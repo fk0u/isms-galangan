@@ -97,9 +97,9 @@ function Guard({ title, children }: { title: string; children: ReactElement }) {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <LanguageProvider>
+      <StoreProvider>
       <AuthProvider>
       <SecurityGuards />
-      <StoreProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -150,8 +150,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
-      </StoreProvider>
       </AuthProvider>
+      </StoreProvider>
     </LanguageProvider>
   </React.StrictMode>
 );

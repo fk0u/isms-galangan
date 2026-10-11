@@ -1,4 +1,4 @@
-﻿// Pola standar fetch API per-batch saat perpindahan modul/tab.
+// Pola standar fetch API per-batch saat perpindahan modul/tab.
 //
 // Masalah pola lama: setiap halaman memanggil resync() penuh (50+ koleksi +
 // WBS/team per proyek) tiap kali dibuka - lambat dan memboroskan bandwidth,
@@ -9,16 +9,17 @@
 //   const { syncing, refresh } = useModuleSync(COLS);            // saat mount
 //   const { syncing } = useModuleSync(COLS_TAB, [tab]);          // saat ganti tab
 //
-// - Mount / deps berubah (mis. tab) → batch koleksi ditarik paralel dari
-//   backend (data selalu paling baru); mode lokal → no-op senyap.
+// - Mount / deps berubah (mis. tab) → koleksi yang belum fresh ditarik paralel;
+//   hasil in-flight/TTL 30 dtk dipakai ulang; mode lokal → no-op senyap.
 // - `syncing` untuk skeleton/disable aksi; `refresh()` untuk tombol muat ulang.
-// - Anti spam: permintaan berjalan tidak pernah didobel (guard ref).
+// - Anti spam: request sejenis bergabung; mutasi/SSE memaksa invalidasi selektif.
 // - AppShell membaca recentModuleSync() agar resync penuh tidak kembar
 //   dengan batch halaman yang baru saja jalan.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore, type CollectionKey, type WbsItem } from "./store";
-import { apiFetch } from "../services/http";
+import { apiFetch, getJwt } from "../services/http";
+import { collectionSyncCache } from "./collectionSyncCache";
 
 let lastBatchSyncAt = 0;
 let batchInFlight = 0;
@@ -97,7 +98,7 @@ export interface ModuleSync {
   /** Batch sedang berjalan - pakai untuk skeleton / disable tombol. */
   syncing: boolean;
   /** Tarik ulang batch secara manual (tombol refresh). */
-  refresh: () => void;
+  refresh: (force?: boolean) => void;
   /** Koleksi pada batch terakhir yang GAGAL ditarik. Kosong = semua berhasil
    *  atau belum ada percobaan. Sebelumnya kegagalan ditelan diam-diam sehingga
    *  halaman menampilkan data seed/IndexedDB seolah-olah itu data terkini. */
@@ -116,6 +117,8 @@ export function useModuleSync(cols: CollectionKey[], deps: unknown[] = []): Modu
   /* Satu re-run tertunda: permintaan yang masuk saat batch berjalan tidak
      dibuang, tapi dijalankan setelahnya. */
   const rerunRef = useRef(false);
+  const rerunForceRef = useRef(false);
+  const latestRefreshRef = useRef<(force?: boolean) => void>(() => undefined);
   const aliveRef = useRef(true);
   const colsKey = cols.join("|");
   const depsKey = JSON.stringify(deps);
@@ -127,7 +130,7 @@ export function useModuleSync(cols: CollectionKey[], deps: unknown[] = []): Modu
     };
   }, []);
 
-const refresh = useCallback(() => {
+const refresh = useCallback((force = true) => {
     if (!colsKey) return;
     /* Tidak membuang permintaan yang datang saat batch lain berjalan: antrekan
        satu re-run. Versi lama `return` di sini, jadi perubahan tab yang cepat
@@ -135,6 +138,7 @@ const refresh = useCallback(() => {
        yang tidak pernah bisa direproduksi. */
     if (runningRef.current) {
       rerunRef.current = true;
+      rerunForceRef.current = rerunForceRef.current || force;
       return;
     }
     const batch = colsKey.split("|") as CollectionKey[];
@@ -142,10 +146,15 @@ const refresh = useCallback(() => {
     batchInFlight += 1;
     setSyncActive(1);
     setSyncing(true);
-    void resyncCollections(batch)
+    void collectionSyncCache.sync(
+      getJwt() ?? "local",
+      batch,
+      (requested) => resyncCollections(requested as CollectionKey[]),
+      force,
+    )
       .then((bad) => {
         if (aliveRef.current) {
-          setFailed(bad);
+          setFailed(bad as CollectionKey[]);
           setLastSyncAt(Date.now());
         }
         publishFailed(colsKey.split("|"), bad);
@@ -172,13 +181,16 @@ const refresh = useCallback(() => {
         if (aliveRef.current) setSyncing(false);
         if (rerunRef.current) {
           rerunRef.current = false;
-          refresh();
+          const rerunForce = rerunForceRef.current;
+          rerunForceRef.current = false;
+          latestRefreshRef.current(rerunForce);
         }
       });
   }, [colsKey, resyncCollections]);
+  latestRefreshRef.current = refresh;
 
   useEffect(() => {
-    refresh();
+    refresh(false);
   }, [refresh, depsKey]);
 
   return { syncing, refresh, failed, lastSyncAt };
