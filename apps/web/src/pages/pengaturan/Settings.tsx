@@ -1,3 +1,4 @@
+import KopCard from "./KopCard";
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Loader2 } from "lucide-react";
 import { Card, PageHeader, Field, Tabs, toast, NumInput, useBusy } from "../../components/ui";
@@ -227,6 +228,7 @@ export default function Settings() {
         <h2 className="text-base font-bold text-navy-900">{S.bizConsts}</h2>
         <p className="text-xs text-steel-500">{S.bizConstsSub}</p>
       </div>
+      <KopCard canWrite={canWrite} />
       <Tabs tabs={[...TABS]} active={tab} onChange={setTab} />
       {(() => {
         const rows = rowsFor(tab);
