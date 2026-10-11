@@ -27,3 +27,9 @@ Angka payload menghitung envelope JSON respons, tanpa header HTTP/TLS dan tanpa 
 ## Batas pengukuran
 
 Perbandingan di atas mengukur alur inventory, bukan angka agregat seluruh halaman atau jumlah bytes aktual sesudah gzip. Batch Finance divalidasi lewat pemetaan koleksi per tab dan pemeriksaan aplikasi; jumlah request produksi tetap bergantung pada data, izin pengguna/cabang, cache, dan event SSE.
+
+## Verifikasi
+
+- `npm run check` dari root lulus; mencakup check web dan API.
+- Branch-scope probe lulus **16/16**; fixture probe dibersihkan di blok `finally`.
+- Pemeriksaan visual demo Procurement: [picker PO besar](issue-104-procurement-picker.png).
