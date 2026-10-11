@@ -1769,6 +1769,32 @@ export function absUrl(url: unknown): string {
   return toAbsoluteUrl(url);
 }
 
+/* Cache gambar ber-JWT per sesi tab: thumbnail, perbesar, dan render ulang
+   memakai blob yang sama, tidak mengunduh ulang dari server. Kunci memuat
+   token sehingga pergantian akun tidak mewarisi gambar akun sebelumnya.
+   Entri tertua dilepas (object URL di-revoke) saat melewati batas. */
+const SECURE_IMG_MAX = 150;
+const secureImgCache = new Map<string, Promise<string>>();
+function loadSecureBlob(raw: string): Promise<string> {
+  const jwt = getJwt();
+  const key = `${jwt ?? ""}|${raw}`;
+  const cached = secureImgCache.get(key);
+  if (cached) return cached;
+  const p = fetch(raw, { headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} }).then(async (res) => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return URL.createObjectURL(await res.blob());
+  });
+  secureImgCache.set(key, p);
+  p.catch(() => secureImgCache.delete(key)); // gagal = boleh dicoba lagi
+  if (secureImgCache.size > SECURE_IMG_MAX) {
+    const oldestKey = secureImgCache.keys().next().value as string;
+    const oldest = secureImgCache.get(oldestKey);
+    secureImgCache.delete(oldestKey);
+    void oldest?.then((u) => URL.revokeObjectURL(u)).catch(() => {});
+  }
+  return p;
+}
+
 /** Gambar dengan inisial bila tanpa foto + loader JWT (fetch blob → object URL).
  *  Cocok untuk foto yang dilindungi auth backend; URL lama relatif dinormalisasi. */
 export function SecureImg({
@@ -1792,28 +1818,16 @@ export function SecureImg({
     setFailed(false);
     setObj(null);
     if (!raw || /^(blob:|data:)/i.test(raw)) return;
-    // URL absolut same-origin / backend ber-JWT → ambil via fetch blob.
-    let revoke = "";
+    // URL absolut same-origin / backend ber-JWT → ambil via fetch blob (ber-cache).
     let cancelled = false;
     // Aset publik dimuat langsung oleh <img> — token tidak dikirim, tanpa fetch ganda.
     const needsJwt = !isPublicAsset && (!/^https?:/i.test(raw) || (BASE && raw.startsWith(BASE)));
     if (!needsJwt) return;
-    void (async () => {
-      try {
-        const jwt = getJwt();
-        const res = await fetch(raw, { headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        if (cancelled) return;
-        revoke = URL.createObjectURL(blob);
-        setObj(revoke);
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    })();
+    void loadSecureBlob(raw)
+      .then((url) => { if (!cancelled) setObj(url); })
+      .catch(() => { if (!cancelled) setFailed(true); });
     return () => {
       cancelled = true;
-      if (revoke) URL.revokeObjectURL(revoke);
     };
   }, [raw]);
   if (!raw) {

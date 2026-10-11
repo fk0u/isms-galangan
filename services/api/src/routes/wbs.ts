@@ -1,3 +1,4 @@
+import { scopedProjectIds } from "../teamScope.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth.js";
@@ -100,6 +101,23 @@ export function registerWbsRoutes(app: FastifyInstance): void {
       });
     }
     return ok({ projectId: id, wbs: parsed.data.wbs });
+  });
+
+  /* Semua WBS + tim dalam SATU permintaan. Sinkron klien sebelumnya memanggil
+     /wbs dan /team per proyek (2N permintaan tiap sinkron); ini penggantinya.
+     Mengikuti lingkup tim yang sama dengan /api/projects. */
+  app.get("/api/project-sides", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
+    const scope = await scopedProjectIds(req.user);
+    const pick = async (tbl: string): Promise<Record<string, unknown>> => {
+      const rows = await q<SideRow>(`SELECT project_id, data FROM ${tbl}`, []);
+      const out: Record<string, unknown> = {};
+      for (const r of rows) {
+        if (scope !== null && !scope.has(r.project_id)) continue;
+        try { out[r.project_id] = JSON.parse(r.data) as unknown; } catch { /* baris rusak dilewati */ }
+      }
+      return out;
+    };
+    return ok({ wbs: await pick("wbs_by_project"), team: await pick("team_by_project") });
   });
 
   app.get("/api/projects/:id/team", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {

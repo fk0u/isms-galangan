@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch, isBackendConfigured } from "../services/http";
+import { Modal, SecureImg } from "./ui";
 
 interface AuditRow {
   id?: unknown;
@@ -80,6 +81,7 @@ export function ChangeHistory({
   };
   entries?: HistoryEntryItem[];
 }) {
+  const [zoom, setZoom] = useState<string | null>(null);
   const [rows, setRows] = useState<AuditRow[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
 
@@ -148,9 +150,11 @@ export function ChangeHistory({
                 {item.photos && item.photos.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {item.photos.map((url, pIdx) => (
-                      <a key={pIdx} href={url} target="_blank" rel="noopener noreferrer" className="inline-block overflow-hidden rounded border border-steel-200 hover:opacity-80">
-                        <img src={url} alt={`Dokumentasi ${pIdx + 1}`} className="h-10 w-14 object-cover" />
-                      </a>
+                      /* Berkas di /files butuh token: <img>/<a> polos selalu 401.
+                         SecureImg mengambilnya dengan token; klik = perbesar di tempat. */
+                      <button key={pIdx} type="button" onClick={() => setZoom(url)} className="inline-block overflow-hidden rounded border border-steel-200 transition-transform duration-150 ease-out hover:opacity-80 active:scale-[0.97]">
+                        <SecureImg src={url} alt={`Dokumentasi ${pIdx + 1}`} className="h-10 w-14 object-cover" />
+                      </button>
                     ))}
                   </div>
                 )}
@@ -158,6 +162,9 @@ export function ChangeHistory({
             ))}
           </ol>
         )}
+        <Modal open={zoom !== null} onClose={() => setZoom(null)} wide title={labels.title}>
+          {zoom && <SecureImg src={zoom} alt={labels.title} className="max-h-[70vh] w-full rounded-xl object-contain" />}
+        </Modal>
       </section>
     );
   }

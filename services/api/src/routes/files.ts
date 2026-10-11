@@ -111,6 +111,9 @@ export async function isPrivateFile(url: string): Promise<boolean> {
   return false;
 }
 
+/* Id permintaan yang sedang melayani berkas pribadi (diisi onRequest, dibaca onSend). */
+const privateRequests = new Set<string>();
+
 export function registerFileRoutes(app: FastifyInstance): void {
   void app.register(multipart, {
     limits: { fileSize: MAX_BYTES, files: 1 },
@@ -131,9 +134,12 @@ export function registerFileRoutes(app: FastifyInstance): void {
          bukan dari flag saat unggah, sehingga tidak bisa terlewat oleh klien.
          ponytail: memindai tabel employees per permintaan berkas; pindahkan
          ke tabel metadata berindeks bila jumlah karyawan ribuan. */
-      if (!can(req.user?.role, "employees", "w") && (await isPrivateFile(url))) {
+      const priv = await isPrivateFile(url);
+      if (priv && !can(req.user?.role, "employees", "w")) {
         return reply.status(403).send(fail("Berkas pribadi karyawan hanya dapat dibuka HR", "FORBIDDEN"));
       }
+      privateRequests.add(req.id);
+      if (!priv) privateRequests.delete(req.id);
       return undefined;
     }
     return undefined;
@@ -145,6 +151,11 @@ export function registerFileRoutes(app: FastifyInstance): void {
     if (url === "/files" || url.startsWith("/files/")) {
       reply.header("Content-Disposition", "attachment");
       reply.header("X-Content-Type-Options", "nosniff");
+      /* Nama berkas unggahan = UUID dan isinya tidak pernah berubah, jadi aman
+         disimpan browser lama (hanya cache pribadi pengguna itu). Berkas pribadi
+         karyawan tidak boleh tersimpan sama sekali. */
+      const wasPrivate = privateRequests.delete(req.id);
+      if (reply.statusCode === 200) reply.header("Cache-Control", wasPrivate ? "no-store" : "private, max-age=604800, immutable");
     }
     return payload;
   });
