@@ -43,7 +43,7 @@ export function collectWbsPhotos(wbs: unknown): WbsPhotoRow[] {
       if (!h || typeof h !== "object") continue;
       const o = h as Record<string, unknown>;
       for (const u of Array.isArray(o.photos) ? o.photos : []) {
-        push({ task, url: String(u ?? ""), note: String(o.note ?? ""), date: String(o.date ?? ""), by: String(o.by ?? ""), source: "riwayat" });
+        push({ task, url: String(u ?? ""), note: String(o.note ?? ""), date: String(o.date ?? ""), by: String(o.actor ?? o.by ?? ""), source: "riwayat" });
       }
     }
   }

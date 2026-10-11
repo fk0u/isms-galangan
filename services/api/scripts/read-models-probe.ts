@@ -19,7 +19,7 @@ async function main(): Promise<void> {
     return { authorization: `Bearer ${signToken({ id: u.id, username: u.username, role: u.role, branch: "SEMUA", v: u.token_version ?? 0 })}` };
   };
   const pure = collectWbsPhotos([
-    { task: "A", photos: [{ url: "/files/a1.png", note: "awal", date: "2026-10-01" }, "/files/a2.png"], history: [{ date: "2026-10-02", by: "Rudi", note: "update", photos: ["/files/a3.png", "/files/a1.png"] }] },
+    { task: "A", photos: [{ url: "/files/a1.png", note: "awal", date: "2026-10-01" }, "/files/a2.png"], history: [{ date: "2026-10-02", actor: "Rudi", note: "update", photos: ["/files/a3.png", "/files/a1.png"] }] },
     { task: "B", photoUrl: "/files/b1.png", photoNote: "lama" },
     { task: "C" },
   ]);
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [pid, "Samarinda", JSON.stringify({ vessel: "TB Probe", client: "PT Probe", status: "Dalam Proses" }), now]);
   await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [empId, "Samarinda", JSON.stringify({ name: "Probe RM", status: "Aktif" }), now]);
   try {
-    const put = await app.inject({ method: "PUT", url: `/api/projects/${pid}/wbs`, headers: dir, payload: { wbs: [{ task: "Hull Assembly", start: "2026-10", end: "2026-11", progress: 40, weight: 10, photos: [{ url: "/files/2026-10/x1.png", note: "blok 1", date: "2026-10-05" }], history: [{ date: "2026-10-06", from: 30, to: 40, by: "Rudi", note: "las blok 2", photos: ["/files/2026-10/x2.png"] }] }] } });
+    const put = await app.inject({ method: "PUT", url: `/api/projects/${pid}/wbs`, headers: dir, payload: { wbs: [{ task: "Hull Assembly", start: "2026-10", end: "2026-11", progress: 40, weight: 10, photos: [{ url: "/files/2026-10/x1.png", note: "blok 1", date: "2026-10-05" }], history: [{ date: "2026-10-06", from: 30, to: 40, actor: "Rudi", note: "las blok 2", photos: ["/files/2026-10/x2.png"] }] }] } });
     assert("PUT WBS berfoto diterima", put.statusCode === 200, put.body);
     const get = await app.inject({ method: "GET", url: `/api/projects/${pid}/wbs/photos`, headers: dir });
     const gp = (get.json() as { data: { total: number; photos: { url: string; task: string; source: string }[] } }).data;

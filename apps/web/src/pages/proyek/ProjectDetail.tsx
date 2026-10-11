@@ -55,6 +55,7 @@ import { projectDelayDetailsOf, shouldAutoSetLate, shouldClearOverride } from ".
 import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRisk } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
+import WbsTree from "./WbsTree";
 import { PhotoUploader } from "../../components/PhotoUploader";
 import type { PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
@@ -1394,6 +1395,8 @@ const createWarranty = async (wbsTask?: string) => {
           {tab === "WBS & Anggaran" && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detWbsTitle}</h3>
+              {/* Alur bercabang: fase → pekerjaan → foto & riwayat. Tabel di bawah tetap untuk mengubah data. */}
+              <div className="mb-4 rounded-xl border border-steel-100 p-3"><WbsTree wbs={wbs} /></div>
 {/* Search WBS. Tabel lain di tab ini TIDAK diberi search dan itu disengaja:
               tabel baseline dibatasi jumlah tahap, tabel booking/maintenance
               sudah punya tombol Detail, dan matriks risiko 5x5 bukan daftar -
