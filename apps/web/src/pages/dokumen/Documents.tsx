@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload } from "lucide-react";
+import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload, FolderTree, Paperclip, History, Link2, GitBranch, Table2 } from "lucide-react";
+import { FlowTree, type FlowNode } from "../../components/FlowTree";
+import { n_tree } from "../../i18n/n_tree";
 import { Card, PageHeader, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, toast, StatusBadge, usePager, AsyncButton, EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { FilterPopover } from "../../components/FilterPopover";
@@ -230,6 +232,72 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
     return key === "dokumen" ? String(d.title ?? "") : key === "tipe" ? String(d.type ?? "") : key === "proyek" ? String(d.project ?? "") : key === "versi" ? String(d.version ?? "") : key === "status" ? String(d.status ?? "") : String(d.updated ?? "");
   }), [list, sort]);
   const docPager = usePager(list.length);
+
+  /* Tampilan pohon (alur bercabang): kelompok → dokumen → lampiran, riwayat
+     revisi, dan dokumen terkait. Pilihan mode & pengelompokan diingat per
+     perangkat; localStorage boleh gagal (mode privat) tanpa merusak halaman. */
+  const TR = n_tree[locale];
+  const readPref = (k: string, d: string): string => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+  const [viewMode, setViewModeRaw] = useState<"tree" | "table">(() => (readPref("isms.docs.view", "tree") === "table" ? "table" : "tree"));
+  const [groupBy, setGroupByRaw] = useState<"type" | "project">(() => (readPref("isms.docs.group", "type") === "project" ? "project" : "type"));
+  const setViewMode = (v: "tree" | "table"): void => { setViewModeRaw(v); try { localStorage.setItem("isms.docs.view", v); } catch { /* abaikan */ } };
+  const setGroupBy = (v: "type" | "project"): void => { setGroupByRaw(v); try { localStorage.setItem("isms.docs.group", v); } catch { /* abaikan */ } };
+  const treeNodes = useMemo<FlowNode[]>(() => {
+    const byId = new Map(data.documents.map((d) => [String(d.id), d]));
+    const groups = new Map<string, StoreItem[]>();
+    for (const d of sortedDocs) {
+      const raw = String((groupBy === "type" ? d.type : d.project) ?? "").trim();
+      const key = raw === "" || raw === "-" ? (groupBy === "type" ? "-" : TR.noProject) : raw;
+      groups.set(key, [...(groups.get(key) ?? []), d]);
+    }
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([key, docs]) => ({
+      id: `g:${key}`, kind: "group" as const, icon: <FolderTree className="h-4 w-4" />,
+      title: key, subtitle: TR.docsN.replace("{n}", String(docs.length)),
+      children: docs.map((d) => {
+        const saved = (Array.isArray(d.revisions) ? d.revisions : []) as { version?: string; at?: string; by?: string; note?: string }[];
+        /* Dokumen lama tanpa riwayat tetap punya satu cabang: versi berjalannya. */
+        const revs = saved.length > 0 ? saved : [{ version: String(d.version ?? "-"), at: String(d.updated ?? ""), by: String(d.owner ?? "-"), note: TR.currentVersion }];
+        const rels = (Array.isArray(d.related) ? d.related : []).map(String);
+        const file = docFileNameOf(d);
+        const branches: FlowNode[] = [];
+        if (docUrlOf(d) !== "" || file !== "") {
+          branches.push({ id: `${String(d.id)}:file`, kind: "leaf", icon: <Paperclip className="h-3.5 w-3.5" />, title: file || docUrlOf(d), subtitle: TR.branchAttachment });
+        }
+        if (revs.length > 0) {
+          branches.push({
+            id: `${String(d.id)}:rev`, kind: "leaf", icon: <History className="h-3.5 w-3.5" />, title: TR.branchRevisions.replace("{n}", String(revs.length)),
+            children: [...revs].reverse().map((r, i) => ({
+              id: `${String(d.id)}:rev:${i}`, kind: "leaf" as const, icon: <GitBranch className="h-3.5 w-3.5" />,
+              title: `${String(r.version ?? "-")}${r.note ? ` - ${String(r.note)}` : ""}`,
+              subtitle: TR.revBy.replace("{date}", r.at ? fmtTanggal(String(r.at)) : "-").replace("{by}", String(r.by ?? "-")),
+            })),
+          });
+        }
+        if (rels.length > 0) {
+          branches.push({
+            id: `${String(d.id)}:rel`, kind: "leaf", icon: <Link2 className="h-3.5 w-3.5" />, title: TR.branchRelated.replace("{n}", String(rels.length)),
+            children: rels.map((rid) => {
+              const found = byId.get(rid);
+              return {
+                id: `${String(d.id)}:rel:${rid}`, kind: "leaf" as const, icon: <FileText className="h-3.5 w-3.5" />,
+                title: found ? String(found.title) : rid, subtitle: found ? `${rid} · ${String(found.type ?? "")}` : undefined,
+                onOpen: found ? () => { setOcrText(""); setDetail(found); } : undefined,
+              };
+            }),
+          });
+        }
+        return {
+          id: String(d.id), kind: "item" as const, icon: <FileText className="h-4 w-4" />,
+          title: String(d.title),
+          subtitle: `${String(d.id)} · ${String(d.version ?? "-")} · ${groupBy === "type" ? String(d.project ?? "-") : String(d.type ?? "-")} · ${fmtTanggal(d.updated)}`,
+          trailing: <StatusBadge status={d.status} />,
+          onOpen: () => setDetail(d),
+          children: branches,
+        };
+      }),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedDocs, groupBy, data.documents, locale]);
   const pickNotifIds = (ids: string[]): void => {
     if (ids.length === 0) return;
     const idx = sortedDocs.findIndex((d) => ids.includes(String(d.id)));
@@ -584,9 +652,37 @@ const doExport = () => {
             </div>
           )}
         </FilterPopover>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {viewMode === "tree" && (
+            <label className="flex items-center gap-1.5 text-xs text-steel-600">
+              {TR.groupBy}
+              <select className="input w-auto py-1.5 text-xs" value={groupBy} onChange={(e) => setGroupBy(e.target.value === "project" ? "project" : "type")}>
+                <option value="type">{TR.byType}</option>
+                <option value="project">{TR.byProject}</option>
+              </select>
+            </label>
+          )}
+          <div role="group" aria-label={TR.viewAria} className="inline-flex overflow-hidden rounded-lg border border-steel-200">
+            {([["tree", TR.viewTree, FolderTree], ["table", TR.viewTable, Table2]] as const).map(([v, label, Icon]) => (
+              <button key={v} type="button" aria-pressed={viewMode === v} onClick={() => setViewMode(v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === v ? "bg-navy-900 text-white" : "bg-white text-steel-600 hover:bg-steel-100"}`}>
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <Card>
+      {viewMode === "tree" && (
+        <Card className="p-4">
+          {treeNodes.length === 0
+            ? <p className="py-8 text-center text-sm text-steel-400">{TR.empty}</p>
+            /* key: ganti pengelompokan = pohon baru dengan semua kelompok terbuka. */
+            : <FlowTree key={`${groupBy}:${type}`} nodes={treeNodes} labels={{ expand: TR.expand, collapse: TR.collapse, expandAll: TR.expandAll, collapseAll: TR.collapseAll }} />}
+        </Card>
+      )}
+
+      <Card className={viewMode === "tree" ? "hidden" : ""}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-surface sticky top-0 z-10">
