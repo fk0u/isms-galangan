@@ -48,6 +48,8 @@ import { n_fin } from "../../i18n/n_fin";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
 import type { StoreItem } from "../../data/store";
+import { useModuleSync, useProjectWbsSync } from "../../data/useModuleSync";
+import { financeCollectionsForTab } from "../../data/moduleCollections";
 import { fmtRupiah, fmtMiliar, fmtTanggal, fmtJumlah, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { getSetting } from "../../utils/settings";
@@ -794,6 +796,15 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
     const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
   const [tab, setTab] = useState("Akun");
+  useModuleSync(financeCollectionsForTab(tab), [tab]);
+  const financeWbsProjectIds = tab === "Invoice" || tab === "Project P&L"
+    ? (data.projects ?? []).map((project) => String(project.id))
+    : [];
+  const { byProject: financeWbs } = useProjectWbsSync(financeWbsProjectIds);
+  const wbsByProject = useMemo(
+    () => ({ ...(data.wbsByProject ?? {}), ...financeWbs }),
+    [data.wbsByProject, financeWbs],
+  );
   const [retQ, setRetQ] = useState("");
   const [plQ, setPlQ] = useState("");
   const [allocQ, setAllocQ] = useState("");
@@ -2425,7 +2436,7 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
           const bastOk = (data.bast ?? []).some(
             (b) => String(b.projectId ?? "") === pid && String(b.status) === "Disetujui"
           );
-          const wbs = (data.wbsByProject ?? {})[pid] ?? [];
+          const wbs = wbsByProject[pid] ?? [];
           const totalW = wbs.reduce((s, w) => s + Number(w.weight || 0), 0);
           const wProg = totalW > 0
             ? Math.round(wbs.reduce((s, w) => s + Number(w.progress || 0) * Number(w.weight || 0), 0) / totalW)

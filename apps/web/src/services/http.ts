@@ -45,12 +45,21 @@ function safeStorage(): Storage | null {
   }
 }
 
+function notifySessionChange(): void {
+  try {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("isms:session-change"));
+  } catch {
+    /* abaikan */
+  }
+}
+
 export function setJwt(token: string): void {
   try {
     safeStorage()?.setItem(JWT_KEY, token);
   } catch {
     /* storage tak tersedia - abaikan */
   }
+  notifySessionChange();
 }
 
 export function getJwt(): string | null {
@@ -67,6 +76,7 @@ export function clearJwt(): void {
   } catch {
     /* abaikan */
   }
+  notifySessionChange();
 }
 
 /* ============ FETCH + ENVELOPE ============ */

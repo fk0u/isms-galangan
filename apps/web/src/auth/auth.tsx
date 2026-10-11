@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
 import { purgeOfflineCache } from "../data/idb";
+import { useStore } from "../data/store";
 
 export interface DemoUser {
   username: string;
@@ -109,6 +110,7 @@ const Ctx = createContext<AuthCtx>({ user: null, login: async () => "Belum siap"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Session | null>(() => loadSession());
+  const { activateCacheOwner, endSession } = useStore();
 
   // Sinkronkan permissions pengguna dari /api/auth/me saat aplikasi dimuat
   useEffect(() => {
@@ -147,14 +149,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           method: "POST",
           body: JSON.stringify({ username: uname, password }),
         });
-        setJwt(res.token);
         const bu = res.user ?? {};
         const userId = bu.id || bu.username || uname;
-        try {
-          localStorage.setItem("isms.cache.ownerUserId", userId);
-        } catch {
-          /* abaikan */
-        }
+        await activateCacheOwner(userId);
+        setJwt(res.token);
         const session: Session = {
           id: bu.id,
           name: bu.name || bu.username || uname,
@@ -186,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (u) => u.username.toLowerCase() === uname.toLowerCase() && u.password === password
       );
       if (!found) return "Username atau password salah. Hubungi administrator untuk akses.";
+      await activateCacheOwner(found.username);
       const session: Session = {
         name: found.name,
         role: found.role,
@@ -222,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    endSession();
     clearJwt();
     sessionStorage.removeItem(SESSION_KEY);
     // Keluar juga mengakhiri mode "lihat sebagai peran" (token akun asal ikut dibuang).

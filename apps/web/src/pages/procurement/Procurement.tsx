@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut, ChartTooltip, Modal, Field, FormGrid, ConfirmModal, toast, EmptyState, SortTh, toggleSort, sortRows, usePager,
@@ -7,11 +7,12 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useBusy, SearchBox, rowMatches } from "../../components/ui";
-import { useStore, type StoreItem, type CollectionKey } from "../../data/store";
+import { useStore, type StoreItem } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
+import { PROCUREMENT_COLLECTIONS } from "../../data/moduleCollections";
 import { findUsages } from "../../utils/usages";
 import { remoteRepository } from "../../services/repositories";
-import { getJwt, isBackendConfigured } from "../../services/http";
+import { ApiError, getJwt, isBackendConfigured } from "../../services/http";
 import { fmtRupiah, fmtJumlah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { sameName } from "../../utils/names";
@@ -285,12 +286,9 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
   );
 }
 
-/* Batch koleksi modul Procurement untuk useModuleSync (pengganti resync penuh). */
-const PROC_COLS: CollectionKey[] = ["activities", "inventory", "materialRequests", "payables", "projects", "purchaseOrders", "requisitions", "rfqs", "services", "vendors"];
-
 export default function Procurement() {
   const busy = useBusy();
-  const { data, add, update, remove, log, inBranch } = useStore();
+  const { data, add, update, remove, log, branch, inBranch } = useStore();
   const poActions = usePoActions();
   const { user } = useAuth();
   const { locale } = useT();
@@ -299,13 +297,13 @@ export default function Procurement() {
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
-  /* Fetch per-batch modul (pengganti resync penuh). */
-  useModuleSync(PROC_COLS);
+  /* Data Procurement saja; inventory dicari per halaman saat picker dibuka. */
+  useModuleSync(PROCUREMENT_COLLECTIONS);
   const purchaseOrders = inBranch(data.purchaseOrders);
   const requisitions = data.requisitions;
   const vendors = data.vendors;
   const rfqs = data.rfqs;
-  const invList = inBranch(data.inventory);
+  const invList = useMemo(() => inBranch(data.inventory), [data.inventory, inBranch]);
 
   const PO_KECIL_LIMIT = getSetting(data, "PO_KECIL_LIMIT", 50000000);
   const APPROVE_PO_LIMIT = getSetting(data, "APPROVE_PO", 1000000);
@@ -407,6 +405,15 @@ export default function Procurement() {
   const [recvNoFaktur, setRecvNoFaktur] = useState("");
   const [recvTglFaktur, setRecvTglFaktur] = useState("");
   const [recvDendaPct, setRecvDendaPct] = useState("0.1");
+  const [inventoryPickerQuery, setInventoryPickerQuery] = useState("");
+  const [inventoryPickerPage, setInventoryPickerPage] = useState(1);
+  const [inventoryPickerRows, setInventoryPickerRows] = useState<StoreItem[]>([]);
+  const [inventoryPickerTotal, setInventoryPickerTotal] = useState(0);
+  const [inventoryPickerPages, setInventoryPickerPages] = useState(1);
+  const [inventoryPickerLoading, setInventoryPickerLoading] = useState(false);
+  const [inventoryLookupRows, setInventoryLookupRows] = useState<StoreItem[]>([]);
+  const inventoryPickerCacheRef = useRef(new Map<string, { at: number; rows: StoreItem[]; total: number; pages: number }>());
+  const inventoryPickerRequestRef = useRef(0);
   const [retPo, setRetPo] = useState<StoreItem | null>(null);
   const [retQty, setRetQty] = useState("");
   const [retNote, setRetNote] = useState("");
@@ -447,6 +454,123 @@ export default function Procurement() {
   const [payungVendor, setPayungVendor] = useState<StoreItem | null>(null);
   const [payungPeriode, setPayungPeriode] = useState("");
   const [payungPlafon, setPayungPlafon] = useState("");
+
+  const inventoryChoices = useMemo(() => {
+    const byId = new Map<string, StoreItem>();
+    for (const item of [...invList, ...inventoryLookupRows]) {
+      const id = String(item.id ?? "");
+      if (id) byId.set(id, item);
+    }
+    return inBranch([...byId.values()]);
+  }, [invList, inventoryLookupRows, inBranch]);
+
+  const rememberInventory = useCallback((rows: readonly StoreItem[]) => {
+    setInventoryLookupRows((previous) => {
+      const byId = new Map(previous.map((item) => [String(item.id ?? ""), item]));
+      for (const item of rows) {
+        const id = String(item.id ?? "");
+        if (id) byId.set(id, item);
+      }
+      return [...byId.values()].slice(-250);
+    });
+  }, []);
+
+  const ensureInventoryRow = useCallback(async (itemId: string, itemName: string): Promise<StoreItem | undefined> => {
+    const id = itemId.trim();
+    const name = itemName.trim();
+    const cached = inventoryChoices.find((item) => (id && String(item.id) === id)
+      || (name && String(item.name ?? "").toLocaleLowerCase() === name.toLocaleLowerCase()));
+    if (cached) return cached;
+    if (!name || !isBackendConfigured() || !getJwt()) return undefined;
+    const repository = remoteRepository("inventory");
+    const page = await repository.listPaged?.({
+      q: name,
+      page: 1,
+      size: 100,
+      ...(branch && branch !== "SEMUA" ? { branch } : {}),
+    });
+    if (!page) return undefined;
+    rememberInventory(page.rows);
+    return page.rows.find((item) => id && String(item.id) === id)
+      ?? page.rows.find((item) => String(item.name ?? "").toLocaleLowerCase() === name.toLocaleLowerCase());
+  }, [branch, inventoryChoices, rememberInventory]);
+
+  const inventoryPickerOpen = showBig || recvPo !== null;
+  useEffect(() => {
+    if (!inventoryPickerOpen) return;
+    let active = true;
+    const requestId = ++inventoryPickerRequestRef.current;
+    const query = inventoryPickerQuery.trim();
+    const pageNo = inventoryPickerPage;
+    const branchKey = branch && branch !== "SEMUA" ? branch : "";
+    const cacheKey = `${branchKey}|${query.toLocaleLowerCase()}|${pageNo}`;
+    const cached = inventoryPickerCacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.at < 30_000) {
+      setInventoryPickerRows(cached.rows);
+      setInventoryPickerTotal(cached.total);
+      setInventoryPickerPages(cached.pages);
+      setInventoryPickerLoading(false);
+      return () => { active = false; };
+    }
+
+    const timer = window.setTimeout(() => {
+      setInventoryPickerLoading(true);
+      const load = async (): Promise<void> => {
+        let rows: StoreItem[];
+        let total: number;
+        let pages: number;
+        try {
+          if (!isBackendConfigured() || !getJwt()) throw new Error("offline");
+          const repository = remoteRepository("inventory");
+          const result = await repository.listPaged?.({
+            q: query,
+            page: pageNo,
+            size: 25,
+            ...(branchKey ? { branch: branchKey } : {}),
+          });
+          if (!result) throw new Error("Paginasi inventory tidak tersedia");
+          rows = result.rows;
+          total = result.total;
+          pages = result.pages;
+        } catch (error) {
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            rows = [];
+            total = 0;
+          } else {
+            const needle = query.toLocaleLowerCase();
+            const matched = invList.filter((item) => !needle || `${item.name ?? ""} ${item.sku ?? ""} ${item.code ?? ""}`.toLocaleLowerCase().includes(needle));
+            total = matched.length;
+            rows = matched.slice((pageNo - 1) * 25, pageNo * 25);
+          }
+          pages = Math.max(1, Math.ceil(total / 25));
+        }
+        if (!active || requestId !== inventoryPickerRequestRef.current) return;
+        inventoryPickerCacheRef.current.set(cacheKey, { at: Date.now(), rows, total, pages });
+        setInventoryPickerRows(rows);
+        setInventoryPickerTotal(total);
+        setInventoryPickerPages(pages);
+        rememberInventory(rows);
+        setInventoryPickerLoading(false);
+      };
+      void load();
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [inventoryPickerOpen, inventoryPickerQuery, inventoryPickerPage, branch, invList, rememberInventory]);
+
+  useEffect(() => {
+    inventoryPickerCacheRef.current.clear();
+  }, [data.inventory]);
+
+  const pickerOptions = useMemo(() => {
+    const selectedId = showBig ? bigForm.itemId : recvItem;
+    const selected = inventoryChoices.find((item) => String(item.id) === selectedId);
+    const rows = selected ? [...inventoryPickerRows, selected] : inventoryPickerRows;
+    return [...new Map(rows.map((item) => [String(item.id), item])).values()];
+  }, [bigForm.itemId, inventoryChoices, inventoryPickerRows, recvItem, showBig]);
 
   const bigList = purchaseOrders.filter((p) => p.poType !== "Kecil");
   const smallList = purchaseOrders.filter((p) => p.poType === "Kecil");
@@ -604,7 +728,7 @@ export default function Procurement() {
   const saveBig = async () => {
     try {
     if (!bigForm.prId) { toast(S.tPrWajib, "info"); return; }
-    const invItem = invList.find((i) => i.id === bigForm.itemId);
+    const invItem = await ensureInventoryRow(bigForm.itemId, pickerOptions.find((i) => String(i.id) === bigForm.itemId)?.name ?? "");
     if (!invItem) { toast(S.tItemInv, "info"); return; }
     if (!bigForm.vendor) { toast(S.tVendorWajib, "info"); return; }
     if (bigForm.tujuan === "kapal") {
@@ -778,13 +902,13 @@ export default function Procurement() {
     const plafon = cekPlafon(winVendor, win.price);
     if (plafon && !plafon.ok) { toast(S.tPlafon.replace("{a}", fmtRupiah(plafon.pakai)).replace("{b}", fmtRupiah(plafon.plafon)), "info"); return; }
     try {
+      const exact = await ensureInventoryRow("", String(winRfq.item ?? ""));
       await update("rfqs", winRfq.id, { winner: winVendor, status: "Diputuskan" });
       const prWin = requisitions.find((r) => r.id === winRfq.prId);
       const wQty = Number(prWin?.qty || 0) > 0 ? Number(prWin?.qty) : 1;
       const wUnit = String(prWin?.unit || "pcs");
       const wProject = String(prWin?.project || "-");
       const wVessel = String(prWin?.vessel || data.projects.find((p) => p.id === String(prWin?.project || ""))?.vessel || "");
-      const exact = invList.find((i) => String(i.name).toLowerCase() === String(winRfq.item).toLowerCase());
       const created = await add("purchaseOrders", {
         poType: "Besar", item: winRfq.item, itemId: exact?.id ?? "", vendor: winVendor,
         req: winRfq.prId, prIds: [winRfq.prId], rfqId: winRfq.id, amount: win.price, qty: wQty,
@@ -966,6 +1090,8 @@ export default function Procurement() {
   const openRecv = (po: StoreItem) => {
     setRecvPo(po);
     setRecvItem(po.itemId ?? "");
+    setInventoryPickerQuery(String(po.item ?? ""));
+    setInventoryPickerPage(1);
     setRecvQty(Number(po.qty || 0) > 0 ? String(poOpenQty(po)) : "");
     setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
     setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : "");
@@ -1016,9 +1142,9 @@ export default function Procurement() {
     const isBig = recvPo.poType !== "Kecil";
     if (isBig && (!recvNoFaktur.trim() || !recvTglFaktur)) { toast(S.tFakturWajib, "info"); return; }
     if (!isBig && !recvNoFaktur.trim()) { toast(S.tNotaWajib, "info"); return; }
-    const invItem = invList.find((i) => i.id === recvItem);
-    if (!invItem) { toast(isBig ? S.tPilihItem : S.tKecilItem, "info"); return; }
     try {
+    const invItem = await ensureInventoryRow(recvItem, pickerOptions.find((i) => String(i.id) === recvItem)?.name ?? String(recvPo.item ?? ""));
+    if (!invItem) { toast(isBig ? S.tPilihItem : S.tKecilItem, "info"); return; }
     /* Denda: hari telat × % per hari dari nilai PO, dibatasi 5%. */
     const prevDenda = Number(recvPo.dendaRp || 0);
     let dendaRp = prevDenda;
@@ -1083,10 +1209,10 @@ export default function Procurement() {
     if (!qty || qty <= 0) { toast(S.tRetQty, "info"); return; }
     if (qty > maxRet(retPo)) { toast(S.tRetOver.replace("{n}", String(maxRet(retPo))), "info"); return; }
     if (!retNote.trim()) { toast(S.tRetNote, "info"); return; }
-    const invItem = invList.find((i) => i.id === retPo.itemId);
-    if (!invItem) { toast(S.tRetNoLink, "info"); return; }
-    if (Number(invItem.stock) < qty) { toast(S.tRetStok, "info"); return; }
     try {
+      const invItem = await ensureInventoryRow(String(retPo.itemId ?? ""), String(retPo.item ?? ""));
+      if (!invItem) { toast(S.tRetNoLink, "info"); return; }
+      if (Number(invItem.stock) < qty) { toast(S.tRetStok, "info"); return; }
       await update("inventory", invItem.id, { stock: Number(invItem.stock) - qty });
       await add("movements", {
         item: invItem.name, itemId: invItem.id, type: "Retur", qty, by: `${retPo.id} - ${retNote.trim()}`, date: todayISO(), tone: "out",
@@ -1370,7 +1496,7 @@ const sparkVendors = useMemo(() => {
               <>
                 <button className="btn-primary-gradient" onClick={() => setShowPr(true)}><Plus className="h-4 w-4" /> {locale === "en" ? "Request goods" : "Minta Barang"}</button>
                 {tab === "PO Besar (Kantor)" && (
-                  <button className="btn-secondary text-xs" onClick={() => setShowBig(true)}>{S.btnCreateBig}</button>
+                  <button className="btn-secondary text-xs" onClick={() => { setInventoryPickerQuery(""); setInventoryPickerPage(1); setShowBig(true); }}>{S.btnCreateBig}</button>
                 )}
                 {tab === "PO Kecil (Workshop)" && (
                   <button className="btn-secondary text-xs" onClick={() => setShowSmall(true)}>{S.btnCreateSmall}</button>
@@ -2078,10 +2204,25 @@ const sparkVendors = useMemo(() => {
               </select>
             </Field>
             <Field label={S.fItemInv} hint={S.hintItemWajib}>
+              <input
+                type="search"
+                className="input mb-2"
+                value={inventoryPickerQuery}
+                onChange={(e) => { setInventoryPickerQuery(e.target.value); setInventoryPickerPage(1); }}
+                placeholder={S.invSearchPh}
+                aria-label={S.invSearchAria}
+              />
               <select className="input" value={bigForm.itemId} onChange={(e) => setBigForm({ ...bigForm, itemId: e.target.value })}>
                 <option value="">{S.optPilihItem}</option>
-                {invList.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
+                {pickerOptions.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
               </select>
+              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-steel-500">
+                <span>{inventoryPickerLoading ? S.invLoading : inventoryPickerRows.length === 0 ? S.invEmpty : S.invPage.replace("{a}", String(inventoryPickerPage)).replace("{b}", String(inventoryPickerPages)).replace("{n}", fmtJumlah(inventoryPickerTotal))}</span>
+                <div className="flex shrink-0 gap-1">
+                  <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage <= 1} onClick={() => setInventoryPickerPage((page) => Math.max(1, page - 1))}>{S.invPrev}</button>
+                  <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage >= inventoryPickerPages} onClick={() => setInventoryPickerPage((page) => Math.min(inventoryPickerPages, page + 1))}>{S.invNext}</button>
+                </div>
+              </div>
             </Field>
           </FormGrid>
           <FormGrid>
@@ -2266,10 +2407,25 @@ const sparkVendors = useMemo(() => {
         </>}>
         <div className="space-y-3">
           <Field label={S.itemTujuan} hint={recvPo?.poType === "Kecil" ? S.hintKecilOps : undefined}>
+            <input
+              type="search"
+              className="input mb-2"
+              value={inventoryPickerQuery}
+              onChange={(e) => { setInventoryPickerQuery(e.target.value); setInventoryPickerPage(1); }}
+              placeholder={S.invSearchPh}
+              aria-label={S.invSearchAria}
+            />
             <select className="input" value={recvItem} onChange={(e) => setRecvItem(e.target.value)}>
               <option value="">{S.optPilihItem}</option>
-              {invList.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
+              {pickerOptions.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
             </select>
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs text-steel-500">
+              <span>{inventoryPickerLoading ? S.invLoading : inventoryPickerRows.length === 0 ? S.invEmpty : S.invPage.replace("{a}", String(inventoryPickerPage)).replace("{b}", String(inventoryPickerPages)).replace("{n}", fmtJumlah(inventoryPickerTotal))}</span>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage <= 1} onClick={() => setInventoryPickerPage((page) => Math.max(1, page - 1))}>{S.invPrev}</button>
+                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage >= inventoryPickerPages} onClick={() => setInventoryPickerPage((page) => Math.min(inventoryPickerPages, page + 1))}>{S.invNext}</button>
+              </div>
+            </div>
           </Field>
           {recvPo && Number(recvPo.qty || 0) > 0 && (
             <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">

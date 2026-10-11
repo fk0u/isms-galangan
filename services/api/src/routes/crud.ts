@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { requireAuth } from "../auth.js";
+import { branchAllowed, requireAuth } from "../auth.js";
 import { requestActor, requestIp, shallowDiff, writeAudit, type AuditInput } from "../audit.js";
 import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
+import { searchContainsPredicate } from "./crudSearch.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
@@ -25,6 +26,7 @@ export const DEFAULT_BRANCH = "Samarinda";
 const REQUIRED_AUDIT_TABLES = new Set([
   "invoices", "payables", "journals", "payroll", "users", "settings", "coa", "purchaseOrders",
 ]);
+const GLOBAL_BRANCH_COLLECTIONS = new Set(["settings", "coa", "branches"]);
 
 /** Baris berubah di antara baca dan tulis (F4-01). */
 class StaleWriteError extends Error {}
@@ -374,10 +376,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const query = (req.query ?? {}) as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];
+    const ownBranch = String(req.user?.branch ?? "").trim();
+    const branchScoped = !GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "" && ownBranch !== "SEMUA";
     /* Cache daftar + ETag (lihat listCache.ts). Kunci memuat URL lengkap dan
-       lingkup tim, sehingga peran lapangan tidak pernah menerima cache peran lain. */
+       lingkup tim/cabang, sehingga pengguna berbeda scope tidak berbagi respons. */
     const scopeForKey = table === "projects" ? await scopedProjectIds(req.user) : null;
-    const cacheKey = `${table}|${req.url}|${scopeForKey === null ? "*" : [...scopeForKey].sort().join(",")}`;
+    const branchForKey = branchScoped ? ownBranch : "*";
+    const cacheKey = `${table}|${req.url}|branch:${branchForKey}|${scopeForKey === null ? "*" : [...scopeForKey].sort().join(",")}`;
     const sendCached = (e: { etag: string; json: string }) => {
       reply.header("ETag", e.etag).header("Cache-Control", "private, no-cache");
       if (req.headers["if-none-match"] === e.etag) return reply.status(304).send();
@@ -385,12 +390,20 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     };
     const hit = cacheGet(cacheKey);
     if (hit) return sendCached(hit);
-    if (query.branch !== undefined && query.branch !== "") {
+    const requestedBranch = String(query.branch ?? "").trim();
+    if (branchScoped) {
+      if (requestedBranch !== "" && !branchAllowed(req.user, requestedBranch)) {
+        where.push("1 = 0");
+      } else {
+        where.push("branch = ?");
+        params.push(ownBranch);
+      }
+    } else if (requestedBranch !== "") {
       where.push("branch = ?");
-      params.push(query.branch);
+      params.push(requestedBranch);
     }
     if (query.q !== undefined && query.q !== "") {
-      where.push(getDialect() === "mysql" ? "LOCATE(?, data) > 0" : "instr(data, ?) > 0");
+      where.push(searchContainsPredicate(getDialect()));
       params.push(query.q);
     }
     if (table === "projects") {
@@ -449,6 +462,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const { id } = req.params as { id: string };
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    const ownBranch = String(req.user?.branch ?? "").trim();
+    const rowBranch = String((rows[0] as Row).branch ?? "").trim();
+    if (!GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "" && ownBranch !== "SEMUA"
+      && rowBranch !== ownBranch) {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     if (table === "projects") {
       // Di luar lingkup tim = 404, sama seperti tidak ada (tidak membocorkan keberadaan).
       const scope = await scopedProjectIds(req.user);

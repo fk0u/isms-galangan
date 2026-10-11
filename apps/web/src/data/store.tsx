@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { newId as newPrefixedId } from "../services/ids";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/http";
 import { remoteRepository } from "../services/repositories";
+import { collectionSyncCache } from "./collectionSyncCache";
+import { cacheOwnerAction } from "./cacheOwner";
 import { stampCreated, stampDerivedCreatedAt, stampUpdated } from "../utils/timestamps";
 import { loadedLaborRatePerDay } from "../utils/rates";
 import {
@@ -369,6 +371,7 @@ function buildSeeds(): StoreShape {
 const STORE_KEY = "isms.store.v4";
 const LEGACY_KEYS = ["isms.store.v3", "isms.store.v2", "isms.store.v1"];
 const BRANCH_KEY = "isms.branch";
+const CACHE_OWNER_KEY = "isms.cache.ownerUserId";
 /* Sinkronisasi offline yang diperkeras: dirty set + tombstone delete dipersist
    agar selamat dari reload.
    PENTING: tidak ada TTL. Dulu entri yang "diam" > 7 hari dihapus, sehingga
@@ -565,6 +568,34 @@ function loadStore(): StoreShape {
   return buildSeeds();
 }
 
+function currentSessionOwnerId(): string | null {
+  try {
+    const raw = sessionStorage.getItem("isms.session");
+    if (!raw) return null;
+    const session = JSON.parse(raw) as { id?: string; username?: string };
+    return session.id || session.username || null;
+  } catch {
+    return null;
+  }
+}
+
+function storedCacheOwnerId(): string | null {
+  try {
+    return localStorage.getItem(CACHE_OWNER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function initialStoreForSession(): StoreShape {
+  const owner = currentSessionOwnerId();
+  return owner && storedCacheOwnerId() === owner ? loadStore() : buildSeeds();
+}
+
+function sessionScopeKey(generation: number): string {
+  return JSON.stringify([generation, getJwt(), currentSessionOwnerId(), storedCacheOwnerId()]);
+}
+
 export type CollectionKey = Exclude<keyof StoreShape, "wbsByProject" | "teamByProject">;
 
 export type BackendMode = "local" | "remote";
@@ -580,6 +611,8 @@ interface StoreCtx {
   remove: (col: CollectionKey, id: string) => Promise<void>;
   log: (action: string, target: string, module: string) => void;
   reset: () => void;
+  activateCacheOwner: (ownerId: string) => Promise<void>;
+  endSession: () => void;
   resync: () => Promise<void>;
   /** Tarik batch koleksi tertentu saja (pola per modul/tab - useModuleSync). */
   resyncCollections: (cols: CollectionKey[]) => Promise<CollectionKey[]>;
@@ -913,7 +946,7 @@ async function isApiCompatible(): Promise<boolean> {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<StoreShape>(() => loadStore());
+  const [data, setData] = useState<StoreShape>(() => initialStoreForSession());
   /* `backendMode` berarti "backend ada DAN tokennya masih hidup", bukan hanya
      "backend terkonfigurasi". Versi lama memakai `useState(() => isBackendConfigured())`
      yang beku: JWT tinggal di sessionStorage, yang bisa hilang TANPA remount -
@@ -939,10 +972,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("focus", recheck);
     window.addEventListener("storage", recheck);
+    window.addEventListener("isms:session-change", recheck);
     document.addEventListener("visibilitychange", recheck);
     return () => {
       window.removeEventListener("focus", recheck);
       window.removeEventListener("storage", recheck);
+      window.removeEventListener("isms:session-change", recheck);
       document.removeEventListener("visibilitychange", recheck);
     };
   }, []);
@@ -970,10 +1005,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const writeEpochRef = useRef<Map<string, number>>(new Map());
   const bumpEpoch = useCallback((col: string) => {
     writeEpochRef.current.set(col, (writeEpochRef.current.get(col) ?? 0) + 1);
+    collectionSyncCache.invalidate([col]);
   }, []);
   const [pendingSync, setPendingSync] = useState<string[]>(() => [...dirtyRef.current]);
   const dataRef = useRef(data);
   dataRef.current = data;
+  /* Generasi sesi menolak hasil fetch lama, termasuk ketika JWT kebetulan
+     dipakai ulang atau identitas sesi berubah sebelum cache owner diperbarui. */
+  const sessionGenerationRef = useRef(0);
   /* Re-entrancy guard pushPending: tanpa ini tombol "Sinkronkan" + interval
      bisa menjalankan dua push bersamaan dan saling menghapus flag. */
   const pushingRef = useRef(false);
@@ -1009,6 +1048,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /* Menunjuk fungsi push yang sedang didefinisikan, supaya blok `finally`
      bisa menjadwalkan run lanjutan tanpa memanggil useCallback-nya sendiri. */
   const pushPendingRef = useRef<(() => Promise<void>) | null>(null);
+  /* Pull modul menunggu hidrasi IndexedDB selesai, agar cache offline tidak
+     menimpa snapshot server yang datang lebih dulu setelah login/restore tab. */
+  const bootstrapGateRef = useRef<{ promise: Promise<void>; resolve: () => void } | null>(null);
+  if (bootstrapGateRef.current === null) {
+    let resolveBootstrap: () => void = () => undefined;
+    const promise = new Promise<void>((resolve) => { resolveBootstrap = resolve; });
+    bootstrapGateRef.current = { promise, resolve: resolveBootstrap };
+  }
 
   const markDirty = useCallback((col: string) => {
     if (!isBackendConfigured()) return;
@@ -1099,6 +1146,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const prev = prevDataRef.current;
     prevDataRef.current = data;
     if (prev === null) return; // boot, bukan perubahan
+    const ownerAtSchedule = currentSessionOwnerId();
+    if (!ownerAtSchedule || storedCacheOwnerId() !== ownerAtSchedule) {
+      pendingPersistRef.current.clear();
+      return;
+    }
+    const sessionAtSchedule = sessionScopeKey(sessionGenerationRef.current);
     const cur = data as unknown as Record<string, unknown>;
     const old = prev as unknown as Record<string, unknown>;
     const pending = pendingPersistRef.current;
@@ -1107,6 +1160,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     if (pending.size === 0) return;
     const t = window.setTimeout(() => {
+      if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtSchedule) return;
       const cols = [...pending];
       pending.clear();
       void persistCollections(cur, cols);
@@ -1134,14 +1188,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (freed > 0) lsClearAll();
   }, []);
 
-  /* Tarik ulang semua koleksi + WBS/team dari backend (dipakai saat boot dan
-     tepat setelah login berhasil, karena JWT baru tersedia saat itu).
+  /* Tarik ulang semua koleksi + WBS/team dari backend (jalur eksplisit/fallback
+     untuk halaman lama; bukan lagi dipanggil saat boot atau sesudah login).
      Koleksi kotor (dirty) dilewati agar perubahan lokal tidak tertimpa.
      Koleksi bersih di-backup dulu (isms.backup.<col>, last 1); activities
      di-merge (union by id, lokal dulu + server-only, cap 100) bukan replace. */
   const resync = useCallback(async (): Promise<void> => {
     if (!remoteActive()) return;
+    const sessionAtStart = sessionScopeKey(sessionGenerationRef.current);
+    await bootstrapGateRef.current?.promise;
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return;
     if (!(await isApiCompatible())) return;
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return;
     const dirty = dirtyRef.current;
     const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
     /* Lihat resyncCollections: epoch saat berangkat menentukan apakah hasil
@@ -1155,9 +1213,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (dirty.has(key as string)) return;
         try {
           const rows = await remoteRepository(key).list();
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           /* Hasil yang mengosongkan koleksi kode ditolak (lihat acceptPull). */
           if (acceptPull(key, rows)) pulled[key] = rows;
         } catch (err) {
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           /* 403 = peran ini memang tidak berhak (RBAC), bukan gangguan:
              kosongkan supaya cache milik peran/sesi lain tidak ikut tampil. */
           if (err instanceof ApiError && err.status === 403) { forbidden.add(key as string); return; }
@@ -1175,6 +1235,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
        jadi tidak perlu menyalin ulang sebelum resync - dan tidak ada lagi
        salinan penuh yang menghabiskan kuota localStorage. */
     setData((prev) => {
+      if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return prev;
       const next = { ...prev, ...pulled };
       for (const key of ARRAY_KEYS) {
         if (key === "wbsByProject" || key === "teamByProject") continue;
@@ -1213,6 +1274,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (forbidden.has("projects")) { next.wbsByProject = {}; next.teamByProject = {}; }
       return next;
     });
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
     const projectIds = ((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => p.id);
     const wbsDirty = dirty.has("wbsByProject");
     const teamDirty = dirty.has("teamByProject");
@@ -1222,6 +1284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
        Server lama tanpa endpoint ini → jatuh ke jalur per-proyek di bawah. */
     try {
       const sides = await apiFetch<{ wbs: Record<string, WbsItem[]>; team: Record<string, string[]> }>("/api/project-sides");
+      if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
       const known = new Set(projectIds);
       const wbsPatch: Record<string, WbsItem[]> = {};
       const teamPatch: Record<string, string[]> = {};
@@ -1236,9 +1299,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         teamPatch[projectId] = ids;
       }
       // Satu setData untuk semua proyek, bukan dua render per proyek.
-      setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, ...wbsPatch }, teamByProject: { ...prev.teamByProject, ...teamPatch } }));
+      setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+        ? prev
+        : { ...prev, wbsByProject: { ...prev.wbsByProject, ...wbsPatch }, teamByProject: { ...prev.teamByProject, ...teamPatch } });
       return;
     } catch {
+      if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
       /* lanjut ke jalur per-proyek */
     }
     await Promise.all(
@@ -1248,6 +1314,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const wbs = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(
             `/api/projects/${encodeURIComponent(projectId)}/wbs`,
           );
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           /* WBS/team dikembalikan lewat endpoint per-proyek, bukan lewat
      resyncCollections, jadi acceptPull() tidak menjangkau keduanya. Polanya
      yang sama tetap perlu: `Array.isArray([])` bernilai true, jadi proyek yang
@@ -1258,9 +1325,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             const rows = wbs.wbs;
             /* Catat isi server sebagai base untuk compare-and-swap saat push. */
             wbsBaseRef.current.set(projectId, JSON.stringify(rows));
-            setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: rows } }));
+            setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+              ? prev
+              : { ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: rows } });
           }
         } catch {
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           /* cache lokal/template tetap dipakai */
         }
         if (dirty.has(`team:${projectId}`) || teamDirty) return;
@@ -1268,12 +1338,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const team = await apiFetch<{ projectId: string; memberIds: string[] }>(
             `/api/projects/${encodeURIComponent(projectId)}/team`,
           );
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           if (Array.isArray(team.memberIds) && team.memberIds.length > 0) {
             const ids = team.memberIds;
             teamBaseRef.current.set(projectId, JSON.stringify(ids));
-            setData((prev) => ({ ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } }));
+            setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+              ? prev
+              : { ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } });
           }
         } catch {
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
           /* cache lokal tetap dipakai */
         }
       }),
@@ -1289,12 +1363,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resyncCollections = useCallback(async (cols: CollectionKey[]): Promise<CollectionKey[]> => {
     if (!remoteActive()) return [];
     if (cols.length === 0) return [];
-    if (!(await isApiCompatible())) return [];
+    const sessionAtStart = sessionScopeKey(sessionGenerationRef.current);
+    await bootstrapGateRef.current?.promise;
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return [];
+    if (!(await isApiCompatible())) return cols;
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return [];
     const dirty = dirtyRef.current;
     const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
     /* Epoch tiap koleksi SAAT request berangkat. Hasil tarikan yang tiba
        setelah epoch naik tidak boleh menimpa apa adanya - lihat applyPulled. */
     const epochAtStart: Record<string, number> = {};
+    const generationAtStart: Record<string, number> = {};
     const forbidden = new Set<string>();
     /* Koleksi yang gagal dicatat, bukan ditelan diam-diam. Tanpa ini halaman
        menampilkan cache lokal seolah-olah itu data server terkini. */
@@ -1302,9 +1381,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await Promise.all(
       cols.map(async (key) => {
         epochAtStart[key as string] = writeEpochRef.current.get(key as string) ?? 0;
+        generationAtStart[key as string] = collectionSyncCache.generation(key as string);
         if (dirty.has(key as string)) return;
         try {
           const rows = await remoteRepository(key).list();
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+            || collectionSyncCache.generation(key as string) !== generationAtStart[key as string]) return;
           if (!acceptPull(key, rows)) {
             /* Server membalas kosong untuk koleksi kode: pertahankan yang lokal.
                Sengaja TIDAK masuk daftar `failed` - "ditolak demi keamanan
@@ -1315,6 +1397,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           pulled[key] = rows;
         } catch (err) {
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+            || collectionSyncCache.generation(key as string) !== generationAtStart[key as string]) return;
           // 403 = di luar hak peran (RBAC): kosong, bukan "gagal memuat".
           if (err instanceof ApiError && err.status === 403) { forbidden.add(key as string); return; }
           /* koleksi ini tetap memakai cache lokal */
@@ -1322,27 +1406,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }),
     );
+    if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return [];
     const serverActivities = pulled.activities;
     if (serverActivities !== undefined) delete pulled.activities;
     setData((prev) => {
-      const next = { ...prev, ...pulled };
+      if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return prev;
+      const safePulled = { ...pulled };
+      const safeForbidden = new Set(forbidden);
+      for (const key of cols) {
+        if (collectionSyncCache.generation(key as string) !== generationAtStart[key as string]) {
+          delete safePulled[key];
+          safeForbidden.delete(key as string);
+        }
+      }
+      const activitiesStillCurrent = collectionSyncCache.generation("activities") === generationAtStart.activities;
+      const next = { ...prev, ...safePulled };
       /* Koleksi yang berubah saat request berjalan: server tetap jadi acuan
          untuk id yang dia kenal, tapi baris lokal yang belum ada di snapshot
          tidak boleh hilang. */
       for (const key of cols) {
-        const incoming = pulled[key];
+        const incoming = safePulled[key];
         if (incoming === undefined) continue;
         if (!pullNeedsMerge(key, epochAtStart[key as string] ?? 0, writeEpochRef.current, dirtyRef.current)) continue;
         next[key] = applyPulled(prev[key] as StoreItem[] | undefined, incoming);
       }
-      if (serverActivities !== undefined) {
+      if (serverActivities !== undefined && activitiesStillCurrent) {
         const local = prev.activities ?? [];
         next.activities = applyPulled(local, serverActivities).slice(0, ACTIVITIES_CAP);
       }
       /* 403 = di luar hak peran: ganti paksa jadi kosong (bukan merge), termasuk
          cache turunan proyek, supaya data sesi/peran lain tidak tetap terlihat. */
-      for (const k of forbidden) (next as unknown as Record<string, unknown>)[k] = [];
-      if (forbidden.has("projects")) { next.wbsByProject = {}; next.teamByProject = {}; }
+      for (const k of safeForbidden) (next as unknown as Record<string, unknown>)[k] = [];
+      if (safeForbidden.has("projects")) { next.wbsByProject = {}; next.teamByProject = {}; }
       return next;
     });
     return failed;
@@ -1718,39 +1813,66 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
   }, [clearDirty, clearTombstones]);
   pushPendingRef.current = pushPending;
 
-  /* Boot backend-first: bila backend dikonfigurasi dan sudah login (JWT),
-     tarik semua koleksi dari BE; tiap koleksi yang gagal → biarkan seed lokal.
-    Jwala boot: coba sinkronkan antrean offline, lalu interval berkala.
-     Dulu hanya tombol manual di AppShell - antrean bisa mengendap lalu hilang. */
-  useEffect(() => {
-    // F2-07: Periksa apakah cache offline dimiliki oleh pengguna berbeda.
-    // Bila pengguna berbeda, buang cache offline sebelum hidrasi agar data tidak bocor.
-    const checkOwnerAndHydrate = async () => {
-      let currentUserId: string | null = null;
+  const clearOwnerScopedMemory = useCallback(() => {
+    dirtyRef.current.clear();
+    dirtyGenRef.current.clear();
+    writeEpochRef.current.clear();
+    tombstonesRef.current.clear();
+    pushCursorRef.current.clear();
+    pushAttemptsRef.current.clear();
+    pushGiveUpRef.current.clear();
+    pushColCursorRef.current = 0;
+    pushAgainRef.current = false;
+    wbsBaseRef.current.clear();
+    teamBaseRef.current.clear();
+    fallbackToasted.current = "";
+    pendingPersistRef.current.clear();
+    setPendingSync([]);
+    setBranchState("SEMUA");
+    const seeds = buildSeeds();
+    dataRef.current = seeds;
+    prevDataRef.current = seeds;
+    setData(seeds);
+  }, []);
+
+  const endSession = useCallback(() => {
+    sessionGenerationRef.current += 1;
+    collectionSyncCache.invalidateAll();
+  }, []);
+
+  const activateCacheOwner = useCallback(async (ownerId: string): Promise<void> => {
+    const normalized = ownerId.trim();
+    if (!normalized) return;
+    await bootstrapGateRef.current?.promise;
+
+    const previousOwner = currentSessionOwnerId();
+    const action = cacheOwnerAction(normalized, storedCacheOwnerId());
+    const sessionChanged = previousOwner !== normalized;
+    const shouldPurge = action === "purge" || (previousOwner !== null && sessionChanged);
+    if (sessionChanged || shouldPurge) {
+      sessionGenerationRef.current += 1;
+      collectionSyncCache.invalidateAll();
+    }
+    if (shouldPurge) {
+      await purgeOfflineCache();
       try {
-        const raw = sessionStorage.getItem("isms.session");
-        if (raw) {
-          const sess = JSON.parse(raw) as { id?: string; username?: string };
-          currentUserId = sess.id || sess.username || null;
-        }
+        for (const key of [STORE_KEY, ...LEGACY_KEYS]) sessionStorage.removeItem(key);
       } catch {
         /* abaikan */
       }
+      clearOwnerScopedMemory();
+    }
+    try {
+      localStorage.setItem(CACHE_OWNER_KEY, normalized);
+    } catch {
+      /* Tanpa storage metadata, cache tetap tidak akan dihidrasi lintas sesi. */
+    }
 
-      const storedOwner = localStorage.getItem("isms.cache.ownerUserId");
-      if (currentUserId && storedOwner && storedOwner !== currentUserId) {
-        await purgeOfflineCache();
-        localStorage.setItem("isms.cache.ownerUserId", currentUserId);
-        setData(sanitizeStore({} as Partial<StoreShape>));
-        await resync();
-        return;
-      }
-      if (currentUserId && !storedOwner) {
-        localStorage.setItem("isms.cache.ownerUserId", currentUserId);
-      }
-
+    if (!shouldPurge) {
+      const activationGeneration = sessionGenerationRef.current;
       await hydrateFromOfflineStore((cached) => {
         setData((prev) => {
+          if (activationGeneration !== sessionGenerationRef.current) return prev;
           const next = { ...prev } as unknown as Record<string, unknown>;
           let changed = false;
           for (const [col, rows] of Object.entries(cached)) {
@@ -1762,11 +1884,60 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
         });
       });
-      await resync();
+    }
+  }, [clearOwnerScopedMemory]);
+
+  /* Hidrasi offline tetap terjadi saat boot, tetapi data remote dimuat oleh
+     hook modul/halaman aktif agar login tidak mengunduh 50+ koleksi. */
+  useEffect(() => {
+    const checkOwnerAndHydrate = async () => {
+      try {
+        const currentUserId = currentSessionOwnerId();
+        const action = cacheOwnerAction(currentUserId, storedCacheOwnerId());
+        if (action === "defer") {
+          const seeds = buildSeeds();
+          dataRef.current = seeds;
+          prevDataRef.current = seeds;
+          pendingPersistRef.current.clear();
+          setData(seeds);
+          return;
+        }
+        if (action === "purge") {
+          sessionGenerationRef.current += 1;
+          collectionSyncCache.invalidateAll();
+          await purgeOfflineCache();
+          try {
+            for (const key of [STORE_KEY, ...LEGACY_KEYS]) sessionStorage.removeItem(key);
+            if (currentUserId) localStorage.setItem(CACHE_OWNER_KEY, currentUserId);
+          } catch {
+            /* abaikan */
+          }
+          clearOwnerScopedMemory();
+          return;
+        }
+
+        const sessionAtStart = sessionScopeKey(sessionGenerationRef.current);
+        await hydrateFromOfflineStore((cached) => {
+          setData((prev) => {
+            if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return prev;
+            const next = { ...prev } as unknown as Record<string, unknown>;
+            let changed = false;
+            for (const [col, rows] of Object.entries(cached)) {
+              if (Array.isArray(rows) && rows.length > 0) {
+                next[col] = rows;
+                changed = true;
+              }
+            }
+            return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+          });
+        });
+      } finally {
+        bootstrapGateRef.current?.resolve();
+      }
     };
 
     void checkOwnerAndHydrate();
-  }, [resync]);
+  }, [clearOwnerScopedMemory]);
 
   useEffect(() => {
     /* Guard mode TIDAK lagi menghentikan pemasangan listener. Dulu
@@ -1892,6 +2063,8 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
       backendError,
       pendingSync,
       pushPending,
+      activateCacheOwner,
+      endSession,
       add: async (col, item, activity) => {
         const full: StoreItem = { ...item, id: item.id || newId(col) };
         stampCreated(full);
@@ -2171,7 +2344,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
       setBranch,
       inBranch,
     };
-  }, [data, branch, inBranch, backendMode, backendError, resync, resyncCollections, pendingSync, pushPending, markDirty]);
+  }, [data, branch, inBranch, backendMode, backendError, resync, resyncCollections, pendingSync, pushPending, activateCacheOwner, endSession, markDirty]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

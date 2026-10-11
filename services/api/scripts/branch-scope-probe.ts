@@ -7,7 +7,16 @@ import { COLLECTIONS } from "../src/routes/crud.js";
 async function main() {
   console.log("=== ISMS Branch Scope Server Probe (F2-06 Jalur A) ===");
   const app = await buildApp();
+  const fixtureSuffix = Date.now();
+  const globalUserId = `probe-global-${fixtureSuffix}`;
+  const scopedUserId = `probe-proyek-${fixtureSuffix}`;
+  const scopedEmployeeId = `probe-employee-${fixtureSuffix}`;
+  const emptyBranchRowId = `probe-empty-branch-${fixtureSuffix}`;
+  const surveyId1 = `S-PROBE-${fixtureSuffix}-1`;
+  const surveyId2 = `S-PROBE-${fixtureSuffix}-2`;
+  const otherSurveyId = `S-PROBE-${fixtureSuffix}-3`;
 
+  try {
   let passed = 0;
   let total = 0;
 
@@ -48,19 +57,25 @@ async function main() {
   const dir = dirUsers[0];
   const dirToken = signToken({ id: dir.id, username: dir.username, role: dir.role, branch: "SEMUA", v: dir.token_version ?? 0 });
 
-  const projUsers = await q<{ id: string; username: string; role: string; token_version: number }>(
-    "SELECT id, username, role, token_version FROM users WHERE role = 'proyek' LIMIT 1",
+  // requireAuth derives branch from the user's employee record, not from a client-supplied JWT claim.
+  const globalUsername = `${globalUserId}@galangan.com`;
+  await exec(
+    "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, 0, NULL)",
+    [globalUserId, globalUsername, "hash", "Probe Global", "direktur", globalUsername],
   );
-  let projUser = projUsers[0];
-  if (!projUser) {
-    const newId = "probe-proj-" + Date.now();
-    await exec(
-      "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version) VALUES (?, ?, ?, ?, ?, ?, 1, 0)",
-      [newId, "probe.proj@galangan.com", "hash", "Probe Proyek", "proyek", "probe.proj@galangan.com"],
-    );
-    projUser = { id: newId, username: "probe.proj@galangan.com", role: "proyek", token_version: 0 };
-  }
-  const projToken = signToken({ id: projUser.id, username: projUser.username, role: "proyek", branch: "Samarinda", v: projUser.token_version ?? 0 });
+  const globalToken = signToken({ id: globalUserId, username: globalUsername, role: "direktur", branch: "SEMUA", v: 0 });
+
+  // Selalu buat aktor uji dengan employee cabang Samarinda; requireAuth mengambil scope dari DB.
+  const scopedUsername = `${scopedUserId}@galangan.com`;
+  await exec(
+    "INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)",
+    [scopedEmployeeId, "Samarinda", JSON.stringify({ nama: "Probe Proyek" }), new Date().toISOString()],
+  );
+  await exec(
+    "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)",
+    [scopedUserId, scopedUsername, "hash", "Probe Proyek", "proyek", scopedUsername, scopedEmployeeId],
+  );
+  const projToken = signToken({ id: scopedUserId, username: scopedUsername, role: "proyek", branch: "Samarinda", v: 0 });
 
   // 2. POST oleh peran operasional (proyek) tanpa branch -> dipaksa default Samarinda
   const createRes1 = await app.inject({
@@ -68,6 +83,7 @@ async function main() {
     url: "/api/surveys",
     headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
     payload: {
+      id: surveyId1,
       data: { judul: "Survey Probe 1", surveyor: "Tester" },
     },
   });
@@ -81,6 +97,7 @@ async function main() {
     url: "/api/surveys",
     headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
     payload: {
+      id: surveyId2,
       branch: "Balikpapan",
       data: { judul: "Survey Probe 2", surveyor: "Tester" },
     },
@@ -89,7 +106,66 @@ async function main() {
   const created2 = JSON.parse(createRes2.body)?.data;
   assert("Server memaksa branch = 'Samarinda' untuk peran non-direktur", created2?.branch === "Samarinda", `branch=${created2?.branch}`);
 
-  // 4. PATCH branch oleh peran operasional -> ditolak 403 Forbidden
+  // 4. List dan get-by-id mengikuti cabang di claim JWT, bukan filter UI/klien.
+  const createOtherRes = await app.inject({
+    method: "POST",
+    url: "/api/surveys",
+    headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+    payload: { id: otherSurveyId, branch: "Banjarmasin", data: { judul: "Survey Probe Cabang Lain", surveyor: "Tester" } },
+  });
+  assert("Direktur dapat membuat fixture survei Banjarmasin", createOtherRes.statusCode === 201, `HTTP ${createOtherRes.statusCode}`);
+  const createdOther = JSON.parse(createOtherRes.body)?.data;
+  assert("Fixture direktur benar-benar tersimpan di Banjarmasin", createdOther?.branch === "Banjarmasin", `branch=${createdOther?.branch}`);
+
+  // Simulasikan data legacy tanpa branch: fail-closed untuk scope cabang.
+  await exec(
+    "INSERT INTO surveys (id, branch, data, updated_at) VALUES (?, ?, ?, ?)",
+    [emptyBranchRowId, "", JSON.stringify({ judul: "Survey Probe Tanpa Cabang" }), new Date().toISOString()],
+  );
+
+  const scopedListRes = await app.inject({
+    method: "GET", url: "/api/surveys?limit=1000", headers: { authorization: `Bearer ${projToken}` },
+  });
+  const scopedRows = JSON.parse(scopedListRes.body)?.data?.rows as Array<{ id: string; branch: string }> | undefined;
+  assert(
+    "GET list pengguna Samarinda hanya mengembalikan row cabang Samarinda",
+    scopedListRes.statusCode === 200 && !!scopedRows?.some((row) => row.id === created1.id)
+      && !scopedRows?.some((row) => row.id === createdOther.id || row.id === emptyBranchRowId)
+      && scopedRows?.every((row) => row.branch === "Samarinda"),
+    `HTTP ${scopedListRes.statusCode}; rows=${scopedRows?.length ?? "?"}`,
+  );
+
+  const forgedBranchRes = await app.inject({
+    method: "GET", url: "/api/surveys?branch=Banjarmasin&limit=1000", headers: { authorization: `Bearer ${projToken}` },
+  });
+  const forgedRows = JSON.parse(forgedBranchRes.body)?.data?.rows as Array<{ id: string }> | undefined;
+  assert(
+    "Query branch palsu tidak dapat memperluas scope pengguna Samarinda",
+    forgedBranchRes.statusCode === 200 && (forgedRows?.length ?? -1) === 0,
+    `HTTP ${forgedBranchRes.statusCode}; rows=${forgedRows?.length ?? "?"}`,
+  );
+
+  const crossBranchGetRes = await app.inject({
+    method: "GET", url: `/api/surveys/${createdOther.id}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("GET-by-id lintas cabang disamarkan sebagai 404", crossBranchGetRes.statusCode === 404, `HTTP ${crossBranchGetRes.statusCode}`);
+
+  const emptyBranchGetRes = await app.inject({
+    method: "GET", url: `/api/surveys/${emptyBranchRowId}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("GET-by-id row tanpa branch ditolak fail-closed", emptyBranchGetRes.statusCode === 404, `HTTP ${emptyBranchGetRes.statusCode}`);
+
+  const directorListRes = await app.inject({
+    method: "GET", url: "/api/surveys?branch=Banjarmasin&limit=1000", headers: { authorization: `Bearer ${globalToken}` },
+  });
+  const directorRows = JSON.parse(directorListRes.body)?.data?.rows as Array<{ id: string }> | undefined;
+  assert(
+    "Direktur dengan scope SEMUA tetap dapat melihat Banjarmasin",
+    directorListRes.statusCode === 200 && !!directorRows?.some((row) => row.id === createdOther.id),
+    `HTTP ${directorListRes.statusCode}`,
+  );
+
+  // 5. PATCH branch oleh peran operasional -> ditolak 403 Forbidden
   const patchOperasionalRes = await app.inject({
     method: "PATCH",
     url: `/api/surveys/${created1.id}`,
@@ -100,7 +176,7 @@ async function main() {
   });
   assert("PATCH branch oleh peran operasional ditolak 403 Forbidden", patchOperasionalRes.statusCode === 403, `HTTP ${patchOperasionalRes.statusCode}`);
 
-  // 5. PATCH data biasa tanpa mengubah branch oleh peran operasional -> berhasil 200
+  // 6. PATCH data biasa tanpa mengubah branch oleh peran operasional -> berhasil 200
   const patchDataRes = await app.inject({
     method: "PATCH",
     url: `/api/surveys/${created1.id}`,
@@ -111,7 +187,7 @@ async function main() {
   });
   assert("PATCH data biasa oleh peran operasional berhasil 200 OK", patchDataRes.statusCode === 200, `HTTP ${patchDataRes.statusCode}`);
 
-  // 6. PATCH branch oleh direktur -> diizinkan 200 OK
+  // 7. PATCH branch oleh direktur -> diizinkan 200 OK
   const patchDirRes = await app.inject({
     method: "PATCH",
     url: `/api/surveys/${created1.id}`,
@@ -124,13 +200,29 @@ async function main() {
   const patchedDirData = JSON.parse(patchDirRes.body)?.data;
   assert("Branch berhasil diperbarui ke 'Banjarmasin' oleh direktur", patchedDirData?.branch === "Banjarmasin", `branch=${patchedDirData?.branch}`);
 
-  // Bersihkan data tes
-  await app.inject({ method: "DELETE", url: `/api/surveys/${created1.id}`, headers: { authorization: `Bearer ${dirToken}` } });
-  await app.inject({ method: "DELETE", url: `/api/surveys/${created2.id}`, headers: { authorization: `Bearer ${dirToken}` } });
-
   console.log(`\nHasil: ${passed}/${total} checks passed.`);
-  await closeDb();
-  if (passed !== total) process.exit(1);
+  if (passed !== total) process.exitCode = 1;
+  } finally {
+    let cleanupFailed = false;
+    const cleanup = async (sql: string, params: unknown[]) => {
+      try {
+        await exec(sql, params);
+      } catch (error) {
+        cleanupFailed = true;
+        console.error("Gagal membersihkan fixture probe:", error);
+      }
+    };
+    await cleanup("DELETE FROM surveys WHERE id IN (?, ?, ?, ?)", [surveyId1, surveyId2, otherSurveyId, emptyBranchRowId]);
+    await cleanup("DELETE FROM users WHERE id IN (?, ?)", [globalUserId, scopedUserId]);
+    await cleanup("DELETE FROM employees WHERE id = ?", [scopedEmployeeId]);
+    try {
+      await closeDb();
+    } catch (error) {
+      cleanupFailed = true;
+      console.error("Gagal menutup database probe:", error);
+    }
+    if (cleanupFailed) process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {

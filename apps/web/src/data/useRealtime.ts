@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import { useStore, type CollectionKey } from "./store";
 import { BASE, getJwt, isBackendConfigured } from "../services/http";
+import { collectionSyncCache } from "./collectionSyncCache";
 
 const DEBOUNCE_MS = 500;
 const MAX_BACKOFF_MS = 30000;
@@ -29,7 +30,15 @@ export function useRealtime(enabled: boolean): void {
       timer = null;
       const cols = [...pending].filter((t) => knownRef.current.has(t)) as CollectionKey[];
       pending.clear();
-      if (cols.length > 0 && document.visibilityState === "visible") void resyncRef.current(cols).catch(() => {});
+      if (cols.length > 0 && document.visibilityState === "visible") {
+        collectionSyncCache.invalidate(cols);
+        void collectionSyncCache.sync(
+          getJwt() ?? "local",
+          cols,
+          (requested) => resyncRef.current(requested as CollectionKey[]),
+          true,
+        ).catch(() => {});
+      }
     };
     const run = async (): Promise<void> => {
       while (!stopped) {
