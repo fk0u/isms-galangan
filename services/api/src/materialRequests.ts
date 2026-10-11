@@ -1,10 +1,12 @@
-/* Permintaan material proyek (F3-D-01, ADR-0007, alur ETC-03).
+/* Permintaan material proyek (F3-D-01, ADR-0007 → ADR-0018, alur ETC-03).
  *
  * Mekanik/proyek meminta barang untuk sebuah proyek (dari WBS atau tab
- * Sparepart). Server yang memutuskan dalam SATU transaksi:
- *   - stok cukup        → barang keluar (movement OUT) penuh
- *   - stok kurang       → keluarkan yang ada + Purchase Request (PR) untuk sisanya
- *   - stok kosong       → seluruhnya jadi PR
+ * Sparepart). Sejak ADR-0018 (issue #73) permintaan TIDAK memotong stok:
+ *   1. permintaan dicatat "Menunggu Approval Gudang"; bila stok tidak cukup,
+ *      kekurangannya langsung jadi Purchase Request (PR)
+ *   2. gudang menyetujui → barang keluar sebanyak stok yang ada (movement OUT)
+ *      atau menolak dengan alasan → tidak ada pergerakan stok, PR dibatalkan
+ *   3. sisa yang menunggu PO dipenuhi setelah barang masuk (fulfill)
  * Stok tidak pernah negatif. Bila diminta sebagai sparepart, baris sparepart
  * dicatat dengan status pemenuhan supaya tim tahu barang mana yang menunggu PO.
  *
@@ -52,7 +54,7 @@ export interface MaterialRequestResult {
 
 /* Status permintaan barang (F3-J-01). "Menunggu stok" diturunkan di UI dari
    PR yang sudah jadi PO; server menyimpan empat status ini. */
-export type MrStatus = "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai";
+export type MrStatus = "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai" | "Menunggu Approval Gudang" | "Ditolak Gudang";
 
 export function mrStatus(issued: number, shortage: number, hadShortage: boolean): MrStatus {
   if (shortage === 0) return hadShortage ? "Selesai" : "Dipenuhi dari stok";
@@ -111,34 +113,33 @@ export async function requestMaterial(input: MaterialRequestInput): Promise<Mate
     const itemName = String(item.name ?? input.itemId);
     const unit = String(item.unit ?? "pcs");
     const stock = Math.max(0, Number(item.stock ?? 0) || 0);
-    const issued = Math.min(stock, qty);
-    const shortage = qty - issued;
+    /* ADR-0018: tidak ada barang keluar di sini. `prQty` = bagian yang memang
+       tidak ada di gudang dan perlu dibeli; sisanya menunggu persetujuan gudang. */
+    const issued = 0;
+    const shortage = qty;
+    const prQty = Math.max(0, qty - stock);
     const now = new Date().toISOString();
     const today = now.slice(0, 10);
     const ref = { projectId: input.projectId, ...(input.wbsTask ? { wbsId: input.wbsTask, wbsTask: input.wbsTask } : {}) };
-    const by = input.wbsTask ? `${input.actor} (WBS: ${input.wbsTask})` : input.actor;
 
     const mrId = newId("MR");
-    const mvRef = { ...ref, materialRequestId: mrId };
-    let movementId: string | null = null;
-    if (issued > 0) {
-      movementId = await issueFromStock(row, item, stock, issued, now, { itemName, unit, by, ref: mvRef, note: input.note ?? "" });
-    }
+    const movementId: string | null = null;
 
     // Harga satuan: inventori menyimpan `cost`; `price`/`unitPrice` untuk data lama.
     const unitPrice = Number(item.cost ?? item.price ?? item.unitPrice ?? 0) || 0;
     let requisitionId: string | null = null;
-    if (shortage > 0) {
+    if (prQty > 0) {
       requisitionId = newId("PR");
       await insert("requisitions", requisitionId, {
-        projectId: input.projectId, item: itemName, itemId: row.id, qty: shortage, unit,
+        projectId: input.projectId, item: itemName, itemId: row.id, qty: prQty, unit,
         status: "Diajukan", date: today, requestedBy: input.actor, by: input.actor, project: input.projectId,
-        amount: Math.round(unitPrice * shortage), ref, sourceRequestIds: [mrId],
+        amount: Math.round(unitPrice * prQty), ref, sourceRequestIds: [mrId],
         note: `Permintaan material proyek ${input.projectId}${input.wbsTask ? ` / WBS ${input.wbsTask}` : ""}: butuh ${qty}, stok ${stock}`,
       }, now);
     }
 
-    const status: MaterialRequestResult["status"] = shortage === 0 ? "Dari stok" : issued > 0 ? "Sebagian" : "Menunggu PO";
+    // Rencana pemenuhan (bukan hasil): stok cukup → akan dari stok; kurang → menunggu PO.
+    const status: MaterialRequestResult["status"] = prQty === 0 ? "Dari stok" : "Menunggu PO";
 
     let sparepartId: string | null = null;
     if (input.purpose === "sparepart") {
@@ -147,11 +148,11 @@ export async function requestMaterial(input: MaterialRequestInput): Promise<Mate
         name: itemName,
         partNumber: String(item.sku ?? item.code ?? row.id),
         category: input.sparepart?.category ?? String(item.category ?? "Lainnya"),
-        status: shortage === 0 ? "Sedang" : "Akan",
+        status: "Akan",
         cost: Math.round(unitPrice * qty),
         notes: input.sparepart?.notes ?? "",
         technician: input.sparepart?.technician ?? "-",
-        usedDate: shortage === 0 ? today : "-",
+        usedDate: "-",
         warrantyUntil: input.sparepart?.warrantyUntil ?? "-",
         projectId: input.projectId,
         vesselId: "",
@@ -160,20 +161,21 @@ export async function requestMaterial(input: MaterialRequestInput): Promise<Mate
         materialRequestId: mrId,
         qty,
         unit,
-        fulfillment: { status, issued, shortage, movementId, requisitionId },
+        fulfillment: { status: "Menunggu PO", issued, shortage, movementId, requisitionId },
       }, now);
     }
 
     await insert("materialRequests", mrId, {
       projectId: input.projectId, itemId: row.id, item: itemName, unit, purpose: input.purpose,
       wbsTask: input.wbsTask ?? "", requested: qty, issued, shortage,
-      status: mrStatus(issued, shortage, false), requestedBy: input.actor, date: today,
-      movementIds: movementId ? [movementId] : [], requisitionId, sparepartId, note: input.note ?? "",
+      status: "Menunggu Approval Gudang" satisfies MrStatus, approvalStatus: "Menunggu ACC",
+      requestedBy: input.actor, date: today,
+      movementIds: [], requisitionId, sparepartId, note: input.note ?? "",
     }, now);
 
     return {
       itemId: row.id, itemName, requested: qty, issued, shortage,
-      stockAfter: stock - issued, movementId, requisitionId, sparepartId, materialRequestId: mrId, status,
+      stockAfter: stock, movementId, requisitionId, sparepartId, materialRequestId: mrId, status,
     };
   });
 }
@@ -197,6 +199,12 @@ export async function fulfillMaterialRequest(id: string, actor: string): Promise
     const mrRow = mrRows[0];
     if (!mrRow) throw new MaterialError(404, `Permintaan ${id} tidak ada`, "NOT_FOUND");
     const mr = parse(mrRow);
+    /* Permintaan lama (tanpa approvalStatus) dibuat sebelum ADR-0018 dan tetap
+       boleh dipenuhi; yang baru wajib sudah disetujui gudang. */
+    const approval = String(mr.approvalStatus ?? "");
+    if (approval !== "" && approval !== "Disetujui") {
+      throw new MaterialError(409, approval === "Ditolak" ? "Permintaan ini ditolak gudang" : "Permintaan belum disetujui gudang", "NOT_APPROVED");
+    }
     const remaining = Number(mr.shortage ?? 0);
     if (remaining <= 0) throw new MaterialError(409, "Permintaan ini sudah terpenuhi", "ALREADY_DONE");
     const inv = await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [String(mr.itemId ?? "")]);
@@ -215,7 +223,8 @@ export async function fulfillMaterialRequest(id: string, actor: string): Promise
     });
     const issued = Number(mr.issued ?? 0) + give;
     const shortage = remaining - give;
-    const status = mrStatus(issued, shortage, true);
+    // "Selesai" hanya bila sempat menunggu pembelian; tanpa PR = dipenuhi dari stok.
+    const status = mrStatus(issued, shortage, String(mr.requisitionId ?? "") !== "");
     const mvIds = Array.isArray(mr.movementIds) ? (mr.movementIds as string[]) : [];
     const res = await exec("UPDATE materialRequests SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
       JSON.stringify({ ...mr, issued, shortage, status, movementIds: [...mvIds, movementId] }), now, id, mrRow.updated_at,
@@ -257,5 +266,49 @@ export async function fulfillMaterialRequest(id: string, actor: string): Promise
       }
     }
     return { id, given: give, issued, shortage, status, movementId };
+  });
+}
+
+export interface DecisionResult { id: string; decision: "approve" | "reject"; status: MrStatus; issued: number; shortage: number; movementId: string | null }
+
+/** Keputusan gudang atas permintaan material (ADR-0018). Setuju = barang keluar
+ *  sebanyak stok yang ada; tolak = tanpa pergerakan stok, PR terbuka dibatalkan. */
+export async function decideMaterialRequest(id: string, decision: "approve" | "reject", actor: string, note: string): Promise<DecisionResult> {
+  return withTx(async () => {
+    const rows = await q<Row>("SELECT id, branch, data, updated_at FROM materialRequests WHERE id = ?", [id]);
+    const mrRow = rows[0];
+    if (!mrRow) throw new MaterialError(404, `Permintaan ${id} tidak ada`, "NOT_FOUND");
+    const mr = parse(mrRow);
+    if (String(mr.approvalStatus ?? "") !== "Menunggu ACC") throw new MaterialError(409, "Permintaan ini sudah diputuskan", "ALREADY_DECIDED");
+    const now = new Date().toISOString();
+    const shortage = Number(mr.shortage ?? 0);
+    const issued = Number(mr.issued ?? 0);
+
+    if (decision === "reject") {
+      if (note.trim() === "") throw new MaterialError(422, "Alasan penolakan wajib diisi", "UNPROCESSABLE");
+      const next: Data = { ...mr, status: "Ditolak Gudang" satisfies MrStatus, approvalStatus: "Ditolak", rejectReason: note.trim(), decidedBy: actor, decidedAt: now };
+      const res = await exec("UPDATE materialRequests SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [JSON.stringify(next), now, id, mrRow.updated_at]);
+      if (res.changes !== 1) throw new MaterialError(409, "Permintaan berubah oleh pengguna lain — muat ulang", "STALE");
+      const prId = String(mr.requisitionId ?? "");
+      if (prId) {
+        const pr = await q<Row>("SELECT id, branch, data, updated_at FROM requisitions WHERE id = ?", [prId]);
+        const prData = pr[0] ? parse(pr[0]) : null;
+        if (pr[0] && prData && PR_OPEN.has(String(prData.status ?? ""))) {
+          await exec("UPDATE requisitions SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
+            JSON.stringify({ ...prData, qty: 0, amount: 0, status: "Dibatalkan", note: `${String(prData.note ?? "")} - permintaan ${id} ditolak gudang`.trim() }), now, prId, pr[0].updated_at,
+          ]);
+        }
+      }
+      return { id, decision, status: "Ditolak Gudang", issued, shortage, movementId: null };
+    }
+
+    const approved: Data = { ...mr, approvalStatus: "Disetujui", decidedBy: actor, decidedAt: now, status: "Menunggu PO" satisfies MrStatus };
+    const res = await exec("UPDATE materialRequests SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [JSON.stringify(approved), now, id, mrRow.updated_at]);
+    if (res.changes !== 1) throw new MaterialError(409, "Permintaan berubah oleh pengguna lain — muat ulang", "STALE");
+    const inv = await q<Row>("SELECT data FROM inventory WHERE id = ?", [String(mr.itemId ?? "")]);
+    const stock = Math.max(0, Number((inv[0] ? parse(inv[0] as Row) : {}).stock ?? 0) || 0);
+    if (stock <= 0) return { id, decision, status: "Menunggu PO", issued, shortage, movementId: null };
+    const f = await fulfillMaterialRequest(id, actor);
+    return { id, decision, status: f.status, issued: f.issued, shortage: f.shortage, movementId: f.movementId };
   });
 }

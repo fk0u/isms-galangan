@@ -2940,7 +2940,7 @@ const createWarranty = async (wbsTask?: string) => {
           </>
         }
       >
-        <div className="space-y-4">
+        <div className="min-h-[24rem] space-y-4">
           <Field label={S.detAssignType}>
             <div className="flex gap-4">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-700">
@@ -3122,6 +3122,8 @@ const createWarranty = async (wbsTask?: string) => {
             toast(e instanceof Error ? e.message : S.saveFail, "info");
           }
         }}>{S.addBtn}</button></>}>
+        {/* #89: beri tinggi cukup supaya daftar pilihan yang terbuka tidak terpotong. */}
+        <div className="min-h-[22rem]">
         <Field label={S.detEmployee}>
           <SearchSelect
             value={teamPick}
@@ -3131,6 +3133,7 @@ const createWarranty = async (wbsTask?: string) => {
             ariaLabel={S.detEmployee}
           />
         </Field>
+        </div>
       </Modal>
 
       {/* Modal dokumen proyek */}

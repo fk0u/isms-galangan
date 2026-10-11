@@ -41,29 +41,56 @@ async function main(): Promise<void> {
     headers: { authorization: `Bearer ${token}` }, payload: payload as Record<string, unknown>,
   });
 
-  const r1 = await call(dir, { itemId, qty: 3, purpose: "wbs", wbsTask: "Probe WBS" });
-  const d1 = r1.json().data as { issued: number; shortage: number; status: string; movementId: string | null; requisitionId: string | null };
-  assert("stok cukup → keluar penuh, tanpa PR", r1.statusCode === 201 && d1.issued === 3 && d1.shortage === 0 && d1.status === "Dari stok" && !!d1.movementId && d1.requisitionId === null, r1.body);
-  assert("stok berkurang 5 → 2", (await stockOf()) === 2);
-
-  const r2 = await call(dir, { itemId, qty: 4, purpose: "sparepart" });
-  const d2 = r2.json().data as { issued: number; shortage: number; status: string; requisitionId: string | null; sparepartId: string | null };
-  assert("stok kurang → keluar 2 + PR 2 (Sebagian)", r2.statusCode === 201 && d2.issued === 2 && d2.shortage === 2 && d2.status === "Sebagian" && !!d2.requisitionId, r2.body);
-  assert("stok tidak negatif (0)", (await stockOf()) === 0);
-  const pr = (await q<{ data: string }>("SELECT data FROM requisitions WHERE id = ?", [d2.requisitionId ?? ""]))[0];
-  assert("PR tercatat qty 2 status Diajukan", !!pr && (JSON.parse(pr.data) as { qty: number; status: string }).qty === 2 && (JSON.parse(pr.data) as { status: string }).status === "Diajukan");
-  const sp = (await q<{ data: string }>("SELECT data FROM spareparts WHERE id = ?", [d2.sparepartId ?? ""]))[0];
-  assert("sparepart tercatat dengan status pemenuhan", !!sp && (JSON.parse(sp.data) as { fulfillment?: { status: string } }).fulfillment?.status === "Sebagian");
-
+  /* ADR-0018 (issue #73): permintaan tidak memotong stok; gudang yang memutuskan. */
+  const decide = (token: string, id: string, payload: unknown) => app.inject({
+    method: "POST", url: `/api/material-requests/${id}/approval`, headers: { authorization: `Bearer ${token}` }, payload: payload as Record<string, unknown>,
+  });
   const mrOf = async (id: string) => {
     const r = (await q<{ data: string }>("SELECT data FROM materialRequests WHERE id = ?", [id]))[0];
-    return r ? (JSON.parse(r.data) as { status: string; issued: number; shortage: number }) : null;
+    return r ? (JSON.parse(r.data) as { status: string; issued: number; shortage: number; approvalStatus?: string; rejectReason?: string }) : null;
   };
-  const mr2Id = (r2.json().data as { materialRequestId: string }).materialRequestId;
-  const mr2 = await mrOf(mr2Id);
-  assert("permintaan barang tercatat (Sebagian diterima)", mr2?.status === "Sebagian diterima" && mr2.shortage === 2);
+  const movementCount = async (): Promise<number> => (await q<{ id: string }>("SELECT id FROM movements WHERE data LIKE ?", [`%${itemId}%`])).length;
+  const mekanik = await tokenFor("mekanik");
+  if (!mekanik) throw new Error("Butuh akun mekanik hasil seed");
+
+  const r1 = await call(dir, { itemId, qty: 3, purpose: "wbs", wbsTask: "Probe WBS" });
+  const d1 = r1.json().data as { issued: number; shortage: number; status: string; movementId: string | null; requisitionId: string | null; materialRequestId: string };
+  assert("stok cukup → permintaan tercatat TANPA barang keluar dan tanpa PR", r1.statusCode === 201 && d1.issued === 0 && d1.movementId === null && d1.requisitionId === null, r1.body);
+  assert("stok tetap 5 sebelum disetujui", (await stockOf()) === 5 && (await movementCount()) === 0);
+  assert("status Menunggu Approval Gudang", (await mrOf(d1.materialRequestId))?.status === "Menunggu Approval Gudang");
+  const byMek = await decide(mekanik, d1.materialRequestId, { decision: "approve" });
+  assert("peminta (mekanik) tidak boleh menyetujui → 403", byMek.statusCode === 403, byMek.body);
+  const early = await app.inject({ method: "POST", url: `/api/material-requests/${d1.materialRequestId}/fulfill`, headers: { authorization: `Bearer ${dir}` } });
+  assert("fulfill sebelum disetujui → 409", early.statusCode === 409 && (await stockOf()) === 5, early.body);
+  const ok1 = await decide(dir, d1.materialRequestId, { decision: "approve" });
+  const mr1 = await mrOf(d1.materialRequestId);
+  assert("disetujui → barang keluar 3, stok 5 → 2, Dipenuhi dari stok", ok1.statusCode === 200 && (await stockOf()) === 2 && mr1?.status === "Dipenuhi dari stok" && mr1.shortage === 0 && (await movementCount()) === 1, ok1.body);
+  const twice = await decide(dir, d1.materialRequestId, { decision: "approve" });
+  assert("keputusan kedua → 409", twice.statusCode === 409, twice.body);
+
+  const rRej = await call(dir, { itemId, qty: 1, purpose: "wbs" });
+  const rejId = (rRej.json().data as { materialRequestId: string }).materialRequestId;
+  const noReason = await decide(dir, rejId, { decision: "reject" });
+  assert("tolak tanpa alasan → 422", noReason.statusCode === 422, noReason.body);
+  const rej = await decide(dir, rejId, { decision: "reject", note: "Barang dicadangkan untuk proyek lain" });
+  const mrRej = await mrOf(rejId);
+  assert("ditolak → alasan tersimpan, tanpa pergerakan stok", rej.statusCode === 200 && mrRej?.status === "Ditolak Gudang" && mrRej.rejectReason === "Barang dicadangkan untuk proyek lain" && (await stockOf()) === 2 && (await movementCount()) === 1, rej.body);
+  const afterRej = await app.inject({ method: "POST", url: `/api/material-requests/${rejId}/fulfill`, headers: { authorization: `Bearer ${dir}` } });
+  assert("fulfill permintaan yang ditolak → 409", afterRej.statusCode === 409, afterRej.body);
+
+  const r2 = await call(dir, { itemId, qty: 4, purpose: "sparepart" });
+  const d2 = r2.json().data as { issued: number; shortage: number; status: string; requisitionId: string | null; sparepartId: string | null; materialRequestId: string };
+  assert("stok kurang (2 dari 4) → PR untuk 2, belum ada barang keluar", r2.statusCode === 201 && d2.issued === 0 && d2.status === "Menunggu PO" && !!d2.requisitionId && (await stockOf()) === 2, r2.body);
+  const pr = (await q<{ data: string }>("SELECT data FROM requisitions WHERE id = ?", [d2.requisitionId ?? ""]))[0];
+  assert("PR tercatat qty 2 status Diajukan", !!pr && (JSON.parse(pr.data) as { qty: number; status: string }).qty === 2 && (JSON.parse(pr.data) as { status: string }).status === "Diajukan");
+  const mr2Id = d2.materialRequestId;
   const prSrc = JSON.parse(pr?.data ?? "{}") as { sourceRequestIds?: string[] };
   assert("PR menyimpan sourceRequestIds", prSrc.sourceRequestIds?.[0] === mr2Id);
+  const ok2 = await decide(dir, mr2Id, { decision: "approve" });
+  const mr2 = await mrOf(mr2Id);
+  assert("disetujui → keluar 2 yang ada, stok 0, Sebagian diterima", ok2.statusCode === 200 && (await stockOf()) === 0 && mr2?.status === "Sebagian diterima" && mr2.shortage === 2, ok2.body);
+  const sp = (await q<{ data: string }>("SELECT data FROM spareparts WHERE id = ?", [d2.sparepartId ?? ""]))[0];
+  assert("sparepart tercatat dengan status pemenuhan", !!sp && (JSON.parse(sp.data) as { fulfillment?: { status: string } }).fulfillment?.status === "Sebagian");
 
   const fulfill = (token: string, id: string) => app.inject({ method: "POST", url: `/api/material-requests/${id}/fulfill`, headers: { authorization: `Bearer ${token}` } });
   const fNone = await fulfill(dir, mr2Id);
@@ -108,7 +135,7 @@ async function main(): Promise<void> {
   await exec("DELETE FROM materialRequests WHERE data LIKE ?", [`%${itemId}%`]);
   await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
   await exec("DELETE FROM audit_log WHERE action = 'material_request' AND diff LIKE ?", [`%${itemId}%`]);
-  await exec("DELETE FROM audit_log WHERE action = 'material_fulfill' AND row_id = ?", [mr2Id]);
+  await exec("DELETE FROM audit_log WHERE action IN ('material_fulfill', 'material_approve', 'material_reject') AND row_id IN (?, ?, ?)", [mr2Id, d1.materialRequestId, rejId]);
 
   console.log(`\n${passed}/${total} pemeriksaan alur material lolos.`);
   await app.close();

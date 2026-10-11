@@ -667,11 +667,15 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
                 </select>
               </Field>
             )}
+            {/* #89: mode inventori - catatan duduk di kanan kategori, bukan baris sendiri. */}
+            {fromInventory && <Field label={S.spsNotes}><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={S.spsNotesPh} /></Field>}
           </FormGrid>
-          <FormGrid>
-            {!fromInventory && <Field label={S.spsCost}><MoneyInput className="input" value={form.cost} onChange={(v) => setForm({ ...form, cost: v })} /></Field>}
-            <Field label={S.spsNotes}><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={S.spsNotesPh} /></Field>
-          </FormGrid>
+          {!fromInventory && (
+            <FormGrid>
+              <Field label={S.spsCost}><MoneyInput className="input" value={form.cost} onChange={(v) => setForm({ ...form, cost: v })} /></Field>
+              <Field label={S.spsNotes}><input className="input" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={S.spsNotesPh} /></Field>
+            </FormGrid>
+          )}
           <FormGrid>
             <Field label={S.spsTech}><input className="input" value={form.technician} onChange={(e) => setForm({ ...form, technician: e.target.value })} placeholder={S.spsTechPh} /></Field>
             {!fromInventory && <Field label={S.spsUsedDate}><input type="date" className="input" value={form.usedDate} onChange={(e) => setForm({ ...form, usedDate: e.target.value })} /></Field>}

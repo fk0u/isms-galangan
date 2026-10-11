@@ -17,7 +17,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import { fmtBulan, fmtMiliar, fmtRupiah, todayISO } from "../../utils/format";
 import { exportExcel } from "../../utils/export";
-import { TAHAP, tahapOf, isOverdue } from "./Projects";
+import { TAHAP, tahapLabel, tahapOf, isOverdue } from "./Projects";
 import { canonPrioritas } from "../../utils/scope";
 import { projectProgressOf } from "../../utils/projectProgress";
 import { useAuth, hasPermission } from "../../auth/auth";
@@ -288,7 +288,7 @@ export default function Monitoring() {
           return (
             <div key={t} className="w-64 shrink-0 rounded-2xl border border-steel-200 bg-surface p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-semibold text-navy-900">{t}</p>
+                <p className="text-sm font-semibold text-navy-900">{tahapLabel(t, locale)}</p>
                 <Badge tone="navy">{cols.length}</Badge>
               </div>
               <div className="space-y-2">

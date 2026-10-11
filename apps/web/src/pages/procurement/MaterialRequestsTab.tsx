@@ -37,6 +37,8 @@ export default function MaterialRequestsTab() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("Terbuka");
   const canIssue = hasPermission(user?.permissions, "movements", "w");
+  // ADR-0018: menyetujui/menolak pengeluaran barang = hak ubah inventori (gudang), bukan sekadar peminta.
+  const canApprove = hasPermission(user?.permissions, "inventory", "w");
 
   const all = useMemo(
     () => [...(data.materialRequests ?? [])].sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")) || String(b.id).localeCompare(String(a.id))),
@@ -206,7 +208,7 @@ export default function MaterialRequestsTab() {
                     <td className="td font-mono text-xs">{String(m.requisitionId ?? "") || "-"}</td>
                     <td className="td"><Badge tone={stTone(st)}>{stLabel[st] ?? st}</Badge></td>
                     <td className="td">
-                      {st === "Menunggu Approval Gudang" && canIssue ? (
+                      {st === "Menunggu Approval Gudang" && canApprove ? (
                         <div className="flex flex-col items-start gap-1">
                           <div className="flex items-center gap-1">
                             <AsyncButton className="btn-primary text-xs py-0.5 px-2" disabled={stock === 0} onAction={() => doApprove(m)}>

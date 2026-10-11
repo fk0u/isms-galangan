@@ -63,6 +63,8 @@ async function main(): Promise<void> {
     const mr = await post(dir, `/api/projects/${project.id}/material-requests`, { itemId, qty: 10, purpose: "wbs" });
     const mrData = mr.json().data as { materialRequestId: string; requisitionId: string };
     mrId = mrData.materialRequestId;
+    // ADR-0018: gudang menyetujui dulu; stok masih 0 sehingga permintaan menunggu PO.
+    await post(dir, `/api/material-requests/${mrId}/approval`, { decision: "approve" });
     prId = mrData.requisitionId;
     assert("permintaan 10 → PR 10 (Menunggu PO)", mr.statusCode === 201 && (await mrOf()).status === "Menunggu PO", mr.body);
 

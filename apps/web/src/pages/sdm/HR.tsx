@@ -50,7 +50,10 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_qc } from "../../i18n/n_qc";
 
 const CERT_WINDOW = 90;
-const TIPE_KARYAWAN = ["Tetap", "Harian", "Kontrak", "Outsourcing"];
+/* #97: tipe karyawan baku. "Harian" hanya nilai data lama - tetap terbaca dan
+   lolos impor, tetapi tidak lagi ditawarkan untuk karyawan baru. */
+const TIPE_KARYAWAN = ["Training", "Kontrak", "Tetap", "Outsourcing"];
+const TIPE_LAMA = ["Harian"];
 const PTKP_STATUS = ["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"];
 const SURAT_JENIS = ["Kontrak Baru", "Perpanjang Kontrak", "SP 1", "SP 2", "SP 3", "Mutasi"];
 const isKontrak = (jenis: string): boolean => jenis === "Kontrak Baru" || jenis === "Perpanjang Kontrak";
@@ -651,7 +654,7 @@ export default function HR() {
       role,
       dept: form.dept,
       branch: form.branch,
-      status: form.status,
+      status: editingId !== null ? form.status : "Aktif",
       join: form.join,
       tipe: form.tipe,
       basic,
@@ -675,7 +678,7 @@ export default function HR() {
           role,
           dept: form.dept,
           branch: form.branch,
-          status: form.status,
+          status: editingId !== null ? form.status : "Aktif",
           join: form.join,
           tipe: form.tipe,
           basic,
@@ -1342,7 +1345,7 @@ const finishTraining = async (t: StoreItem) => {
         }
         /* Tipe karyawan whitelist + kontrak wajib untuk Kontrak/Outsourcing. */
         const tipeV = String(tipeRaw || "Tetap").trim() || "Tetap";
-        if (!TIPE_KARYAWAN.includes(tipeV)) {
+        if (![...TIPE_KARYAWAN, ...TIPE_LAMA].includes(tipeV)) {
           gagal.push(`Baris ${line}: tipe "${tipeV}" tidak dikenal (${TIPE_KARYAWAN.join(", ")})`);
           continue;
         }
@@ -2022,34 +2025,37 @@ const finishTraining = async (t: StoreItem) => {
                   {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
                 </select>
               </Field>
+              {/* #97: prototype satu cabang - cabang terkunci ke Samarinda, tanpa pilihan. */}
               <Field label={S.fCabang}>
-                <select className="input" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })}>
-                  {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <input className="input bg-surface" value={form.branch} readOnly aria-readonly="true" />
               </Field>
-              <Field label={S.dlStatus}>
-                <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  <option>Aktif</option>
-                  <option>Nonaktif</option>
-                  <option>Cuti</option>
-                </select>
-              </Field>
+              {/* Karyawan baru selalu Aktif; perubahan status hanya saat mengubah data yang sudah ada. */}
+              {editingId !== null && (
+                <Field label={S.dlStatus}>
+                  <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <option>Aktif</option>
+                    <option>Nonaktif</option>
+                    <option>Cuti</option>
+                  </select>
+                </Field>
+              )}
               <Field label={S.fTipeKaryawan}>
                 <select className="input" value={form.tipe} onChange={(e) => setForm({ ...form, tipe: e.target.value })}>
-                  {TIPE_KARYAWAN.map((t) => <option key={t}>{t}</option>)}
+                  {[...TIPE_KARYAWAN, ...(TIPE_KARYAWAN.includes(form.tipe) ? [] : [form.tipe])].map((t) => <option key={t}>{t}</option>)}
                 </select>
               </Field>
               <Field label={S.fJoin}>
                 <input type="date" className="input" value={form.join} onChange={(e) => setForm({ ...form, join: e.target.value })} />
               </Field>
+              {/* Urutan kontrak: mulai → berakhir → nomor. */}
+              <Field label={E.lastContractStart}>
+                <input type="date" className="input" value={form.lastContractStart} onChange={(e) => setForm({ ...form, lastContractStart: e.target.value })} />
+              </Field>
               <Field label={S.fContractEnd}>
-                <input type="date" className="input" value={form.contractEnd} onChange={(e) => setForm({ ...form, contractEnd: e.target.value })} />
+                <input type="date" className="input" value={form.contractEnd} min={form.lastContractStart || undefined} onChange={(e) => setForm({ ...form, contractEnd: e.target.value })} />
               </Field>
               <Field label={E.lastContractNo}>
                 <input className="input" value={form.lastContractNo} onChange={(e) => setForm({ ...form, lastContractNo: e.target.value })} />
-              </Field>
-              <Field label={E.lastContractStart}>
-                <input type="date" className="input" value={form.lastContractStart} onChange={(e) => setForm({ ...form, lastContractStart: e.target.value })} />
               </Field>
               {(form.tipe === "Outsourcing" || form.partnerName !== "") && (
                 <>

@@ -153,7 +153,9 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     if (prIds.length > 0) {
       const mrs = (await q<Row>("SELECT id, branch, data, updated_at FROM materialRequests", []))
         .map((r) => ({ id: r.id, d: parse(r) }))
-        .filter((m) => prIds.includes(String(m.d.requisitionId ?? "")) && String(m.d.itemId ?? "") === itemId && num(m.d.shortage) > 0)
+        .filter((m) => prIds.includes(String(m.d.requisitionId ?? "")) && String(m.d.itemId ?? "") === itemId && num(m.d.shortage) > 0
+          // ADR-0018: yang belum/ditolak gudang tidak ikut dipenuhi otomatis saat barang PO masuk.
+          && ["", "Disetujui"].includes(String(m.d.approvalStatus ?? "")))
         .sort((a, b) => String(a.d.date ?? "").localeCompare(String(b.d.date ?? "")));
       for (const m of mrs) {
         const stockNow = Math.max(0, num(parse((await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [itemId]))[0]).stock));

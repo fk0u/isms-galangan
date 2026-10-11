@@ -492,8 +492,9 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
           </FormGrid>
           <FormGrid>
             <Field label={S.colUnitPrice} hint={
-              /* #85: subtotal langsung = kuantitas × harga satuan, mengikuti isian. */
-              S.boqLiveTotal
+              /* #85: subtotal langsung = kuantitas × harga satuan, mengikuti isian.
+                 Belum lengkap/invalid → tidak menampilkan angka yang menyesatkan. */
+              !(Number(form.quantity) > 0 && parseRupiah(form.unitPrice) > 0) ? undefined : S.boqLiveTotal
                 .replace("{q}", String(Number(form.quantity) || 0))
                 .replace("{u}", form.unit)
                 .replace("{p}", fmtRupiah(parseRupiah(form.unitPrice)))
