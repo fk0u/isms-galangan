@@ -1,5 +1,8 @@
 export const n_misc = {
   id: {
+    rangeFrom: "Dari bulan",
+    rangeTo: "Sampai bulan",
+    rangeReset: "Reset",
     pagerInfo: "{a}–{b} dari {n}",
     pagerLoading: "Memuat…",
     pagerNav: "Navigasi halaman",
@@ -92,7 +95,7 @@ export const n_misc = {
     attOverdue: "{n} invoice overdue (7h: {a} · 14h: {b} · 30h+: {c})",
     attLatestIncident: "Insiden terbaru: {a} - {b}",
     attDelayed: "{n} proyek Terlambat ({b})",
-    anSubtitle: "Analisis 4 level - dari 'apa yang terjadi' hingga 'harus berbuat apa'",
+    anSubtitle: "Analisis deskriptif, diagnostik, dan profitabilitas",
     exportReportBtn: "Ekspor Laporan",
     pdfReportBtn: "Ekspor PDF",
     tabDescriptive: "Deskriptif",
@@ -504,6 +507,9 @@ export const n_misc = {
     cardSearchPh: "Cari di daftar ini...",
   },
   en: {
+    rangeFrom: "From month",
+    rangeTo: "To month",
+    rangeReset: "Reset",
     pagerInfo: "{a}–{b} of {n}",
     pagerLoading: "Loading…",
     pagerNav: "Page navigation",
@@ -596,7 +602,7 @@ export const n_misc = {
     attOverdue: "{n} overdue invoices (7d: {a} · 14d: {b} · 30d+: {c})",
     attLatestIncident: "Latest incident: {a} - {b}",
     attDelayed: "{n} delayed projects ({b})",
-    anSubtitle: "4-level analysis - from 'what happened' to 'what to do'",
+    anSubtitle: "Descriptive, diagnostic, and profitability analysis",
     exportReportBtn: "Export Report",
     pdfReportBtn: "Export PDF",
     tabDescriptive: "Descriptive",

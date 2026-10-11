@@ -2147,8 +2147,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 <button className="btn-secondary" onClick={() => setShowScan(true)} title={S.scanBtnTitle} aria-label={S.scanBtnAria}>
                   <Camera className="h-4 w-4" /> {S.scanBtn}
                 </button>
-              </div>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {/* INV-02: pilihan impor, template, dan impor CSV sebaris dengan Scan. */}
                 <select className="input w-auto py-1.5 text-xs" value={importMode} onChange={(e) => { setImportMode(e.target.value as "Katalog" | "IN" | "OUT"); setImportReport([]); }} aria-label={S.impModeAria}>
                   <option value="Katalog">{S.impKatalog}</option>
                   <option value="IN">{S.impIn}</option>
@@ -2163,16 +2162,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 {importMode === "OUT" && (
                   <button className="btn-secondary text-xs" onClick={downloadTemplateOUT}><Download className="h-3.5 w-3.5" /> {S.btnTplOut}</button>
                 )}
-                <label className="btn-secondary cursor-pointer text-xs">
+                <label className="btn-secondary cursor-pointer text-xs" title={importMode === "Katalog" ? S.hintCols : importMode === "IN" ? S.hintColsIn : S.hintColsOut}>
                   <Upload className="h-3.5 w-3.5" /> {S.btnImport}
                   <input type="file" accept=".csv" className="hidden" aria-label={importMode === "Katalog" ? S.impAriaKatalog : importMode === "IN" ? S.impAriaIn : S.impAriaOut}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) { if (importMode === "IN") handleImportINFile(f); else if (importMode === "OUT") handleImportOUTFile(f); else handleImportFile(f); } e.target.value = ""; }} />
                 </label>
-                <span className="text-xs text-steel-400">
-                  {importMode === "Katalog" && S.hintCols}
-                  {importMode === "IN" && S.hintColsIn}
-                  {importMode === "OUT" && S.hintColsOut}
-                </span>
               </div>
               {importReport.length > 0 && (
                 <div className="mb-3 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">

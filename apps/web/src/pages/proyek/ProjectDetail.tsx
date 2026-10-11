@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
@@ -470,6 +470,8 @@ if (from === "Desain" && to === "Produksi") {
   const sessionName = String(session?.name ?? "").trim() || String(session?.username ?? "").trim();
   const slots = data.dockSlots.filter((s) => s.project === pid);
   const docs = data.documents.filter((d) => d.project === pid);
+  /* PRJ-20: dokumen dikelompokkan per tipe (BoQ, Kontrak, Drawing, ...). */
+  const docsByType = [...docs].sort((x, y) => String(x.type ?? "").localeCompare(String(y.type ?? "")));
   const wos = data.workOrders.filter((w) => w.project === pid);
   const coList = data.changeOrders.filter((c) => c.project === pid);
   const riskList = data.risks.filter((r) => r.project === pid);
@@ -1811,7 +1813,7 @@ const createWarranty = async (wbsTask?: string) => {
                 <button className="btn-secondary text-xs" onClick={() => setShowDoc(true)}><Plus className="h-3.5 w-3.5" /> {S.detAddDoc}</button>
               </div>
               <div className="space-y-2">
-                {docs.map((d) => {
+                {docsByType.map((d, idx) => {
                   const url = docUrlOf(d);
                   const fname = docBaseName(d, url);
                   const isNew = lastUploadedId === String(d.id);
@@ -1827,7 +1829,11 @@ const createWarranty = async (wbsTask?: string) => {
                      memberi tanda "Baru diunggah" + sorotan tepi. */
                   const isOpen = url !== "" && openDocId === String(d.id);
                   return (
-                  <div key={d.id} className={`doc-card rounded-xl border p-3 text-sm ${isNew ? "border-ocean-400 ring-2 ring-ocean-100" : "border-steel-100"}`} style={{ breakInside: "avoid" }}>
+                  <Fragment key={d.id}>
+                  {(idx === 0 || String(docsByType[idx - 1].type ?? "") !== String(d.type ?? "")) && (
+                    <h4 className="pt-2 text-xs font-semibold uppercase tracking-wide text-steel-500">{String(d.type ?? "-")} ({docsByType.filter((x) => String(x.type ?? "") === String(d.type ?? "")).length})</h4>
+                  )}
+                  <div className={`doc-card rounded-xl border p-3 text-sm ${isNew ? "border-ocean-400 ring-2 ring-ocean-100" : "border-steel-100"}`} style={{ breakInside: "avoid" }}>
                     <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-navy-900">{d.title} {isNew && <Badge tone="teal">Baru diunggah</Badge>}</p>
@@ -1880,6 +1886,7 @@ const createWarranty = async (wbsTask?: string) => {
                       )}
                     </div>
                   </div>
+                  </Fragment>
                   );
                 })}
                 {docs.length === 0 && <p className="text-sm text-steel-400">{S.detNoDocs}</p>}
