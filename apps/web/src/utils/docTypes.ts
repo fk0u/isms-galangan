@@ -33,6 +33,7 @@ export const DOC_TYPES = [
   "Dock Space",
   "Surat Jalan",
   "Tanda Terima",
+  "BoQ",
 ] as const;
 
 export type DocType = (typeof DOC_TYPES)[number];
@@ -61,6 +62,7 @@ export const SUB_TYPES: Record<string, string[]> = {
   Laporan: ["Laporan Progres", "Laporan Mutu", "Laporan K3", "Laporan Keuangan", "Laporan Lainnya"],
   Kontrak: ["Kontrak Utama", "Kontrak Kerja", "Addendum", "Perubahan Bright", "Kontrak Lainnya"],
   Invoice: ["Invoice Progres", "Invoice Retensi", "Invoice Penutup"],
+  BoQ: ["BoQ Proyek", "Revisi BoQ", "Addendum BoQ"],
 };
 
 /** Sub-tipe yang berlaku untuk satu jenis dokumen. */

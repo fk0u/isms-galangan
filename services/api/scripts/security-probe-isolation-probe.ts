@@ -62,7 +62,8 @@ function runProbe(args: string[], callerDb: string, callerUploads: string, tempR
 }
 
 function main(): void {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "isms-security-isolation-check-"));
+  const baseTmp = process.platform === "darwin" && fs.existsSync("/tmp") ? "/tmp" : os.tmpdir();
+  const root = fs.mkdtempSync(path.join(baseTmp, "isms-sec-iso-"));
   const callerDb = path.join(root, "caller.db");
   const callerUploads = path.join(root, "caller-uploads");
   const successTempRoot = path.join(root, "probe-temp-success");

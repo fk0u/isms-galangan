@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload, FolderTree, Paperclip, History, Link2, GitBranch, Table2 } from "lucide-react";
+import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload, FolderTree, Paperclip, History, Link2, GitBranch, Table2, Printer } from "lucide-react";
 import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
 import { Card, PageHeader, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, toast, StatusBadge, usePager, AsyncButton, EntityPicker, SearchBox, rowMatches } from "../../components/ui";
@@ -11,7 +11,7 @@ import { DocumentPreviewCell, DocumentPreviewPanel, InlineDocPreview } from "../
 import { isBackendConfigured } from "../../services/http";
 import { ocrImageUrl } from "../../services/upload";
 import { uploadFile } from "../../services/upload";
-import { fmtTanggal, todayISO } from "../../utils/format";
+import { fmtRupiah, fmtTanggal, todayISO } from "../../utils/format";
 import { employeeOptions } from "../../utils/employeeOptions";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
@@ -25,6 +25,8 @@ import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
 import { monthAxis, monthKeyOf } from "../../utils/monthAxis";
 import { DOC_TYPES, NEEDS_QC_LINK, qcCertCandidates, subTypesOf } from "../../utils/docTypes";
+import { BoqDetailModal } from "./BoqDetailModal";
+import { printBoqHtml } from "../../utils/printBoqHtml";
 
 const TYPES: readonly string[] = DOC_TYPES;
 const FILTERS = ["Semua", ...TYPES, "Arsip"];
@@ -49,7 +51,7 @@ const PDF_HEIGHT_RE = /\.pdf(\?|$)/i;
 const IMAGE_URL_RE = /\.(png|jpe?g|webp|bmp)(\?|$)/i;
 
 /* Batch koleksi modul Dokumen untuk useModuleSync (pengganti resync penuh). */
-const DOC_COLS: CollectionKey[] = ["activities", "documents", "vessels", "projects"];
+const DOC_COLS: CollectionKey[] = ["activities", "documents", "vessels", "projects", "boqDocs", "boq"];
 const EXPIRY_WINDOW = 30;
 
 
@@ -66,12 +68,14 @@ const PREFIX: Record<string, string> = {
   Kontrak: "CTR", Drawing: "DRW", Prosedur: "SOP", Sertifikat: "SRT",
   Laporan: "LAP", Invoice: "INV", NCR: "NCR", Penawaran: "QTN",
   "Dock Space": "DS-SB", "Surat Jalan": "SJ-SMD", "Tanda Terima": "TT-SMD",
+  BoQ: "BQD",
 };
 
 const RETENSI: Record<string, number | null> = {
   Kontrak: 10, Sertifikat: 5, Laporan: 5, Invoice: 10, NCR: 5,
   Drawing: null, Prosedur: 5, Penawaran: 3,
   "Dock Space": 5, "Surat Jalan": 5, "Tanda Terima": 5,
+  BoQ: 10,
 };
 
 function nextDocId(type: string, docs: StoreItem[]): string {
@@ -164,11 +168,35 @@ export default function Documents() {
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<StoreItem | null>(null);
   const [detail, setDetail] = useState<StoreItem | null>(null);
+  const [boqModalDoc, setBoqModalDoc] = useState<StoreItem | null>(null);
   const [ocrText, setOcrText] = useState("");
   const [ocrBusy, setOcrBusy] = useState(false);
   const [archiving, setArchiving] = useState<StoreItem | null>(null);
   const [deleting, setDeleting] = useState<StoreItem | null>(null);
   const [form, setForm] = useState(emptyForm);
+
+  /* Hubungkan dokumen BoQ dengan detail surat boqDocs & baris pekerjaan boq */
+  const selectedBoqDoc = useMemo(() => {
+    if (!boqModalDoc) return null;
+    const rawId = String(boqModalDoc.boqDocId ?? boqModalDoc.id ?? "");
+    const cleanId = rawId.replace(/^DOC-/, "");
+    return (
+      data.boqDocs?.find((b) => b.id === boqModalDoc.boqDocId || b.id === cleanId || b.id === rawId) ??
+      data.boqDocs?.find((b) => b.projectId === boqModalDoc.project) ??
+      null
+    );
+  }, [boqModalDoc, data.boqDocs]);
+
+  const selectedBoqItems = useMemo(() => {
+    if (!selectedBoqDoc && !boqModalDoc) return [];
+    const pId = String(selectedBoqDoc?.projectId ?? boqModalDoc?.project ?? "");
+    return (data.boq ?? []).filter((item) => String(item.projectId ?? "") === pId);
+  }, [selectedBoqDoc, boqModalDoc, data.boq]);
+
+  const selectedBoqProject = useMemo(() => {
+    const pId = String(selectedBoqDoc?.projectId ?? boqModalDoc?.project ?? "");
+    return (data.projects ?? []).find((p) => p.id === pId) ?? null;
+  }, [selectedBoqDoc, boqModalDoc, data.projects]);
 
   /* Dokumen Sertifikat yang boleh dipilih sebagai dasar QC untuk sertifikat
      yang sedang dibuat. Hanya proyek yang sedang dikerjakan dan dokumen
@@ -291,7 +319,7 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
           title: String(d.title),
           subtitle: `${String(d.id)} · ${String(d.version ?? "-")} · ${groupBy === "type" ? String(d.project ?? "-") : String(d.type ?? "-")} · ${fmtTanggal(d.updated)}`,
           trailing: <StatusBadge status={d.status} />,
-          onOpen: () => setDetail(d),
+          onOpen: () => openDetail(d),
           children: branches,
         };
       }),
@@ -341,7 +369,7 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
        berbagi overlay. Kalau tidak saling menutup, ketiganya bisa terbuka
        bersamaan dan panel Detail tertinggal menampilkan dokumen yang baru
        saja diarsipkan atau dihapus. */
-    setDetail(null); setArchiving(null); setDeleting(null);
+    setDetail(null); setArchiving(null); setDeleting(null); setBoqModalDoc(null);
     setOcrText(""); setDistTo("");
     setEditing(d);
     setRelSel(Array.isArray(d.related) ? d.related.map(String) : []);
@@ -351,17 +379,23 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
   const openDetail = (d: StoreItem) => {
     setEditing(null); setArchiving(null); setDeleting(null);
     setOcrText(""); setDistTo("");
-    setDetail(d);
+    if (d.type === "BoQ" || d.boqDocId) {
+      setDetail(null);
+      setBoqModalDoc(d);
+    } else {
+      setBoqModalDoc(null);
+      setDetail(d);
+    }
   };
 
   const openArchive = (d: StoreItem) => {
-    setEditing(null); setDetail(null); setDeleting(null);
+    setEditing(null); setDetail(null); setDeleting(null); setBoqModalDoc(null);
     setOcrText(""); setDistTo("");
     setArchiving(d);
   };
 
   const openDelete = (d: StoreItem) => {
-    setEditing(null); setDetail(null); setArchiving(null);
+    setEditing(null); setDetail(null); setArchiving(null); setBoqModalDoc(null);
     setOcrText(""); setDistTo("");
     setDeleting(d);
   };
@@ -577,6 +611,24 @@ const doExport = () => {
    bulan berjalan) dan monthKeyOf() yang membaca YYYY-MM lengkap. */
   const docAxis = useMemo(() => monthAxis({ months: 12, locale: locale as "id" | "en" }), [locale]);
 
+  const boqTotalValue = useMemo(() => {
+    const activeBoqDocs = active.filter((d) => d.type === "BoQ");
+    let sum = 0;
+    for (const d of activeBoqDocs) {
+      const cleanId = String(d.boqDocId ?? d.id).replace(/^DOC-/, "");
+      const bDoc = (data.boqDocs ?? []).find((b) => b.id === d.boqDocId || b.id === cleanId || b.id === d.id);
+      if (bDoc && Number(bDoc.total) > 0) {
+        sum += Number(bDoc.total);
+      } else {
+        const pId = String(d.project ?? "");
+        const items = (data.boq ?? []).filter((it) => String(it.projectId ?? "") === pId);
+        const itemSum = items.reduce((acc, it) => acc + (Number(it.totalPrice) || (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)), 0);
+        sum += itemSum;
+      }
+    }
+    return sum;
+  }, [active, data.boqDocs, data.boq]);
+
   const trendOf = (pred: (d: StoreItem) => boolean) =>
     docAxis.map((pt) => ({
       name: pt.label,
@@ -599,12 +651,54 @@ const doExport = () => {
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.kpiTotal} value={String(active.length)} icon={<ScrollText className="h-5 w-5" />} chip="navy" hint={S.kpiTotalHint} spark={trendOf(() => true)} />
-        <KpiCard label={S.kpiValid} value={String(active.filter((d) => d.status === "Berlaku" || d.status === "Disetujui").length)} icon={<FileText className="h-5 w-5" />} chip="teal" hint={S.kpiValidHint} spark={trendOf((d) => d.status === "Berlaku" || d.status === "Disetujui")} />
-        <KpiCard label={S.kpiPending} value={String(active.filter((d) => canonStatus(d.status) === "Diajukan" || d.status === "Draft").length)} icon={<FileText className="h-5 w-5" />} chip="amber" hint={S.kpiPendingHint} spark={trendOf((d) => canonStatus(d.status) === "Diajukan" || d.status === "Draft")} />
-        <KpiCard label={S.kpiExpired} value={String(active.filter((d) => d.status === "Kedaluwarsa").length)} icon={<FileText className="h-5 w-5" />} chip="rose" hint={S.kpiExpiredHint} spark={trendOf((d) => d.status === "Kedaluwarsa")} />
-      </div>
+      {type === "BoQ" ? (
+        <div className="mb-4 space-y-3">
+          <div className="rounded-xl border border-ocean-200 bg-gradient-to-r from-ocean-50/80 via-sky-50/50 to-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-bold text-navy-900">
+                  <FileText className="h-4 w-4 text-ocean-600" />
+                  {S.boqSectionTitle}
+                </h3>
+                <p className="mt-0.5 text-xs text-steel-600">
+                  {S.boqSectionSubtitle}
+                </p>
+              </div>
+              <Badge tone="blue">Enterprise Integration</Badge>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KpiCard
+              label={S.boqKpiTotal}
+              value={String(active.filter((d) => d.type === "BoQ").length)}
+              icon={<ScrollText className="h-5 w-5" />}
+              chip="navy"
+              hint={locale === "en" ? "Registered BoQ letters" : "Surat BoQ terdaftar"}
+            />
+            <KpiCard
+              label={S.boqKpiApproved}
+              value={String(active.filter((d) => d.type === "BoQ" && d.status === "Disetujui").length)}
+              icon={<FileText className="h-5 w-5" />}
+              chip="teal"
+              hint={locale === "en" ? "Locked & approved" : "Terkunci & disetujui"}
+            />
+            <KpiCard
+              label={S.boqKpiValue}
+              value={fmtRupiah(boqTotalValue)}
+              icon={<FileText className="h-5 w-5" />}
+              chip="ocean"
+              hint={locale === "en" ? "Approved BoQ commitment" : "Komitmen BoQ disetujui"}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label={S.kpiTotal} value={String(active.length)} icon={<ScrollText className="h-5 w-5" />} chip="navy" hint={S.kpiTotalHint} spark={trendOf(() => true)} />
+          <KpiCard label={S.kpiValid} value={String(active.filter((d) => d.status === "Berlaku" || d.status === "Disetujui").length)} icon={<FileText className="h-5 w-5" />} chip="teal" hint={S.kpiValidHint} spark={trendOf((d) => d.status === "Berlaku" || d.status === "Disetujui")} />
+          <KpiCard label={S.kpiPending} value={String(active.filter((d) => canonStatus(d.status) === "Diajukan" || d.status === "Draft").length)} icon={<FileText className="h-5 w-5" />} chip="amber" hint={S.kpiPendingHint} spark={trendOf((d) => canonStatus(d.status) === "Diajukan" || d.status === "Draft")} />
+          <KpiCard label={S.kpiExpired} value={String(active.filter((d) => d.status === "Kedaluwarsa").length)} icon={<FileText className="h-5 w-5" />} chip="rose" hint={S.kpiExpiredHint} spark={trendOf((d) => d.status === "Kedaluwarsa")} />
+        </div>
+      )}
 
       {expiring.length > 0 && type !== "Arsip" && (
         <Card className="mb-4 p-4">
@@ -630,6 +724,38 @@ const doExport = () => {
           ariaLabel={S.searchAria}
           className="min-w-52 flex-1 sm:max-w-xs"
         />
+
+        {/* Quick type tabs */}
+        <div className="flex flex-wrap items-center gap-1">
+          {(["Semua", "BoQ", "Kontrak", "Sertifikat", "Laporan", "Arsip"] as const).map((tab) => {
+            const isActive = type === tab;
+            const count = tab === "Arsip"
+              ? archived.length
+              : tab === "Semua"
+              ? active.length
+              : active.filter((d) => d.type === tab).length;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setType(tab)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-navy-900 text-white shadow-sm"
+                    : "border border-steel-200 bg-white text-steel-700 hover:bg-steel-50"
+                }`}
+              >
+                {tab}
+                <span className={`ml-1.5 rounded-full px-1.5 py-0.2 text-[10px] ${
+                  isActive ? "bg-white/20 text-white" : "bg-steel-100 text-steel-600"
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <FilterPopover
           activeCount={[type !== "Semua"].filter(Boolean).length}
           initial={{ type }}
@@ -709,8 +835,65 @@ const doExport = () => {
                   <td className="td text-xs text-steel-600">{createdAtOf(d) !== null ? fmtTanggal(createdAtOf(d)) : <span className="text-steel-400">-</span>}</td>
                   <td className="td text-xs text-steel-600">{lastTouchedAt(d) !== null ? fmtTanggal(lastTouchedAt(d)) : <span className="text-steel-400">-</span>}</td>
                   <td className="td">
-                    <div className="flex gap-1">
-                      <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.detailBtn} aria-label={S.detailOf.replace("{a}", String(d.id))} onClick={() => openDetail(d)}><Eye className="h-4 w-4" /></button>
+                    <div className="flex items-center gap-1">
+                      {d.type === "BoQ" ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-secondary flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-ocean-700 hover:bg-ocean-50"
+                            title={S.boqOpenDetail}
+                            onClick={() => openDetail(d)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            {S.boqOpenDetail}
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-lg p-1.5 text-steel-600 hover:bg-steel-100"
+                            title={S.boqPrintEnterprise}
+                            aria-label={S.boqPrintEnterprise}
+                            onClick={() => {
+                              const cleanId = String(d.boqDocId ?? d.id).replace(/^DOC-/, "");
+                              const bDoc = (data.boqDocs ?? []).find((b) => b.id === d.boqDocId || b.id === cleanId || b.id === d.id);
+                              const pId = String(bDoc?.projectId ?? d.project ?? "");
+                              const prj = (data.projects ?? []).find((p) => p.id === pId);
+                              const bItems = (data.boq ?? []).filter((it) => String(it.projectId ?? "") === pId);
+                              const cItems = bItems.map((it, idx) => ({
+                                no: idx + 1,
+                                name: String(it.name ?? it.task ?? "Pekerjaan"),
+                                description: it.description ? String(it.description) : undefined,
+                                category: it.category ? String(it.category) : undefined,
+                                qty: Number(it.quantity ?? 1),
+                                unit: String(it.unit ?? "ls"),
+                                unitPrice: Number(it.unitPrice ?? 0),
+                                totalPrice: Number(it.totalPrice) || (Number(it.quantity ?? 1) * Number(it.unitPrice ?? 0)),
+                              }));
+                              const tot = cItems.length > 0
+                                ? cItems.reduce((acc, it) => acc + it.totalPrice, 0)
+                                : Number(bDoc?.total ?? 0);
+                              printBoqHtml({
+                                number: String(bDoc?.number ?? d.title ?? "BQ/PRJ/001"),
+                                revision: Number(bDoc?.revision ?? 0),
+                                status: String(bDoc?.status ?? d.status ?? "Draft"),
+                                issuedAt: String(bDoc?.issuedAt ?? d.updated ?? ""),
+                                projectId: pId,
+                                vesselName: String(prj?.vessel ?? d.vessel ?? "-"),
+                                clientName: String(prj?.client ?? "-"),
+                                approvedBy: bDoc?.approvedBy ? String(bDoc.approvedBy) : undefined,
+                                approvedAt: bDoc?.approvedAt ? String(bDoc.approvedAt) : undefined,
+                                note: String(bDoc?.note ?? ""),
+                                items: cItems,
+                                total: tot,
+                                locale,
+                              });
+                            }}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.detailBtn} aria-label={S.detailOf.replace("{a}", String(d.id))} onClick={() => openDetail(d)}><Eye className="h-4 w-4" /></button>
+                      )}
                       {/* Sel aksi tabel arsip hanya punya Detail - tidak ada
                           tombol Pratinjau lagi (item 14 revisi 2 Oktober).
                           Sebelumnya `DocumentPreviewCell` menaruh Eye di sini
@@ -1062,6 +1245,16 @@ const doExport = () => {
         confirmDisabled={deleting ? findUsages(data, "documents", String(deleting.id)).length > 0 : false}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
+      />
+
+      <BoqDetailModal
+        open={boqModalDoc !== null}
+        onClose={() => setBoqModalDoc(null)}
+        doc={boqModalDoc}
+        boqDoc={selectedBoqDoc}
+        items={selectedBoqItems}
+        project={selectedBoqProject}
+        allBoqDocs={data.boqDocs}
       />
     </div>
   );
