@@ -33,7 +33,7 @@ import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRi
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { canonPrioritas } from "../../utils/scope";
 import ProjectAddModal from "../../components/ProjectAddModal";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
@@ -98,6 +98,8 @@ export default function Projects() {
   const [pmFilter, setPmFilter] = useState("Semua");
   const [q, setQ] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [showMoreFilter, setShowMoreFilter] = useState(false);
+  const reducedMotion = useReducedMotion();
   /* Default: proyek terbaru paling atas (P9). Versi lama `key: null` dengan
      `dir: "asc"` membuat daftar urut tak tertentu, dan kolom `createdAt`
      yang diklik pertama kali menghasilkan ASC = terlama dulu, berlawanan
@@ -185,6 +187,7 @@ export default function Projects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects]);
 
+  const moreFilters = [filter, tahapFilter, prioritasFilter, pmFilter].filter((v) => v !== "Semua").length;
   const activeFilters = [filter, tahapFilter, statusFilter, prioritasFilter, pmFilter].filter((v) => v !== "Semua").length;
   const pmOptions = [...new Set(projects.map((p) => String(p.manager ?? "")).filter(Boolean))].sort();
   const resetFilters = () => { setFilter("Semua"); setStatusFilter("Semua"); setTahapFilter("Semua"); setBranchFilter("Semua"); setPrioritasFilter("Semua"); setPmFilter("Semua"); setQ(""); };
@@ -276,19 +279,38 @@ export default function Projects() {
         {activeFilters > 0 && <button type="button" className="text-xs font-medium text-ocean-600 hover:underline" onClick={resetFilters}>{S.prjFilterReset}</button>}
         <span className="ml-auto text-xs text-steel-400">{S.prjCount.replace("{n}", String(list.length))}</span>
       </div>
-      {/* Filter sebagai deret chip (PRJ-05): langsung berlaku tanpa tombol Terapkan. */}
+      {/* #81: klik Filter → status muncul lebih dulu, bergeser masuk dari kiri;
+          tombol "Lainnya" di ujung kanan membuka filter lain dengan geser ke bawah.
+          Semua chip langsung berlaku tanpa tombol Terapkan. */}
       <AnimatePresence initial={false}>
         {showFilter && (
+          <motion.div
+            initial={{ opacity: 0, x: reducedMotion ? 0 : -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: reducedMotion ? 0 : -16 }}
+            transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="mb-3 flex flex-wrap items-center gap-2"
+          >
+            <span className="text-xs font-medium text-steel-500">{S.statusLabel}</span>
+            <StatusChips value={statusFilter} onChange={setStatusFilter} ariaLabel={S.statusLabel}
+              options={statusOptions.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllStatus : v }))} />
+            <button type="button" className="btn-secondary ml-auto text-xs" aria-expanded={showMoreFilter} onClick={() => setShowMoreFilter((v) => !v)}>
+              {S.prjFilterMore}{moreFilters > 0 ? ` (${moreFilters})` : ""}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence initial={false}>
+        {showFilter && showMoreFilter && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
             className="overflow-hidden"
           >
             <div className="mb-4 space-y-2 rounded-xl border border-steel-200 bg-white p-3">
               {([
-                [S.statusLabel, statusFilter, setStatusFilter, statusOptions.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllStatus : v }))],
                 [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...TAHAP].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : v }))],
                 [S.prjFieldTipe, filter, setFilter, filters.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTipe : TYPE_ID[v] ?? v }))],
                 [S.prjFieldPrioritas, prioritasFilter, setPrioritasFilter, ["Semua", ...PRIORITAS].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPrioritas : v }))],

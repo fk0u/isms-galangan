@@ -1069,7 +1069,8 @@ if (k === "mattype") return matTypeOf(i);
     const conversion = conversionDraft ?? (canKeepExisting ? existingConversion : null);
     const conversionRequired = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
     if (conversionRequired && !conversion) { toast(S.conversionRequired, "info"); return; }
-    const numStock = form.stock.trim() === "" ? 0 : Number(form.stock);
+    // #92: material baru selalu mulai dari stok 0; stok hanya bertambah lewat penerimaan barang.
+    const numStock = !editing || form.stock.trim() === "" ? 0 : Number(form.stock);
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);
     const numCost = parseRupiah(form.cost);
     if (!Number.isFinite(numStock) || numStock < 0) { toast(S.stockInvalid, "info"); return; }

@@ -99,6 +99,11 @@ export default function CatalogMaterialForm({
   const rule = conversionRuleForCategory(form.category);
   const preview = buildUnitConversion(form.category, form.unit, form);
   const stepTitle = S.formSteps[step] ?? S.formSteps[0];
+  /* #92: material baru tidak lagi punya langkah "Stok & gudang" - stok awal
+     selalu 0 dan gudang/rak/bin ditentukan saat penerimaan barang PO.
+     Mengubah material lama tetap menampilkan langkah itu agar lokasi yang
+     sudah tercatat tidak hilang. */
+  const lastStep = editing ? 3 : 2;
 
   return (
     <Modal
@@ -113,7 +118,7 @@ export default function CatalogMaterialForm({
             <button type="button" className="btn-secondary" onClick={onClose}>{S.cancelBtn}</button>
             {step > 0 && <button type="button" className="btn-secondary" onClick={onBack}>{S.stepBack}</button>}
           </div>
-          {step < 3
+          {step < lastStep
             ? <button type="button" className="btn-primary" onClick={onNext}>{S.stepNext}</button>
             : <AsyncButton className="btn-primary" onAction={onSave}>{S.saveBtn}</AsyncButton>}
         </div>
@@ -121,7 +126,7 @@ export default function CatalogMaterialForm({
     >
       <div className="space-y-4">
         <ol aria-label={S.formStepsAria} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {S.formSteps.map((label, index) => (
+          {S.formSteps.slice(0, lastStep + 1).map((label, index) => (
             <li
               key={label}
               aria-current={step === index ? "step" : undefined}
@@ -200,11 +205,15 @@ export default function CatalogMaterialForm({
                   {purchaseUnitsForCategory(form.category, form.unit).map((unit) => <option key={unit} value={unit}>{unit}</option>)}
                 </select>
               </Field>
-              <Field label={S.eceranLbl} hint={S.eceranHint}>
-                <label className="flex min-h-11 items-center gap-3 rounded-xl border border-steel-200 px-3 text-sm font-medium text-navy-900">
-                  <input type="checkbox" checked={form.eceran} onChange={(event) => onFieldChange("eceran", event.target.checked)} className="h-4 w-4 accent-navy-700" />
-                  {form.eceran ? S.yesLabel : S.noLabel}
-                </label>
+<Field label={S.eceranLbl} hint={S.eceranHint}>
+                <div role="radiogroup" aria-label={S.eceranLbl} className="grid grid-cols-2 gap-2">
+                  {([[true, S.yesLabel], [false, S.noLabel]] as const).map(([value, label]) => (
+                    <button key={String(value)} type="button" role="radio" aria-checked={form.eceran === value} onClick={() => onFieldChange("eceran", value)}
+                      className={`min-h-11 rounded-xl border px-3 text-sm font-medium transition-colors ${form.eceran === value ? "border-navy-900 bg-navy-900 text-white" : "border-steel-200 text-steel-600 hover:bg-steel-100"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </Field>
             </FormGrid>
           </div>
@@ -254,7 +263,15 @@ export default function CatalogMaterialForm({
           </div>
         )}
 
-        {step === 3 && (
+        {step === 2 && !editing && (
+          <FormGrid>
+            <Field label={S.minLbl}>
+              <NumInput min={0} className="input" value={form.minStock} onChange={(event) => onFieldChange("minStock", event.target.value)} />
+            </Field>
+          </FormGrid>
+        )}
+
+        {step === 3 && editing && (
           <div className="space-y-3">
             <FormGrid>
               <Field label={S.whLbl}>
