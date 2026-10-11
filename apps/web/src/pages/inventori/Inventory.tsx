@@ -430,7 +430,8 @@ export default function Inventory() {
   const [matF, setMatF] = useState("Semua");
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
   const [sort2, setSort2] = useState<SortState>({ key: null, dir: "asc" });
-  const [sort3, setSort3] = useState<SortState>({ key: null, dir: "asc" });
+  /* #75: pergerakan terbaru di atas secara bawaan. */
+  const [sort3, setSort3] = useState<SortState>({ key: "tanggal", dir: "desc" });
 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -3261,7 +3262,8 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             <Field label={S.destLbl}>
               <select className="input" value={trDest} onChange={(e) => setTrDest(e.target.value)}>
                 <option value="">{S.pickWh}</option>
-                {warehouses.map((w) => <option key={w}>{w}</option>)}
+                {/* #93: gudang asal item tidak ditawarkan sebagai tujuan. */}
+                {warehouses.filter((w) => w !== String(trTarget?.warehouse ?? "")).map((w) => <option key={w}>{w}</option>)}
               </select>
             </Field>
           </FormGrid>

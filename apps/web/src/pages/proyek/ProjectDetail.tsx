@@ -75,6 +75,9 @@ const RISK_LEVEL = ["Rendah", "Sedang", "Tinggi"];
 const STATIONS = ["Cutting", "Bending", "Welding", "Panel", "Block", "Erection", "Alignment", "Launching"];
 
 type WbsExt = WbsItem & { predecessor?: string };
+/* #86: pilihan kondisi Trial. Data lama (Baik / Perlu Perbaiki / Rusak) tetap terbaca apa adanya. */
+const TRIAL_KONDISI = ["Sudah Sesuai", "Tidak Sesuai", "Perlu Diperbaiki"] as const;
+type TrialKondisi = (typeof TRIAL_KONDISI)[number];
 interface WbsBaseline { at: string; wbs: WbsExt[]; }
 
 /* Resolusi lampiran memakai utils/docAttachment (satu sumber untuk semua modul).
@@ -354,7 +357,7 @@ if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
   const [showBast, setShowBast] = useState(false);
   const [bastForm, setBastForm] = useState({ milestone: "", tanggal: todayISO(), signer: "", lampiran: "", amount: "" });
   const [showTrial, setShowTrial] = useState(false);
-  const [trialForm, setTrialForm] = useState({ tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Baik" as "Baik" | "Perlu Perbaiki" | "Rusak", checklist: [] as { wbsTask: string; done: boolean; note: string }[] });
+  const [trialForm, setTrialForm] = useState({ tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Sudah Sesuai" as TrialKondisi, checklist: [] as { wbsTask: string; done: boolean; note: string }[] });
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
   const [sort2, setSort2] = useState<SortState>({ key: null, dir: "asc" });
   const [wbsQ, setWbsQ] = useState("");
@@ -949,7 +952,7 @@ const createWarranty = async (wbsTask?: string) => {
   const openTrialNew = () => {
     const doneTasks = wbs.filter((w) => Number(w.progress ?? 0) >= 100);
     setTrialForm({
-      tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Baik",
+      tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Sudah Sesuai",
       checklist: doneTasks.map((w) => ({ wbsTask: w.task, done: false, note: "" })),
     });
     setShowTrial(true);
@@ -964,10 +967,10 @@ const createWarranty = async (wbsTask?: string) => {
         id, projectId: pid, tanggal: trialForm.tanggal, parameter: trialForm.parameter.trim(),
         punchList: trialForm.punchList.trim(), hasil: "Berjalan", baRef: trialForm.baRef.trim(),
         ...(trialForm.checklist.length > 0 ? { checklist: trialForm.checklist } : {}),
-        ...(trialForm.kondisi !== "Baik" ? { kondisi: trialForm.kondisi } : {}),
+        kondisi: trialForm.kondisi,
       }, { action: "membuat sea trial", target: `${id} · ${pid}`, module: "Proyek" });
       toast(S.detToastTrialMade.replace("{a}", id));
-      setTrialForm({ tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Baik", checklist: [] });
+      setTrialForm({ tanggal: todayISO(), parameter: "", punchList: "", hasil: "Lolos", baRef: "", kondisi: "Sudah Sesuai", checklist: [] });
       setShowTrial(false);
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
@@ -1029,6 +1032,10 @@ const createWarranty = async (wbsTask?: string) => {
     const hours = Number(wbsUpdateForm.hours) || 0;
     const prog = Math.max(0, Math.min(100, Number(wbsUpdateForm.progress)));
     if (wbsUpdateForm.progress === "" || Number.isNaN(prog)) { toast(S.detToastProgRange, "info"); return; }
+    /* #77: perubahan progres wajib disertai minimal satu foto bukti. Hanya saat
+       tersambung server - mode lokal tidak punya tempat mengunggah berkas. */
+    const progBefore = Number(wbs.find((w) => w.task === wbsTaskUpdate)?.progress ?? 0);
+    if (isBackendConfigured() && prog !== progBefore && wbsUpdateForm.photos.length === 0) { toast(S.detToastPhotoRequired, "info"); return; }
     // E2: hull tasks wajib isi station.
     if (/hull/i.test(wbsTaskUpdate) && !wbsUpdateForm.station) { toast(S.detToastStation, "info"); return; }
     const dftNum = wbsUpdateForm.dft === "" ? undefined : Number(wbsUpdateForm.dft);
@@ -1262,7 +1269,8 @@ const createWarranty = async (wbsTask?: string) => {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* #83: beri jarak antara deret tahap dan kartu status. */}
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label={S.colBudget} value={fmtMiliar(project.budget)} hint={S.detKpiBudgetHint} icon={<Calendar className="h-5 w-5" />} />
         <KpiCard label={S.colActual} value={fmtMiliar(project.actual)} delta={S.detKpiUsed.replace("{a}", String(project.budget ? Math.round((project.actual / project.budget) * 100) : 0))} deltaDirection={project.actual > project.budget ? "down" : "flat"} hint={S.detKpiActualHint} />
         <Card className="card-hover relative overflow-hidden p-4">
@@ -2496,10 +2504,8 @@ const createWarranty = async (wbsTask?: string) => {
           <Field label={S.detPunchField}><input className="input" value={trialForm.punchList} onChange={(e) => setTrialForm({ ...trialForm, punchList: e.target.value })} placeholder={S.detPunchPh} /></Field>
           <Field label={S.detBaField}><input className="input" value={trialForm.baRef} onChange={(e) => setTrialForm({ ...trialForm, baRef: e.target.value })} placeholder={S.detBaPh} /></Field>
           <Field label={S.detTrialKondisi}>
-            <select className="input" value={trialForm.kondisi} onChange={(e) => setTrialForm({ ...trialForm, kondisi: e.target.value as "Baik" | "Perlu Perbaiki" | "Rusak" })}>
-              <option value="Baik">{locale === "en" ? "Good" : "Baik"}</option>
-              <option value="Perlu Perbaiki">{locale === "en" ? "Needs Fixing" : "Perlu Perbaiki"}</option>
-              <option value="Rusak">{locale === "en" ? "Damaged" : "Rusak"}</option>
+<select className="input" value={trialForm.kondisi} onChange={(e) => setTrialForm({ ...trialForm, kondisi: e.target.value as TrialKondisi })}>
+              {TRIAL_KONDISI.map((k) => <option key={k} value={k}>{k === "Sudah Sesuai" ? S.detTrialKSesuai : k === "Tidak Sesuai" ? S.detTrialKTidak : S.detTrialKPerbaiki}</option>)}
             </select>
           </Field>
           {/* D10: checklist dari WBS task yang sudah selesai. */}
@@ -2854,7 +2860,7 @@ const createWarranty = async (wbsTask?: string) => {
               <DocumentPreviewCell doc={{ title: S.detPhotoImage, fileUrl: wbsUpdateForm.photoUrl }} />
             </div>
           )}
-          <Field label={S.detPhotoUpload} hint={S.detPhotoHint}>
+          <Field label={`${S.detPhotoUpload} *`} hint={S.detPhotoHint}>
             <PhotoUploader
               value={wbsUpdateForm.photos}
               onChange={(photos) => setWbsUpdateForm((current) => ({ ...current, photos }))}

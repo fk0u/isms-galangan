@@ -171,7 +171,11 @@ export default function ReportSection({ projectId }: Props) {
               <p className="text-xs text-steel-400">{S.repNoWbs}</p>
             ) : (
               <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                {wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "status", "materialUsed", "completedBy", "completionDate"])).map((w) => (
+                {/* #84: persentase tertinggi dulu; bila sama, yang paling baru diperbarui di atas. */}
+                {wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "status", "materialUsed", "completedBy", "completionDate"]))
+                  .map((w) => ({ w, last: (w.history ?? []).reduce((m, h) => (String(h.date ?? "") > m ? String(h.date ?? "") : m), "") }))
+                  .sort((x, y) => (Number(y.w.progress) || 0) - (Number(x.w.progress) || 0) || y.last.localeCompare(x.last))
+                  .map(({ w }) => (
                   <div key={w.task}>
                     <div className="flex justify-between text-xs"><span className="font-medium text-navy-900">{w.task}</span><span className="text-steel-500">{w.progress}%</span></div>
                     <ProgressBar value={Number(w.progress) || 0} className="mt-1" tone={Number(w.progress) >= 100 ? "green" : "navy"} />

@@ -127,7 +127,6 @@ export default function CRM() {
   const [expandedSurvey, setExpandedSurvey] = useState<Record<string, boolean>>({});
   const toggleSurvey = (clientId: string) =>
     setExpandedSurvey((p) => ({ ...p, [clientId]: !p[clientId] }));
-  const SURVEY_PREVIEW = 90;
 
   // Relasi lokal di luar findUsages: quotation←projects/contracts, request←quotations, contract←projects/clientPos.
   const quoteBlockers = (q: StoreItem): string[] => {
@@ -1235,14 +1234,10 @@ export default function CRM() {
                         <p className="truncate font-semibold text-navy-900" title={String(c.name)}>{String(c.name)}</p>
                         <p className="text-xs text-steel-500">{S.satDetail.replace("{a}", String(Array.isArray(c.survei) ? c.survei.length : 0)).replace("{b}", surveyAvg(c) ? surveyAvg(c).toFixed(1) : "-")}</p>
                         {notes.length === 0 && <p className="mt-0.5 text-xs italic text-steel-400">{S.satNoNotes}</p>}
-                        {notes.map((note, i) => {
-                          const shown = open || note.length <= SURVEY_PREVIEW ? note : `${note.slice(0, SURVEY_PREVIEW)}…`;
-                          return (
-                            <p key={i} className="mt-0.5 text-xs italic leading-relaxed text-steel-500" title={open ? undefined : note}>
-                              “{shown}”
-                            </p>
-                          );
-                        })}
+                        {/* #109: deskripsi tersembunyi secara bawaan; tampil penuh setelah dibuka. */}
+                        {open && notes.map((note, i) => (
+                          <p key={i} className="mt-0.5 text-xs italic leading-relaxed text-steel-500">“{note}”</p>
+                        ))}
                         {/* Tombol expand/collapse SELALU ada untuk catatan
                             yang ada - bukan hanya yang panjang. Versi lama
                             memakai `long &&`, jadi catatan pendek tampil utuh

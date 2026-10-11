@@ -1014,7 +1014,7 @@ export default function Payroll() {
                       <SortTh label={S.colAllowance} sortKey="allow" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colOvertime} sortKey="overtime" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colPph} sortKey="pph" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colBpjs} sortKey="bpjs" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <SortTh label={`${S.colBpjs} (${rates.bpjsKes}% + ${rates.bpjsTk}%)`} sortKey="bpjs" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colNet} sortKey="net" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
