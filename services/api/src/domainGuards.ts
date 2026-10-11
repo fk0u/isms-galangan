@@ -35,6 +35,19 @@ export function wbsRemovalError(before: unknown, after: unknown): string | null 
   return null;
 }
 
+/** #77: progres tahapan yang sudah ada hanya boleh berubah bila disertai foto
+ *  bukti baru. Tahapan baru (template/baseline) dan perubahan non-progres
+ *  seperti penugasan tidak terkena aturan ini. */
+export function wbsPhotoError(before: unknown, after: unknown): string | null {
+  const prev = new Map(((Array.isArray(before) ? before : []) as Data[]).map((s) => [str(s.task), s]));
+  for (const stage of (Array.isArray(after) ? after : []) as Data[]) {
+    const old = prev.get(str(stage.task));
+    if (!old || Number(old.progress ?? 0) === Number(stage.progress ?? 0)) continue;
+    if (len(stage.photos) <= len(old.photos)) return `Perubahan progres "${str(stage.task)}" wajib disertai minimal satu foto bukti`;
+  }
+  return null;
+}
+
 /** Jabatan Project Manager di data karyawan (HR). Sistem tidak punya peran akun
  *  khusus PM - peran "proyek" mencakup seluruh staf proyek - jadi jabatan HR
  *  adalah satu-satunya sumber; aturan yang sama dipakai picker di web. */

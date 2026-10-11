@@ -42,6 +42,12 @@ async function main(): Promise<void> {
     assert("hapus lalu tambah tahapan kosong bukan rename → ditolak", (await call("PUT", wbsUrl, { wbs: [kosong, { ...kosong, task: "Baru" }] })).status === 409);
     assert("ganti nama tahapan berprogres (riwayat ikut) → 200", (await call("PUT", wbsUrl, { wbs: [kosong, { ...isi, task: "Sandblasting" }] })).status === 200);
     assert("hapus tahapan kosong → 200", (await call("PUT", wbsUrl, { wbs: [{ ...isi, task: "Sandblasting" }] })).status === 200);
+    /* #77 */
+    const kini = { ...isi, task: "Sandblasting" };
+    const tanpaFoto = await call("PUT", wbsUrl, { wbs: [{ ...kini, progress: 60 }] });
+    assert("ubah progres tanpa foto → 422 PHOTO_REQUIRED", tanpaFoto.status === 422 && tanpaFoto.body.error?.code === "PHOTO_REQUIRED", JSON.stringify(tanpaFoto.body));
+    assert("penugasan tanpa ubah progres tidak butuh foto → 200", (await call("PUT", wbsUrl, { wbs: [{ ...kini, assignee: { type: "internal", id: empPm } }] })).status === 200);
+    assert("ubah progres dengan foto baru → 200", (await call("PUT", wbsUrl, { wbs: [{ ...kini, progress: 60, photos: [{ url: "/files/2026-10/probe.jpg", note: "", date: "2026-10-12" }] }] })).status === 200);
     assert("tahapan berpenugasan terlindungi", wbsRemovalError([{ task: "A", progress: 0, assignee: { type: "internal", id: "E1" } }], []) !== null);
     assert("tahapan berfoto terlindungi", wbsRemovalError([{ task: "A", progress: 0, photos: [{ url: "x" }] }], []) !== null);
 
