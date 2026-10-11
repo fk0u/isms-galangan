@@ -65,7 +65,10 @@ export function scanContent(buf: Buffer, ext: string): string | null {
     return null;
   }
   if (ext === ".pdf") {
-    if (/\/JavaScript|\/AA\b|\/OpenAction|\/EmbeddedFiles|\/Launch/i.test(head)) {
+    /* #98: /OpenAction dan /AA sendiri tidak berbahaya - hampir semua PDF hasil
+       pindai/Word memakainya untuk zoom awal, sehingga sertifikat sah ikut
+       tertolak. Yang ditolak adalah muatannya: skrip, peluncur, lampiran. */
+    if (/\/JavaScript|\/JS\b|\/EmbeddedFiles|\/Launch/i.test(head)) {
       return "PDF mengandung skrip/aksi tertanam - tidak diizinkan";
     }
     return null;

@@ -111,3 +111,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | sebagian | probe simetri ID/EN masuk check; penghapusan kunci mati belum |
 | F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | selesai | --max-warnings 74 (web) / 29 (api) |
 | F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |
+| #67 #82 #93 | Guard server: hapus tahapan WBS, Project Manager, transfer gudang | P1 | GitHub issue | Claude | review | `services/api/src/domainGuards.ts` + `probe:domain-guards` (16 cek); #93 dijaga di pencatatan pergerakan, endpoint transfer atomik belum |
+| #98 | Upload PDF sertifikat karyawan | P1 | GitHub issue | Claude | review | pemindai PDF tidak lagi menolak `/OpenAction`/`/AA` (penyebab PDF pindai/Word tertolak); test unit ditambah; penyebab belum dikonfirmasi dengan berkas asli klien |
+| #99 #100 | Cuti mandiri: token QR ber-hash + kedaluwarsa, tanpa PIN, pratinjau NIK, dokumen pendukung | P1 | GitHub issue | Claude | review | ADR-0019; `probe:public-leave` 22 cek; QR tampil sekali saat dibuat |
+| #101 | Riwayat & nomor kontrak otomatis di modal Buat Surat | P1 | GitHub issue | Claude | review | nomor diisi dari kontrak terakhir, berganti karyawan memuat ulang |
