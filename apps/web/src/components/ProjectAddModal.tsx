@@ -103,7 +103,10 @@ export default function ProjectAddModal({
         .filter((e) => {
           const role = String(e.role ?? "").toLowerCase();
           const dept = String(e.dept ?? "").toLowerCase();
-          return role.includes("manager") || role.includes("pm") || dept === "proyek" || role.includes("proyek");
+          /* #82: hanya Project Manager - manager bidang lain (finance, gudang, ...)
+             dan staf proyek non-PM tidak ikut ditawarkan. */
+          void dept;
+          return role.includes("project manager") || /(^|[^a-z])pm([^a-z]|$)/.test(role) || role.includes("manajer proyek");
         })
         .map((e) => ({
           value: String(e.name ?? ""),

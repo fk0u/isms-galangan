@@ -491,7 +491,14 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
             </select></Field>
           </FormGrid>
           <FormGrid>
-            <Field label={S.colUnitPrice}><MoneyInput className="input" value={form.unitPrice} onChange={(v) => setForm({ ...form, unitPrice: v })} /></Field>
+            <Field label={S.colUnitPrice} hint={
+              /* #85: subtotal langsung = kuantitas × harga satuan, mengikuti isian. */
+              S.boqLiveTotal
+                .replace("{q}", String(Number(form.quantity) || 0))
+                .replace("{u}", form.unit)
+                .replace("{p}", fmtRupiah(parseRupiah(form.unitPrice)))
+                .replace("{t}", fmtRupiah((Number(form.quantity) || 0) * parseRupiah(form.unitPrice)))
+            }><MoneyInput className="input" value={form.unitPrice} onChange={(v) => setForm({ ...form, unitPrice: v })} /></Field>
             <Field label={S.boqCategory}><select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select></Field>

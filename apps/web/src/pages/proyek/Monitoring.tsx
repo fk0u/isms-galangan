@@ -213,8 +213,11 @@ export default function Monitoring() {
             <button
               key={m}
               onClick={() => setMode(m)}
+              /* #112: mode "Perhatian Khusus" selalu merah supaya menonjol. */
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                mode === m ? "bg-navy-700 text-white" : "bg-white border border-steel-200 text-steel-600 hover:bg-steel-100"
+                m === "Semua"
+                  ? (mode === m ? "bg-navy-700 text-white" : "bg-white border border-steel-200 text-steel-600 hover:bg-steel-100")
+                  : (mode === m ? "bg-rose-700 text-white" : "bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100")
               }`}
             >
               {m === "Semua" ? S.filterAll : S.monModeAtt}
