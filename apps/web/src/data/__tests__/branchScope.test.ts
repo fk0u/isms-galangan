@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rowsInBranch } from "../branchScope";
+import { initialBranchScope, rowsInBranch, verifiedBranchScope } from "../branchScope";
 import { scopeAlertStoreData } from "../scopeAlertData";
 import type { StoreShape } from "../store";
 
@@ -16,8 +16,31 @@ describe("rowsInBranch", () => {
     expect(rowsInBranch(rows, "Samarinda").map((row) => row.id)).toEqual(["same"]);
   });
 
+  it("returns no rows when the active scope is unresolved, even for an empty-branch row", () => {
+    expect(rowsInBranch(rows, "")).toEqual([]);
+    expect(rowsInBranch(rows, "   ")).toEqual([]);
+    expect(rowsInBranch([{ id: "empty", branch: "" }], "")).toEqual([]);
+  });
+
   it("keeps global visibility explicit", () => {
     expect(rowsInBranch(rows, "SEMUA")).toBe(rows);
+  });
+
+  it("hides a backend cache until the current server branch is verified", () => {
+    const cached = [{ id: "old-branch", branch: "Samarinda" }, { id: "new-branch", branch: "Balikpapan" }];
+    const initial = initialBranchScope(true, "SEMUA");
+    expect(initial).toBe("");
+    expect(rowsInBranch(cached, initial)).toEqual([]);
+    expect(rowsInBranch(cached, verifiedBranchScope("Balikpapan")).map((row) => row.id)).toEqual(["new-branch"]);
+  });
+
+  it("uses saved scope only in local mode and fails closed for missing server branch", () => {
+    expect(initialBranchScope(false, "Samarinda")).toBe("Samarinda");
+    expect(initialBranchScope(false, null)).toBe("SEMUA");
+    expect(initialBranchScope(true, null)).toBe("");
+    expect(verifiedBranchScope(undefined)).toBe("");
+    expect(verifiedBranchScope("")).toBe("");
+    expect(verifiedBranchScope("  ")).toBe("");
   });
 
   it("scopes alert collections and WBS to projects visible in the active branch", () => {

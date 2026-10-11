@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
 import { useStore } from "../data/store";
+import { verifiedBranchScope } from "../data/branchScope";
 
 export interface DemoUser {
   username: string;
@@ -113,19 +114,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Sinkronkan permissions pengguna dari /api/auth/me saat aplikasi dimuat
   useEffect(() => {
-    if (!isBackendConfigured() || !getJwt()) return;
+    const tokenAtStart = getJwt();
+    const sessionAtStart = loadSession();
+    if (!isBackendConfigured() || !tokenAtStart || !sessionAtStart) return;
     let active = true;
     void apiFetch<{ user?: BackendLoginUser; permissions?: PermissionsMap }>("/api/auth/me")
-      .then((res) => {
-        if (!active || !res.permissions) return;
+      .then(async (res) => {
+        if (!active || getJwt() !== tokenAtStart || !res.permissions) return;
+        const currentSession = loadSession();
+        if (!currentSession
+          || currentSession.id !== sessionAtStart.id
+          || currentSession.username !== sessionAtStart.username) return;
+        if ((res.user?.id && sessionAtStart.id && res.user.id !== sessionAtStart.id)
+          || (res.user?.username && res.user.username !== sessionAtStart.username)) return;
+        const branch = verifiedBranchScope(res.user?.branch);
+        await activateCacheOwner(sessionAtStart.id || sessionAtStart.username);
+        const latestSession = loadSession();
+        if (!active || getJwt() !== tokenAtStart || !latestSession
+          || latestSession.id !== sessionAtStart.id
+          || latestSession.username !== sessionAtStart.username) return;
+        setBranch(branch);
         setUser((prev) => {
-          if (!prev) return prev;
+          if (!prev || prev.id !== sessionAtStart.id || prev.username !== sessionAtStart.username) return prev;
           const updated: Session = {
             ...prev,
             id: res.user?.id ?? prev.id,
             role: res.user?.role ?? prev.role,
             name: res.user?.name ?? prev.name,
-            branch: res.user?.branch ?? prev.branch,
+            branch,
             // null dari server = tautan karyawan dicabut → kosongkan; undefined = tak dikirim.
             employeeId: res.user?.employeeId !== undefined ? res.user.employeeId : prev.employeeId ?? null,
             permissions: res.permissions,
@@ -150,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         const bu = res.user ?? {};
         const userId = bu.id || bu.username || uname;
+        const branch = verifiedBranchScope(bu.branch);
         await activateCacheOwner(userId);
         setJwt(res.token);
         const session: Session = {
@@ -160,12 +177,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           initials: initialsOf(bu.name || bu.username || uname),
           username: bu.username || uname,
           loginAt: new Date().toISOString(),
-          branch: String(bu.branch ?? "SEMUA") || "SEMUA",
+          branch,
           employeeId: bu.employeeId ?? null,
           permissions: res.permissions,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-        setBranch(session.branch ?? "SEMUA");
+        setBranch(branch);
         setUser(session);
         return null;
       } catch (err) {

@@ -5,7 +5,7 @@ import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/htt
 import { remoteRepository } from "../services/repositories";
 import { collectionSyncCache } from "./collectionSyncCache";
 import { cacheOwnerAction } from "./cacheOwner";
-import { rowsInBranch } from "./branchScope";
+import { initialBranchScope, rowsInBranch } from "./branchScope";
 import { mergeOfflineValues, persistScopedCollections } from "./offlinePersistence";
 import { createSessionFence } from "./sessionFence";
 import { loadSideMapConflictHolds, persistSideMapConflictHolds } from "./sideMapConflictHolds";
@@ -593,7 +593,20 @@ function storedCacheOwnerId(): string | null {
   }
 }
 
+function currentSessionBranch(): string | null {
+  try {
+    const raw = sessionStorage.getItem("isms.session");
+    if (!raw) return null;
+    const session = JSON.parse(raw) as { branch?: unknown };
+    return typeof session.branch === "string" ? session.branch : null;
+  } catch {
+    return null;
+  }
+}
+
 function initialStoreForSession(): StoreShape {
+  // Remote cache must wait until AuthProvider verifies the current branch.
+  if (isBackendConfigured()) return buildSeeds();
   const owner = currentSessionOwnerId();
   return owner && storedCacheOwnerId() === owner ? loadStore() : buildSeeds();
 }
@@ -1141,9 +1154,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     saveTombstonesPersisted(tombstonesRef.current);
   }, []);
-  /* F3-A-01: Cabang dikendalikan oleh sesi user (user.branch), bukan dari
-     input dropdown atau localStorage. Default "SEMUA". Bersihkan sisa kunci lama. */
-  const [branch, setBranchState] = useState<string>("SEMUA");
+  /* Cabang remote fail-closed sampai /auth/me memulihkan scope server; mode lokal
+     boleh memakai cabang sesi yang tersimpan. Bersihkan sisa kunci dropdown lama. */
+  const [branch, setBranchState] = useState<string>(() => initialBranchScope(isBackendConfigured(), currentSessionBranch()));
   const branchRef = useRef(branch);
   branchRef.current = branch;
 
@@ -2099,7 +2112,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
     fallbackToasted.current = "";
     pendingPersistRef.current.clear();
     setPendingSync([]);
-    setBranchState("SEMUA");
+    setBranchState(initialBranchScope(isBackendConfigured(), null));
     const seeds = buildSeeds();
     dataRef.current = seeds;
     prevDataRef.current = seeds;
@@ -2163,6 +2176,9 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
   useEffect(() => {
     const checkOwnerAndHydrate = async () => {
       try {
+        // A persisted branch can be stale after server-side reassignment; AuthProvider
+        // hydrates the owner cache only after /auth/me confirms the current scope.
+        if (isBackendConfigured()) return;
         const currentUserId = currentSessionOwnerId();
         const action = cacheOwnerAction(currentUserId, storedCacheOwnerId());
         if (action === "defer") {
