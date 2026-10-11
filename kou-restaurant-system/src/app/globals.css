@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  /* Netral gelap-hangat */
+  --color-ink-950: #0d0a08;
+  --color-ink-900: #15110e;
+  --color-ink-800: #1e1814;
+  --color-ink-700: #2a221c;
+  --color-ink-600: #3a3029;
+  /* Teks hangat; sand-400 tetap ≥ 7:1 di atas ink-950 */
+  --color-sand-50: #f8f1e9;
+  --color-sand-200: #e4d6c7;
+  --color-sand-400: #b9a898;
+  /* Satu aksen: ember */
+  --color-ember-200: #ffd0ad;
+  --color-ember-300: #ffb27a;
+  --color-ember-400: #ff9450;
+  --color-ember-500: #f2762c;
+  --color-ember-950: #2b1407;
+  /* Status (khusus denah meja) */
+  --color-danger-400: #f87171;
+}
+
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+@utility glass {
+  background-color: rgb(255 255 255 / 0.045);
+  border: 1px solid rgb(255 255 255 / 0.09);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-sand-50);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(255 148 80 / 0.35);
+    color: var(--color-sand-50);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ember-300);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
