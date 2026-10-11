@@ -29,7 +29,7 @@ import { fmtMiliar } from "../../data";
 import { todayISO, fmtTanggal } from "../../utils/format";
 import { getSetting } from "../../utils/settings";
 import { shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
-import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
+import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRisk } from "../../utils/riskAuto";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { canonPrioritas } from "../../utils/scope";
 import ProjectAddModal from "../../components/ProjectAddModal";
@@ -175,7 +175,8 @@ export default function Projects() {
         : { add: [], close: [] };
       const woResult = generateRisksFromWo(p.id, wos, existing, today, msDays);
       for (const draft of [...wbsResult.add, ...woResult.add]) {
-        void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => {});
+        if (!claimAutoRisk(String(p.id), draft)) continue;
+      void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(p.id), draft));
       }
       for (const id of [...wbsResult.close, ...woResult.close]) {
         void update("risks", id, { status: "Tertutup" }).catch(() => {});

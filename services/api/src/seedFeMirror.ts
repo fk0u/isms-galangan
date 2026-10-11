@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (725 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (730 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -11026,6 +11026,86 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "amount": 210000000,
       "status": "Dikirim",
       "date": "2026-07-30"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2025-141",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Cat Epoxy Primer",
+      "vendor": "PT Jotun Indonesia",
+      "req": "-",
+      "qty": 400,
+      "amount": 76000000,
+      "receivedQty": 400,
+      "status": "Diterima",
+      "date": "2025-11-12"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2026-032",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Cat Epoxy Primer",
+      "vendor": "PT Bahana Baja",
+      "req": "-",
+      "qty": 600,
+      "amount": 111000000,
+      "receivedQty": 600,
+      "status": "Diterima",
+      "date": "2026-02-20"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2026-077",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Cat Epoxy Primer",
+      "vendor": "PT Jotun Indonesia",
+      "req": "-",
+      "qty": 500,
+      "amount": 97500000,
+      "receivedQty": 500,
+      "status": "Diterima",
+      "date": "2026-05-18"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2026-059",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Wire Rope 22mm",
+      "vendor": "PT Steel Rig",
+      "req": "-",
+      "qty": 300,
+      "amount": 61500000,
+      "receivedQty": 300,
+      "status": "Diterima",
+      "date": "2026-04-03"
+    }
+  },
+  {
+    "table": "purchaseOrders",
+    "id": "PO-2025-166",
+    "branch": "",
+    "data": {
+      "poType": "Besar",
+      "item": "Wire Rope 22mm",
+      "vendor": "PT Primabaja",
+      "req": "-",
+      "qty": 250,
+      "amount": 53750000,
+      "receivedQty": 250,
+      "status": "Diterima",
+      "date": "2025-12-09"
     }
   },
   {

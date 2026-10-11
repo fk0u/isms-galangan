@@ -45,7 +45,8 @@ export function boqDoc(input: BoqDocInput, opts: DocOptions = {}): Document {
   d.add(spacer(2));
   const rows = input.items.map((it, i) => [
     String(i + 1),
-    it.description && it.description !== it.name ? `${it.name}\n${it.description}` : it.name,
+    // Satu baris teks (dibungkus otomatis): "\n" di sel membuat tinggi baris salah hitung.
+    it.description && it.description !== it.name ? `${it.name} - ${it.description}` : it.name,
     money(it.qty),
     it.unit,
     rupiah(it.unitPrice),

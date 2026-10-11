@@ -67,6 +67,19 @@ Repo ini publik: jangan menulis kredensial, alamat server, atau data nyata di si
 | F3-M-02 | sebagian | Tab Prediktif & Preskriptif dan sheet ekspornya dihapus dari UI | `pages/Analytics.tsx` |
 | F3-A-03 | selesai | Komponen `<Pager>` bersama (info, ukuran, nomor halaman maks 5, responsif), default 25; simbol tombol yang rusak encoding diperbaiki | `components/ui.tsx`, `i18n/n_misc.ts` |
 
+### Batch 3 (uji klik lokal, 11 Okt)
+
+Diuji di browser dengan API + web lokal (DB sementara, token uji): daftar proyek, Drydock (waiting list, booking, jadwal maintenance), Inventori tab Pergerakan, detail karyawan (riwayat kontrak), cuti via QR dari ujung ke ujung, modal QR HR, RFQ, HSE pekerja, Absensi, Analitik, Subkontraktor, form kop surat, dan hasil cetak PDF BoQ / garansi / surat kontrak. Realtime terbukti: tulis lewat API memicu tarik ulang di tab.
+
+Bug yang ditemukan dan diperbaiki:
+- **Risiko otomatis terduplikasi** (sudah ada sebelum sesi ini): efek di `Projects.tsx`/`ProjectDetail.tsx` berjalan ulang saat sinkronisasi awal sehingga tiap risiko dibuat 7-8 kali (115 baris dari 32 unik, ±120 `activities`). Diperbaiki dengan `claimAutoRisk` di `utils/riskAuto.ts`. Pembersihan data lama: `npx tsx scripts/dedupe-risks.ts` (laporan) lalu `--apply` di `services/api`. **Belum dijalankan di server.**
+- Stream `/api/events` tanpa header CORS (balasan di-hijack melewati hook `onSend`) - hanya terasa bila web dan API beda origin.
+- PDF BoQ: baris tumpang tindih bila sel memuat `\n`; sekarang satu baris yang dibungkus otomatis.
+- PDF surat kontrak: NIK/jabatan/unit kosong (nama field karyawan salah); judul diperjelas.
+- Panel riwayat harga RFQ kosong di data demo; ditambah 5 PO historis sintetis.
+
+Belum diuji klik: detail proyek (tab Change Order, Tim, Gantt), ingest alat absensi lewat UI, lingkup tim sebagai mekanik, mobile.
+
 ## 2. Yang BELUM diverifikasi (jangan diklaim selesai)
 
 - **Tidak ada uji klik manual / screenshot** untuk batch ini. Yang lulus hanya typecheck, lint, probe, dan render SSR 28 halaman. AGENTS.md mewajibkan cek manual + screenshot untuk task UI — ini utang.

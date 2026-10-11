@@ -35,13 +35,15 @@
     "lint": "eslint . --max-warnings=74",
     "check": "tsc --noEmit && tsc -p tsconfig.scripts.json --noEmit && npm run lint && npm test && npm run probe:render && npm run probe:shared-components && npm run probe:money && npm run probe:project-add && npm run probe:progress && npm run probe:wbs && npm run probe:price && npm run probe:foundation && npm run probe:alert && npm run probe:wo && npm run probe:table && npm run probe:push && npm run probe:time && npm run probe:employee && npm run probe:risk && npm run probe:p8 && npm run probe:cache && npm run probe:api-base && npm run probe:unit-conversion && npm run probe:drydock-dates && npm run probe:equipment-notif && npm run probe:qc-deep-link && npm run probe:termin && npm run probe:stock-issue && npm run probe:hr-rules && npm run probe:i18n",
     "test": "vitest run",
-    "probe:i18n": "vite build --ssr scripts/i18n-probe.ts --outDir node_modules/.cache/i18n-probe --emptyOutDir --logLevel error && node node_modules/.cache/i18n-probe/i18n-probe.js"
+    "probe:i18n": "vite build --ssr scripts/i18n-probe.ts --outDir node_modules/.cache/i18n-probe --emptyOutDir --logLevel error && node node_modules/.cache/i18n-probe/i18n-probe.js",
+    "knip": "knip"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "autoprefixer": "^10.5.4",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "knip": "^6.41.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",

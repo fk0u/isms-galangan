@@ -6,6 +6,7 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../auth.js";
 import { dbEvents } from "../db.js";
+import { loadEnv } from "../env.js";
 import { can } from "../policy.js";
 import { COLLECTIONS } from "./crud.js";
 
@@ -20,8 +21,15 @@ export function registerEventRoutes(app: FastifyInstance): void {
     const role = req.user?.role;
     reply.hijack();
     const res = reply.raw;
+    /* Balasan yang di-hijack melewati hook onSend, jadi header CORS dan
+       keamanan yang biasanya dipasang di sana harus ditulis di sini. */
+    const origin = req.headers.origin;
+    const cors: Record<string, string> = typeof origin === "string" && loadEnv().webOrigins.includes(origin)
+      ? { "Access-Control-Allow-Origin": origin, Vary: "Origin" }
+      : {};
     res.writeHead(200, {
-      ...(reply.getHeaders() as Record<string, string>),
+      ...cors,
+      "X-Content-Type-Options": "nosniff",
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",

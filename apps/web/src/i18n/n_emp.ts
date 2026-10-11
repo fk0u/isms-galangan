@@ -1,6 +1,12 @@
 /* Teks data karyawan lengkap & rekap absensi bulanan (F3-L-02, F3-L-07). */
 export const n_emp = {
   id: {
+    kopTitle: "Kop surat PDF",
+    kopHint: "Dipakai di semua dokumen PDF. Kolom yang dikosongkan memakai kop bawaan.",
+    kopFields: { name: "Nama perusahaan", line1: "Baris keterangan", hq: "Kantor pusat", addr1: "Alamat kantor", addr2: "Alamat galangan", hp: "Telepon" },
+    kopSave: "Simpan kop",
+    kopSaved: "Kop surat disimpan",
+    kopFail: "Kop surat gagal disimpan",
     ingCsv: "Impor CSV absensi",
     ingDevice: "Daftarkan alat",
     ingHint: "CSV: employeeNo,timestamp,type (in/out)",
@@ -87,6 +93,12 @@ export const n_emp = {
     exported: "Rekap absensi diunduh",
   },
   en: {
+    kopTitle: "PDF letterhead",
+    kopHint: "Used on every PDF document. Empty fields fall back to the built-in letterhead.",
+    kopFields: { name: "Company name", line1: "Tagline", hq: "Head office", addr1: "Office address", addr2: "Shipyard address", hp: "Phone" },
+    kopSave: "Save letterhead",
+    kopSaved: "Letterhead saved",
+    kopFail: "Could not save the letterhead",
     ingCsv: "Import attendance CSV",
     ingDevice: "Register device",
     ingHint: "CSV: employeeNo,timestamp,type (in/out)",
