@@ -13,6 +13,8 @@ export interface FlowNode {
   icon?: ReactNode;
   /** Lencana/aksi di sisi kanan simpul. */
   trailing?: ReactNode;
+  /** Isi tambahan di bawah baris simpul (mis. deret thumbnail foto). */
+  content?: ReactNode;
   /** Klik pada badan simpul (mis. buka detail). Tanpa ini, klik = buka-tutup. */
   onOpen?: () => void;
   children?: FlowNode[];
@@ -68,6 +70,7 @@ function Branch({ nodes, depth, open, toggle, labels }: {
               ) : <span className="flex min-w-0 flex-1 items-center gap-2">{body}</span>}
               {n.trailing && <span className="flex shrink-0 items-center gap-1.5">{n.trailing}</span>}
             </div>
+            {n.content && <div className="mt-2 pl-8">{n.content}</div>}
             <AnimatePresence initial={false}>
               {kids.length > 0 && isOpen && (
                 <motion.div
