@@ -12,6 +12,7 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
+import { projectManagerError, transferError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -543,6 +544,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    const ruleCreate = transferError(table, rowData) ?? await projectManagerError(table, null, rowData);
+    if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     const loanCreate = await loanOverlapError(table, null, rowData);
     if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
     const fitCreate = await dockFitError(table, rowData, req.user?.role);
@@ -656,6 +659,11 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
     const spkLock = spkLockError(table, oldData, merged, req.user?.role);
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
+    // Baris Transfer lama (tanpa fromWh/toWh) tetap bisa diedit selama gudangnya tidak disentuh.
+    const whChanged = (["type", "fromWh", "toWh"] as const).some((k) => oldData[k] !== (merged as Record<string, unknown>)[k]);
+    const rulePatch = (whChanged ? transferError(table, merged as Record<string, unknown>) : null)
+      ?? await projectManagerError(table, oldData, merged as Record<string, unknown>);
+    if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));
     const loanPatch = await loanOverlapError(table, id, merged);
     if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
     // Hanya saat dock/proyek berganti: slot lama yang sudah terlanjur tidak dikunci.

@@ -14,6 +14,7 @@ import { AsyncButton } from "../../components/ui";
 import { useStore } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
+import { isProjectManager } from "../../utils/employeeOptions";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { fmtMiliar, fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -181,7 +182,7 @@ export default function CRM() {
 
   const pmCandidates = useMemo(() => (
     (data.employees ?? [])
-      .filter((e) => String(e.dept) === "Proyek" || String(e.role ?? "").includes("Manager"))
+      .filter(isProjectManager)
       .map((e) => String(e.name))
   ), [data.employees]);
 
@@ -680,7 +681,9 @@ export default function CRM() {
   const openConvert = (q: StoreItem) => {
     setHoChecks([false, false, false, false]);
     setHoBy("Tim Commercial");
-    setConvManager(String(q.pic ?? q.manager ?? ""));
+    // #82: PIC penawaran hanya diisikan otomatis bila ia memang Project Manager.
+    const pic = String(q.pic ?? q.manager ?? "");
+    setConvManager(pmCandidates.includes(pic) ? pic : "");
     setConvStart(todayISO());
     setConvEnd("");
     setConvertTarget(q);
@@ -1397,7 +1400,7 @@ export default function CRM() {
           <FormGrid>
             <Field label="PM Proyek">
               <select className="input" value={convManager} onChange={(e) => setConvManager(e.target.value)}>
-                <option value="">Pilih PM</option>
+                <option value="">{pmCandidates.length > 0 ? S.pickPmOpt : S.noPmCandidates}</option>
                 {pmCandidates.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </Field>
