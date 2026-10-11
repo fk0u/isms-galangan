@@ -83,7 +83,11 @@ async function isSingleActiveBranchConfig(): Promise<boolean> {
   // hanya menjadi N/A pada konfigurasi satu cabang yang diterima di ADR-0003.
   for (const table of [...COLLECTIONS, "pdfDocs"]) {
     const rows = await q<{ branch: unknown }>(`SELECT DISTINCT branch FROM ${table}`);
-    if (rows.some((row) => String(row.branch ?? "").trim() !== DEFAULT_BRANCH)) return false;
+    const non = rows.filter((row) => String(row.branch ?? "").trim() !== DEFAULT_BRANCH);
+    if (non.length > 0) {
+      console.log(`[security-probe] Table ${table} has non-default branch:`, non);
+      return false;
+    }
   }
   return true;
 }
@@ -105,17 +109,21 @@ async function main(): Promise<void> {
 
   try {
     // Read only the caller's existing data to preserve the Jalur A/B decision.
-    // Every migration, seed, audit row, and upload below uses the temporary DB.
-    const sourceSqlitePath = process.env.SQLITE_PATH ?? "./data/isms.db";
-    const sourceDbExists = getDialect() === "mysql" || fs.existsSync(
-      path.isAbsolute(sourceSqlitePath) ? sourceSqlitePath : path.resolve(process.cwd(), sourceSqlitePath),
-    );
+    const defaultSqlitePath = fs.existsSync(path.resolve(process.cwd(), "./data/isms.db"))
+      ? "./data/isms.db"
+      : path.resolve(import.meta.dirname, "../data/isms.db");
+    const sourceSqlitePath = process.env.SQLITE_PATH ?? defaultSqlitePath;
+    const resolvedSourceDb = path.isAbsolute(sourceSqlitePath) ? sourceSqlitePath : path.resolve(process.cwd(), sourceSqlitePath);
+    const sourceDbExists = getDialect() === "mysql" || fs.existsSync(resolvedSourceDb);
     if (sourceDbExists) {
+      if (getDialect() !== "mysql") {
+        process.env.SQLITE_PATH = resolvedSourceDb;
+      }
       try {
         sourceSingleActiveBranch = await isSingleActiveBranchConfig();
-      } catch {
+      } catch (err) {
         sourceSingleActiveBranch = false;
-        console.warn("[security-probe] Source branch mode could not be verified; T02–T05 remain applicable.");
+        console.warn("[security-probe] Source branch mode could not be verified; T02–T05 remain applicable.", err);
       } finally {
         await closeDb();
       }

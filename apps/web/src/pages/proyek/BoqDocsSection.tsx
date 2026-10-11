@@ -9,7 +9,7 @@
  * disetujui menjadikan surat lama "Digantikan". Tersambung server → endpoint
  * /api/boqDocs/:id/status & /revise (transaksional); mode lokal → logika setara. */
 import { useMemo, useState } from "react";
-import { ArrowLeft, FileText, GitBranch, Plus, Send, Check, X, RotateCcw, Lock } from "lucide-react";
+import { ArrowLeft, FileText, GitBranch, Plus, Send, Check, X, RotateCcw, Lock, Printer, Download } from "lucide-react";
 import { useStore } from "../../data/store";
 import type { BoQItem } from "../../data";
 import { useT } from "../../i18n/LanguageContext";
@@ -17,12 +17,13 @@ import { n_prj } from "../../i18n/n_prj";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { Badge, Card, ConfirmModal, EmptyState, toast, AsyncButton } from "../../components/ui";
-import { fmtRupiah } from "../../utils/export";
+import { fmtRupiah, exportExcel } from "../../utils/export";
 import { fmtTanggal, todayISO } from "../../utils/format";
 import BoQSection from "./BoQSection";
 import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
-import { usePdfDoc } from "../../components/usePdfDoc";
+import { printBoqHtml } from "../../utils/printBoqHtml";
+import { terbilangRupiah, spelledOutCurrency } from "../../utils/terbilang";
 
 type DocStatus = "Draft" | "Diajukan" | "Disetujui" | "Ditolak" | "Digantikan";
 
@@ -57,7 +58,6 @@ function remote(): boolean {
 export default function BoqDocsSection({ projectId }: { projectId: string }) {
   const { locale } = useT();
   const S = n_prj[locale];
-  const pdfDoc = usePdfDoc();
   const { data, add, update, resyncCollections, log } = useStore();
   const { user } = useAuth();
   const canWrite = hasPermission(user?.permissions, "boq", "w");
@@ -108,7 +108,7 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
       await apiFetch(`/api/boqDocs/${encodeURIComponent(doc.id)}/status`, {
         method: "POST", body: JSON.stringify({ status: to }),
       });
-      await resyncCollections(["boqDocs", "boq", "activities"]);
+      await resyncCollections(["boqDocs", "boq", "activities", "documents"]);
     } else {
       const total = totalOf(doc.id);
       const patch: Record<string, unknown> = { status: to, total };
@@ -117,6 +117,30 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
       await update("boqDocs", doc.id, patch);
       if (to === "Disetujui" && doc.supersedes) {
         await update("boqDocs", doc.supersedes, { status: "Digantikan", supersededBy: doc.id });
+      }
+      if (to === "Disetujui") {
+        const docId = `DOC-${doc.id}`;
+        const pr = data.projects.find((p) => p.id === projectId);
+        const vessel = pr ? String(pr.vessel ?? "") : "";
+        const exists = data.documents.some((d) => d.id === docId);
+        if (!exists) {
+          await add("documents", {
+            id: docId,
+            title: `BoQ ${doc.number} Rev ${doc.revision}`,
+            type: "BoQ",
+            subType: doc.revision > 0 ? "Revisi BoQ" : "BoQ Proyek",
+            project: projectId,
+            vessel,
+            version: `Rev ${doc.revision}`,
+            status: "Disetujui",
+            updated: todayISO(),
+            owner: user?.name ?? "Commercial Estimator",
+            boqDocId: doc.id,
+            archived: false,
+            docCopy: "Terkendali",
+            branch: String(pr?.branch ?? ""),
+          });
+        }
       }
     }
     log(`mengubah status surat BoQ → ${to}`, `${doc.number} Rev ${doc.revision}`, "BoQ");
@@ -198,14 +222,105 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
     if (open.status === "Ditolak") actions.push({ to: "Draft", label: S.bqdBackToDraft, icon: RotateCcw, primary: true });
     if (open.status === "Disetujui") actions.push({ to: "revise", label: S.bqdMakeRevision, icon: GitBranch, primary: true });
 
+    const handleEnterprisePrint = (openDoc: DocRow) => {
+      const rawItems = itemsOf(openDoc.id);
+      const prj = data.projects.find((p) => p.id === projectId);
+      const computedItems = rawItems.map((it, idx) => ({
+        no: idx + 1,
+        name: it.name,
+        description: it.description,
+        category: it.category,
+        qty: it.quantity,
+        unit: it.unit,
+        unitPrice: it.unitPrice,
+        totalPrice: it.totalPrice,
+      }));
+      const totalAmount = totalOf(openDoc.id);
+      printBoqHtml({
+        number: openDoc.number,
+        revision: openDoc.revision,
+        status: openDoc.status,
+        issuedAt: openDoc.issuedAt || todayISO(),
+        projectId,
+        vesselName: prj?.vessel || "-",
+        clientName: prj?.client || "-",
+        approvedBy: openDoc.approvedBy,
+        approvedAt: openDoc.approvedAt,
+        note: openDoc.note,
+        items: computedItems,
+        total: totalAmount,
+        signerName: openDoc.approvedBy || "Commercial Estimator",
+        locale,
+      });
+      toast(locale === "en" ? "Opening Enterprise Print preview..." : "Membuka pratinjau cetak Enterprise...", "info");
+    };
+
+    const handleExportExcel = async (openDoc: DocRow) => {
+      try {
+        const isEn = locale === "en";
+        const prj = data.projects.find((p) => p.id === projectId);
+        const rawItems = itemsOf(openDoc.id);
+        const totalAmount = totalOf(openDoc.id);
+        const terbilangText = isEn ? spelledOutCurrency(totalAmount) : terbilangRupiah(totalAmount);
+
+        const headerRow = [
+          "No",
+          isEn ? "Work Item" : "Uraian Pekerjaan",
+          isEn ? "Specification / Description" : "Spesifikasi / Deskripsi",
+          isEn ? "Category" : "Kategori",
+          isEn ? "Qty" : "Volume",
+          isEn ? "Unit" : "Satuan",
+          isEn ? "Unit Price (Rp)" : "Harga Satuan (Rp)",
+          isEn ? "Total (Rp)" : "Jumlah Harga (Rp)",
+        ];
+
+        const dataRows = rawItems.map((it, idx) => [
+          idx + 1,
+          it.name,
+          it.description || "-",
+          it.category || "-",
+          it.quantity,
+          it.unit,
+          it.unitPrice,
+          it.totalPrice,
+        ]);
+
+        const totalRow = ["", "TOTAL", "", "", "", "", "", totalAmount];
+
+        const rows: unknown[][] = [
+          [`BILL OF QUANTITY (BoQ) - ${openDoc.number} Rev ${openDoc.revision}`],
+          [
+            `Proyek: ${projectId} | Kapal: ${prj?.vessel || "-"} | Klien: ${prj?.client || "-"} | Status: ${openDoc.status} | Tgl: ${fmtTanggal(openDoc.issuedAt || todayISO())}`,
+          ],
+          [],
+          headerRow,
+          ...dataRows,
+          totalRow,
+          [],
+          [`Terbilang: ${terbilangText}`],
+        ];
+
+        const safeFilename = `BoQ-${openDoc.number.replace(/[^a-zA-Z0-9-_]/g, "_")}-Rev${openDoc.revision}`;
+        await exportExcel(rows, safeFilename, "BoQ");
+        toast(isEn ? `Excel exported: ${safeFilename}.xlsx` : `Excel berhasil diunduh: ${safeFilename}.xlsx`, "success");
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Gagal mengekspor Excel", "info");
+      }
+    };
+
     return (
       <div className="space-y-4">
-        <button className="btn-secondary text-xs" onClick={() => setOpenId(null)}>
-          <ArrowLeft className="h-3.5 w-3.5" /> {S.bqdBack}
-        </button>
-        <button className="btn-secondary text-xs" onClick={() => void pdfDoc.request({ kind: "boq", id: String(openId), locale }, `BoQ-${String(openId)}`, false)}>
-          <FileText className="h-3.5 w-3.5" /> {S.boqPrint}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="btn-secondary text-xs" onClick={() => setOpenId(null)}>
+            <ArrowLeft className="h-3.5 w-3.5" /> {S.bqdBack}
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => handleEnterprisePrint(open)}>
+            <Printer className="h-3.5 w-3.5" /> {locale === "en" ? "Print PDF (Enterprise)" : "Cetak PDF (Enterprise)"}
+          </button>
+          <button className="btn-secondary text-xs" onClick={() => void handleExportExcel(open)}>
+            <Download className="h-3.5 w-3.5" /> {locale === "en" ? "Export Excel" : "Ekspor Excel"}
+          </button>
+        </div>
 
         <Card className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">

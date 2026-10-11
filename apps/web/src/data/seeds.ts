@@ -432,6 +432,9 @@ export const seedDocuments: StoreItem[] = [
   { id: "DS-SB-2026-001", title: "Dock Space - BG RMN 3324", type: "Dock Space", project: "RP-2026-006", vessel: "BG RMN 3324", version: "v1.0", status: "Berlaku", updated: "2026-08-10", owner: "Rudi Hartono", sbRef: "000/DS-SB/SMD/VIII/2026" },
   { id: "SJ-SMD-2026-001", title: "Surat Jalan - Material BG RMN 3324", type: "Surat Jalan", project: "RP-2026-006", vessel: "BG RMN 3324", version: "v1.0", status: "Berlaku", updated: "2026-08-15", owner: "Santi", sbRef: "001/SJ-SMD/SMD/VIII/2026" },
   { id: "TT-SMD-2026-001", title: "Tanda Terima - BG RMN 3324", type: "Tanda Terima", project: "RP-2026-006", vessel: "BG RMN 3324", version: "v1.0", status: "Berlaku", updated: "2026-08-15", owner: "Santi", sbRef: "001/TT-SMD/SMD/VIII/2026" },
+  { id: "DOC-BQD-RP-2026-003-R1", title: "BoQ BQ/RP-2026-003/001 Rev 1", type: "BoQ", subType: "Revisi BoQ", project: "RP-2026-003", vessel: "TB Karya Bahari 12", version: "Rev 1", status: "Disetujui", updated: "2026-08-15", owner: "Direktur Demo", boqDocId: "BQD-RP-2026-003-R1" },
+  { id: "DOC-BQD-NB-2025-012-R0", title: "BoQ BQ/NB-2025-012/001 Rev 0", type: "BoQ", subType: "BoQ Proyek", project: "NB-2025-012", vessel: "TB Samudra Jaya 07", version: "Rev 0", status: "Disetujui", updated: "2025-11-01", owner: "Direktur Demo", boqDocId: "BQD-NB-2025-012-R0" },
+  { id: "DOC-BQD-RP-2026-005-R0", title: "BoQ BQ/RP-2026-005/001 Rev 0", type: "BoQ", subType: "BoQ Proyek", project: "RP-2026-005", vessel: "TB Pelita 01", version: "Rev 0", status: "Disetujui", updated: "2026-07-15", owner: "Direktur Demo", boqDocId: "BQD-RP-2026-005-R0" },
 ];
 
 /* ============ SEED REMAKE: cabang, absensi, payroll, pajak, RFQ, CO, risiko,

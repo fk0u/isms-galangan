@@ -26,8 +26,15 @@ export function getDialect(): Dialect {
 }
 
 function resolveSqlitePath(): string {
-  const raw = process.env.SQLITE_PATH ?? "./data/isms.db";
-  return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  if (process.env.SQLITE_PATH) {
+    const raw = process.env.SQLITE_PATH;
+    return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
+  }
+  const rootRel = path.resolve(process.cwd(), "./data/isms.db");
+  if (fs.existsSync(rootRel)) return rootRel;
+  const apiRel = path.resolve(import.meta.dirname, "../data/isms.db");
+  if (fs.existsSync(apiRel)) return apiRel;
+  return rootRel;
 }
 
 let sqliteDb: Database.Database | null = null;

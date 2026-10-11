@@ -1421,7 +1421,7 @@ const createWarranty = async (wbsTask?: string) => {
             <div>
               <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detWbsTitle}</h3>
               {/* Alur bercabang: fase → pekerjaan → foto & riwayat. Tabel di bawah tetap untuk mengubah data. */}
-              <div className="mb-4 rounded-xl border border-steel-100 p-3"><WbsTree wbs={wbs} /></div>
+              {wbs.length > 0 && <div className="mb-4 rounded-xl border border-steel-100 p-3"><WbsTree wbs={wbs} /></div>}
 {/* Search WBS. Tabel lain di tab ini TIDAK diberi search dan itu disengaja:
               tabel baseline dibatasi jumlah tahap, tabel booking/maintenance
               sudah punya tombol Detail, dan matriks risiko 5x5 bukan daftar -
@@ -1437,7 +1437,14 @@ const createWarranty = async (wbsTask?: string) => {
                     <tr><SortTh label={S.colStageName} sortKey="task" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detStart} sortKey="start" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detEnd} sortKey="end" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colWeight} sortKey="weight" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPred} sortKey="predecessor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.detAssignCol}</th><th className="th">{S.actionTh}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
-                    {sortRows(wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "dft", "predecessor"])), sort, (w: WbsExt, k) => k === "weight" ? Number(w.weight) : k === "progress" ? Number(w.progress) : String((w as unknown as Record<string, unknown>)[k] ?? "")).map((w) => (
+                    {wbs.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-xs text-steel-400">
+                          {S.detNoWbs}
+                        </td>
+                      </tr>
+                    ) : (
+                      sortRows(wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "dft", "predecessor"])), sort, (w: WbsExt, k) => k === "weight" ? Number(w.weight) : k === "progress" ? Number(w.progress) : String((w as unknown as Record<string, unknown>)[k] ?? "")).map((w) => (
                       <tr key={w.task}>
 <td className="td font-medium text-navy-900">{w.task}
                             {w.station ? <span className="ml-2 rounded bg-navy-50 px-1.5 py-0.5 text-[11px] font-semibold text-navy-700">{w.station}</span> : null}
@@ -1500,7 +1507,7 @@ const createWarranty = async (wbsTask?: string) => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>

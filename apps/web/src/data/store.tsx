@@ -284,6 +284,11 @@ function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
+const seedWbsByProject: Record<string, WbsItem[]> = {
+  "NB-2025-012": clone(wbsTemplate),
+  "RP-2026-003": clone(wbsTemplate),
+};
+
 function buildSeeds(): StoreShape {
     const shape: StoreShape = {
     projects: clone(seedProjects) as StoreItem[],
@@ -347,8 +352,8 @@ function buildSeeds(): StoreShape {
       materialRequests: clone(seedMaterialRequests) as StoreItem[],
       checklistTemplates: clone(seedChecklistTemplates) as StoreItem[],
       checklistResponses: clone(seedChecklistResponses) as StoreItem[],
-wbsByProject: {},
-     teamByProject: clone(seedTeamByProject),
+      wbsByProject: clone(seedWbsByProject),
+      teamByProject: clone(seedTeamByProject),
    };
    /* Stempel tanggal buat untuk SEED diturunkan dari field tanggal milik rekam
       itu sendiri (lihat `deriveCreatedAt`). Rekam tanpa kandidat sengaja
@@ -2106,7 +2111,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
       },
       resync,
       resyncCollections,
-      wbsFor: (projectId) => data.wbsByProject[projectId] ?? clone(wbsTemplate),
+      wbsFor: (projectId) => data.wbsByProject[projectId] ?? [],
       setWbs: async (projectId, wbs) => {
         const prevWbs = dataRef.current.wbsByProject[projectId];
         setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: wbs } }));

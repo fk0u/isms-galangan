@@ -146,8 +146,8 @@ const asWo = (v: unknown): StoreItem => v as unknown as StoreItem;
   /* Dua daftar tipe yang tadinya ditulis terpisah (Documents 11 nilai,
      ProjectDetail 8 nilai) dan sudah berkhianat: Penawaran/Dock Space/Surat
      Jalan/Tanda Terima tidak bisa dibuat dari tab proyek. */
-  assert(DOC_TYPES.length === 11, "DOC_TYPES = 11 jenis", String(DOC_TYPES.length));
-  for (const t of ["Penawaran", "Dock Space", "Surat Jalan", "Tanda Terima", "NCR"]) {
+  assert(DOC_TYPES.length === 12, "DOC_TYPES = 12 jenis", String(DOC_TYPES.length));
+  for (const t of ["Penawaran", "Dock Space", "Surat Jalan", "Tanda Terima", "NCR", "BoQ"]) {
     assert(DOC_TYPES.includes(t as (typeof DOC_TYPES)[number]), `tipe ${t} ada di daftar bersama`);
   }
 

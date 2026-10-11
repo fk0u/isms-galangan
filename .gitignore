@@ -35,6 +35,8 @@ docs/audit/
 .agents/
 ai-prompts/
 
-# Secret deploy
+# Secret deploy & env
 deploy/.env
+.env
+*.env
 .claude/
