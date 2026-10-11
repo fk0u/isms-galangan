@@ -52,8 +52,10 @@ export class CollectionSyncCache {
             const didFail = failed.includes(collection);
             const sameScope = this.scope === requestScope;
             const sameGeneration = (this.generations.get(collection) ?? 0) === versions.get(collection);
-            if (!didFail && sameScope && sameGeneration) this.freshAt.set(collection, this.now());
-            else this.freshAt.delete(collection);
+            if (sameScope && sameGeneration) {
+              if (!didFail) this.freshAt.set(collection, this.now());
+              else this.freshAt.delete(collection);
+            }
             return didFail;
           })
           .catch(() => {

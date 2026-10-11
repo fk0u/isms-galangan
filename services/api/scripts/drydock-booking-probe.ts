@@ -1,9 +1,8 @@
 /* Probe F3-F-04: tanggal booking drydock divalidasi server-side, termasuk update. */
 import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
-import { closeDb, q } from "../src/db.js";
+import { closeDb, exec, q } from "../src/db.js";
 
-interface ProbeRow { id: string; username: string; role: string; token_version: number }
 interface CreatedRow { id: string; data?: Record<string, unknown> }
 
 function witaDate(offset: number): string {
@@ -20,6 +19,12 @@ async function main(): Promise<void> {
   let passed = 0;
   let total = 0;
   const createdIds: string[] = [];
+  const globalUserId = `probe-drydock-global-${Date.now()}`;
+  const globalUsername = `${globalUserId}@galangan.com`;
+  const branchSuffix = Date.now();
+  const legacyBranch = `Probe-Legacy-Branch-${branchSuffix}`;
+  const targetBranch = `Probe-Target-Branch-${branchSuffix}`;
+  const sourceBranch = `Probe-Source-Branch-${branchSuffix}`;
   let headers: Record<string, string> = {};
   const assert = (name: string, condition: boolean, detail = ""): void => {
     total += 1;
@@ -27,14 +32,15 @@ async function main(): Promise<void> {
     else { console.error(`[FAIL] ${name} ${detail}`); process.exitCode = 1; }
   };
   try {
-    const director = (await q<ProbeRow>(
-      "SELECT id, username, role, token_version FROM users WHERE role = 'direktur' LIMIT 1",
-    ))[0];
     const project = (await q<{ id: string }>("SELECT id FROM projects LIMIT 1"))[0];
     const docks = await q<{ id: string }>("SELECT id FROM drydocks ORDER BY id LIMIT 2");
-    if (!director || !project || docks.length === 0) throw new Error("Probe membutuhkan akun direktur, proyek, dan drydock hasil seed");
+    if (!project || docks.length === 0) throw new Error("Probe membutuhkan proyek dan drydock hasil seed");
+    await exec(
+      "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, 0, NULL)",
+      [globalUserId, globalUsername, "hash", "Probe Drydock Global", "direktur", globalUsername],
+    );
     headers = {
-      authorization: `Bearer ${signToken({ id: director.id, username: director.username, role: director.role, branch: "SEMUA", v: director.token_version ?? 0 })}`,
+      authorization: `Bearer ${signToken({ id: globalUserId, username: globalUsername, role: "direktur", branch: "SEMUA", v: 0 })}`,
     };
     const primaryDock = docks[0]!.id;
     const create = async (dockId: string, startDate: string, endDate: string, branch?: string) => {
@@ -107,18 +113,18 @@ async function main(): Promise<void> {
       method: "POST",
       url: "/api/dockSlots",
       headers,
-      payload: { branch: "Probe-Legacy-Branch", data: {
+      payload: { branch: legacyBranch, data: {
         dockId: primaryDock, project: project.id, vessel: "Probe Kapal Lama", from: 10, to: 13,
         priority: "Normal", ratePerDay: 0,
       } },
     });
     if (legacy.statusCode === 201) createdIds.push((legacy.json() as { data: CreatedRow }).data.id);
-    const legacyCollision = await create(primaryDock, witaDate(12), witaDate(14), "Probe-Legacy-Branch");
+    const legacyCollision = await create(primaryDock, witaDate(12), witaDate(14), legacyBranch);
     assert("booking tanggal tetap memeriksa slot lama berbasis indeks hari", legacy.statusCode === 201
       && legacyCollision.statusCode === 409, legacyCollision.body);
 
-    const branchTarget = await create(primaryDock, "2099-12-01", "2099-12-03", "Probe-Target-Branch");
-    const branchSource = await create(primaryDock, "2099-12-01", "2099-12-03", "Probe-Source-Branch");
+    const branchTarget = await create(primaryDock, "2099-12-01", "2099-12-03", targetBranch);
+    const branchSource = await create(primaryDock, "2099-12-01", "2099-12-03", sourceBranch);
     const branchSourceId = (branchSource.json() as { data?: CreatedRow }).data?.id;
     let movedIntoBranchStatus = 0;
     if (branchSourceId) {
@@ -126,7 +132,7 @@ async function main(): Promise<void> {
         method: "PATCH",
         url: `/api/dockSlots/${encodeURIComponent(branchSourceId)}`,
         headers,
-        payload: { branch: "Probe-Target-Branch" },
+        payload: { branch: targetBranch },
       });
       movedIntoBranchStatus = movedIntoBranchConflict.statusCode;
     }
@@ -147,6 +153,7 @@ async function main(): Promise<void> {
     for (const id of createdIds) {
       await app.inject({ method: "DELETE", url: `/api/dockSlots/${encodeURIComponent(id)}`, headers }).catch(() => undefined);
     }
+    await exec("DELETE FROM users WHERE id = ?", [globalUserId]).catch(() => undefined);
     await app.close();
     await closeDb();
   }

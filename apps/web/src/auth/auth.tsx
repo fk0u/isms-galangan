@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, apiFetch, clearJwt, getJwt, isBackendConfigured, setJwt } from "../services/http";
 import { forgetDeleteDates } from "../utils/audit";
-import { purgeOfflineCache } from "../data/idb";
 import { useStore } from "../data/store";
 
 export interface DemoUser {
@@ -110,7 +109,7 @@ const Ctx = createContext<AuthCtx>({ user: null, login: async () => "Belum siap"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Session | null>(() => loadSession());
-  const { activateCacheOwner, endSession } = useStore();
+  const { activateCacheOwner, endSession, setBranch } = useStore();
 
   // Sinkronkan permissions pengguna dari /api/auth/me saat aplikasi dimuat
   useEffect(() => {
@@ -166,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           permissions: res.permissions,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        setBranch(session.branch ?? "SEMUA");
         setUser(session);
         return null;
       } catch (err) {
@@ -194,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginAt: new Date().toISOString(),
       };
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      setBranch("SEMUA");
       setUser(session);
       return null;
     }
@@ -221,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    endSession();
+    void endSession();
     clearJwt();
     sessionStorage.removeItem(SESSION_KEY);
     // Keluar juga mengakhiri mode "lihat sebagai peran" (token akun asal ikut dibuang).
@@ -230,7 +231,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        ini user berikutnya yang memakai tab sama bisa membaca tanggal hapus
        milik user sebelumnya. */
     forgetDeleteDates();
-    void purgeOfflineCache();
     setUser(null);
     return true;
   };

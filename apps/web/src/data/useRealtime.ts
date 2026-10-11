@@ -12,7 +12,7 @@ const DEBOUNCE_MS = 500;
 const MAX_BACKOFF_MS = 30000;
 
 export function useRealtime(enabled: boolean): void {
-  const { resyncCollections, data } = useStore();
+  const { resyncCollections, data, sessionGeneration } = useStore();
   const resyncRef = useRef(resyncCollections);
   resyncRef.current = resyncCollections;
   // Hanya koleksi yang dikenal store; nama lain dari server diabaikan.
@@ -33,7 +33,7 @@ export function useRealtime(enabled: boolean): void {
       if (cols.length > 0 && document.visibilityState === "visible") {
         collectionSyncCache.invalidate(cols);
         void collectionSyncCache.sync(
-          getJwt() ?? "local",
+          `${getJwt() ?? "local"}:${sessionGeneration}`,
           cols,
           (requested) => resyncRef.current(requested as CollectionKey[]),
           true,
@@ -79,5 +79,5 @@ export function useRealtime(enabled: boolean): void {
       ctl?.abort();
       if (timer !== null) window.clearTimeout(timer);
     };
-  }, [enabled]);
+  }, [enabled, sessionGeneration]);
 }

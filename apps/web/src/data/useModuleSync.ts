@@ -109,7 +109,7 @@ export interface ModuleSync {
 
 /** Tarik batch `cols` saat mount dan setiap `deps` berubah (mis. [tab]). */
 export function useModuleSync(cols: CollectionKey[], deps: unknown[] = []): ModuleSync {
-  const { resyncCollections } = useStore();
+  const { resyncCollections, sessionGeneration } = useStore();
   const [syncing, setSyncing] = useState(false);
   const [failed, setFailed] = useState<CollectionKey[]>([]);
   const [lastSyncAt, setLastSyncAt] = useState(0);
@@ -147,7 +147,7 @@ const refresh = useCallback((force = true) => {
     setSyncActive(1);
     setSyncing(true);
     void collectionSyncCache.sync(
-      getJwt() ?? "local",
+      `${getJwt() ?? "local"}:${sessionGeneration}`,
       batch,
       (requested) => resyncCollections(requested as CollectionKey[]),
       force,
@@ -186,7 +186,7 @@ const refresh = useCallback((force = true) => {
           latestRefreshRef.current(rerunForce);
         }
       });
-  }, [colsKey, resyncCollections]);
+  }, [colsKey, resyncCollections, sessionGeneration]);
   latestRefreshRef.current = refresh;
 
   useEffect(() => {
@@ -217,55 +217,48 @@ const refresh = useCallback((force = true) => {
 export function useProjectWbsSync(
   projectIds: string[],
 ): { syncing: boolean; byProject: Record<string, WbsItem[]> } {
+  const { sessionGeneration, mergeWbsCache, captureSideMapEpochs } = useStore();
   /* Kunci stabil: id unik + diurutkan supaya urutan berbeda tidak memicu
      fetch ulang yang sama berulang kali. */
   const key = [...new Set(projectIds.filter((id) => id !== ""))].sort().join("|");
   const [syncing, setSyncing] = useState(false);
   const [byProject, setByProject] = useState<Record<string, WbsItem[]>>({});
-  const runningRef = useRef(false);
+  const requestGenerationRef = useRef(0);
 
   useEffect(() => {
     const ids = key === "" ? [] : key.split("|");
-    if (ids.length === 0) return;
-    if (runningRef.current) return;
-    runningRef.current = true;
+    const requestGeneration = ++requestGenerationRef.current;
+    if (ids.length === 0) {
+      setByProject({});
+      setSyncing(false);
+      return;
+    }
+    const requestSession = sessionGeneration;
     lastBatchSyncAt = Date.now();
     setSyncActive(1);
     setSyncing(true);
     void (async () => {
       const found: Record<string, WbsItem[]> = {};
-      /* Lebih dari satu proyek: satu permintaan gabungan, bukan satu per proyek. */
-      if (ids.length > 1) {
-        try {
-          const sides = await apiFetch<{ wbs: Record<string, WbsItem[]> }>("/api/project-sides");
-          for (const projectId of ids) if (Array.isArray(sides.wbs?.[projectId])) found[projectId] = sides.wbs[projectId];
-          if (Object.keys(found).length > 0) setByProject((prev) => ({ ...prev, ...found }));
-          return;
-        } catch {
-          // Server lama tanpa endpoint gabungan: lanjut per proyek.
-        }
-      }
+      const sideEpochs = captureSideMapEpochs(ids);
+      const params = new URLSearchParams({ includeTeam: "false", projects: ids.join(",") });
+      const sides = await apiFetch<{ wbs: Record<string, WbsItem[]> }>(`/api/project-sides?${params.toString()}`);
+      if (requestGeneration !== requestGenerationRef.current || requestSession !== sessionGeneration) return;
       for (const projectId of ids) {
-        try {
-          const res = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(
-            `/api/projects/${encodeURIComponent(projectId)}/wbs`,
-          );
-          if (Array.isArray(res.wbs)) found[projectId] = res.wbs;
-        } catch {
-          // Cache lokal / template store tetap dipakai untuk proyek ini.
-        }
+        if (Array.isArray(sides.wbs?.[projectId])) found[projectId] = sides.wbs[projectId];
       }
-      if (Object.keys(found).length > 0) {
-        setByProject((prev) => ({ ...prev, ...found }));
-      }
+      if (Object.keys(found).length === 0) return;
+      const accepted = mergeWbsCache(requestSession, found, sideEpochs);
+      if (Object.keys(accepted).length > 0) setByProject((prev) => ({ ...prev, ...accepted }));
     })()
       .catch(() => undefined)
       .finally(() => {
-        runningRef.current = false;
         setSyncActive(-1);
-        setSyncing(false);
+        if (requestGeneration === requestGenerationRef.current) setSyncing(false);
       });
-  }, [key]);
+    return () => {
+      if (requestGeneration === requestGenerationRef.current) requestGenerationRef.current += 1;
+    };
+  }, [key, mergeWbsCache, captureSideMapEpochs, sessionGeneration]);
 
   return { syncing, byProject };
 }

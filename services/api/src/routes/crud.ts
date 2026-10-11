@@ -5,7 +5,7 @@ import { branchAllowed, requireAuth } from "../auth.js";
 import { requestActor, requestIp, shallowDiff, writeAudit, type AuditInput } from "../audit.js";
 import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
-import { searchContainsPredicate } from "./crudSearch.js";
+import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate } from "./crudSearch.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
@@ -15,7 +15,7 @@ import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
-import { cacheGet, cachePut } from "../listCache.js";
+import { cacheGeneration, cacheGet, cachePut } from "../listCache.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
@@ -351,6 +351,36 @@ function newId(table: string): string {
   return `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 }
 
+/** Same row-level branch/team authorization for every by-id read or write. */
+async function rowVisibleToUser(table: string, row: Row, user: Parameters<typeof branchAllowed>[0]): Promise<boolean> {
+  const ownBranch = String(user?.branch ?? "").trim();
+  if (!GLOBAL_BRANCH_COLLECTIONS.has(table)) {
+    if (ownBranch === "") return false;
+    if (ownBranch !== "SEMUA" && String(row.branch ?? "") !== ownBranch) return false;
+  }
+  if (table === "projects") {
+    const scope = await scopedProjectIds(user);
+    if (scope !== null && !scope.has(String(row.id))) return false;
+  }
+  return true;
+}
+
+async function withProjectWriteScope<T>(
+  id: string,
+  user: Parameters<typeof branchAllowed>[0],
+  write: () => Promise<T>,
+): Promise<{ allowed: false } | { allowed: true; result: T }> {
+  return withTx(async () => {
+    const lockClause = getDialect() === "mysql" ? " FOR UPDATE" : "";
+    const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM projects WHERE id = ?${lockClause}`, [id]);
+    const project = rows[0];
+    if (!project || !(await rowVisibleToUser("projects", project, user))) return { allowed: false };
+    // team_by_project writers lock the same parent project row, so this
+    // membership read is serialized with revocation until the CRUD write commits.
+    return { allowed: true, result: await write() };
+  });
+}
+
 function parseLimit(raw: unknown): number {
   const n = typeof raw === "string" ? Number.parseInt(raw, 10) : NaN;
   if (Number.isNaN(n)) return 200;
@@ -373,11 +403,14 @@ export function registerCrud(app: FastifyInstance, table: string): void {
   const deleteGuards = [requireAuth, requirePermission(table, "d")];
 
   app.get(base, { preHandler: readGuards }, async (req, reply) => {
+    /* Capture before any await (projects also queries team scope) so a write
+       during scope/list reads fences the eventual cachePut. */
+    const generationAtStart = cacheGeneration(table);
     const query = (req.query ?? {}) as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];
     const ownBranch = String(req.user?.branch ?? "").trim();
-    const branchScoped = !GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "" && ownBranch !== "SEMUA";
+    const branchScoped = !GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "SEMUA";
     /* Cache daftar + ETag (lihat listCache.ts). Kunci memuat URL lengkap dan
        lingkup tim/cabang, sehingga pengguna berbeda scope tidak berbagi respons. */
     const scopeForKey = table === "projects" ? await scopedProjectIds(req.user) : null;
@@ -392,19 +425,23 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (hit) return sendCached(hit);
     const requestedBranch = String(query.branch ?? "").trim();
     if (branchScoped) {
-      if (requestedBranch !== "" && !branchAllowed(req.user, requestedBranch)) {
+      if (ownBranch === "" || (requestedBranch !== "" && !branchAllowed(req.user, requestedBranch))) {
         where.push("1 = 0");
       } else {
-        where.push("branch = ?");
+        where.push(exactBranchPredicate(getDialect()));
         params.push(ownBranch);
       }
     } else if (requestedBranch !== "") {
-      where.push("branch = ?");
+      where.push(exactBranchPredicate(getDialect()));
       params.push(requestedBranch);
     }
     if (query.q !== undefined && query.q !== "") {
       where.push(searchContainsPredicate(getDialect()));
       params.push(query.q);
+    }
+    if (table === "inventory" && query.exactName?.trim()) {
+      where.push(exactJsonNamePredicate(getDialect()));
+      params.push(query.exactName.trim());
     }
     if (table === "projects") {
       const scope = scopeForKey;
@@ -455,23 +492,15 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       limit,
       offset,
       nextCursor: rows.length === limit && last !== undefined ? cursorOf(last) : null,
-    })));
+    }), generationAtStart));
   });
 
   app.get(`${base}/:id`, { preHandler: readGuards }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
-    const ownBranch = String(req.user?.branch ?? "").trim();
-    const rowBranch = String((rows[0] as Row).branch ?? "").trim();
-    if (!GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "" && ownBranch !== "SEMUA"
-      && rowBranch !== ownBranch) {
+    if (!(await rowVisibleToUser(table, rows[0] as Row, req.user))) {
       return reply.status(404).send(fail("Not found", "NOT_FOUND"));
-    }
-    if (table === "projects") {
-      // Di luar lingkup tim = 404, sama seperti tidak ada (tidak membocorkan keberadaan).
-      const scope = await scopedProjectIds(req.user);
-      if (scope !== null && !scope.has(id)) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     }
     return ok(toJson(rows[0] as Row));
   });
@@ -570,6 +599,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const current = rows[0] as Row;
+    if (!(await rowVisibleToUser(table, current, req.user))) {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     if (parsed.data.baseUpdatedAt !== undefined && parsed.data.baseUpdatedAt !== current.updated_at) {
       return reply.status(409).send({
         ok: false,
@@ -651,9 +683,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
        jatuh di milidetik yang sama, jadi isi data ikut dibandingkan. */
     const rawData = typeof (current as { data: unknown }).data === "string" ? String((current as { data: unknown }).data) : null;
     const persist = () => persistWithAudit(table, async () => {
+      const scopePredicate = !GLOBAL_BRANCH_COLLECTIONS.has(table) && String(req.user?.branch ?? "").trim() !== "SEMUA"
+        ? ` AND ${exactBranchPredicate(getDialect())}`
+        : "";
+      const scopeParams = scopePredicate === "" ? [] : [String(req.user?.branch ?? "").trim()];
       const res = rawData !== null
-        ? await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?`, [branch, JSON.stringify(merged), now, id, current.updated_at, rawData])
-        : await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ?`, [branch, JSON.stringify(merged), now, id, current.updated_at]);
+        ? await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?${scopePredicate}`, [branch, JSON.stringify(merged), now, id, current.updated_at, rawData, ...scopeParams])
+        : await exec(`UPDATE ${table} SET branch = ?, data = ?, updated_at = ? WHERE id = ? AND updated_at = ?${scopePredicate}`, [branch, JSON.stringify(merged), now, id, current.updated_at, ...scopeParams]);
       if (res.changes !== 1) throw new StaleWriteError();
     }, {
       actor: requestActor(req),
@@ -666,16 +702,27 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       },
       ip: requestIp(req),
     });
+    const performWrite = async (): Promise<string | null> => {
+      if (changedRange) return persistDrydockWithOverlap(merged, branch, id, persist);
+      await persist();
+      return null;
+    };
     try {
-      if (changedRange) {
-        const overlapError = await persistDrydockWithOverlap(merged, branch, id, persist);
-        if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
+      let overlapError: string | null;
+      if (table === "projects") {
+        const scopedWrite = await withProjectWriteScope(id, req.user, performWrite);
+        if (!scopedWrite.allowed) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+        overlapError = scopedWrite.result;
       } else {
-        await persist();
+        overlapError = await performWrite();
       }
+      if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
     } catch (err) {
       if (!(err instanceof StaleWriteError)) throw err;
       const fresh = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
+      if (fresh[0] && !(await rowVisibleToUser(table, fresh[0], req.user))) {
+        return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+      }
       return reply.status(409).send({
         ok: false,
         error: { message: "Stale data: row was modified by another user", code: "STALE" },
@@ -694,6 +741,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const rows = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
     if (rows.length === 0) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const doomed = rows[0] as Row;
+    if (!(await rowVisibleToUser(table, doomed, req.user))) {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
     const deleteGuard = await serviceGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
     if (deleteGuard) return reply.status(409).send(fail(deleteGuard, "LOCKED"));
@@ -708,18 +758,45 @@ export function registerCrud(app: FastifyInstance, table: string): void {
         .status(409)
         .send(fail(`Tidak dapat menghapus: masih dipakai oleh ${usages.join(", ")}`, "REFERENCED"));
     }
-    await persistWithAudit(table, () => exec(`DELETE FROM ${table} WHERE id = ?`, [id]), {
-      actor: requestActor(req),
-      action: "delete",
-      table,
-      rowId: id,
-      /* Baris sudah terhapus sebelum audit ditulis; JSON.parse tanpa
-         try/catch di sini membuat DELETE kelihatan gagal (500) padahal
-         datanya SUDAH hilang, lalu FE mencoba ulang dan mendapat 404.
-         toJson() sudah menangani JSON korup - pakai helper yang sama. */
-      diff: { branch: doomed.branch, data: toJson(doomed).data },
-      ip: requestIp(req),
-    });
+    const ownBranch = String(req.user?.branch ?? "").trim();
+    const scopePredicate = !GLOBAL_BRANCH_COLLECTIONS.has(table) && ownBranch !== "SEMUA"
+      ? ` AND ${exactBranchPredicate(getDialect())}`
+      : "";
+    const scopeParams = scopePredicate === "" ? [] : [ownBranch];
+    const performDelete = () => persistWithAudit(table, async () => {
+        const result = await exec(`DELETE FROM ${table} WHERE id = ?${scopePredicate}`, [id, ...scopeParams]);
+        if (result.changes !== 1) throw new StaleWriteError();
+      }, {
+        actor: requestActor(req),
+        action: "delete",
+        table,
+        rowId: id,
+        /* Baris sudah terhapus sebelum audit ditulis; JSON.parse tanpa
+           try/catch di sini membuat DELETE kelihatan gagal (500) padahal
+           datanya SUDAH hilang, lalu FE mencoba ulang dan mendapat 404.
+           toJson() sudah menangani JSON korup - pakai helper yang sama. */
+        diff: { branch: doomed.branch, data: toJson(doomed).data },
+        ip: requestIp(req),
+      });
+    try {
+      if (table === "projects") {
+        const scopedWrite = await withProjectWriteScope(id, req.user, performDelete);
+        if (!scopedWrite.allowed) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+      } else {
+        await performDelete();
+      }
+    } catch (err) {
+      if (!(err instanceof StaleWriteError)) throw err;
+      const fresh = await q<Row>(`SELECT id, branch, data, updated_at FROM ${table} WHERE id = ?`, [id]);
+      if (!fresh[0] || !(await rowVisibleToUser(table, fresh[0], req.user))) {
+        return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+      }
+      return reply.status(409).send({
+        ok: false,
+        error: { message: "Stale data: row changed while deleting", code: "STALE" },
+        data: toJson(fresh[0]),
+      });
+    }
     return ok({ id, deleted: true });
   });
 }

@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
-import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
+import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch } from "lucide-react";
 import {
@@ -463,6 +463,31 @@ if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
 
   if (!project) return <p className="text-sm text-steel-500">{S.detNotFound}</p>;
   const pid = project.id;
+
+  const saveWbsWithConflictRetry = async (draft: WbsItem[]) => {
+    try {
+      await setWbs(pid, draft);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 409 && error.code === "STALE")) throw error;
+      const confirmed = window.confirm(locale === "en"
+        ? `WBS for project ${pid} changed on the server. Replace the latest server WBS with this local draft (${draft.length} stages)? This may overwrite concurrent changes.`
+        : `WBS proyek ${pid} berubah di server. Ganti WBS server terbaru dengan draf lokal ini (${draft.length} tahapan)? Perubahan bersamaan dapat tertimpa.`);
+      if (!confirmed) throw error;
+      await setWbs(pid, draft);
+    }
+  };
+  const saveTeamWithConflictRetry = async (draft: string[]) => {
+    try {
+      await setTeam(pid, draft);
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 409 && error.code === "STALE")) throw error;
+      const confirmed = window.confirm(locale === "en"
+        ? `Project team for ${pid} changed on the server. Replace the latest server team with your local selection (${draft.length} members)? This may overwrite concurrent changes.`
+        : `Tim proyek ${pid} berubah di server. Ganti tim server terbaru dengan pilihan lokal ini (${draft.length} anggota)? Perubahan bersamaan dapat tertimpa.`);
+      if (!confirmed) throw error;
+      await setTeam(pid, draft);
+    }
+  };
 
   const wbs = wbsFor(pid) as WbsExt[];
   const teamIds = teamFor(pid);
@@ -1078,7 +1103,7 @@ const createWarranty = async (wbsTask?: string) => {
         : w
     );
     try {
-      await setWbs(pid, updated);
+      await saveWbsWithConflictRetry(updated);
       await update("projects", pid, { progress: calcProjectProgress(updated, projectBoq) });
       /* D3 & F3-D-01: material terpilih → alur permintaan material (server
          transaksional bila tersambung): stok cukup = barang keluar, kurang =
@@ -1157,7 +1182,7 @@ const createWarranty = async (wbsTask?: string) => {
 
     const updated = wbs.map((w) => (w.task === wbsAssignTask ? { ...w, assignee } : w));
     try {
-      await setWbs(pid, updated);
+      await saveWbsWithConflictRetry(updated);
       log("menugaskan tahap WBS", `${wbsAssignTask} → ${assignee.type}: ${assignee.name}`, "Proyek");
       toast(S.detAssignSuccess);
       setWbsAssignTask(null);
@@ -1178,7 +1203,7 @@ const createWarranty = async (wbsTask?: string) => {
     const totalW = next.reduce((s, w) => s + Number(w.weight || 0), 0);
     if (totalW !== 100) { toast(S.detToastWeightTotal.replace("{n}", String(totalW)), "info"); return; }
     try {
-      await setWbs(pid, next);
+      await saveWbsWithConflictRetry(next);
       await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) });
       log("menambah tahapan WBS", `${pid} · ${wbsForm.task.trim()}`, "Proyek");
       toast(S.detToastStageAdd);
@@ -1970,7 +1995,7 @@ const createWarranty = async (wbsTask?: string) => {
                       <p className="text-xs text-steel-500">{e.role} · {e.dept}</p>
                       {(e.phone || e.email) ? <p className="truncate text-xs text-steel-400">{[e.phone, e.email].filter(Boolean).join(" · ")}</p> : null}
                     </div>
-                    <button className="rounded p-1 text-rose-400 hover:bg-rose-50" title={S.detRemoveTitle} onClick={async () => { try { await setTeam(pid, teamIds.filter((t) => t !== e.id)); toast(S.detToastRemoved.replace("{a}", e.name), "info"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
+                    <button className="rounded p-1 text-rose-400 hover:bg-rose-50" title={S.detRemoveTitle} onClick={async () => { try { await saveTeamWithConflictRetry(teamIds.filter((t) => t !== e.id)); toast(S.detToastRemoved.replace("{a}", e.name), "info"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </Card>
@@ -3074,7 +3099,7 @@ const createWarranty = async (wbsTask?: string) => {
         onConfirm={async () => {
           if (!stageToDelete) return;
           const next = wbs.filter((w) => w.task !== stageToDelete);
-          await setWbs(pid, next);
+          await saveWbsWithConflictRetry(next);
           log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
           toast(S.detDelStageSuccess.replace("{a}", stageToDelete));
           setStageToDelete(null);
@@ -3090,7 +3115,7 @@ const createWarranty = async (wbsTask?: string) => {
           if (!teamPick) { toast(S.detToastPickEmp, "info"); return; }
           if (teamIds.includes(teamPick)) { toast(S.detToastDupMember, "info"); return; }
           try {
-            await setTeam(pid, [...teamIds, teamPick]);
+            await saveTeamWithConflictRetry([...teamIds, teamPick]);
             log("menambah anggota tim", `${pid} · ${data.employees.find((e) => e.id === teamPick)?.name}`, "Proyek");
             toast(S.detToastMemberAdd); setShowTeam(false); setTeamPick("");
           } catch (e) {

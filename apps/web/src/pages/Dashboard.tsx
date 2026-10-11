@@ -50,6 +50,7 @@ import {
 import { useStore } from "../data/store";
 import type { CollectionKey } from "../data/store";
 import { useModuleSync } from "../data/useModuleSync";
+import { scopeAlertStoreData } from "../data/scopeAlertData";
 import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../utils/monthAxis";
 import { lastPoint, numOf, pctChange, prevPoint } from "../utils/series";
 import { warnLevelOf } from "../utils/inventoryWarn";
@@ -229,6 +230,7 @@ const DB_COLS: CollectionKey[] = ["activities", "drydocks", "employees", "incide
 export default function Dashboard() {
 
   const { data, branch, inBranch } = useStore();
+  const scopedAlertData = useMemo(() => scopeAlertStoreData(data, branch), [data, branch]);
   const pdfDoc = usePdfDoc();
   /* Fetch per-batch modul (pengganti resync penuh). */
   useModuleSync(DB_COLS);
@@ -500,14 +502,14 @@ const exportSummary = async () => {
      pernah sampai ke sini. Sekarang keduanya bersumber dari satu tempat:
      klik item langsung melompat ke modul, tab, lalu baris yang DIPAKAI. */
   const attentionItems = useMemo(() => {
-    const byKey = buildModuleAlertItems(data);
+    const byKey = buildModuleAlertItems(scopedAlertData);
     const out: { key: ModuleAlertKey; item: ModuleAlertItem }[] = [];
     /* Urutan modul = urutan trademark kartu di bawah, jadi stable. */
     for (const k of DASH_ALERT_KEYS) {
       for (const item of byKey[k]) out.push({ key: k, item });
     }
     return out;
-  }, [data]);
+  }, [scopedAlertData]);
 
   const selectedAttentionItems = useMemo(
     () => selectedAttentionCategory

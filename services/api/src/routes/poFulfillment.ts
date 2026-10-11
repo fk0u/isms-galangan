@@ -7,7 +7,7 @@ import { can } from "../policy.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { fail, ok } from "../envelope.js";
 import { MaterialError } from "../materialRequests.js";
-import { PoError, reassignPo, receivePo, vendorCannotFulfill } from "../poFulfillment.js";
+import { PoError, reassignPo, receivePo, returnPo, vendorCannotFulfill } from "../poFulfillment.js";
 
 const ReceiveSchema = z.object({
   qty: z.number().finite().positive().max(1_000_000),
@@ -15,6 +15,11 @@ const ReceiveSchema = z.object({
   noFaktur: z.string().max(100).optional(),
   tglFaktur: z.string().max(32).optional(),
   dendaRp: z.number().finite().min(0).optional(),
+});
+const ReturnSchema = z.object({
+  qty: z.number().finite().positive().max(1_000_000),
+  itemId: z.string().trim().min(1).max(128),
+  note: z.string().trim().min(1).max(500),
 });
 const CancelSchema = z.object({ qty: z.number().finite().positive().max(1_000_000), reason: z.string().trim().min(1).max(500) });
 const ReassignSchema = z.object({ vendor: z.string().min(1).max(200), unitPrice: z.number().finite().positive().max(1e13).optional(), eta: z.string().max(32).optional() });
@@ -37,6 +42,18 @@ export function registerPoFulfillmentRoutes(app: FastifyInstance): void {
       const res = await receivePo(id, parsed.data, requestActor(req));
       await writeAudit({ actor: requestActor(req), action: "po_receive", table: "purchaseOrders", rowId: id, diff: { qty: parsed.data.qty, status: res.po.status, fulfilled: res.fulfilled.map((f) => f.id) }, ip: requestIp(req) });
       return ok(res);
+    } catch (err) { return handleError(err, reply); }
+  });
+
+  app.post("/api/purchaseOrders/:id/return", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!canPo(req) && !can(req.user?.role, "movements", "w")) return reply.status(403).send(fail("Peran ini tidak boleh memproses retur barang", "FORBIDDEN"));
+    const parsed = ReturnSchema.safeParse(req.body);
+    if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
+    const { id } = req.params as { id: string };
+    try {
+      const result = await returnPo(id, parsed.data, requestActor(req), String(req.user?.branch ?? ""));
+      await writeAudit({ actor: requestActor(req), action: "po_return", table: "purchaseOrders", rowId: id, diff: { qty: parsed.data.qty, itemId: parsed.data.itemId, movementId: result.movementId }, ip: requestIp(req) });
+      return ok(result);
     } catch (err) { return handleError(err, reply); }
   });
 

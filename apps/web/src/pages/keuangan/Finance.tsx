@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban } from "lucide-react";
 import { openFileUrl } from "../../services/files";
+import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { ID_MON as MONTH_ID } from "../../utils/monthAxis";
@@ -47,8 +48,8 @@ import { useBusy } from "../../components/ui";
 import { n_fin } from "../../i18n/n_fin";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
-import type { StoreItem } from "../../data/store";
-import { useModuleSync, useProjectWbsSync } from "../../data/useModuleSync";
+import type { StoreItem, WbsItem } from "../../data/store";
+import { useModuleSync } from "../../data/useModuleSync";
 import { financeCollectionsForTab } from "../../data/moduleCollections";
 import { fmtRupiah, fmtMiliar, fmtTanggal, fmtJumlah, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -781,7 +782,7 @@ function SptFilingForm({ period, locked, onSave }: {
   );
 }
 
-const { data, add, update, remove, log, branch, inBranch } = useStore();
+const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isSessionGenerationCurrent, captureSideMapEpochs, mergeWbsCache } = useStore();
 
   /* Buka bukti pembayaran di tab baru. window.open(url) biasa ada di sini
      sebelumnya, tapi tab baru tidak membawa header Authorization sehingga
@@ -797,14 +798,9 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
   const [tab, setTab] = useState("Akun");
   useModuleSync(financeCollectionsForTab(tab), [tab]);
-  const financeWbsProjectIds = tab === "Invoice" || tab === "Project P&L"
-    ? (data.projects ?? []).map((project) => String(project.id))
-    : [];
-  const { byProject: financeWbs } = useProjectWbsSync(financeWbsProjectIds);
-  const wbsByProject = useMemo(
-    () => ({ ...(data.wbsByProject ?? {}), ...financeWbs }),
-    [data.wbsByProject, financeWbs],
-  );
+  // WBS tidak diperlukan untuk merender Project P&L; ambil exact hanya ketika
+  // settlement invoice perlu memeriksa syarat penutupan proyek.
+  const wbsByProject = data.wbsByProject ?? {};
   const [retQ, setRetQ] = useState("");
   const [plQ, setPlQ] = useState("");
   const [allocQ, setAllocQ] = useState("");
@@ -826,15 +822,14 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
 
   const projectById = useMemo(() => {
     const m: Record<string, StoreItem> = {};
-    for (const p of data.projects ?? []) m[String(p.id)] = p;
+    for (const p of inBranch(data.projects ?? [])) m[String(p.id)] = p;
     return m;
-  }, [data.projects]);
+  }, [data.projects, inBranch]);
 
   const matchBranch = (projectId: string): boolean => {
     if (branch === "SEMUA") return true;
     const p = projectById[projectId];
-    if (!p || !p.branch) return true;
-    return String(p.branch) === branch;
+    return Boolean(p) && String(p.branch ?? "") === branch;
   };
 
   const invoices = useMemo(
@@ -2420,7 +2415,10 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
   // Lunas mengalir balik: projects.actual (+status bila syarat tutup terpenuhi),
   // bast (invoiceId + paidAt), contracts (paidTotal), clients.creditLimit.
   const afterInvoicePaid = async (inv: StoreItem, paidDate: string, paidRef: string): Promise<void> => {
+    const workflowGeneration = sessionGeneration;
+    const isWorkflowCurrent = () => isSessionGenerationCurrent(workflowGeneration);
     try {
+      if (!isWorkflowCurrent()) return;
       const grand = invNeto(inv);
       const pid = String(inv.project ?? "");
       if (pid) {
@@ -2436,16 +2434,36 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
           const bastOk = (data.bast ?? []).some(
             (b) => String(b.projectId ?? "") === pid && String(b.status) === "Disetujui"
           );
-          const wbs = wbsByProject[pid] ?? [];
-          const totalW = wbs.reduce((s, w) => s + Number(w.weight || 0), 0);
-          const wProg = totalW > 0
-            ? Math.round(wbs.reduce((s, w) => s + Number(w.progress || 0) * Number(w.weight || 0), 0) / totalW)
-            : 0;
-          if (rest.length === 0 && String(proj.tahap) === "Handover" && bastOk && wProg === 100) {
-            patch.status = "Selesai";
+          if (rest.length === 0 && String(proj.tahap) === "Handover" && bastOk) {
+            const backendConfigured = isBackendConfigured();
+            const remoteSession = backendConfigured && Boolean(getJwt());
+            let wbs: WbsItem[] | undefined = backendConfigured ? undefined : wbsByProject[pid];
+            if (remoteSession) {
+              try {
+                const wbsEpochs = captureSideMapEpochs([pid]);
+                const fresh = await apiFetch<{ wbs?: WbsItem[] }>(`/api/projects/${encodeURIComponent(pid)}/wbs`);
+                if (!isWorkflowCurrent()) return;
+                wbs = Array.isArray(fresh.wbs) ? fresh.wbs : [];
+                const accepted = mergeWbsCache(sessionGeneration, { [pid]: wbs }, wbsEpochs);
+                if (!accepted[pid]) wbs = undefined;
+              } catch {
+                if (!isWorkflowCurrent()) return;
+                // Jangan tutup proyek memakai WBS cache yang mungkin stale jika fetch remote gagal.
+                wbs = undefined;
+              }
+            }
+            if (wbs) {
+              const totalW = wbs.reduce((s, w) => s + Number(w.weight || 0), 0);
+              const wProg = totalW > 0
+                ? Math.round(wbs.reduce((s, w) => s + Number(w.progress || 0) * Number(w.weight || 0), 0) / totalW)
+                : 0;
+              if (wProg === 100) patch.status = "Selesai";
+            }
           }
         }
+        if (!isWorkflowCurrent()) return;
         await update("projects", pid, patch);
+        if (!isWorkflowCurrent()) return;
         log("akumulasi realisasi dari pelunasan", `${pid} → ${fmtRupiah(actual)}`, "Keuangan");
         const proj2 = projectById[pid];
         const contract = (data.contracts ?? []).find((c) =>
@@ -2457,7 +2475,9 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
             .filter((i) => String(i.project ?? "") === pid &&
               (String(i.id) === String(inv.id) || String(i.status) === "Lunas"))
             .reduce((s, i) => s + (String(i.id) === String(inv.id) ? grand : invNeto(i)), 0);
+          if (!isWorkflowCurrent()) return;
           await update("contracts", contract.id, { paidTotal, lastPaidAt: paidDate, lastPaidRef: paidRef });
+          if (!isWorkflowCurrent()) return;
           log("akumulasi pembayaran kontrak", `${contract.id} → ${fmtRupiah(paidTotal)}`, "Keuangan");
         }
       }
@@ -2467,17 +2487,21 @@ const { data, add, update, remove, log, branch, inBranch } = useStore();
       if (bastId) {
         const b = (data.bast ?? []).find((x) => String(x.id) === bastId);
         if (b) {
+          if (!isWorkflowCurrent()) return;
           await update("bast", b.id, { invoiceId: String(inv.id), paidAt: paidDate, paidRef });
+          if (!isWorkflowCurrent()) return;
           log("pelunasan invoice BAST", `${bastId} ← ${String(inv.id)} Lunas`, "Keuangan");
         }
       }
       // Plafon kredit klien dipulihkan sebesar grand yang dilunasi.
       const client = (data.clients ?? []).find((c) => sameName(c.name, inv.client));
       if (client && grand > 0) {
+        if (!isWorkflowCurrent()) return;
         await update("clients", client.id, {
           creditLimit: num(client.creditLimit) + grand,
           lastPaidAt: paidDate,
         });
+        if (!isWorkflowCurrent()) return;
         log("pemulihan limit kredit", `${String(client.name)} +${fmtRupiah(grand)}`, "Keuangan");
       }
     } catch {

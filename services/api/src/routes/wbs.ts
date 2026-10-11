@@ -6,6 +6,7 @@ import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { requirePermission } from "../policy.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
+import { exactBranchPredicate } from "./crudSearch.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
 const TeamSchema = z.object({
@@ -20,7 +21,32 @@ interface SideRow {
 
 interface SideWriteOutcome {
   projectMissing: boolean;
+  projectForbidden: boolean;
   conflict: SideRow | null;
+}
+
+interface ProjectScopeUser {
+  role?: string;
+  employeeId?: string | null;
+  branch?: string;
+}
+
+async function projectScopeFor(user: ProjectScopeUser | undefined): Promise<Set<string> | null> {
+  const teamScope = await scopedProjectIds(user);
+  const branch = String(user?.branch ?? "").trim();
+  if (branch === "" || branch === "SEMUA") return teamScope;
+  const rows = await q<{ id: string }>(
+    `SELECT id FROM projects WHERE ${exactBranchPredicate(getDialect())}`,
+    [branch],
+  );
+  const branchScope = new Set(rows.map((row) => row.id));
+  return teamScope === null
+    ? branchScope
+    : new Set([...teamScope].filter((projectId) => branchScope.has(projectId)));
+}
+
+function projectInScope(projectId: string, scope: Set<string> | null): boolean {
+  return scope === null || scope.has(projectId);
 }
 
 /**
@@ -34,7 +60,9 @@ interface SideWriteOutcome {
  * Menambah kolom `updated_at` berarti migrasi produksi, sementara tabel ini
  * menyimpan blob kecil. Jadi klien mengirim `baseData` - isi yang ia yakini
  * masih ada di server - dan server menolak dengan 409 STALE kalau isinya sudah
- * berbeda. Ini persis pola `baseUpdatedAt` yang sudah dipakai tabel utama,
+ * berbeda. Baris yang tidak ada diperlakukan sebagai snapshot server `[]`,
+ * sehingga penghapusan baris sejak fetch juga menghasilkan 409 untuk baseline
+ * non-kosong. Ini persis pola `baseUpdatedAt` yang sudah dipakai tabel utama,
  * jadi klien sudah punya jalur penanganan 409 STALE.
  *
  * `baseData` yang tidak dikirim berarti "menimpa buta" - dipakai klien lama
@@ -57,8 +85,9 @@ async function upsert(table: string, projectId: string, payload: unknown): Promi
 }
 
 export function registerWbsRoutes(app: FastifyInstance): void {
-  app.get("/api/projects/:id/wbs", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
+  app.get("/api/projects/:id/wbs", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
+    if (!projectInScope(id, await projectScopeFor(req.user))) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const rows = await q<SideRow>("SELECT project_id, data FROM wbs_by_project WHERE project_id = ?", [id]);
     const wbs = rows.length > 0 ? (JSON.parse((rows[0] as SideRow).data) as unknown) : [];
     return ok({ projectId: id, wbs });
@@ -68,15 +97,20 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     const parsed = WbsSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
+    if (!projectInScope(id, await projectScopeFor(req.user))) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const lockClause = getDialect() === "mysql" ? " FOR UPDATE" : "";
     const outcome = await withTx<SideWriteOutcome>(async () => {
       // Lock parent row first so writers serialize even before the side row exists.
       const projects = await q<{ id: string }>(`SELECT id FROM projects WHERE id = ?${lockClause}`, [id]);
-      if (projects.length === 0) return { projectMissing: true, conflict: null };
+      if (projects.length === 0) return { projectMissing: true, projectForbidden: false, conflict: null };
+      if (!projectInScope(id, await projectScopeFor(req.user))) {
+        return { projectMissing: false, projectForbidden: true, conflict: null };
+      }
       const beforeRows = await q<SideRow>(`SELECT project_id, data FROM wbs_by_project WHERE project_id = ?${lockClause}`, [id]);
       const current = beforeRows[0] as SideRow | undefined;
-      if (parsed.data.baseData !== undefined && current && JSON.stringify(parsed.data.baseData) !== current.data) {
-        return { projectMissing: false, conflict: current };
+      const serverData = current?.data ?? "[]";
+      if (parsed.data.baseData !== undefined && JSON.stringify(parsed.data.baseData) !== serverData) {
+        return { projectMissing: false, projectForbidden: false, conflict: current ?? { project_id: id, data: serverData } };
       }
       const before = current ? JSON.parse(current.data) as unknown : null;
       await upsert("wbs_by_project", id, parsed.data.wbs);
@@ -88,8 +122,11 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         diff: { before, after: parsed.data.wbs },
         ip: requestIp(req),
       }, { required: true });
-      return { projectMissing: false, conflict: null };
+      return { projectMissing: false, projectForbidden: false, conflict: null };
     });
+    if (outcome.projectForbidden) {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     if (outcome.projectMissing) {
       return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
     }
@@ -103,25 +140,41 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     return ok({ projectId: id, wbs: parsed.data.wbs });
   });
 
-  /* Semua WBS + tim dalam SATU permintaan. Sinkron klien sebelumnya memanggil
-     /wbs dan /team per proyek (2N permintaan tiap sinkron); ini penggantinya.
-     Mengikuti lingkup tim yang sama dengan /api/projects. */
-  app.get("/api/project-sides", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
-    const scope = await scopedProjectIds(req.user);
+  /* Tarik WBS terarah dalam satu request, tanpa team kecuali diminta pemanggil. */
+  app.get("/api/project-sides", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req, reply) => {
+    const query = (req.query ?? {}) as Record<string, string | undefined>;
+    const rawIds = String(query.projects ?? "").trim();
+    const requestedIds = rawIds === "" ? null : [...new Set(rawIds.split(",").map((id) => id.trim()).filter(Boolean))];
+    if (requestedIds && requestedIds.length > 500) {
+      return reply.status(400).send(fail("At most 500 project IDs may be requested", "VALIDATION_ERROR"));
+    }
+    const scope = await projectScopeFor(req.user);
+    const permittedIds = requestedIds?.filter((id) => projectInScope(id, scope));
     const pick = async (tbl: string): Promise<Record<string, unknown>> => {
-      const rows = await q<SideRow>(`SELECT project_id, data FROM ${tbl}`, []);
+      let rows: SideRow[];
+      if (requestedIds) {
+        if (!permittedIds?.length) return {};
+        rows = await q<SideRow>(
+          `SELECT project_id, data FROM ${tbl} WHERE project_id IN (${permittedIds.map(() => "?").join(",")})`,
+          permittedIds,
+        );
+      } else {
+        rows = await q<SideRow>(`SELECT project_id, data FROM ${tbl}`, []);
+      }
       const out: Record<string, unknown> = {};
-      for (const r of rows) {
-        if (scope !== null && !scope.has(r.project_id)) continue;
-        try { out[r.project_id] = JSON.parse(r.data) as unknown; } catch { /* baris rusak dilewati */ }
+      for (const row of rows) {
+        if (!projectInScope(row.project_id, scope)) continue;
+        try { out[row.project_id] = JSON.parse(row.data) as unknown; } catch { /* baris rusak dilewati */ }
       }
       return out;
     };
-    return ok({ wbs: await pick("wbs_by_project"), team: await pick("team_by_project") });
+    const includeTeam = String(query.includeTeam ?? "true").toLowerCase() !== "false";
+    return ok({ wbs: await pick("wbs_by_project"), ...(includeTeam ? { team: await pick("team_by_project") } : {}) });
   });
 
-  app.get("/api/projects/:id/team", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req) => {
+  app.get("/api/projects/:id/team", { preHandler: [requireAuth, requirePermission("projects", "r")] }, async (req, reply) => {
     const { id } = req.params as { id: string };
+    if (!projectInScope(id, await projectScopeFor(req.user))) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     const rows = await q<SideRow>("SELECT project_id, data FROM team_by_project WHERE project_id = ?", [id]);
     const memberIds = rows.length > 0 ? (JSON.parse((rows[0] as SideRow).data) as unknown) : [];
     return ok({ projectId: id, memberIds });
@@ -131,6 +184,7 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     const parsed = TeamSchema.safeParse(req.body);
     if (!parsed.success) return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     const { id } = req.params as { id: string };
+    if (!projectInScope(id, await projectScopeFor(req.user))) return reply.status(404).send(fail("Not found", "NOT_FOUND"));
     for (const memberId of parsed.data.memberIds) {
       const rows = await q("SELECT id FROM employees WHERE id = ?", [memberId]);
       if (rows.length === 0) {
@@ -141,11 +195,15 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     const outcome = await withTx<SideWriteOutcome>(async () => {
       // Lock parent row first so writers serialize even before the side row exists.
       const projects = await q<{ id: string }>(`SELECT id FROM projects WHERE id = ?${lockClause}`, [id]);
-      if (projects.length === 0) return { projectMissing: true, conflict: null };
+      if (projects.length === 0) return { projectMissing: true, projectForbidden: false, conflict: null };
+      if (!projectInScope(id, await projectScopeFor(req.user))) {
+        return { projectMissing: false, projectForbidden: true, conflict: null };
+      }
       const beforeRows = await q<SideRow>(`SELECT project_id, data FROM team_by_project WHERE project_id = ?${lockClause}`, [id]);
       const current = beforeRows[0] as SideRow | undefined;
-      if (parsed.data.baseData !== undefined && current && JSON.stringify(parsed.data.baseData) !== current.data) {
-        return { projectMissing: false, conflict: current };
+      const serverData = current?.data ?? "[]";
+      if (parsed.data.baseData !== undefined && JSON.stringify(parsed.data.baseData) !== serverData) {
+        return { projectMissing: false, projectForbidden: false, conflict: current ?? { project_id: id, data: serverData } };
       }
       const before = current ? JSON.parse(current.data) as unknown : null;
       await upsert("team_by_project", id, parsed.data.memberIds);
@@ -157,8 +215,11 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         diff: { before, after: parsed.data.memberIds },
         ip: requestIp(req),
       }, { required: true });
-      return { projectMissing: false, conflict: null };
+      return { projectMissing: false, projectForbidden: false, conflict: null };
     });
+    if (outcome.projectForbidden) {
+      return reply.status(404).send(fail("Not found", "NOT_FOUND"));
+    }
     if (outcome.projectMissing) {
       return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
     }

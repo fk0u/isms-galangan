@@ -8,6 +8,7 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut,
 import type { SortState } from "../../components/ui";
 import { useBusy, SearchBox, rowMatches } from "../../components/ui";
 import { useStore, type StoreItem } from "../../data/store";
+import { findUniqueInventoryByName } from "../../data/inventoryLookup";
 import { useModuleSync } from "../../data/useModuleSync";
 import { PROCUREMENT_COLLECTIONS } from "../../data/moduleCollections";
 import { findUsages } from "../../utils/usages";
@@ -288,7 +289,7 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
 
 export default function Procurement() {
   const busy = useBusy();
-  const { data, add, update, remove, log, branch, inBranch } = useStore();
+  const { data, add, update, remove, log, branch, inBranch, sessionGeneration } = useStore();
   const poActions = usePoActions();
   const { user } = useAuth();
   const { locale } = useT();
@@ -478,22 +479,44 @@ export default function Procurement() {
   const ensureInventoryRow = useCallback(async (itemId: string, itemName: string): Promise<StoreItem | undefined> => {
     const id = itemId.trim();
     const name = itemName.trim();
-    const cached = inventoryChoices.find((item) => (id && String(item.id) === id)
-      || (name && String(item.name ?? "").toLocaleLowerCase() === name.toLocaleLowerCase()));
-    if (cached) return cached;
-    if (!name || !isBackendConfigured() || !getJwt()) return undefined;
+    const cachedCandidate = id
+      ? inventoryChoices.find((item) => String(item.id) === id)
+      : findUniqueInventoryByName(inventoryChoices, name, (item) => item.name);
+    const cached = cachedCandidate && inBranch([cachedCandidate]).length > 0 ? cachedCandidate : undefined;
+    if (!isBackendConfigured()) return cached;
+    // A partial local inventory cache cannot prove that a name is unique in the server branch.
+    // Keep the ID-selected offline path, but fail closed for name-only resolution without auth.
+    if (!getJwt()) return id ? cached : undefined;
     const repository = remoteRepository("inventory");
-    const page = await repository.listPaged?.({
-      q: name,
-      page: 1,
-      size: 100,
-      ...(branch && branch !== "SEMUA" ? { branch } : {}),
-    });
-    if (!page) return undefined;
-    rememberInventory(page.rows);
-    return page.rows.find((item) => id && String(item.id) === id)
-      ?? page.rows.find((item) => String(item.name ?? "").toLocaleLowerCase() === name.toLocaleLowerCase());
-  }, [branch, inventoryChoices, rememberInventory]);
+    if (id && repository.getById) {
+      try {
+        const fresh = await repository.getById(id);
+        if (inBranch([fresh]).length === 0) return undefined;
+        rememberInventory([fresh]);
+        return fresh;
+      } catch (error) {
+        if (error instanceof ApiError && [401, 403, 404].includes(error.status)) return undefined;
+        return cached;
+      }
+    }
+    if (!name) return cached;
+    try {
+      const page = await repository.listPaged?.({
+        exactName: name,
+        page: 1,
+        size: 2,
+        ...(branch && branch !== "SEMUA" ? { branch } : {}),
+      });
+      if (!page) return undefined;
+      rememberInventory(page.rows);
+      const exactRows = page.rows.filter((item) => String(item.name ?? "").toLocaleLowerCase() === name.toLocaleLowerCase());
+      return page.total === 1 && exactRows.length === 1 ? exactRows[0] : undefined;
+    } catch {
+      // Do not attach an RFQ/PO to a possibly ambiguous row from a partial cache when the
+      // authoritative exact-name lookup could not be completed.
+      return undefined;
+    }
+  }, [branch, inBranch, inventoryChoices, rememberInventory]);
 
   const inventoryPickerOpen = showBig || recvPo !== null;
   useEffect(() => {
@@ -503,7 +526,7 @@ export default function Procurement() {
     const query = inventoryPickerQuery.trim();
     const pageNo = inventoryPickerPage;
     const branchKey = branch && branch !== "SEMUA" ? branch : "";
-    const cacheKey = `${branchKey}|${query.toLocaleLowerCase()}|${pageNo}`;
+    const cacheKey = `${sessionGeneration}|${branchKey}|${query.toLocaleLowerCase()}|${pageNo}`;
     const cached = inventoryPickerCacheRef.current.get(cacheKey);
     if (cached && Date.now() - cached.at < 30_000) {
       setInventoryPickerRows(cached.rows);
@@ -559,11 +582,21 @@ export default function Procurement() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [inventoryPickerOpen, inventoryPickerQuery, inventoryPickerPage, branch, invList, rememberInventory]);
+  }, [inventoryPickerOpen, inventoryPickerQuery, inventoryPickerPage, branch, invList, rememberInventory, sessionGeneration]);
 
   useEffect(() => {
     inventoryPickerCacheRef.current.clear();
   }, [data.inventory]);
+
+  useEffect(() => {
+    inventoryPickerCacheRef.current.clear();
+    setInventoryLookupRows([]);
+    setInventoryPickerRows([]);
+    setShowBig(false);
+    setRecvPo(null);
+    setRecvItem("");
+    setBigForm((previous) => ({ ...previous, itemId: "" }));
+  }, [sessionGeneration]);
 
   const pickerOptions = useMemo(() => {
     const selectedId = showBig ? bigForm.itemId : recvItem;
@@ -903,6 +936,12 @@ export default function Procurement() {
     if (plafon && !plafon.ok) { toast(S.tPlafon.replace("{a}", fmtRupiah(plafon.pakai)).replace("{b}", fmtRupiah(plafon.plafon)), "info"); return; }
     try {
       const exact = await ensureInventoryRow("", String(winRfq.item ?? ""));
+      if (!exact?.id) {
+        toast(locale === "en"
+          ? `No exact inventory item was found for "${String(winRfq.item ?? "")}". Create or select the matching inventory item before awarding this RFQ.`
+          : `Item persediaan yang sama persis dengan "${String(winRfq.item ?? "")}" tidak ditemukan. Buat atau pilih item yang cocok sebelum menetapkan pemenang RFQ.`, "info");
+        return;
+      }
       await update("rfqs", winRfq.id, { winner: winVendor, status: "Diputuskan" });
       const prWin = requisitions.find((r) => r.id === winRfq.prId);
       const wQty = Number(prWin?.qty || 0) > 0 ? Number(prWin?.qty) : 1;
@@ -910,7 +949,7 @@ export default function Procurement() {
       const wProject = String(prWin?.project || "-");
       const wVessel = String(prWin?.vessel || data.projects.find((p) => p.id === String(prWin?.project || ""))?.vessel || "");
       const created = await add("purchaseOrders", {
-        poType: "Besar", item: winRfq.item, itemId: exact?.id ?? "", vendor: winVendor,
+        poType: "Besar", item: winRfq.item, itemId: String(exact.id), vendor: winVendor,
         req: winRfq.prId, prIds: [winRfq.prId], rfqId: winRfq.id, amount: win.price, qty: wQty,
         lines: [{ name: winRfq.item, qty: wQty, unit: wUnit, price: wQty > 0 ? Math.round((Number(win.price) / wQty) * 100) / 100 : Number(win.price) }],
         project: wProject, vessel: wVessel, eta: win.eta, receivedQty: 0, returnedQty: 0,
@@ -1210,14 +1249,11 @@ export default function Procurement() {
     if (qty > maxRet(retPo)) { toast(S.tRetOver.replace("{n}", String(maxRet(retPo))), "info"); return; }
     if (!retNote.trim()) { toast(S.tRetNote, "info"); return; }
     try {
-      const invItem = await ensureInventoryRow(String(retPo.itemId ?? ""), String(retPo.item ?? ""));
+      const itemId = String(retPo.itemId ?? "").trim();
+      if (!itemId) { toast(S.tRetNoLink, "info"); return; }
+      const invItem = await ensureInventoryRow(itemId, String(retPo.item ?? ""));
       if (!invItem) { toast(S.tRetNoLink, "info"); return; }
-      if (Number(invItem.stock) < qty) { toast(S.tRetStok, "info"); return; }
-      await update("inventory", invItem.id, { stock: Number(invItem.stock) - qty });
-      await add("movements", {
-        item: invItem.name, itemId: invItem.id, type: "Retur", qty, by: `${retPo.id} - ${retNote.trim()}`, date: todayISO(), tone: "out",
-      }, { action: "meretur barang", target: `${invItem.name} × ${qty} (${retPo.id})`, module: "Procurement" });
-      await update("purchaseOrders", retPo.id, { returnedQty: Number(retPo.returnedQty || 0) + qty });
+      await poActions.returnStock(retPo, { qty, itemId: String(invItem.id), note: retNote.trim(), actor: user?.name });
       log("meretur barang", `${invItem.name} × ${qty} (${retPo.id}): ${retNote.trim()}`, "Procurement");
       toast(S.tRetOk.replace("{a}", retPo.id).replace("{b}", String(qty)));
       setRetPo(null);

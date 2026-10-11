@@ -27,9 +27,28 @@ async function main(): Promise<void> {
 
   const tag = Date.now().toString(36).toUpperCase();
   const itemId = `STK-POP${tag}`;
+  const returnItemId = `STK-RET${tag}`;
+  const awayReturnItemId = `STK-RETX${tag}`;
+  const scopedDirectorId = `probe-return-dir-${tag}`;
+  const scopedDirectorEmployeeId = `probe-return-emp-${tag}`;
+  const scopedDirectorUsername = `${scopedDirectorId}@galangan.com`;
   await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
     itemId, "Samarinda", JSON.stringify({ name: "Probe Valve", unit: "pcs", stock: 0, cost: 100000 }), new Date().toISOString(),
   ]);
+  await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    returnItemId, "Samarinda", JSON.stringify({ name: "Probe Return Valve", unit: "pcs", stock: 5, cost: 100000 }), new Date().toISOString(),
+  ]);
+  await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    awayReturnItemId, "Banjarmasin", JSON.stringify({ name: "Probe Away Return Valve", unit: "pcs", stock: 2, cost: 100000 }), new Date().toISOString(),
+  ]);
+  await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    scopedDirectorEmployeeId, "Samarinda", JSON.stringify({ nama: "Probe Return Director" }), new Date().toISOString(),
+  ]);
+  await exec(
+    "INSERT INTO users (id, username, pass_hash, name, role, email, is_active, token_version, employee_id) VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)",
+    [scopedDirectorId, scopedDirectorUsername, "hash", "Probe Return Director", "direktur", scopedDirectorUsername, scopedDirectorEmployeeId],
+  );
+  const scopedDirector = signToken({ id: scopedDirectorId, username: scopedDirectorUsername, role: "direktur", branch: "Samarinda", v: 0 });
   const poIds: string[] = [];
   let mrId = "";
   let prId = "";
@@ -106,15 +125,60 @@ async function main(): Promise<void> {
     poIds.push(legacyId);
     const legacyRecv = await post(dir, `/api/purchaseOrders/${legacyId}/receive`, { qty: 3 });
     assert("PO lama tanpa qty → diterima penuh", legacyRecv.statusCode === 200 && (await poOf(legacyId)).status === "Diterima", legacyRecv.body);
+
+    const returnPoRes = await post(dir, "/api/purchaseOrders", { branch: "Samarinda", data: {
+      poType: "Besar", item: "Probe Return Valve", itemId: returnItemId, vendor: "PT Vendor Retur Probe", qty: 5,
+      receivedQty: 5, returnedQty: 0, amount: 500000, status: "Diterima", date: "2026-10-10",
+    } });
+    const returnPoId = (returnPoRes.json().data as { id: string }).id;
+    poIds.push(returnPoId);
+    const deniedReturn = await post(viewer, `/api/purchaseOrders/${returnPoId}/return`, { qty: 1, itemId: returnItemId, note: "probe" });
+    assert("viewer tidak boleh memproses retur PO → 403", deniedReturn.statusCode === 403, deniedReturn.body);
+    const returned = await post(dir, `/api/purchaseOrders/${returnPoId}/return`, { qty: 2, itemId: returnItemId, note: "Probe retur" });
+    const returnData = returned.json().data as { movementId: string } | undefined;
+    const returnPoAfter = await poOf(returnPoId);
+    const returnStockAfter = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [returnItemId]))[0]?.data ?? "{}") as { stock: number }).stock);
+    const returnMovement = returnData?.movementId
+      ? await q<{ branch: string; data: string }>("SELECT branch, data FROM movements WHERE id = ?", [returnData.movementId])
+      : [];
+    const returnMovementData = returnMovement[0] ? JSON.parse(returnMovement[0].data) as Record<string, unknown> : {};
+    assert("retur 2 atomik: stok turun 5→3, PO returnedQty=2, movement tercatat", returned.statusCode === 200
+      && returnStockAfter === 3 && returnPoAfter.returnedQty === 2
+      && returnMovementData.type === "Retur" && returnMovementData.qty === 2
+      && returnMovementData.itemId === returnItemId && returnMovement[0]?.branch === "Samarinda", returned.body);
+
+    const overReturn = await post(dir, `/api/purchaseOrders/${returnPoId}/return`, { qty: 4, itemId: returnItemId, note: "Over retur" });
+    const unchangedPo = await poOf(returnPoId);
+    const unchangedStock = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [returnItemId]))[0]?.data ?? "{}") as { stock: number }).stock);
+    assert("over-return ditolak tanpa mutasi stok atau PO → 422", overReturn.statusCode === 422 && unchangedStock === 3 && unchangedPo.returnedQty === 2, overReturn.body);
+
+    const wrongSku = await post(dir, `/api/purchaseOrders/${returnPoId}/return`, { qty: 1, itemId, note: "SKU salah" });
+    assert("SKU berbeda dari item PO ditolak → 422", wrongSku.statusCode === 422, wrongSku.body);
+
+    const awayPoRes = await post(dir, "/api/purchaseOrders", { branch: "Banjarmasin", data: {
+      poType: "Besar", item: "Probe Away Return Valve", itemId: awayReturnItemId, vendor: "PT Vendor Retur Probe", qty: 2,
+      receivedQty: 2, returnedQty: 0, amount: 200000, status: "Diterima", date: "2026-10-10",
+    } });
+    const awayPoId = (awayPoRes.json().data as { id: string }).id;
+    poIds.push(awayPoId);
+    const branchDeniedReturn = await post(scopedDirector, `/api/purchaseOrders/${awayPoId}/return`, { qty: 1, itemId: awayReturnItemId, note: "Lintas cabang" });
+    const awayStock = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [awayReturnItemId]))[0]?.data ?? "{}") as { stock: number }).stock);
+    assert("retur lintas cabang ditolak tanpa mengubah stok → 404", branchDeniedReturn.statusCode === 404 && awayStock === 2, branchDeniedReturn.body);
   } finally {
     for (const id of poIds) await exec("DELETE FROM purchaseOrders WHERE id = ?", [id]);
     for (const id of poIds) await exec("DELETE FROM audit_log WHERE row_id = ?", [id]);
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%${itemId}%`]);
+    await exec("DELETE FROM movements WHERE data LIKE ?", [`%${returnItemId}%`]);
+    await exec("DELETE FROM movements WHERE data LIKE ?", [`%${awayReturnItemId}%`]);
     await exec("DELETE FROM materialRequests WHERE data LIKE ?", [`%${itemId}%`]);
     await exec("DELETE FROM requisitions WHERE data LIKE ?", [`%${itemId}%`]);
     if (mrId) await exec("DELETE FROM audit_log WHERE row_id = ?", [mrId]);
     await exec("DELETE FROM audit_log WHERE action = 'material_request' AND diff LIKE ?", [`%${itemId}%`]);
     await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
+    await exec("DELETE FROM inventory WHERE id = ?", [returnItemId]);
+    await exec("DELETE FROM inventory WHERE id = ?", [awayReturnItemId]);
+    await exec("DELETE FROM employees WHERE id = ?", [scopedDirectorEmployeeId]);
+    await exec("DELETE FROM users WHERE id = ?", [scopedDirectorId]);
   }
 
   console.log(`\n${passed}/${total} pemeriksaan PO sebagian lolos.`);

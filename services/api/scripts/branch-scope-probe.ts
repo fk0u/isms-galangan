@@ -12,9 +12,16 @@ async function main() {
   const scopedUserId = `probe-proyek-${fixtureSuffix}`;
   const scopedEmployeeId = `probe-employee-${fixtureSuffix}`;
   const emptyBranchRowId = `probe-empty-branch-${fixtureSuffix}`;
+  const outOfScopeProjectId = `PRJ-PROBE-${fixtureSuffix}`;
   const surveyId1 = `S-PROBE-${fixtureSuffix}-1`;
   const surveyId2 = `S-PROBE-${fixtureSuffix}-2`;
   const otherSurveyId = `S-PROBE-${fixtureSuffix}-3`;
+  const exactInventoryName = `Probe exact inventory ${fixtureSuffix}`;
+  const inventoryNoiseIds = Array.from({ length: 105 }, (_, index) => `INV-PROBE-${fixtureSuffix}-noise-${String(index).padStart(3, "0")}`);
+  const inventoryExactId = `INV-PROBE-${fixtureSuffix}-exact`;
+  const inventoryForeignExactId = `INV-PROBE-${fixtureSuffix}-foreign`;
+  const inventoryFixtureIds = [...inventoryNoiseIds, inventoryExactId, inventoryForeignExactId];
+  const scopedWbsFixture = [{ id: "probe-wbs-node" }];
 
   try {
   let passed = 0;
@@ -76,6 +83,40 @@ async function main() {
     [scopedUserId, scopedUsername, "hash", "Probe Proyek", "proyek", scopedUsername, scopedEmployeeId],
   );
   const projToken = signToken({ id: scopedUserId, username: scopedUsername, role: "proyek", branch: "Samarinda", v: 0 });
+
+  const inventoryFixtureRows = [
+    ...inventoryNoiseIds.map((id) => ({
+      id, branch: "Samarinda", data: JSON.stringify({ name: `${exactInventoryName} variant` }), updated_at: "2026-10-01T00:00:00.000Z",
+    })),
+    { id: inventoryExactId, branch: "Samarinda", data: JSON.stringify({ name: exactInventoryName }), updated_at: "2099-12-31T23:59:59.999Z" },
+    { id: inventoryForeignExactId, branch: "Banjarmasin", data: JSON.stringify({ name: exactInventoryName }), updated_at: "2099-12-31T23:59:59.999Z" },
+  ];
+  await exec(
+    `INSERT INTO inventory (id, branch, data, updated_at) VALUES ${inventoryFixtureRows.map(() => "(?, ?, ?, ?)").join(",")}`,
+    inventoryFixtureRows.flatMap((row) => [row.id, row.branch, row.data, row.updated_at]),
+  );
+
+  const exactInventoryQuery = new URLSearchParams({ exactName: exactInventoryName, branch: "Samarinda", limit: "2", offset: "0" });
+  const exactInventoryRes = await app.inject({
+    method: "GET", url: `/api/inventory?${exactInventoryQuery}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  const exactInventoryBody = JSON.parse(exactInventoryRes.body)?.data as { rows?: Array<{ id: string }>; total?: number } | undefined;
+  assert(
+    "Lookup exact inventory melewati substring matches tetapi hanya mengembalikan item Samarinda",
+    exactInventoryRes.statusCode === 200 && exactInventoryBody?.total === 1
+      && exactInventoryBody.rows?.length === 1 && exactInventoryBody.rows[0]?.id === inventoryExactId,
+    `HTTP ${exactInventoryRes.statusCode}; total=${exactInventoryBody?.total}; rows=${exactInventoryBody?.rows?.length}`,
+  );
+  const forgedInventoryQuery = new URLSearchParams({ exactName: exactInventoryName, branch: "Banjarmasin", limit: "2", offset: "0" });
+  const forgedInventoryRes = await app.inject({
+    method: "GET", url: `/api/inventory?${forgedInventoryQuery}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  const forgedInventoryBody = JSON.parse(forgedInventoryRes.body)?.data as { rows?: Array<{ id: string }>; total?: number } | undefined;
+  assert(
+    "Lookup exact inventory tidak dapat memperluas branch lewat query palsu",
+    forgedInventoryRes.statusCode === 200 && forgedInventoryBody?.total === 0 && forgedInventoryBody.rows?.length === 0,
+    `HTTP ${forgedInventoryRes.statusCode}; total=${forgedInventoryBody?.total}; rows=${forgedInventoryBody?.rows?.length}`,
+  );
 
   // 2. POST oleh peran operasional (proyek) tanpa branch -> dipaksa default Samarinda
   const createRes1 = await app.inject({
@@ -150,6 +191,101 @@ async function main() {
   });
   assert("GET-by-id lintas cabang disamarkan sebagai 404", crossBranchGetRes.statusCode === 404, `HTTP ${crossBranchGetRes.statusCode}`);
 
+  const crossBranchPatchRes = await app.inject({
+    method: "PATCH", url: `/api/surveys/${createdOther.id}`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { data: { judul: "Tidak boleh diubah lintas cabang" } },
+  });
+  assert("PATCH row lintas cabang ditolak sebagai 404", crossBranchPatchRes.statusCode === 404, `HTTP ${crossBranchPatchRes.statusCode}`);
+
+  const crossBranchDeleteRes = await app.inject({
+    method: "DELETE", url: `/api/surveys/${createdOther.id}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("DELETE row lintas cabang ditolak sebagai 404", crossBranchDeleteRes.statusCode === 404, `HTTP ${crossBranchDeleteRes.statusCode}`);
+
+  // Sama-cabang project di luar keanggotaan harus tertutup pada semua by-id verbs.
+  await exec(
+    "INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)",
+    [outOfScopeProjectId, "Samarinda", JSON.stringify({ vessel: "Probe Vessel", client: "Probe Client" }), new Date().toISOString()],
+  );
+  const outOfScopeProjectPatchRes = await app.inject({
+    method: "PATCH", url: `/api/projects/${outOfScopeProjectId}`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { data: { note: "Tidak boleh diubah di luar team scope" } },
+  });
+  assert("PATCH project satu-cabang di luar team scope ditolak 404", outOfScopeProjectPatchRes.statusCode === 404, `HTTP ${outOfScopeProjectPatchRes.statusCode}`);
+
+  const outOfScopeProjectDeleteRes = await app.inject({
+    method: "DELETE", url: `/api/projects/${outOfScopeProjectId}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("DELETE project satu-cabang di luar team scope ditolak 404", outOfScopeProjectDeleteRes.statusCode === 404, `HTTP ${outOfScopeProjectDeleteRes.statusCode}`);
+
+  const teamGrantRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/team`,
+    headers: { authorization: `Bearer ${globalToken}`, "content-type": "application/json" },
+    payload: { memberIds: [scopedEmployeeId], baseData: [] },
+  });
+  assert("Admin dapat memberi membership fixture proyek", teamGrantRes.statusCode === 200, `HTTP ${teamGrantRes.statusCode}`);
+
+  const inScopeProjectGetRes = await app.inject({
+    method: "GET", url: `/api/projects/${outOfScopeProjectId}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("Member proyek dapat membaca project dalam team scope", inScopeProjectGetRes.statusCode === 200, `HTTP ${inScopeProjectGetRes.statusCode}`);
+
+  const inScopeProjectPatchRes = await app.inject({
+    method: "PATCH", url: `/api/projects/${outOfScopeProjectId}`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { data: { note: "Perubahan oleh anggota proyek" } },
+  });
+  assert("Member proyek dapat PATCH project dalam team scope", inScopeProjectPatchRes.statusCode === 200, `HTTP ${inScopeProjectPatchRes.statusCode}`);
+
+  const inScopeWbsPutRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/wbs`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { wbs: scopedWbsFixture, baseData: [] },
+  });
+  assert("Member proyek dapat menulis WBS dalam team scope", inScopeWbsPutRes.statusCode === 200, `HTTP ${inScopeWbsPutRes.statusCode}`);
+
+  const inScopeTeamPutRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/team`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { memberIds: [scopedEmployeeId], baseData: [scopedEmployeeId] },
+  });
+  assert("Member proyek dapat menulis Team dalam team scope", inScopeTeamPutRes.statusCode === 200, `HTTP ${inScopeTeamPutRes.statusCode}`);
+
+  const teamRevokeRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/team`,
+    headers: { authorization: `Bearer ${globalToken}`, "content-type": "application/json" },
+    payload: { memberIds: [], baseData: [scopedEmployeeId] },
+  });
+  assert("Admin dapat mencabut membership fixture proyek", teamRevokeRes.statusCode === 200, `HTTP ${teamRevokeRes.statusCode}`);
+
+  const revokedProjectPatchRes = await app.inject({
+    method: "PATCH", url: `/api/projects/${outOfScopeProjectId}`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { data: { note: "Tidak boleh diubah setelah membership dicabut" } },
+  });
+  assert("PATCH proyek ditolak 404 setelah membership dicabut", revokedProjectPatchRes.statusCode === 404, `HTTP ${revokedProjectPatchRes.statusCode}`);
+
+  const revokedWbsPutRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/wbs`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { wbs: [], baseData: scopedWbsFixture },
+  });
+  assert("PUT WBS ditolak 404 setelah membership dicabut", revokedWbsPutRes.statusCode === 404, `HTTP ${revokedWbsPutRes.statusCode}`);
+
+  const revokedTeamPutRes = await app.inject({
+    method: "PUT", url: `/api/projects/${outOfScopeProjectId}/team`,
+    headers: { authorization: `Bearer ${projToken}`, "content-type": "application/json" },
+    payload: { memberIds: [], baseData: [scopedEmployeeId] },
+  });
+  assert("PUT Team ditolak 404 setelah membership dicabut", revokedTeamPutRes.statusCode === 404, `HTTP ${revokedTeamPutRes.statusCode}`);
+
+  const revokedProjectDeleteRes = await app.inject({
+    method: "DELETE", url: `/api/projects/${outOfScopeProjectId}`, headers: { authorization: `Bearer ${projToken}` },
+  });
+  assert("DELETE proyek ditolak 404 setelah membership dicabut", revokedProjectDeleteRes.statusCode === 404, `HTTP ${revokedProjectDeleteRes.statusCode}`);
+
   const emptyBranchGetRes = await app.inject({
     method: "GET", url: `/api/surveys/${emptyBranchRowId}`, headers: { authorization: `Bearer ${projToken}` },
   });
@@ -213,6 +349,11 @@ async function main() {
       }
     };
     await cleanup("DELETE FROM surveys WHERE id IN (?, ?, ?, ?)", [surveyId1, surveyId2, otherSurveyId, emptyBranchRowId]);
+    await cleanup(`DELETE FROM inventory WHERE id IN (${inventoryFixtureIds.map(() => "?").join(",")})`, inventoryFixtureIds);
+    await cleanup("DELETE FROM audit_log WHERE table_name IN ('projects', 'team_by_project', 'wbs_by_project') AND row_id = ?", [outOfScopeProjectId]);
+    await cleanup("DELETE FROM wbs_by_project WHERE project_id = ?", [outOfScopeProjectId]);
+    await cleanup("DELETE FROM team_by_project WHERE project_id = ?", [outOfScopeProjectId]);
+    await cleanup("DELETE FROM projects WHERE id = ?", [outOfScopeProjectId]);
     await cleanup("DELETE FROM users WHERE id IN (?, ?)", [globalUserId, scopedUserId]);
     await cleanup("DELETE FROM employees WHERE id = ?", [scopedEmployeeId]);
     try {
