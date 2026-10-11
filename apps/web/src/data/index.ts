@@ -677,6 +677,12 @@ export const purchaseOrders = [
   { id: "PO-2026-115", item: "Aux Engine MAK", vendor: "PT Indo Diesel", req: "PR-2026-201", amount: 1700000000, status: "Diterima", date: "2026-07-05" },
   { id: "PO-2026-116", item: "Cat Epoxy", vendor: "PT Jotun Indonesia", req: "PR-2026-207", amount: 480000000, status: "Menunggu Persetujuan", date: "2026-07-28" },
   { id: "PO-2026-117", item: "Wire Rope", vendor: "PT Steel Rig", req: "PR-2026-209", amount: 210000000, status: "Dikirim", date: "2026-07-30" },
+  /* F3-J-03 demo: riwayat harga untuk panel perbandingan di RFQ (data sintetis). */
+  { id: "PO-2025-141", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Jotun Indonesia", req: "-", qty: 400, amount: 76000000, receivedQty: 400, status: "Diterima", date: "2025-11-12" },
+  { id: "PO-2026-032", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Bahana Baja", req: "-", qty: 600, amount: 111000000, receivedQty: 600, status: "Diterima", date: "2026-02-20" },
+  { id: "PO-2026-077", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Jotun Indonesia", req: "-", qty: 500, amount: 97500000, receivedQty: 500, status: "Diterima", date: "2026-05-18" },
+  { id: "PO-2026-059", poType: "Besar", item: "Wire Rope 22mm", vendor: "PT Steel Rig", req: "-", qty: 300, amount: 61500000, receivedQty: 300, status: "Diterima", date: "2026-04-03" },
+  { id: "PO-2025-166", poType: "Besar", item: "Wire Rope 22mm", vendor: "PT Primabaja", req: "-", qty: 250, amount: 53750000, receivedQty: 250, status: "Diterima", date: "2025-12-09" },
   /* F3-J-02 demo: PO Anoda Zink untuk MR-2026-002 (PR-2026-211) sedang dikirim —
      peragakan terima sebagian, vendor tidak sanggup, lalu alihkan ke vendor lain.
      PO-2026-098 = riwayat harga vendor lain untuk item yang sama. */

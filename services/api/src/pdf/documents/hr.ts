@@ -238,7 +238,11 @@ export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document
   d.add(companyKop());
   d.add(
     docTitle({
-      title: input.jenis.toUpperCase(),
+      title: input.kontrak
+        ? (input.kontrak.sebelumnya
+          ? L(locale, "SURAT PERPANJANGAN KONTRAK KERJA", "EMPLOYMENT CONTRACT EXTENSION")
+          : L(locale, "SURAT PERJANJIAN KERJA", "EMPLOYMENT AGREEMENT"))
+        : input.jenis.toUpperCase(),
       ref: `${L(locale, "No", "No")}. ${input.no}`,
     }),
   );

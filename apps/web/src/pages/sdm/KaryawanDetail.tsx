@@ -580,9 +580,9 @@ export default function KaryawanDetail() {
               <input type="range" min={0} max={100} step={5} className="flex-1" value={skillForm.pct} onChange={(e) => setSkillForm({ ...skillForm, pct: Number(e.target.value) })} aria-label={E.skillLevel} />
               <input type="number" min={0} max={100} className="input w-16 px-2 py-1 text-xs" value={skillForm.pct} onChange={(e) => setSkillForm({ ...skillForm, pct: Number(e.target.value) || 0 })} aria-label={E.skillLevel} />
             </label>
-            <div className="flex gap-2">
-              <input type="date" className="input flex-1" value={skillForm.at} onChange={(e) => setSkillForm({ ...skillForm, at: e.target.value })} aria-label={E.skillAt} />
-              <input className="input flex-1" value={skillForm.by} onChange={(e) => setSkillForm({ ...skillForm, by: e.target.value })} placeholder={E.skillBy} />
+            <div className="flex flex-wrap gap-2">
+              <input type="date" className="input min-w-36 flex-1" value={skillForm.at} onChange={(e) => setSkillForm({ ...skillForm, at: e.target.value })} aria-label={E.skillAt} />
+              <input className="input min-w-36 flex-1" value={skillForm.by} onChange={(e) => setSkillForm({ ...skillForm, by: e.target.value })} placeholder={E.skillBy} />
             </div>
             <AsyncButton className="btn-secondary w-full text-xs" onAction={saveSkill}>{S.btnTambah}</AsyncButton>
           </div>

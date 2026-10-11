@@ -52,7 +52,7 @@ import { canonPrioritas, scopeList } from "../../utils/scope";
 import { equipmentCostSummary } from "../../utils/projectCost";
 import { employeeOptions } from "../../utils/employeeOptions";
 import { projectDelayDetailsOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
-import { generateRisksFromWbs, generateRisksFromWo } from "../../utils/riskAuto";
+import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRisk } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
 import { PhotoUploader } from "../../components/PhotoUploader";
@@ -411,7 +411,8 @@ if (from === "Desain" && to === "Produksi") {
     const wbsResult = generateRisksFromWbs(project.id, wbs, existingRisks, today, msDays);
     const woResult = generateRisksFromWo(project.id, data.workOrders.filter((w) => w.project === project.id), existingRisks, today, msDays);
     for (const draft of [...wbsResult.add, ...woResult.add]) {
-      void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => {});
+      if (!claimAutoRisk(String(project.id), draft)) continue;
+      void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(project.id), draft));
     }
     for (const id of [...wbsResult.close, ...woResult.close]) {
       void update("risks", id, { status: "Tertutup" }).catch(() => {});

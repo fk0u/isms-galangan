@@ -269,3 +269,24 @@ export function generateRisksFromWo(
 
   return { add, close };
 }
+/* Penjaga balapan: efek pemanggil berjalan ulang setiap kali `projects`
+   berganti identitas (beberapa kali saat sinkronisasi awal), sementara
+   `add("risks")` sebelumnya belum sempat masuk ke store - sehingga risiko
+   yang sama dibuat 7-8 kali dalam satu kali buka halaman. Satu kunci
+   (proyek + sumber + pekerjaan) hanya boleh diklaim sekali per sesi tab. */
+const claimed = new Set<string>();
+const claimKey = (projectId: string, d: { source?: unknown; wbsTask?: unknown; title?: unknown }): string =>
+  `${projectId}|${String(d.source ?? "")}|${String(d.wbsTask ?? d.title ?? "")}`;
+
+/** true hanya pada klaim pertama; pemanggil baru boleh menulis bila true. */
+export function claimAutoRisk(projectId: string, draft: { source?: unknown; wbsTask?: unknown; title?: unknown }): boolean {
+  const key = claimKey(projectId, draft);
+  if (claimed.has(key)) return false;
+  claimed.add(key);
+  return true;
+}
+
+/** Lepas klaim bila tulisnya gagal, supaya bisa dicoba lagi nanti. */
+export function releaseAutoRisk(projectId: string, draft: { source?: unknown; wbsTask?: unknown; title?: unknown }): void {
+  claimed.delete(claimKey(projectId, draft));
+}
