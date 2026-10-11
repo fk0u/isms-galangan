@@ -2,7 +2,9 @@
  * Baris dibuat server saat proyek mengambil material (WBS / sparepart). Sisa
  * yang kurang dipenuhi dari stok setelah barang PO masuk gudang. */
 import { useMemo, useState } from "react";
-import { PackageCheck } from "lucide-react";
+import { PackageCheck, Ship, ClipboardList, Truck } from "lucide-react";
+import { FlowTree, type FlowNode } from "../../components/FlowTree";
+import { n_tree } from "../../i18n/n_tree";
 import { Badge, EmptyState, SearchBox, rowMatches, toast, AsyncButton } from "../../components/ui";
 import { useStore, type StoreItem } from "../../data/store";
 import { useFulfillMaterialRequest } from "../../data/useMaterialRequest";
@@ -54,6 +56,50 @@ export default function MaterialRequestsTab() {
     return Math.max(0, Number(it?.stock ?? 0) || 0);
   };
 
+  /* Alur bercabang: proyek → permintaan → PR → PO → PO pengalihan vendor.
+     Rantai dibaca dari data yang sudah ada: MR.requisitionId, PO.req, PO.reassignedFrom. */
+  const TR = n_tree[locale];
+  const poNode = (po: StoreItem): FlowNode => {
+    const qty = Number(po.qty ?? 0);
+    const received = Number(po.receivedQty ?? 0);
+    const cancelled = Number(po.cancelledQty ?? 0);
+    const kids = (data.purchaseOrders ?? []).filter((x) => String(x.reassignedFrom ?? "") === String(po.id)).map(poNode);
+    return {
+      id: `po:${String(po.id)}`, kind: "leaf", icon: <Truck className="h-3.5 w-3.5" />,
+      title: `${String(po.id)} · ${String(po.vendor ?? "-")}`,
+      subtitle: qty > 0
+        ? TR.procPoQty.replace("{r}", fmtJumlah(received)).replace("{q}", fmtJumlah(qty)) + (cancelled > 0 ? ` · ${TR.procPoCancelled.replace("{n}", fmtJumlah(cancelled))}` : "")
+        : String(po.date ?? ""),
+      trailing: <Badge tone={String(po.status) === "Diterima" ? "green" : "amber"}>{String(po.status ?? "-")}</Badge>,
+      children: kids,
+    };
+  };
+  const flow: FlowNode[] = [...new Set(shown.map((m) => String(m.projectId ?? "-")))].map((pid) => {
+    const proj = (data.projects ?? []).find((p) => String(p.id) === pid);
+    const mrs = shown.filter((m) => String(m.projectId ?? "-") === pid);
+    return {
+      id: `prj:${pid}`, kind: "group" as const, icon: <Ship className="h-4 w-4" />,
+      title: proj ? `${String(proj.vessel ?? pid)}` : pid, subtitle: `${pid} · ${TR.procMrN.replace("{n}", String(mrs.length))}`,
+      children: mrs.map((m) => {
+        const st = mrDisplayStatus(m, data.requisitions ?? []);
+        const pr = (data.requisitions ?? []).find((r) => String(r.id) === String(m.requisitionId ?? ""));
+        const pos = pr ? (data.purchaseOrders ?? []).filter((po) => String(po.req ?? "") === String(pr.id) && String(po.reassignedFrom ?? "") === "") : [];
+        return {
+          id: `mr:${String(m.id)}`, kind: "item" as const, icon: <PackageCheck className="h-4 w-4" />,
+          title: `${String(m.item ?? "-")} · ${fmtJumlah(Number(m.requested ?? 0))} ${String(m.unit ?? "")}`,
+          subtitle: `${String(m.id)}${m.wbsTask ? ` · ${String(m.wbsTask)}` : ""} · ${fmtTanggal(String(m.date ?? ""))}`,
+          trailing: <Badge tone={stTone(st)}>{stLabel[st] ?? st}</Badge>,
+          children: pr ? [{
+            id: `pr:${String(pr.id)}`, kind: "leaf" as const, icon: <ClipboardList className="h-3.5 w-3.5" />,
+            title: `${String(pr.id)} · ${TR.procPrShort.replace("{n}", fmtJumlah(Number(m.shortage ?? 0)))}`,
+            subtitle: String(pr.status ?? ""),
+            children: pos.map(poNode),
+          }] : [],
+        };
+      }),
+    };
+  });
+
   const doFulfill = async (m: StoreItem) => {
     try {
       const res = await fulfill(String(m.id), user?.name);
@@ -92,6 +138,13 @@ export default function MaterialRequestsTab() {
           ))}
         </div>
       </div>
+
+      {flow.length > 0 && (
+        <div className="rounded-xl border border-steel-200 bg-white p-4">
+          <p className="mb-1 text-xs text-steel-500">{TR.procIntro}</p>
+          <FlowTree key={`${filter}:${q}`} nodes={flow} defaultOpen={flow.map((n) => n.id)} labels={{ expand: TR.expand, collapse: TR.collapse, expandAll: TR.expandAll, collapseAll: TR.collapseAll }} />
+        </div>
+      )}
 
       {shown.length === 0 ? (
         <EmptyState icon={<PackageCheck className="h-6 w-6" />} title={T.mrEmptyT} subtitle={T.mrEmptyS} />

@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -56,6 +56,8 @@ import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRi
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
 import WbsTree from "./WbsTree";
+import { FlowTree, type FlowNode } from "../../components/FlowTree";
+import { n_tree } from "../../i18n/n_tree";
 import { PhotoUploader } from "../../components/PhotoUploader";
 import type { PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
@@ -473,6 +475,29 @@ if (from === "Desain" && to === "Produksi") {
   const docs = data.documents.filter((d) => d.project === pid);
   /* PRJ-20: dokumen dikelompokkan per tipe (BoQ, Kontrak, Drawing, ...). */
   const docsByType = [...docs].sort((x, y) => String(x.type ?? "").localeCompare(String(y.type ?? "")));
+  const TR = n_tree[locale];
+  const docTree: FlowNode[] = [...new Set(docsByType.map((d) => String(d.type ?? "-")))].map((type) => {
+    const list = docsByType.filter((d) => String(d.type ?? "-") === type);
+    return {
+      id: `t:${type}`, kind: "group" as const, icon: <FileText className="h-4 w-4" />,
+      title: type, subtitle: TR.docsN.replace("{n}", String(list.length)),
+      children: list.map((d) => {
+        const saved = (Array.isArray(d.revisions) ? d.revisions : []) as { version?: string; at?: string; by?: string; note?: string }[];
+        const revs = saved.length > 0 ? saved : [{ version: String(d.version ?? "-"), at: String(d.updated ?? ""), by: String(d.owner ?? "-"), note: TR.currentVersion }];
+        return {
+          id: String(d.id), kind: "item" as const, icon: <FileText className="h-4 w-4" />,
+          title: String(d.title), subtitle: `${String(d.id)} · ${String(d.version ?? "-")} · ${fmtTanggal(String(d.updated ?? ""))}`,
+          trailing: <StatusBadge status={d.status} />,
+          onOpen: () => setDocDetail(d),
+          children: [...revs].reverse().map((r, i) => ({
+            id: `${String(d.id)}:rev:${i}`, kind: "leaf" as const,
+            title: `${String(r.version ?? "-")}${r.note ? ` - ${String(r.note)}` : ""}`,
+            subtitle: TR.revBy.replace("{date}", r.at ? fmtTanggal(String(r.at)) : "-").replace("{by}", String(r.by ?? "-")),
+          })),
+        };
+      }),
+    };
+  });
   const wos = data.workOrders.filter((w) => w.project === pid);
   const coList = data.changeOrders.filter((c) => c.project === pid);
   const riskList = data.risks.filter((r) => r.project === pid);
@@ -1815,6 +1840,12 @@ const createWarranty = async (wbsTask?: string) => {
               <div className="mb-3 flex justify-end">
                 <button className="btn-secondary text-xs" onClick={() => setShowDoc(true)}><Plus className="h-3.5 w-3.5" /> {S.detAddDoc}</button>
               </div>
+              {/* Alur bercabang: tipe → dokumen → riwayat revisi. Kartu di bawah tetap untuk pratinjau & berbagi. */}
+              {docsByType.length > 0 && (
+                <div className="mb-4 rounded-xl border border-steel-100 p-3">
+                  <FlowTree nodes={docTree} defaultOpen={docTree.map((n) => n.id)} labels={{ expand: TR.expand, collapse: TR.collapse, expandAll: TR.expandAll, collapseAll: TR.collapseAll }} />
+                </div>
+              )}
               <div className="space-y-2">
                 {docsByType.map((d, idx) => {
                   const url = docUrlOf(d);

@@ -20,6 +20,8 @@ import { Badge, Card, ConfirmModal, EmptyState, toast, AsyncButton } from "../..
 import { fmtRupiah } from "../../utils/export";
 import { fmtTanggal, todayISO } from "../../utils/format";
 import BoQSection from "./BoQSection";
+import { FlowTree, type FlowNode } from "../../components/FlowTree";
+import { n_tree } from "../../i18n/n_tree";
 import { usePdfDoc } from "../../components/usePdfDoc";
 
 type DocStatus = "Draft" | "Diajukan" | "Disetujui" | "Ditolak" | "Digantikan";
@@ -157,6 +159,29 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
     setConfirm(null);
   };
 
+  const TR = n_tree[locale];
+  const boqTree: FlowNode[] = [...new Set(docs.map((d) => d.number))].map((number) => {
+    const revs = docs.filter((d) => d.number === number);
+    return {
+      id: `n:${number}`, kind: "group" as const, icon: <FileText className="h-4 w-4" />,
+      title: number, subtitle: TR.boqRevN.replace("{n}", String(revs.length)),
+      children: revs.map((d) => {
+        const items = itemsOf(d.id);
+        return {
+          id: d.id, kind: "item" as const, icon: <GitBranch className="h-4 w-4" />,
+          title: `Rev ${d.revision} · ${fmtRupiah(totalOf(d.id))}`,
+          subtitle: `${TR.boqItemsN.replace("{n}", String(items.length))} · ${d.approvedAt ? fmtTanggal(d.approvedAt) : d.issuedAt ? fmtTanggal(d.issuedAt) : "-"}`,
+          trailing: <Badge tone={STATUS_TONE[d.status]}>{statusLabel(d.status)}</Badge>,
+          onOpen: () => setOpenId(d.id),
+          children: items.map((it) => ({
+            id: `${d.id}:${it.id}`, kind: "leaf" as const,
+            title: it.name,
+            subtitle: `${it.quantity} ${it.unit} × ${fmtRupiah(it.unitPrice)} = ${fmtRupiah(it.totalPrice)}`,
+          })),
+        };
+      }),
+    };
+  });
   const open = docs.find((d) => d.id === openId) ?? null;
 
   /* ---------- Detail surat ---------- */
@@ -288,6 +313,10 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
         </div>
       ) : (
         <div className="overflow-x-auto">
+          {/* Alur bercabang: nomor surat → revisi → item pekerjaan. */}
+          <div className="border-t border-steel-100 p-4">
+            <FlowTree nodes={boqTree} defaultOpen={boqTree.map((n) => n.id)} labels={{ expand: TR.expand, collapse: TR.collapse, expandAll: TR.expandAll, collapseAll: TR.collapseAll }} />
+          </div>
           <table className="w-full">
             <thead>
               <tr>
