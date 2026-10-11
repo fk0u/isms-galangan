@@ -55,9 +55,10 @@
     "probe:drydock": "tsx --env-file-if-exists=.env scripts/drydock-booking-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint . --max-warnings=29",
-    "check": "tsc --noEmit && npm run lint && npm test && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope && npm run probe:read-models",
+    "check": "tsc --noEmit && npm run lint && npm test && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope && npm run probe:read-models && npm run probe:cache",
     "test": "vitest run",
-    "probe:read-models": "tsx scripts/read-models-probe.ts"
+    "probe:read-models": "tsx scripts/read-models-probe.ts",
+    "probe:cache": "tsx scripts/cache-probe.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",

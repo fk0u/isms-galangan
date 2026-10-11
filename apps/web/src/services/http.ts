@@ -149,7 +149,23 @@ export interface ApiFetchInit extends RequestInit {
   background?: boolean;
 }
 
+/* GET identik yang masih berjalan dipakai bersama: beberapa komponen/halaman
+   yang meminta koleksi yang sama pada saat bersamaan hanya menghasilkan satu
+   permintaan jaringan. Kunci memuat token, jadi tidak pernah lintas sesi. */
+const inflightGet = new Map<string, Promise<unknown>>();
+
 export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+  const isPlainGet = (init?.method ?? "GET").toUpperCase() === "GET" && init?.body == null && init?.signal == null && init?.headers == null;
+  if (!isPlainGet) return apiFetchRaw<T>(path, init);
+  const key = `${getJwt() ?? ""}|${path}`;
+  const running = inflightGet.get(key);
+  if (running) return running as Promise<T>;
+  const p = apiFetchRaw<T>(path, init).finally(() => inflightGet.delete(key));
+  inflightGet.set(key, p);
+  return p;
+}
+
+async function apiFetchRaw<T>(path: string, init?: ApiFetchInit): Promise<T> {
   if (!isBackendConfigured()) throw new ApiNotConfigured();
   const jwt = getJwt();
   /* timeoutMs/background adalah opsi kita sendiri, bukan fetch - buang

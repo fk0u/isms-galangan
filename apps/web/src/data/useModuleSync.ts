@@ -222,6 +222,17 @@ export function useProjectWbsSync(
     setSyncing(true);
     void (async () => {
       const found: Record<string, WbsItem[]> = {};
+      /* Lebih dari satu proyek: satu permintaan gabungan, bukan satu per proyek. */
+      if (ids.length > 1) {
+        try {
+          const sides = await apiFetch<{ wbs: Record<string, WbsItem[]> }>("/api/project-sides");
+          for (const projectId of ids) if (Array.isArray(sides.wbs?.[projectId])) found[projectId] = sides.wbs[projectId];
+          if (Object.keys(found).length > 0) setByProject((prev) => ({ ...prev, ...found }));
+          return;
+        } catch {
+          // Server lama tanpa endpoint gabungan: lanjut per proyek.
+        }
+      }
       for (const projectId of ids) {
         try {
           const res = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(

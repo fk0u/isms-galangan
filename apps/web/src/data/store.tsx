@@ -877,9 +877,18 @@ function notifyVersionBlocked(serverApi: string): void {
 /* Fetch /api/version sebelum sync; false = major mismatch → skip sync.
    Gagal fetch (offline/backend lama tanpa endpoint) → true agar fallback
    normal tetap berjalan. */
+/* Versi API tidak berubah tanpa deploy, jadi hasil yang BERHASIL diingat 5
+   menit: setiap sinkron tidak lagi diawali satu permintaan /api/version.
+   Gagal fetch tidak di-cache, supaya pemulihan koneksi langsung terdeteksi. */
+let versionCache: { at: number; ver: { api: string; minWeb: string } } | null = null;
+const VERSION_TTL_MS = 5 * 60_000;
+
 async function isApiCompatible(): Promise<boolean> {
   try {
-    const ver = await apiFetch<{ api: string; minWeb: string }>("/api/version");
+    if (!versionCache || Date.now() - versionCache.at > VERSION_TTL_MS) {
+      versionCache = { at: Date.now(), ver: await apiFetch<{ api: string; minWeb: string }>("/api/version") };
+    }
+    const ver = versionCache.ver;
     const serverMajor = majorOf(ver?.api);
     if (serverMajor === null) return true;
     if (serverMajor !== EXPECTED_API_MAJOR) {
@@ -1202,6 +1211,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const projectIds = ((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => p.id);
     const wbsDirty = dirty.has("wbsByProject");
     const teamDirty = dirty.has("teamByProject");
+    /* Satu permintaan untuk semua WBS + tim (GET /api/project-sides), menggantikan
+       dua permintaan per proyek. Aturan yang sama dipertahankan: proyek yang
+       punya edit lokal tertunda dilewati, dan isi kosong tidak menghapus cache.
+       Server lama tanpa endpoint ini → jatuh ke jalur per-proyek di bawah. */
+    try {
+      const sides = await apiFetch<{ wbs: Record<string, WbsItem[]>; team: Record<string, string[]> }>("/api/project-sides");
+      const known = new Set(projectIds);
+      const wbsPatch: Record<string, WbsItem[]> = {};
+      const teamPatch: Record<string, string[]> = {};
+      for (const [projectId, rows] of Object.entries(sides.wbs ?? {})) {
+        if (!known.has(projectId) || wbsDirty || dirty.has(`wbs:${projectId}`) || !Array.isArray(rows) || rows.length === 0) continue;
+        wbsBaseRef.current.set(projectId, JSON.stringify(rows));
+        wbsPatch[projectId] = rows;
+      }
+      for (const [projectId, ids] of Object.entries(sides.team ?? {})) {
+        if (!known.has(projectId) || teamDirty || dirty.has(`team:${projectId}`) || !Array.isArray(ids) || ids.length === 0) continue;
+        teamBaseRef.current.set(projectId, JSON.stringify(ids));
+        teamPatch[projectId] = ids;
+      }
+      // Satu setData untuk semua proyek, bukan dua render per proyek.
+      setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, ...wbsPatch }, teamByProject: { ...prev.teamByProject, ...teamPatch } }));
+      return;
+    } catch {
+      /* lanjut ke jalur per-proyek */
+    }
     await Promise.all(
       projectIds.map(async (projectId) => {
         if (dirty.has(`wbs:${projectId}`) || wbsDirty) return;

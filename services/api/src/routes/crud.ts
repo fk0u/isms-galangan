@@ -14,6 +14,7 @@ import { spkLockError } from "../workOrderGuard.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
+import { cacheGet, cachePut } from "../listCache.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
@@ -369,10 +370,21 @@ export function registerCrud(app: FastifyInstance, table: string): void {
   const writeGuards = [requireAuth, requirePermission(table, "w")];
   const deleteGuards = [requireAuth, requirePermission(table, "d")];
 
-  app.get(base, { preHandler: readGuards }, async (req) => {
+  app.get(base, { preHandler: readGuards }, async (req, reply) => {
     const query = (req.query ?? {}) as Record<string, string | undefined>;
     const where: string[] = [];
     const params: unknown[] = [];
+    /* Cache daftar + ETag (lihat listCache.ts). Kunci memuat URL lengkap dan
+       lingkup tim, sehingga peran lapangan tidak pernah menerima cache peran lain. */
+    const scopeForKey = table === "projects" ? await scopedProjectIds(req.user) : null;
+    const cacheKey = `${table}|${req.url}|${scopeForKey === null ? "*" : [...scopeForKey].sort().join(",")}`;
+    const sendCached = (e: { etag: string; json: string }) => {
+      reply.header("ETag", e.etag).header("Cache-Control", "private, no-cache");
+      if (req.headers["if-none-match"] === e.etag) return reply.status(304).send();
+      return reply.type("application/json; charset=utf-8").send(e.json);
+    };
+    const hit = cacheGet(cacheKey);
+    if (hit) return sendCached(hit);
     if (query.branch !== undefined && query.branch !== "") {
       where.push("branch = ?");
       params.push(query.branch);
@@ -382,7 +394,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       params.push(query.q);
     }
     if (table === "projects") {
-      const scope = await scopedProjectIds(req.user);
+      const scope = scopeForKey;
       if (scope !== null) {
         if (scope.size === 0) where.push("1 = 0");
         else { where.push(`id IN (${[...scope].map(() => "?").join(",")})`); params.push(...scope); }
@@ -424,13 +436,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     /* Cursor halaman berikutnya = baris terakhir yang benar-benar dikirim.
        Kalau halaman kosong tidak ada cursor lanjutan - pemanggil berhenti. */
     const last = rows[rows.length - 1];
-    return ok({
+    return sendCached(cachePut(cacheKey, table, ok({
       rows: rows.map(toJson),
       total,
       limit,
       offset,
       nextCursor: rows.length === limit && last !== undefined ? cursorOf(last) : null,
-    });
+    })));
   });
 
   app.get(`${base}/:id`, { preHandler: readGuards }, async (req, reply) => {
