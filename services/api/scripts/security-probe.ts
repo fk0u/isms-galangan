@@ -212,6 +212,10 @@ async function main(): Promise<void> {
     const branchIsolationNotApplicableReason = singleActiveBranch
       ? `ADR-0003 Jalur A: data dasar hanya memiliki cabang aktif ${DEFAULT_BRANCH}; isolasi lintas-cabang menunggu Jalur B`
       : undefined;
+    const branchScopeCannotBeVerified = !sourceDbExists;
+    const branchScopeVerificationNote = branchScopeCannotBeVerified
+      ? "; source DB caller tidak tersedia untuk verifikasi baseline"
+      : "";
     console.log(`Konfigurasi scope cabang: ${singleActiveBranch ? `Jalur A (${DEFAULT_BRANCH})` : "lintas-cabang berlaku"}`);
 
     // Gunakan proyek sintetis agar probe tidak mengubah data seed yang sudah ada.
@@ -250,7 +254,7 @@ async function main(): Promise<void> {
       url: `/api/projects/${foreignProject.id}`,
       headers: { authorization: `Bearer ${branchToken}` },
     });
-    record("T02", `User ${ownBranch} GET proyek ${otherBranch} (${foreignProject.id})`, "403/404", `HTTP ${t02.statusCode}`, t02.statusCode === 200, "K", branchIsolationNotApplicableReason);
+    record("T02", `User ${ownBranch} GET proyek ${otherBranch} (${foreignProject.id})`, "403/404", `HTTP ${t02.statusCode}${branchScopeVerificationNote}`, t02.statusCode === 200 || branchScopeCannotBeVerified, "K", branchIsolationNotApplicableReason);
 
     // 4. T03: User Balikpapan list ?branch=Samarinda
     const t03 = await app.inject({
@@ -259,7 +263,7 @@ async function main(): Promise<void> {
       headers: { authorization: `Bearer ${branchToken}` },
     });
     const t03Total = JSON.parse(t03.body)?.data?.total ?? 0;
-    record("T03", `User ${ownBranch} list ?branch=${otherBranch}`, "403/kosong", `HTTP ${t03.statusCode}, total=${t03Total}`, t03.statusCode === 200 && t03Total > 0, "K", branchIsolationNotApplicableReason);
+    record("T03", `User ${ownBranch} list ?branch=${otherBranch}`, "403/kosong", `HTTP ${t03.statusCode}, total=${t03Total}${branchScopeVerificationNote}`, (t03.statusCode === 200 && t03Total > 0) || branchScopeCannotBeVerified, "K", branchIsolationNotApplicableReason);
 
     // 5. T04: User cabang baca WBS proyek cabang lain
     const t04 = await app.inject({
@@ -267,7 +271,7 @@ async function main(): Promise<void> {
       url: `/api/projects/${foreignProject.id}/wbs`,
       headers: { authorization: `Bearer ${branchToken}` },
     });
-    record("T04", "User cabang baca WBS proyek cabang lain", "403", `HTTP ${t04.statusCode}`, t04.statusCode === 200, "K", branchIsolationNotApplicableReason);
+    record("T04", "User cabang baca WBS proyek cabang lain", "403", `HTTP ${t04.statusCode}${branchScopeVerificationNote}`, t04.statusCode === 200 || branchScopeCannotBeVerified, "K", branchIsolationNotApplicableReason);
 
     // 6. T05: User cabang PATCH proyek cabang lain
     const t05 = await app.inject({
@@ -276,7 +280,7 @@ async function main(): Promise<void> {
       headers: { authorization: `Bearer ${branchToken}`, "content-type": "application/json" },
       payload: { data: { auditProbe: "x" } },
     });
-    record("T05", "User cabang PATCH proyek cabang lain", "403", `HTTP ${t05.statusCode}`, t05.statusCode === 200, "K", branchIsolationNotApplicableReason);
+    record("T05", "User cabang PATCH proyek cabang lain", "403", `HTTP ${t05.statusCode}${branchScopeVerificationNote}`, t05.statusCode === 200 || branchScopeCannotBeVerified, "K", branchIsolationNotApplicableReason);
 
     // 7. T06: User cabang memindahkan proyek ke cabangnya
     const t06 = await app.inject({
@@ -724,6 +728,21 @@ async function main(): Promise<void> {
       `HTTP ${concurrentWbsStatuses.join("/")}`,
       concurrentWbsStatuses[0] !== 200 || concurrentWbsStatuses[1] !== 409,
     );
+    await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [f208ProjectId]);
+    const missingWbs = await app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/wbs`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { wbs: [{ id: "F2-08-WBS-LOCAL" }], baseData: [{ id: "F2-08-WBS-REMOVED" }] },
+    });
+    const missingWbsData = (JSON.parse(missingWbs.body) as { data?: { wbs?: unknown } }).data?.wbs;
+    record(
+      "F2-08-WBS-MISSING-CAS",
+      "WBS yang dihapus di server menghasilkan konflik terhadap baseline non-kosong",
+      "HTTP 409 dengan snapshot server []",
+      `HTTP ${missingWbs.statusCode}, server=${JSON.stringify(missingWbsData)}`,
+      missingWbs.statusCode !== 409 || JSON.stringify(missingWbsData) !== "[]",
+    );
 
     const f208Team = await app.inject({
       method: "PUT",
@@ -768,6 +787,21 @@ async function main(): Promise<void> {
       "satu HTTP 200 dan satu HTTP 409",
       `HTTP ${concurrentTeamStatuses.join("/")}`,
       concurrentTeamStatuses[0] !== 200 || concurrentTeamStatuses[1] !== 409,
+    );
+    await exec("DELETE FROM team_by_project WHERE project_id = ?", [f208ProjectId]);
+    const missingTeam = await app.inject({
+      method: "PUT",
+      url: `/api/projects/${f208ProjectId}/team`,
+      headers: { authorization: `Bearer ${dirToken}`, "content-type": "application/json" },
+      payload: { memberIds: [], baseData: [f208EmployeeId] },
+    });
+    const missingTeamData = (JSON.parse(missingTeam.body) as { data?: { memberIds?: unknown } }).data?.memberIds;
+    record(
+      "F2-08-TEAM-MISSING-CAS",
+      "Team yang dihapus di server menghasilkan konflik terhadap baseline non-kosong",
+      "HTTP 409 dengan snapshot server []",
+      `HTTP ${missingTeam.statusCode}, server=${JSON.stringify(missingTeamData)}`,
+      missingTeam.statusCode !== 409 || JSON.stringify(missingTeamData) !== "[]",
     );
 
     // F2-08: kegagalan insert audit harus menggagalkan PATCH dan membatalkan perubahan invoice.

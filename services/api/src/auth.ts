@@ -81,20 +81,34 @@ export function branchAllowed(user: AuthUser | undefined, asked: string): boolea
   const norm = (v: unknown): string => String(v ?? "").trim();
   const own = norm(user?.branch);
   const want = norm(asked);
+  /* Kompatibilitas token lama/helper murni: claim yang hilang tetap global.
+     Route CRUD tetap mem-fail-close scope kosong sebelum memanggil helper ini. */
   if (own === "" || own === "SEMUA") return true;
   return own === want;
 }
 
+export class BranchScopeResolutionError extends Error {
+  constructor() {
+    super("Unable to verify employee branch scope");
+    this.name = "BranchScopeResolutionError";
+  }
+}
+
 export async function branchOfUser(user: { employee_id?: string | null }): Promise<string> {
   const empId = String(user.employee_id ?? "").trim();
+  /* Accounts without an employee link are the explicit global-scope path used
+     by system/demo identities. A linked employee must resolve to a real branch. */
   if (empId === "") return "SEMUA";
+  let rows: Array<{ branch: string }>;
   try {
-    const rows = await q<{ branch: string }>("SELECT branch FROM employees WHERE id = ?", [empId]);
-    const b = String(rows[0]?.branch ?? "").trim();
-    return b === "" || b === "-" ? "SEMUA" : b;
+    rows = await q<{ branch: string }>("SELECT branch FROM employees WHERE id = ?", [empId]);
   } catch {
-    return "SEMUA";
+    throw new BranchScopeResolutionError();
   }
+  if (rows.length !== 1) throw new BranchScopeResolutionError();
+  const branch = String(rows[0]?.branch ?? "").trim();
+  if (branch === "" || branch === "-") throw new BranchScopeResolutionError();
+  return branch;
 }
 
 interface CachedUserRecord {
@@ -174,7 +188,15 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
     }
 
     const u = rows[0];
-    const branch = await branchOfUser({ employee_id: u.employee_id });
+    let branch: string;
+    try {
+      branch = await branchOfUser({ employee_id: u.employee_id });
+    } catch {
+      return reply.status(503).send({
+        ok: false,
+        error: { message: "Unable to verify account branch scope", code: "BRANCH_SCOPE_UNAVAILABLE" },
+      });
+    }
     cached = {
       id: u.id,
       username: u.username,

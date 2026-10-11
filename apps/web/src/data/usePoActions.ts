@@ -41,9 +41,10 @@ const prIdsOf = (po: StoreItem): string[] =>
 
 export interface ReceiveArgs { qty: number; itemId: string; noFaktur?: string; tglFaktur?: string; dendaRp?: number; actor?: string }
 export interface ReceiveOutcome { status: string; fulfilled: { id: string; given?: number }[] }
+export interface ReturnArgs { qty: number; itemId: string; note: string; actor?: string }
 
 export function usePoActions() {
-  const { data, add, update, resyncCollections } = useStore();
+  const { data, add, update, resyncCollections, inBranch } = useStore();
   const remote = () => isBackendConfigured() && getJwt() !== null;
 
   const receive = useCallback(async (po: StoreItem, a: ReceiveArgs): Promise<ReceiveOutcome> => {
@@ -117,6 +118,35 @@ export function usePoActions() {
     return { status: st, fulfilled };
   }, [data.inventory, data.materialRequests, data.spareparts, add, update, resyncCollections]);
 
+  const returnStock = useCallback(async (po: StoreItem, a: ReturnArgs): Promise<void> => {
+    if (remote()) {
+      await apiFetch(`/api/purchaseOrders/${encodeURIComponent(String(po.id))}/return`, {
+        method: "POST",
+        body: JSON.stringify({ qty: a.qty, itemId: a.itemId, note: a.note }),
+      });
+      await resyncCollections(["purchaseOrders", "inventory", "movements"]);
+      return;
+    }
+    const item = inBranch(data.inventory ?? []).find((row) => String(row.id) === a.itemId);
+    if (!item) throw new Error("Item inventori tidak ditemukan pada cabang aktif");
+    const storedItemId = String(po.itemId ?? "");
+    if (storedItemId !== "" && storedItemId !== a.itemId) throw new Error(`Barang PO sudah ditetapkan (${storedItemId})`);
+    const received = po.receivedQty === undefined ? num(po.qty) : num(po.receivedQty);
+    const available = Math.max(0, received - num(po.returnedQty));
+    if (a.qty > available) throw new Error(`Melebihi jumlah yang telah diterima dan belum diretur (${available})`);
+    if (num(item.stock) < a.qty) throw new Error("Stok inventori tidak mencukupi untuk retur");
+    if (!a.note.trim()) throw new Error("Catatan retur wajib diisi");
+    await update("inventory", a.itemId, { stock: num(item.stock) - a.qty });
+    await add("movements", {
+      item: String(item.name ?? a.itemId), itemId: a.itemId, type: "Retur", qty: a.qty,
+      unit: String(item.unit ?? "pcs"), by: `${po.id} - ${a.note.trim()}`, date: todayISO(), tone: "out", ref: { poId: po.id },
+    });
+    await update("purchaseOrders", String(po.id), {
+      ...(storedItemId === "" ? { itemId: a.itemId, item: String(item.name ?? po.item ?? "") } : {}),
+      returnedQty: num(po.returnedQty) + a.qty,
+    });
+  }, [add, data.inventory, inBranch, resyncCollections, update]);
+
   const vendorCannotFulfill = useCallback(async (po: StoreItem, qty: number, reason: string, actor: string): Promise<void> => {
     if (remote()) {
       await apiFetch(`/api/purchaseOrders/${encodeURIComponent(String(po.id))}/vendor-cannot-fulfill`, { method: "POST", body: JSON.stringify({ qty, reason }) });
@@ -164,7 +194,7 @@ export function usePoActions() {
     return String(created.id);
   }, [add, update, resyncCollections]);
 
-  return { receive, vendorCannotFulfill, reassign };
+  return { receive, returnStock, vendorCannotFulfill, reassign };
 }
 
 /** Riwayat harga per vendor untuk item yang sama (bahan pilih vendor pengganti). */

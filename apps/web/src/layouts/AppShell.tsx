@@ -47,14 +47,22 @@ import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import { remoteRepository } from "../services/repositories";
 import { useRealtime } from "../data/useRealtime";
-import { recentModuleSync, useFailedCollections, useModuleSyncing } from "../data/useModuleSync";
+import { recentModuleSync, useFailedCollections, useModuleSync, useModuleSyncing, useProjectWbsSync } from "../data/useModuleSync";
+import { SHELL_ALERT_COLLECTIONS } from "../data/moduleCollections";
+import { scopeAlertStoreData } from "../data/scopeAlertData";
 import { getJwt, isBackendConfigured } from "../services/http";
 
 export default function AppShell() {
   const { user, logout } = useAuth();
   useRealtime(Boolean(user));
   const { t, locale, setLocale } = useT();
-  const { data, reset, branch, setBranch, backendMode, backendError, pendingSync, pushPending, resync } = useStore();
+  const { data, reset, branch, setBranch, backendMode, backendError, pendingSync, pushPending, resync, inBranch } = useStore();
+  const location = useLocation();
+  useModuleSync(SHELL_ALERT_COLLECTIONS, [user?.id]);
+  const alertProjectIds = useMemo(
+    () => inBranch(data.projects ?? []).map((project) => String(project.id)),
+    [data.projects, inBranch],
+  );
   /* Cabang yang boleh diakses akun ini, dari claim JWT (`/api/auth/me`).
      "SEMUA" untuk akun demo/developer dan sesi lokal tanpa backend - mode
      lokal tidak punya server yang bisa menolak, jadi tidak perlu dibatasi. */
@@ -149,12 +157,17 @@ export default function AppShell() {
   };
   const [userOpen, setUserOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  // Peta WBS hanya diperlukan untuk milestone/critical-path alert di bell.
+  // Jangan tarik semua WBS saat Finance/P&L dibuka; sync on-demand saat bell dibuka.
+  const shellNeedsWbs = !location.pathname.startsWith("/keuangan") || notifOpen;
+  useProjectWbsSync(shellNeedsWbs ? alertProjectIds : []);
   const [bellExpanded, setBellExpanded] = useState(false);
   const [bellMin, setBellMin] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [q, setQ] = useState("");
 
-  const alerts = useMemo(() => computeAlerts(data), [data]);
+  const scopedAlertData = useMemo(() => scopeAlertStoreData(data, branch), [data, branch]);
+  const alerts = useMemo(() => computeAlerts(scopedAlertData), [scopedAlertData]);
 
   /* Badge bell = item belum dibaca beneran (alert + 30 aktivitas terakhir - yang sudah dibaca). */
   const notifIds = useMemo(
@@ -166,7 +179,7 @@ export default function AppShell() {
     void readTick;
     const read = loadNotifRead();
     return notifIds.filter((id) => !read.has(id)).length;
-  }, [notifIds, notifOpen, readTick]);
+  }, [notifIds, readTick]);
   const markNotifRead = (id: string) => {
     const read = loadNotifRead();
     if (read.has(id)) return;
@@ -188,7 +201,7 @@ export default function AppShell() {
   const unreadModuleCount = useMemo(() => {
     void seenTick;
     const seen = loadModSeen();
-    const all = buildModuleAlertItems(data);
+    const all = buildModuleAlertItems(scopedAlertData);
     const out = {} as Record<ModuleAlertKey, number>;
     (Object.keys(all) as ModuleAlertKey[]).forEach((k) => {
       const s = new Set(seen[k] ?? []);
@@ -200,7 +213,7 @@ export default function AppShell() {
     });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, seenTick]);
+  }, [scopedAlertData, seenTick]);
 
   /* Urutan grup ikut alur bisnis galangan: Utama → Komersial (CRM melahirkan
      Proyek) → Operasional → SDM → Aset (master) → Analisis → Sistem. */
@@ -401,7 +414,6 @@ export default function AppShell() {
      dan resync terakhir >60 dtk. Dilewati saat mengetik di pencarian global,
      saat modal/dropdown terbuka, atau tab tersembunyi - resync menimpa draft
      tabel. Throttle via ref timestamp. */
-  const location = useLocation();
   const projectDetailRoute = matchPath({ path: "/proyek/:id", end: true }, location.pathname) !== null
     && matchPath({ path: "/proyek/monitoring", end: true }, location.pathname) === null;
   const stateFrom = (location.state as { from?: unknown } | null)?.from;

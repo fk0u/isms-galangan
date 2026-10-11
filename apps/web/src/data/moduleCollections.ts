@@ -13,13 +13,38 @@ export const PROCUREMENT_COLLECTIONS: CollectionKey[] = [
   "vendors",
 ];
 
+/* Koleksi yang dibaca bell/sidebar/dashboard setelah full boot sync dihapus. */
+export const SHELL_ALERT_COLLECTIONS: CollectionKey[] = [
+  "activities",
+  "dockSlots",
+  "documents",
+  "equipment",
+  "incidents",
+  "inventory",
+  "invoices",
+  "leaves",
+  "ncr",
+  "payables",
+  "payroll",
+  "projects",
+  "purchaseOrders",
+  "requests",
+  "requisitions",
+  "settings",
+  "termins",
+  "vessels",
+];
+
 const FINANCE_TAB_COLLECTIONS: Record<string, CollectionKey[]> = {
   Akun: ["coa"],
   Aset: ["assets", "equipment", "inventory", "movements", "projects"],
-  Invoice: ["bast", "clientPos", "contracts", "invoices", "projects", "services", "termins", "warranties", "workOrders"],
-  "Piutang (AR)": ["clientPos", "clients", "invoices", "projects"],
+  Invoice: [
+    "bast", "clientPos", "clients", "contracts", "invoices", "projects",
+    "services", "termins", "timesheets", "warranties", "workOrders",
+  ],
+  "Piutang (AR)": ["bast", "clientPos", "clients", "contracts", "invoices", "projects"],
   "Hutang (AP)": ["payables", "payroll", "projects", "purchaseOrders"],
-  "Jadwal Bayar": ["payables", "payroll", "purchaseOrders"],
+  "Jadwal Bayar": ["bast", "clientPos", "clients", "contracts", "payables", "payroll", "purchaseOrders"],
   "Kas & Bank": ["coa", "invoices", "journals", "payables", "payroll"],
   Jurnal: ["coa", "invoices", "journals", "payables", "payroll"],
   "Buku Besar": ["assets", "coa", "invoices", "journals", "payables", "payroll"],
@@ -29,7 +54,7 @@ const FINANCE_TAB_COLLECTIONS: Record<string, CollectionKey[]> = {
     "bast", "bookings", "equipment", "invoices", "inventory", "movements",
     "payables", "payroll", "projects", "purchaseOrders", "termins", "timesheets", "workOrders",
   ],
-  Pajak: ["invoices", "payables", "payroll", "taxPeriods"],
+  Pajak: ["invoices", "payables", "payroll", "taxPeriods", "termins"],
 };
 
 /* KPI yang selalu tampil di header Finance membutuhkan sumber terkini pada

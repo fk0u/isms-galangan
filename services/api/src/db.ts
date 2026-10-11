@@ -19,6 +19,7 @@ export interface TxContext {
 export type TxFn<R> = (tx: TxContext) => Promise<R> | R;
 
 const txStorage = new AsyncLocalStorage<TxContext>();
+const txWriteTablesStorage = new AsyncLocalStorage<Set<string>>();
 
 export function getDialect(): Dialect {
   const raw = (process.env.DB_DIALECT ?? "sqlite").toLowerCase();
@@ -44,6 +45,7 @@ function ensureSqlite(): Database.Database {
   const file = resolveSqlitePath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
   sqliteDb = new Database(file);
+  sqliteDb.function("unicode_lower", (value: unknown) => String(value ?? "").toLowerCase());
   return sqliteDb;
 }
 
@@ -82,7 +84,10 @@ const WRITE_RE = /^\s*(?:INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+[
 function noteWrite(sql: string, res: ExecResult): ExecResult {
   if (res.changes > 0) {
     const m = WRITE_RE.exec(sql);
-    if (m) dbEvents.emit("write", m[1]);
+    if (m) {
+      dbEvents.emit("write", m[1]);
+      txWriteTablesStorage.getStore()?.add(m[1]);
+    }
   }
   return res;
 }
@@ -169,11 +174,13 @@ export async function withTx<R>(fn: TxFn<R>): Promise<R> {
           return { changes };
         },
       };
+      const writtenTables = new Set<string>();
       let committed = false;
       try {
-        const result = await txStorage.run(tx, () => fn(tx));
+        const result = await txWriteTablesStorage.run(writtenTables, () => txStorage.run(tx, () => fn(tx)));
         await conn.commit();
         committed = true;
+        for (const table of writtenTables) dbEvents.emit("write-commit", table);
         return result;
       } finally {
         if (!committed) {
@@ -204,11 +211,13 @@ export async function withTx<R>(fn: TxFn<R>): Promise<R> {
         return { changes: res.changes };
       },
     };
+    const writtenTables = new Set<string>();
     let committed = false;
     try {
-      const result = await txStorage.run(tx, () => fn(tx));
+      const result = await txWriteTablesStorage.run(writtenTables, () => txStorage.run(tx, () => fn(tx)));
       db.prepare("COMMIT").run();
       committed = true;
+      for (const table of writtenTables) dbEvents.emit("write-commit", table);
       return result;
     } finally {
       if (!committed) {

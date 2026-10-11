@@ -12,7 +12,7 @@
  * saat barang diterima, permintaan barang proyek (materialRequests) yang
  * menunggu PR/PO ini otomatis dipenuhi dari stok yang baru masuk. */
 import { randomUUID } from "node:crypto";
-import { exec, q, withTx } from "./db.js";
+import { exec, getDialect, q, withTx } from "./db.js";
 import { DEFAULT_BRANCH } from "./routes/crud.js";
 import { fulfillMaterialRequest, type FulfillResult } from "./materialRequests.js";
 
@@ -162,6 +162,84 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
       }
     }
     return { po: { id, ...nextPo }, movementId, fulfilled };
+  });
+}
+
+export interface ReturnInput { qty: number; itemId: string; note: string }
+export interface ReturnResult { po: Data & { id: string }; movementId: string }
+
+/** Retur barang PO: stok, movement, dan returnedQty berubah atomik. */
+export async function returnPo(
+  id: string,
+  input: ReturnInput,
+  actor: string,
+  branchScope = "",
+): Promise<ReturnResult> {
+  const qty = Number(input.qty);
+  const itemId = String(input.itemId ?? "").trim();
+  const note = String(input.note ?? "").trim();
+  if (!Number.isFinite(qty) || qty <= 0) throw new PoError(422, "Jumlah retur harus lebih dari 0", "UNPROCESSABLE");
+  if (itemId === "") throw new PoError(422, "Pilih item inventori untuk retur", "UNPROCESSABLE");
+  if (note === "") throw new PoError(422, "Catatan retur wajib diisi", "UNPROCESSABLE");
+
+  return withTx(async () => {
+    const lockClause = getDialect() === "mysql" ? " FOR UPDATE" : "";
+    const poRows = await q<Row>(`SELECT id, branch, data, updated_at FROM purchaseOrders WHERE id = ?${lockClause}`, [id]);
+    const poRow = poRows[0];
+    if (!poRow) throw new PoError(404, `PO ${id} tidak ada`, "NOT_FOUND");
+    if (branchScope !== "" && branchScope !== "SEMUA" && poRow.branch !== branchScope) {
+      throw new PoError(404, `PO ${id} tidak ada`, "NOT_FOUND");
+    }
+
+    const po = parse(poRow);
+    const storedItemId = String(po.itemId ?? "").trim();
+    if (storedItemId !== "" && storedItemId !== itemId) {
+      throw new PoError(422, `Barang PO sudah ditetapkan (${storedItemId})`, "ITEM_LOCKED");
+    }
+    const received = po.receivedQty === undefined ? num(po.qty) : num(po.receivedQty);
+    const returned = num(po.returnedQty);
+    const available = Math.max(0, received - returned);
+    if (qty > available) throw new PoError(422, `Melebihi jumlah yang telah diterima dan belum diretur (${available})`, "OVER_RETURN");
+
+    const invRows = await q<Row>(`SELECT id, branch, data, updated_at FROM inventory WHERE id = ?${lockClause}`, [itemId]);
+    const invRow = invRows[0];
+    if (!invRow) throw new PoError(422, "Item inventori tidak ada", "UNPROCESSABLE");
+    if (branchScope !== "" && branchScope !== "SEMUA" && invRow.branch !== branchScope) {
+      throw new PoError(404, "Item inventori tidak ada", "NOT_FOUND");
+    }
+    if (poRow.branch !== "" && invRow.branch !== "" && poRow.branch !== invRow.branch) {
+      throw new PoError(422, "PO dan stok inventori berada di cabang berbeda", "BRANCH_MISMATCH");
+    }
+    const item = parse(invRow);
+    const stock = Math.max(0, num(item.stock));
+    if (stock < qty) throw new PoError(422, "Stok inventori tidak mencukupi untuk retur", "INSUFFICIENT_STOCK");
+
+    const now = new Date().toISOString();
+    const nextItem: Data = { ...item, stock: stock - qty };
+    const invUpdate = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
+      JSON.stringify(nextItem), now, itemId, invRow.updated_at, invRow.data,
+    ]);
+    if (invUpdate.changes !== 1) throw new PoError(409, "Stok berubah oleh pengguna lain — muat ulang", "STALE");
+
+    const movementId = `M-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+    await exec("INSERT INTO movements (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      movementId,
+      invRow.branch || poRow.branch || DEFAULT_BRANCH,
+      JSON.stringify({
+        item: String(item.name ?? itemId), itemId, type: "Retur", qty, unit: String(item.unit ?? "pcs"),
+        by: `${id} - ${note}`, date: now.slice(0, 10), tone: "out", ref: { poId: id }, note: `Retur oleh ${actor}`,
+      }),
+      now,
+    ]);
+
+    const nextPo: Data = {
+      ...po,
+      itemId,
+      item: String(item.name ?? po.item ?? ""),
+      returnedQty: returned + qty,
+    };
+    await savePo(poRow, nextPo, now);
+    return { po: { id, ...nextPo }, movementId };
   });
 }
 

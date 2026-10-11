@@ -66,6 +66,26 @@ describe("CollectionSyncCache", () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  it("does not let an older invalidated flight clear a newer fresh result", async () => {
+    const cache = new CollectionSyncCache();
+    const releases: Array<(failed: readonly string[]) => void> = [];
+    const load = vi.fn((_collections: string[]) => new Promise<readonly string[]>((resolve) => { releases.push(resolve); }));
+
+    const oldFlight = cache.sync("session-a", ["projects"], load);
+    await Promise.resolve();
+    cache.invalidate(["projects"]);
+    const currentFlight = cache.sync("session-a", ["projects"], load);
+    await Promise.resolve();
+
+    releases[1]?.([]);
+    await currentFlight;
+    releases[0]?.([]);
+    await oldFlight;
+
+    await cache.sync("session-a", ["projects"], load);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("exposes a newer generation after selective invalidation", () => {
     const cache = new CollectionSyncCache();
     const startedAt = cache.generation("inventory");

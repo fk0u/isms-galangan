@@ -1,10 +1,16 @@
-import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, purgeOfflineCache, type Row } from "./idb";
+import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, purgeOfflineCache } from "./idb";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { newId as newPrefixedId } from "../services/ids";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/http";
 import { remoteRepository } from "../services/repositories";
 import { collectionSyncCache } from "./collectionSyncCache";
 import { cacheOwnerAction } from "./cacheOwner";
+import { initialBranchScope, rowsInBranch } from "./branchScope";
+import { mergeOfflineValues, persistScopedCollections } from "./offlinePersistence";
+import { createSessionFence } from "./sessionFence";
+import { loadSideMapConflictHolds, persistSideMapConflictHolds } from "./sideMapConflictHolds";
+import { SideMapEpochs, shouldRetainSideProjectData, type SideMapEpochSnapshot, type SideMapKind } from "./sideMapEpochs";
+import { mergeProjectIdsAfterPull, mergeProjectRowsAfterPull } from "./projectPullScope";
 import { stampCreated, stampDerivedCreatedAt, stampUpdated } from "../utils/timestamps";
 import { loadedLaborRatePerDay } from "../utils/rates";
 import {
@@ -587,7 +593,20 @@ function storedCacheOwnerId(): string | null {
   }
 }
 
+function currentSessionBranch(): string | null {
+  try {
+    const raw = sessionStorage.getItem("isms.session");
+    if (!raw) return null;
+    const session = JSON.parse(raw) as { branch?: unknown };
+    return typeof session.branch === "string" ? session.branch : null;
+  } catch {
+    return null;
+  }
+}
+
 function initialStoreForSession(): StoreShape {
+  // Remote cache must wait until AuthProvider verifies the current branch.
+  if (isBackendConfigured()) return buildSeeds();
   const owner = currentSessionOwnerId();
   return owner && storedCacheOwnerId() === owner ? loadStore() : buildSeeds();
 }
@@ -620,6 +639,10 @@ interface StoreCtx {
   setWbs: (projectId: string, wbs: WbsItem[]) => Promise<void>;
   teamFor: (projectId: string) => string[];
   setTeam: (projectId: string, ids: string[]) => Promise<void>;
+  sessionGeneration: number;
+  isSessionGenerationCurrent: (expectedGeneration: number) => boolean;
+  captureSideMapEpochs: (projectIds: string[]) => SideMapEpochSnapshot;
+  mergeWbsCache: (expectedGeneration: number, byProject: Record<string, WbsItem[]>, expectedEpochs: SideMapEpochSnapshot) => Record<string, WbsItem[]>;
   branch: string;
   setBranch: (b: string) => void;
   inBranch: (rows: StoreItem[]) => StoreItem[];
@@ -731,24 +754,24 @@ function notifyStorageFull(message: string): void {
 /* Tulis koleksi ke IndexedDB; bila tidak tersedia, jatuh ke localStorage
    dengan batas baris. Integritas > kelengkapan: lebih baik menyimpan 400
    baris terakhir daripada diam-diam menyimpan nol. */
-async function persistCollections(src: Record<string, unknown>, cols: string[]): Promise<void> {
-  const useIdb = await idbAvailable();
-  let gagal = 0;
-  for (const col of cols) {
-    const rows = src[col];
-    if (!Array.isArray(rows)) continue;
-    const ok = useIdb ? await idbPut(col, rows as Row[]) : lsPut(col, rows as Row[]);
-    if (!ok) gagal += 1;
-  }
-  if (gagal > 0) {
+async function persistCollections(
+  src: Record<string, unknown>,
+  cols: string[],
+  isCurrentScope: () => boolean,
+): Promise<void> {
+  const gagal = await persistScopedCollections(src, cols, isCurrentScope, {
+    idbAvailable,
+    idbPut,
+    localPut: lsPut,
+  });
+  if (gagal > 0 && isCurrentScope()) {
     notifyStorageFull(
       `Penyimpanan browser gagal menyimpan ${gagal} koleksi - data offline bisa hilang saat reload`,
     );
   }
 }
 
-/* Koleksi yang dipersistensi. wbsByProject/teamByProject bukan array (object)
-   jadi ditangani terpisah. */
+/* Koleksi array dan map project-side yang harus bertahan setelah reload offline. */
 const OFFLINE_COLLECTIONS: string[] = [
   "projects", "vessels", "drydocks", "dockSlots", "inventory", "movements",
   "equipment", "bookings", "subcontractors", "workOrders", "termins",
@@ -759,22 +782,25 @@ const OFFLINE_COLLECTIONS: string[] = [
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
   "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
+  "wbsByProject", "teamByProject", "wbsBaseByProject", "teamBaseByProject",
 ];
 
 /* Hidrasi cache offline dari IndexedDB saat boot. Berjalan sebelum resync
    supaya server menimpa cache yang bersih, sementara koleksi dirty (yang
    menyimpan edit offline) tetap aman karena resync melewatinya. */
-async function hydrateFromOfflineStore(apply: (rows: Record<string, Row[]>) => void): Promise<void> {
+async function hydrateFromOfflineStore(apply: (values: Record<string, unknown>) => void): Promise<void> {
   const all = await idbGetAll();
   if (all && Object.keys(all).length > 0) {
     apply(all);
     return;
   }
   // Fallback: localStorage (dipakai hanya bila IndexedDB tidak tersedia)
-  const partial: Record<string, Row[]> = {};
+  const partial: Record<string, unknown> = {};
   for (const col of OFFLINE_COLLECTIONS) {
-    const rows = lsGet(col);
-    if (rows && rows.length > 0) partial[col] = rows;
+    const value = lsGet(col);
+    if (Array.isArray(value) && value.length > 0) partial[col] = value;
+    else if ((col === "wbsByProject" || col === "teamByProject" || col === "wbsBaseByProject" || col === "teamBaseByProject")
+      && typeof value === "object" && value !== null && Object.keys(value).length > 0) partial[col] = value;
   }
   if (Object.keys(partial).length > 0) apply(partial);
 }
@@ -787,9 +813,9 @@ function remoteActive(): boolean {
 
 /**
  * String JSON -> nilai, untuk `baseData` compare-and-swap wbs/team.
- * String rusak (cache lama, storage penuh) menghasilkan null, yang berarti
- * "tidak ada base" - server lalu menerima penimpaan. Itu pilihan yang aman:
- * lebih baik satu penimpaan buta daripada push yang macet karena base rusak.
+ * String rusak atau tidak ada menghasilkan undefined. Push side-map kemudian
+ * membandingkan snapshot lokal dengan GET terbaru dan gagal-closed bila tidak
+ * bisa membuktikan bahwa write aman.
  */
 function parseMaybeJson(raw: string | undefined): unknown {
   if (raw === undefined || raw === "") return undefined;
@@ -798,6 +824,21 @@ function parseMaybeJson(raw: string | undefined): unknown {
   } catch {
     return undefined;
   }
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return typeof value === "object"
+    && value !== null
+    && !Array.isArray(value)
+    && Object.values(value).every((item) => typeof item === "string");
+}
+
+function loadConflictHolds(): Set<string> {
+  try { return loadSideMapConflictHolds(localStorage); } catch { return new Set(); }
+}
+
+function saveConflictHolds(holds: ReadonlySet<string>): void {
+  try { persistSideMapConflictHolds(localStorage, holds); } catch { /* best-effort local metadata */ }
 }
 
 /* Koleksi yang isinya KODE, bukan data operasional: kalau server membalas
@@ -1003,6 +1044,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
      yang sedang tiba dibuat SEBELUM perubahan itu, sehingga replace menghapus
      baris yang baru saja berhasil disimpan. */
   const writeEpochRef = useRef<Map<string, number>>(new Map());
+  const projectMutationClockRef = useRef(0);
+  /* Latest per-ID existence writes stay until session reset so an older
+     concurrent resync can still account for mutations after its own snapshot. */
+  const projectExistenceChangesRef = useRef<Map<string, { epoch: number; exists: boolean; row?: StoreItem }>>(new Map());
+  const recordProjectExistence = useCallback((projectId: string, exists: boolean, row?: StoreItem) => {
+    projectMutationClockRef.current += 1;
+    projectExistenceChangesRef.current.set(projectId, { epoch: projectMutationClockRef.current, exists, row });
+  }, []);
   const bumpEpoch = useCallback((col: string) => {
     writeEpochRef.current.set(col, (writeEpochRef.current.get(col) ?? 0) + 1);
     collectionSyncCache.invalidate([col]);
@@ -1012,7 +1061,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   dataRef.current = data;
   /* Generasi sesi menolak hasil fetch lama, termasuk ketika JWT kebetulan
      dipakai ulang atau identitas sesi berubah sebelum cache owner diperbarui. */
+  const [sessionGeneration, setSessionGeneration] = useState(0);
   const sessionGenerationRef = useRef(0);
+  const bumpSessionGeneration = useCallback(() => {
+    sessionGenerationRef.current += 1;
+    setSessionGeneration(sessionGenerationRef.current);
+  }, []);
   /* Re-entrancy guard pushPending: tanpa ini tombol "Sinkronkan" + interval
      bisa menjalankan dua push bersamaan dan saling menghapus flag. */
   const pushingRef = useRef(false);
@@ -1035,6 +1089,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
      sukses supaya base berikutnya adalah versi server yang baru. */
   const wbsBaseRef = useRef<Map<string, string>>(new Map());
   const teamBaseRef = useRef<Map<string, string>>(new Map());
+  const sideMapEpochRef = useRef(new SideMapEpochs());
+  const sideConflictHoldRef = useRef(loadConflictHolds());
   /* Rotasi koleksi: indeks koleksi mana yang dilayani duluan pada run ini.
      Dipakai supaya budget yang habis tidak selalu jatuh ke koleksi yang sama
      dan tidak menyebabkan koleksi lain kelaparan. */
@@ -1098,9 +1154,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     saveTombstonesPersisted(tombstonesRef.current);
   }, []);
-  /* F3-A-01: Cabang dikendalikan oleh sesi user (user.branch), bukan dari
-     input dropdown atau localStorage. Default "SEMUA". Bersihkan sisa kunci lama. */
-  const [branch, setBranchState] = useState<string>("SEMUA");
+  /* Cabang remote fail-closed sampai /auth/me memulihkan scope server; mode lokal
+     boleh memakai cabang sesi yang tersimpan. Bersihkan sisa kunci dropdown lama. */
+  const [branch, setBranchState] = useState<string>(() => initialBranchScope(isBackendConfigured(), currentSessionBranch()));
   const branchRef = useRef(branch);
   branchRef.current = branch;
 
@@ -1122,9 +1178,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
      selalu berubah sehingga memo tidak pernah hit dan seluruh komponen
      useStore() ikut re-render di setiap render StoreProvider. */
   const inBranch = useCallback(
-    (rows: StoreItem[]): StoreItem[] =>
-      branch === "SEMUA" ? rows : rows.filter((r) => !r.branch || r.branch === branch),
+    (rows: StoreItem[]): StoreItem[] => rowsInBranch(rows, branch),
     [branch],
+  );
+
+  const bumpSideMapEpoch = useCallback((kind: SideMapKind, projectId: string) => {
+    sideMapEpochRef.current.bump(kind, projectId);
+  }, []);
+  const captureSideMapEpochs = useCallback((projectIds: string[]): SideMapEpochSnapshot => {
+    return sideMapEpochRef.current.capture(projectIds);
+  }, []);
+
+  const mergeWbsCache = useCallback((
+    expectedGeneration: number,
+    byProject: Record<string, WbsItem[]>,
+    expectedEpochs: SideMapEpochSnapshot,
+  ): Record<string, WbsItem[]> => {
+    if (expectedGeneration !== sessionGenerationRef.current || !currentSessionOwnerId()) return {};
+    const accepted: Record<string, WbsItem[]> = {};
+    for (const [projectId, rows] of Object.entries(byProject)) {
+      const epochKey = `wbs:${projectId}`;
+      if (sideMapEpochRef.current.isCurrent("wbs", projectId, expectedEpochs)
+        && !dirtyRef.current.has(epochKey)
+        && !sideConflictHoldRef.current.has(epochKey)) {
+        accepted[projectId] = rows;
+        wbsBaseRef.current.set(projectId, JSON.stringify(rows));
+      }
+    }
+    if (Object.keys(accepted).length === 0) return accepted;
+    setData((prev) => {
+      if (expectedGeneration !== sessionGenerationRef.current || !currentSessionOwnerId()) return prev;
+      const stillCurrent = Object.fromEntries(Object.entries(accepted).filter(([projectId]) => {
+        return sideMapEpochRef.current.isCurrent("wbs", projectId, expectedEpochs);
+      }));
+      return Object.keys(stillCurrent).length === 0
+        ? prev
+        : { ...prev, wbsByProject: { ...(prev.wbsByProject ?? {}), ...stillCurrent } };
+    });
+    return accepted;
+  }, []);
+  const isSessionGenerationCurrent = useCallback(
+    (expectedGeneration: number) => expectedGeneration === sessionGenerationRef.current,
+    [],
   );
 
   /* Persistensi cache offline ke IndexedDB, bukan localStorage.
@@ -1142,6 +1237,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
      <700 ms) hanya menulis koleksi dari perubahan terakhir dan sisanya hilang
      saat reload. */
   const pendingPersistRef = useRef<Set<string>>(new Set());
+  /* Semua writer dan purge terserialisasi: write yang sudah mulai untuk owner
+     lama harus selesai (atau dibatalkan per koleksi) sebelum cache dihapus. */
+  const persistQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const cacheLifecycleRef = useRef<Promise<void>>(Promise.resolve());
+  const persistSideBase = useCallback((collection: string, values: unknown, isCurrentScope: () => boolean) => {
+    const next = persistQueueRef.current.catch(() => undefined).then(
+      () => persistCollections({ [collection]: values }, [collection], isCurrentScope),
+    );
+    persistQueueRef.current = next;
+    return next;
+  }, []);
+  const purgeOfflineCacheAfterWrites = useCallback((): Promise<void> => {
+    const next = cacheLifecycleRef.current.catch(() => undefined).then(async () => {
+      await persistQueueRef.current.catch(() => undefined);
+      await purgeOfflineCache();
+    });
+    cacheLifecycleRef.current = next;
+    return next;
+  }, []);
   useEffect(() => {
     const prev = prevDataRef.current;
     prevDataRef.current = data;
@@ -1161,9 +1275,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (pending.size === 0) return;
     const t = window.setTimeout(() => {
       if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtSchedule) return;
-      const cols = [...pending];
+      const cols = new Set(pending);
       pending.clear();
-      void persistCollections(cur, cols);
+      const isCurrentScope = () => sessionScopeKey(sessionGenerationRef.current) === sessionAtSchedule
+        && currentSessionOwnerId() === ownerAtSchedule
+        && storedCacheOwnerId() === ownerAtSchedule;
+      const source = { ...cur };
+      if (cols.has("wbsByProject")) {
+        source.wbsBaseByProject = Object.fromEntries(wbsBaseRef.current);
+        cols.add("wbsBaseByProject");
+      }
+      if (cols.has("teamByProject")) {
+        source.teamBaseByProject = Object.fromEntries(teamBaseRef.current);
+        cols.add("teamBaseByProject");
+      }
+      const next = persistQueueRef.current.catch(() => undefined)
+        .then(() => persistCollections(source, [...cols], isCurrentScope));
+      persistQueueRef.current = next;
+      void next;
     }, 700);
     return () => window.clearTimeout(t);
   }, [data]);
@@ -1201,6 +1330,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!(await isApiCompatible())) return;
     if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return;
     const dirty = dirtyRef.current;
+    const projectMutationAtStart = projectMutationClockRef.current;
     const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
     /* Lihat resyncCollections: epoch saat berangkat menentukan apakah hasil
        tarikan boleh menimpa apa adanya. */
@@ -1230,6 +1360,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     );
     const serverActivities = (pulled as Partial<Record<string, StoreItem[]>>).activities;
     if (serverActivities !== undefined) delete (pulled as Partial<Record<string, StoreItem[]>>).activities;
+    const pulledProjects = pulled.projects as StoreItem[] | undefined;
+    const serverProjectIds = (pulledProjects ?? []).map((project) => String(project.id));
+    const liveProjects = mergeProjectIdsAfterPull(
+      serverProjectIds,
+      projectExistenceChangesRef.current,
+      projectMutationAtStart,
+    );
+    if (pulledProjects !== undefined) {
+      const activeSideWriteKeys = sideMapEpochRef.current.activeWriteKeys();
+      const sideProjects = new Set([
+        ...sideMapEpochRef.current.projectIds(),
+        ...Object.keys(dataRef.current.wbsByProject ?? {}),
+        ...Object.keys(dataRef.current.teamByProject ?? {}),
+        ...wbsBaseRef.current.keys(),
+        ...teamBaseRef.current.keys(),
+      ]);
+      for (const projectId of sideProjects) {
+        if (!shouldRetainSideProjectData("wbs", projectId, liveProjects, dirty, sideConflictHoldRef.current, activeSideWriteKeys)) {
+          bumpSideMapEpoch("wbs", projectId);
+          wbsBaseRef.current.delete(projectId);
+        }
+        if (!shouldRetainSideProjectData("team", projectId, liveProjects, dirty, sideConflictHoldRef.current, activeSideWriteKeys)) {
+          bumpSideMapEpoch("team", projectId);
+          teamBaseRef.current.delete(projectId);
+        }
+      }
+      const isCurrentScope = () => sessionScopeKey(sessionGenerationRef.current) === sessionAtStart;
+      void persistSideBase("wbsBaseByProject", Object.fromEntries(wbsBaseRef.current), isCurrentScope);
+      void persistSideBase("teamBaseByProject", Object.fromEntries(teamBaseRef.current), isCurrentScope);
+    }
     /* Tidak ada lagi saveBackup di sini: cache offline yang benar sekarang
        ditulis ke IndexedDB oleh persistCollections setiap kali data berubah,
        jadi tidak perlu menyalin ulang sebelum resync - dan tidak ada lagi
@@ -1244,9 +1404,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!pullNeedsMerge(key as CollectionKey, epochAtStart[key as string] ?? 0, writeEpochRef.current, dirtyRef.current)) {
           continue;
         }
-        (next as unknown as Record<string, unknown>)[key as string] = applyPulled(
+        const merged = applyPulled(
           (prev as unknown as Record<string, unknown>)[key as string] as StoreItem[] | undefined,
           incoming,
+        );
+        (next as unknown as Record<string, unknown>)[key as string] = key === "projects"
+          ? mergeProjectRowsAfterPull(merged, prev.projects, projectExistenceChangesRef.current, projectMutationAtStart)
+          : merged;
+      }
+      if (pulledProjects !== undefined) {
+        next.projects = mergeProjectRowsAfterPull(
+          next.projects ?? pulledProjects,
+          prev.projects,
+          projectExistenceChangesRef.current,
+          projectMutationAtStart,
         );
       }
       if (serverActivities !== undefined) {
@@ -1255,16 +1426,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       /* Buang wbs/team yatim: proyek dihapus di server tidak boleh meninggalkan
          cache selamanya (versi lama hanya menambah, tidak pernah menghapus). */
-      const liveProjects = new Set(((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => String(p.id)));
-      if (liveProjects.size > 0 && pulled.projects !== undefined) {
+      if (pulledProjects !== undefined) {
+        const projectsVisibleAtCommit = mergeProjectIdsAfterPull(
+          serverProjectIds,
+          projectExistenceChangesRef.current,
+          projectMutationAtStart,
+        );
+        const activeWritesAtCommit = sideMapEpochRef.current.activeWriteKeys();
         const wbsNext: Record<string, WbsItem[]> = {};
         for (const [pid, rows] of Object.entries(prev.wbsByProject ?? {})) {
-          if (liveProjects.has(pid) || dirty.has(`wbs:${pid}`) || dirty.has("wbsByProject")) wbsNext[pid] = rows;
+          if (shouldRetainSideProjectData("wbs", pid, projectsVisibleAtCommit, dirty, sideConflictHoldRef.current, activeWritesAtCommit)) wbsNext[pid] = rows;
         }
         next.wbsByProject = wbsNext;
         const teamNext: Record<string, string[]> = {};
         for (const [pid, ids] of Object.entries(prev.teamByProject ?? {})) {
-          if (liveProjects.has(pid) || dirty.has(`team:${pid}`) || dirty.has("teamByProject")) teamNext[pid] = ids;
+          if (shouldRetainSideProjectData("team", pid, projectsVisibleAtCommit, dirty, sideConflictHoldRef.current, activeWritesAtCommit)) teamNext[pid] = ids;
         }
         next.teamByProject = teamNext;
       }
@@ -1276,6 +1452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
     const projectIds = ((pulled.projects as StoreItem[] | undefined) ?? []).map((p) => p.id);
+    const sideEpochAtStart = captureSideMapEpochs(projectIds);
     const wbsDirty = dirty.has("wbsByProject");
     const teamDirty = dirty.has("teamByProject");
     /* Satu permintaan untuk semua WBS + tim (GET /api/project-sides), menggantikan
@@ -1289,19 +1466,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const wbsPatch: Record<string, WbsItem[]> = {};
       const teamPatch: Record<string, string[]> = {};
       for (const [projectId, rows] of Object.entries(sides.wbs ?? {})) {
-        if (!known.has(projectId) || wbsDirty || dirty.has(`wbs:${projectId}`) || !Array.isArray(rows) || rows.length === 0) continue;
+        const key = `wbs:${projectId}`;
+        if (!known.has(projectId) || wbsDirty || dirty.has(key) || sideConflictHoldRef.current.has(key)
+          || !sideMapEpochRef.current.isCurrent("wbs", projectId, sideEpochAtStart)
+          || !Array.isArray(rows) || rows.length === 0) continue;
         wbsBaseRef.current.set(projectId, JSON.stringify(rows));
         wbsPatch[projectId] = rows;
       }
       for (const [projectId, ids] of Object.entries(sides.team ?? {})) {
-        if (!known.has(projectId) || teamDirty || dirty.has(`team:${projectId}`) || !Array.isArray(ids) || ids.length === 0) continue;
+        const key = `team:${projectId}`;
+        if (!known.has(projectId) || teamDirty || dirty.has(key) || sideConflictHoldRef.current.has(key)
+          || !sideMapEpochRef.current.isCurrent("team", projectId, sideEpochAtStart)
+          || !Array.isArray(ids) || ids.length === 0) continue;
         teamBaseRef.current.set(projectId, JSON.stringify(ids));
         teamPatch[projectId] = ids;
       }
       // Satu setData untuk semua proyek, bukan dua render per proyek.
-      setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
-        ? prev
-        : { ...prev, wbsByProject: { ...prev.wbsByProject, ...wbsPatch }, teamByProject: { ...prev.teamByProject, ...teamPatch } });
+      setData((prev) => {
+        if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return prev;
+        const currentWbs = Object.fromEntries(Object.entries(wbsPatch).filter(([projectId]) => {
+          return sideMapEpochRef.current.isCurrent("wbs", projectId, sideEpochAtStart);
+        }));
+        const currentTeam = Object.fromEntries(Object.entries(teamPatch).filter(([projectId]) => {
+          return sideMapEpochRef.current.isCurrent("team", projectId, sideEpochAtStart);
+        }));
+        return { ...prev, wbsByProject: { ...prev.wbsByProject, ...currentWbs }, teamByProject: { ...prev.teamByProject, ...currentTeam } };
+      });
       return;
     } catch {
       if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
@@ -1309,40 +1499,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     await Promise.all(
       projectIds.map(async (projectId) => {
-        if (dirty.has(`wbs:${projectId}`) || wbsDirty) return;
-        try {
-          const wbs = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(
-            `/api/projects/${encodeURIComponent(projectId)}/wbs`,
-          );
-          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
-          /* WBS/team dikembalikan lewat endpoint per-proyek, bukan lewat
-     resyncCollections, jadi acceptPull() tidak menjangkau keduanya. Polanya
-     yang sama tetap perlu: `Array.isArray([])` bernilai true, jadi proyek yang
-     WBS-nya belum pernah dimigrasikan akan MENGHAPUS WBS dan tim yang
-     tersimpan di cache tanpa jejak apa pun. Respons kosong diperlakukan sebagai
-     "tidak ada data", bukan "hapus semua". */
-          if (Array.isArray(wbs.wbs) && wbs.wbs.length > 0) {
-            const rows = wbs.wbs;
-            /* Catat isi server sebagai base untuk compare-and-swap saat push. */
-            wbsBaseRef.current.set(projectId, JSON.stringify(rows));
-            setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
-              ? prev
-              : { ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: rows } });
+        const wbsKey = `wbs:${projectId}`;
+        const teamKey = `team:${projectId}`;
+        if (!wbsDirty && !dirty.has(wbsKey) && !sideConflictHoldRef.current.has(wbsKey)) {
+          try {
+            const wbs = await apiFetch<{ projectId: string; wbs: WbsItem[] }>(
+              `/api/projects/${encodeURIComponent(projectId)}/wbs`,
+            );
+            if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
+            /* Empty side rows mean "no data", not "delete cached side map". */
+            if (Array.isArray(wbs.wbs) && wbs.wbs.length > 0
+              && sideMapEpochRef.current.isCurrent("wbs", projectId, sideEpochAtStart)) {
+              const rows = wbs.wbs;
+              wbsBaseRef.current.set(projectId, JSON.stringify(rows));
+              setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+                || !sideMapEpochRef.current.isCurrent("wbs", projectId, sideEpochAtStart)
+                ? prev
+                : { ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: rows } });
+            }
+          } catch {
+            if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
+            /* cache lokal/template tetap dipakai */
           }
-        } catch {
-          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
-          /* cache lokal/template tetap dipakai */
         }
-        if (dirty.has(`team:${projectId}`) || teamDirty) return;
+        if (dirty.has(teamKey) || teamDirty || sideConflictHoldRef.current.has(teamKey)) return;
         try {
           const team = await apiFetch<{ projectId: string; memberIds: string[] }>(
             `/api/projects/${encodeURIComponent(projectId)}/team`,
           );
           if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
-          if (Array.isArray(team.memberIds) && team.memberIds.length > 0) {
+          if (Array.isArray(team.memberIds) && team.memberIds.length > 0
+            && sideMapEpochRef.current.isCurrent("team", projectId, sideEpochAtStart)) {
             const ids = team.memberIds;
             teamBaseRef.current.set(projectId, JSON.stringify(ids));
             setData((prev) => sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart
+              || !sideMapEpochRef.current.isCurrent("team", projectId, sideEpochAtStart)
               ? prev
               : { ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } });
           }
@@ -1352,7 +1543,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }),
     );
-}, []);
+}, [captureSideMapEpochs, bumpSideMapEpoch, persistSideBase]);
 
   /* Pola standar fetch per-batch saat pindah modul/tab (lihat useModuleSync):
    hanya koleksi yang dibutuhkan modul aktif yang ditarik, paralel - data
@@ -1369,6 +1560,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!(await isApiCompatible())) return cols;
     if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart || !remoteActive()) return [];
     const dirty = dirtyRef.current;
+    const projectMutationAtStart = projectMutationClockRef.current;
     const pulled: Partial<Record<CollectionKey, StoreItem[]>> = {};
     /* Epoch tiap koleksi SAAT request berangkat. Hasil tarikan yang tiba
        setelah epoch naik tidak boleh menimpa apa adanya - lihat applyPulled. */
@@ -1428,7 +1620,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const incoming = safePulled[key];
         if (incoming === undefined) continue;
         if (!pullNeedsMerge(key, epochAtStart[key as string] ?? 0, writeEpochRef.current, dirtyRef.current)) continue;
-        next[key] = applyPulled(prev[key] as StoreItem[] | undefined, incoming);
+        const merged = applyPulled(prev[key] as StoreItem[] | undefined, incoming);
+        next[key] = key === "projects"
+          ? mergeProjectRowsAfterPull(merged, prev.projects, projectExistenceChangesRef.current, projectMutationAtStart)
+          : merged;
+      }
+      if (safePulled.projects !== undefined) {
+        next.projects = mergeProjectRowsAfterPull(
+          next.projects ?? safePulled.projects,
+          prev.projects,
+          projectExistenceChangesRef.current,
+          projectMutationAtStart,
+        );
       }
       if (serverActivities !== undefined && activitiesStillCurrent) {
         const local = prev.activities ?? [];
@@ -1468,11 +1671,14 @@ const PUSH_MAX_ATTEMPTS = 5;
        sama dengan "fail", jadi satu baris beracun mengulang tiap 45 detik
        selamanya, menyimpan flag dirty, dan tidak pernah memberi tahu
        pengguna apa yang harus diperbaiki. */
-type PushOutcome = "ok" | "stale" | "fail" | "auth";
+type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
 
   const pushPending = useCallback(async (): Promise<void> => {
     if (!remoteActive()) return;
+    const sessionAtStart = sessionScopeKey(sessionGenerationRef.current);
+    const isCurrentSession = () => sessionScopeKey(sessionGenerationRef.current) === sessionAtStart;
     if (!(await isApiCompatible())) return;
+    if (!isCurrentSession() || !remoteActive()) return;
     if (pushingRef.current) {
       /* Ada yang memicu saat push masih jalan. Jangan di-drop: tandai saja,
          nanti run berikutnya menyusul begitu push yang sedang selesai. Tanpa
@@ -1507,23 +1713,47 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
     /* Koleksi boleh dilompati kalau budget habis: `continue`, bukan `break`,
        supaya DELETE tombstone dan wbs/team tetap sempat jalan. */
     for (let ci = 0; ci < cols.length; ci += 1) {
+      if (!isCurrentSession() || !remoteActive()) return;
       const col = cols[(pushColCursorRef.current + ci) % cols.length] as string;
+      if (sideConflictHoldRef.current.has(col)) continue;
       try {
         if (budget <= 0) break;
         if (col === "wbsByProject" || col.startsWith("wbs:")) {
           const entries = Object.entries(dataRef.current.wbsByProject ?? {});
           const targets =
             col === "wbsByProject"
-              ? entries
-              : entries.filter(([pid]) => col === `wbs:${pid}`);
+              ? entries.filter(([pid]) => !sideConflictHoldRef.current.has(`wbs:${pid}`))
+              : entries.filter(([pid]) => col === `wbs:${pid}` && !sideConflictHoldRef.current.has(col));
           for (const [projectId, wbs] of targets) {
+            const baseData = parseMaybeJson(wbsBaseRef.current.get(projectId));
+            if (baseData === undefined) {
+              const latest = await apiFetch<{ wbs?: WbsItem[] }>(`/api/projects/${encodeURIComponent(projectId)}/wbs`);
+              if (!isCurrentSession()) return;
+              const remoteWbs = Array.isArray(latest.wbs) ? latest.wbs : [];
+              if (JSON.stringify(remoteWbs) !== JSON.stringify(wbs)) {
+                const conflictKey = `wbs:${projectId}`;
+                wbsBaseRef.current.set(projectId, JSON.stringify(remoteWbs));
+                sideConflictHoldRef.current.add(conflictKey);
+                saveConflictHolds(sideConflictHoldRef.current);
+                markDirty(conflictKey);
+                void persistSideBase("wbsByProject", { ...dataRef.current.wbsByProject, [projectId]: wbs }, isCurrentSession);
+                void persistSideBase("wbsBaseByProject", Object.fromEntries(wbsBaseRef.current), isCurrentSession);
+                throw new ApiError(409, `WBS ${projectId} berubah saat edit offline dan baseline tidak tersedia`, "STALE");
+              }
+              wbsBaseRef.current.set(projectId, JSON.stringify(remoteWbs));
+              continue;
+            }
             await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/wbs`, {
               method: "PUT",
-              body: JSON.stringify({ wbs, baseData: parseMaybeJson(wbsBaseRef.current.get(projectId)) }),
+              body: JSON.stringify({ wbs, baseData }),
             });
+            if (!isCurrentSession()) return;
             /* Base jadi versi server yang baru saja kita tulis. */
             wbsBaseRef.current.set(projectId, JSON.stringify(wbs));
           }
+          if (!isCurrentSession()) return;
+          await persistSideBase("wbsBaseByProject", Object.fromEntries(wbsBaseRef.current), isCurrentSession);
+          if (!isCurrentSession()) return;
           clearDirty(col, sentGen.get(col));
           setBackendError(null);
           continue;
@@ -1532,15 +1762,37 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           const entries = Object.entries(dataRef.current.teamByProject ?? {});
           const targets =
             col === "teamByProject"
-              ? entries
-              : entries.filter(([pid]) => col === `team:${pid}`);
+              ? entries.filter(([pid]) => !sideConflictHoldRef.current.has(`team:${pid}`))
+              : entries.filter(([pid]) => col === `team:${pid}` && !sideConflictHoldRef.current.has(col));
           for (const [projectId, memberIds] of targets) {
+            const baseData = parseMaybeJson(teamBaseRef.current.get(projectId));
+            if (baseData === undefined) {
+              const latest = await apiFetch<{ memberIds?: string[] }>(`/api/projects/${encodeURIComponent(projectId)}/team`);
+              if (!isCurrentSession()) return;
+              const remoteTeam = Array.isArray(latest.memberIds) ? latest.memberIds : [];
+              if (JSON.stringify(remoteTeam) !== JSON.stringify(memberIds)) {
+                const conflictKey = `team:${projectId}`;
+                teamBaseRef.current.set(projectId, JSON.stringify(remoteTeam));
+                sideConflictHoldRef.current.add(conflictKey);
+                saveConflictHolds(sideConflictHoldRef.current);
+                markDirty(conflictKey);
+                void persistSideBase("teamByProject", { ...dataRef.current.teamByProject, [projectId]: memberIds }, isCurrentSession);
+                void persistSideBase("teamBaseByProject", Object.fromEntries(teamBaseRef.current), isCurrentSession);
+                throw new ApiError(409, `Tim proyek ${projectId} berubah saat edit offline dan baseline tidak tersedia`, "STALE");
+              }
+              teamBaseRef.current.set(projectId, JSON.stringify(remoteTeam));
+              continue;
+            }
             await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/team`, {
               method: "PUT",
-              body: JSON.stringify({ memberIds, baseData: parseMaybeJson(teamBaseRef.current.get(projectId)) }),
+              body: JSON.stringify({ memberIds, baseData }),
             });
+            if (!isCurrentSession()) return;
             teamBaseRef.current.set(projectId, JSON.stringify(memberIds));
           }
+          if (!isCurrentSession()) return;
+          await persistSideBase("teamBaseByProject", Object.fromEntries(teamBaseRef.current), isCurrentSession);
+          if (!isCurrentSession()) return;
           clearDirty(col, sentGen.get(col));
           setBackendError(null);
           continue;
@@ -1553,9 +1805,12 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
         const sentTombstones = new Set<string>();
         if (tombstones && tombstones.size > 0) {
           for (const id of [...tombstones]) {
+            if (!isCurrentSession() || !remoteActive()) return;
             try {
               await remoteRepository(col).remove(id);
+              if (!isCurrentSession()) return;
             } catch (err) {
+              if (!isCurrentSession()) return;
               /* 404 = sudah hilang di BE -> anggap sukses; selain itu gagal. */
               if (err instanceof ApiError && err.status === 404) {
                 tombstones.delete(id);
@@ -1615,13 +1870,16 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
                 hilang) membekukan koleksi seutuhnya.
            Sekarang: continue + laporkan. Koleksi hanya dibersihkan bila
            semua baris pada jendela ini benar-benar berhasil. */
-        const failedRows: string[] = [];
-        for (const row of rows.slice(0, bolehKirim)) {
+          const failedRows: string[] = [];
+          for (const row of rows.slice(0, bolehKirim)) {
+          if (!isCurrentSession() || !remoteActive()) return;
           const attemptCreate = async (retried: boolean, staleBase?: string): Promise<PushOutcome> => {
+            if (!isCurrentSession() || !remoteActive()) return "session";
             try {
               await remoteRepository(col).create(row);
-              return "ok";
+              return isCurrentSession() ? "ok" : "session";
             } catch (err) {
+              if (!isCurrentSession()) return "session";
               if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return "auth";
               if (err instanceof ApiError && err.status === 409) {
                 try {
@@ -1636,14 +1894,16 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
                     row.id,
                     (base ? { ...row, baseUpdatedAt: base } : row) as Record<string, unknown>,
                   );
-                  return "ok";
+                  return isCurrentSession() ? "ok" : "session";
                 } catch (perr) {
+                  if (!isCurrentSession()) return "session";
                   if (perr instanceof ApiError && (perr.status === 401 || perr.status === 403)) return "auth";
                   if (perr instanceof ApiError && perr.status === 409 && perr.code === "STALE") return "stale";
                   if (perr instanceof ApiError && perr.status === 429 && !retried) {
                     const waitMs = Math.min(Math.max(perr.retryAfterSec ?? 5, 1), 30) * 1000;
                     setBackendError(`Terlalu banyak permintaan - jeda ${Math.round(waitMs / 1000)} dtk lalu coba lagi`);
                     await sleep(waitMs);
+                    if (!isCurrentSession()) return "session";
                     return attemptCreate(true, staleBase);
                   }
                   return "fail";
@@ -1654,12 +1914,14 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
                 const waitMs = Math.min(Math.max(err.retryAfterSec ?? 5, 1), 30) * 1000;
                 setBackendError(`Terlalu banyak permintaan - jeda ${Math.round(waitMs / 1000)} dtk lalu coba lagi`);
                 await sleep(waitMs);
+                if (!isCurrentSession()) return "session";
                 return attemptCreate(true, staleBase);
               }
               return "fail";
             }
           };
           let res = await attemptCreate(false);
+          if (res === "session" || !isCurrentSession()) return;
           if (res === "auth") {
             /* Sesi habis atau hak akses ditolak: hentikan SEGERA seluruh push.
                Koleksi lain tidak akan berhasil juga, dan mencoba semua hanya
@@ -1683,10 +1945,11 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
               const server = await apiFetch<{ id: string; updated_at: string }>(
                 `/api/${col}/${encodeURIComponent(row.id)}`,
               );
+              if (!isCurrentSession()) return;
               freshBase = typeof server.updated_at === "string" ? server.updated_at : undefined;
               /* Samakan base lokal supaya run berikutnya tidak menabrak STALE lagi. */
               if (freshBase) {
-                setData((prev) => ({
+                setData((prev) => !isCurrentSession() ? prev : ({
                   ...prev,
                   [col]: (((prev as unknown as Record<string, StoreItem[]>)[col] ?? []) as StoreItem[]).map((r) =>
                     r.id === row.id ? { ...r, updated_at: freshBase } : r,
@@ -1695,11 +1958,14 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
                 bumpEpoch(col as string);
               }
             } catch {
+              if (!isCurrentSession()) return;
               /* Tidak bisa ambil versi server - coba tanpa base (blind merge)
                  lebih baik daripada membuang edit pengguna. */
               freshBase = undefined;
             }
+            if (!isCurrentSession()) return;
             res = freshBase ? await attemptCreate(false, freshBase) : await attemptCreate(false);
+            if (res === "session" || !isCurrentSession()) return;
           }
           if (res === "auth") {
             /* Percobaan ulang dengan base server juga ditolak karena sesi/role.
@@ -1778,6 +2044,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           }
         }
       } catch (err) {
+        if (!isCurrentSession()) return;
         /* Koleksi ini tetap dirty - coba lagi nanti. Kecuali sesi habis:
            itu bukan masalah koleksi, jadi hentikan seluruh push daripada
            mengulang request yang pasti ditolak. Antrean tetap utuh. */
@@ -1790,13 +2057,25 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           }
           return;
         }
+        if (err instanceof ApiError && err.status === 409 && err.code === "STALE") {
+          setBackendError(err.message);
+          const key = `stale:${col}`;
+          if (fallbackToasted.current !== key) {
+            fallbackToasted.current = key;
+            const label = col.startsWith("wbs") ? "WBS" : "tim proyek";
+            notifyConflict(`${label} berubah di server; edit lokal tetap tersimpan dan menunggu penyelesaian konflik.`);
+          }
+          return;
+        }
       }
     }
     } finally {
       pushingRef.current = false;
       /* Koleksi berikutnya dilayani mulai dari tempat berhenti, supaya yang
          tidak kebagian budget run ini dapat giliran pertama di run berikutnya. */
-      pushColCursorRef.current = (pushColCursorRef.current + 1) % Math.max(1, cols.length);
+      if (isCurrentSession()) {
+        pushColCursorRef.current = (pushColCursorRef.current + 1) % Math.max(1, cols.length);
+      }
       /* Ada trigger yang tertahan selama push ini berjalan: jalankan lagi
          setelah jeda pendek supaya tidak menabrak rate limit, dan pastikan
          penandanya dibersihkan lebih dulu supaya tidak berputar terus. */
@@ -1810,13 +2089,15 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
         }, 1500);
       }
     }
-  }, [clearDirty, clearTombstones]);
+  }, [clearDirty, clearTombstones, bumpEpoch, markDirty, persistSideBase]);
   pushPendingRef.current = pushPending;
 
   const clearOwnerScopedMemory = useCallback(() => {
     dirtyRef.current.clear();
     dirtyGenRef.current.clear();
     writeEpochRef.current.clear();
+    projectMutationClockRef.current = 0;
+    projectExistenceChangesRef.current.clear();
     tombstonesRef.current.clear();
     pushCursorRef.current.clear();
     pushAttemptsRef.current.clear();
@@ -1825,36 +2106,42 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
     pushAgainRef.current = false;
     wbsBaseRef.current.clear();
     teamBaseRef.current.clear();
+    sideMapEpochRef.current.clear();
+    sideConflictHoldRef.current.clear();
+    saveConflictHolds(sideConflictHoldRef.current);
     fallbackToasted.current = "";
     pendingPersistRef.current.clear();
     setPendingSync([]);
-    setBranchState("SEMUA");
+    setBranchState(initialBranchScope(isBackendConfigured(), null));
     const seeds = buildSeeds();
     dataRef.current = seeds;
     prevDataRef.current = seeds;
     setData(seeds);
   }, []);
 
-  const endSession = useCallback(() => {
-    sessionGenerationRef.current += 1;
+  const endSession = useCallback((): Promise<void> => {
+    bumpSessionGeneration();
     collectionSyncCache.invalidateAll();
-  }, []);
+    clearOwnerScopedMemory();
+    return purgeOfflineCacheAfterWrites();
+  }, [bumpSessionGeneration, clearOwnerScopedMemory, purgeOfflineCacheAfterWrites]);
 
   const activateCacheOwner = useCallback(async (ownerId: string): Promise<void> => {
     const normalized = ownerId.trim();
     if (!normalized) return;
     await bootstrapGateRef.current?.promise;
+    await cacheLifecycleRef.current.catch(() => undefined);
 
     const previousOwner = currentSessionOwnerId();
     const action = cacheOwnerAction(normalized, storedCacheOwnerId());
     const sessionChanged = previousOwner !== normalized;
     const shouldPurge = action === "purge" || (previousOwner !== null && sessionChanged);
     if (sessionChanged || shouldPurge) {
-      sessionGenerationRef.current += 1;
+      bumpSessionGeneration();
       collectionSyncCache.invalidateAll();
     }
     if (shouldPurge) {
-      await purgeOfflineCache();
+      await purgeOfflineCacheAfterWrites();
       try {
         for (const key of [STORE_KEY, ...LEGACY_KEYS]) sessionStorage.removeItem(key);
       } catch {
@@ -1871,27 +2158,27 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
     if (!shouldPurge) {
       const activationGeneration = sessionGenerationRef.current;
       await hydrateFromOfflineStore((cached) => {
+        if (activationGeneration !== sessionGenerationRef.current) return;
+        if (isStringRecord(cached.wbsBaseByProject)) wbsBaseRef.current = new Map(Object.entries(cached.wbsBaseByProject));
+        if (isStringRecord(cached.teamBaseByProject)) teamBaseRef.current = new Map(Object.entries(cached.teamBaseByProject));
         setData((prev) => {
           if (activationGeneration !== sessionGenerationRef.current) return prev;
-          const next = { ...prev } as unknown as Record<string, unknown>;
-          let changed = false;
-          for (const [col, rows] of Object.entries(cached)) {
-            if (Array.isArray(rows) && rows.length > 0) {
-              next[col] = rows;
-              changed = true;
-            }
-          }
-          return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+          const current = prev as unknown as Record<string, unknown>;
+          const merged = mergeOfflineValues(current, cached);
+          return merged === current ? prev : sanitizeStore(merged as unknown as Partial<StoreShape>);
         });
       });
     }
-  }, [clearOwnerScopedMemory]);
+  }, [bumpSessionGeneration, clearOwnerScopedMemory, purgeOfflineCacheAfterWrites]);
 
   /* Hidrasi offline tetap terjadi saat boot, tetapi data remote dimuat oleh
      hook modul/halaman aktif agar login tidak mengunduh 50+ koleksi. */
   useEffect(() => {
     const checkOwnerAndHydrate = async () => {
       try {
+        // A persisted branch can be stale after server-side reassignment; AuthProvider
+        // hydrates the owner cache only after /auth/me confirms the current scope.
+        if (isBackendConfigured()) return;
         const currentUserId = currentSessionOwnerId();
         const action = cacheOwnerAction(currentUserId, storedCacheOwnerId());
         if (action === "defer") {
@@ -1903,9 +2190,9 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           return;
         }
         if (action === "purge") {
-          sessionGenerationRef.current += 1;
+          bumpSessionGeneration();
           collectionSyncCache.invalidateAll();
-          await purgeOfflineCache();
+          await purgeOfflineCacheAfterWrites();
           try {
             for (const key of [STORE_KEY, ...LEGACY_KEYS]) sessionStorage.removeItem(key);
             if (currentUserId) localStorage.setItem(CACHE_OWNER_KEY, currentUserId);
@@ -1918,17 +2205,14 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
 
         const sessionAtStart = sessionScopeKey(sessionGenerationRef.current);
         await hydrateFromOfflineStore((cached) => {
+          if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return;
+          if (isStringRecord(cached.wbsBaseByProject)) wbsBaseRef.current = new Map(Object.entries(cached.wbsBaseByProject));
+          if (isStringRecord(cached.teamBaseByProject)) teamBaseRef.current = new Map(Object.entries(cached.teamBaseByProject));
           setData((prev) => {
             if (sessionScopeKey(sessionGenerationRef.current) !== sessionAtStart) return prev;
-            const next = { ...prev } as unknown as Record<string, unknown>;
-            let changed = false;
-            for (const [col, rows] of Object.entries(cached)) {
-              if (Array.isArray(rows) && rows.length > 0) {
-                next[col] = rows;
-                changed = true;
-              }
-            }
-            return changed ? sanitizeStore(next as unknown as Partial<StoreShape>) : prev;
+            const current = prev as unknown as Record<string, unknown>;
+            const merged = mergeOfflineValues(current, cached);
+            return merged === current ? prev : sanitizeStore(merged as unknown as Partial<StoreShape>);
           });
         });
       } finally {
@@ -1937,7 +2221,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
     };
 
     void checkOwnerAndHydrate();
-  }, [clearOwnerScopedMemory]);
+  }, [bumpSessionGeneration, clearOwnerScopedMemory, purgeOfflineCacheAfterWrites]);
 
   useEffect(() => {
     /* Guard mode TIDAK lagi menghentikan pemasangan listener. Dulu
@@ -2065,7 +2349,15 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
       pushPending,
       activateCacheOwner,
       endSession,
+      sessionGeneration,
+      isSessionGenerationCurrent,
+      captureSideMapEpochs,
+      mergeWbsCache,
       add: async (col, item, activity) => {
+        const { isCurrent: isCurrentSession, assertCurrent: assertCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
         const full: StoreItem = { ...item, id: item.id || newId(col) };
         stampCreated(full);
         /* Branch fallback terpusat: baris baru tanpa branch mewarisi cabang global.
@@ -2082,23 +2374,29 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           try {
             const saved = await remoteRepository(col).create(full);
             const finalItem = saved && saved.id ? saved : full;
+            if (!isCurrentSession()) assertCurrentSession();
+            if (col === "projects") recordProjectExistence(String(finalItem.id), true, finalItem);
             const entry = activity
               ? buildActivity(activity.action, activity.target ?? finalItem.id, activity.module)
               : null;
-            setData((prev) => ({
+            setData((prev) => !isCurrentSession() ? prev : ({
               ...prev,
               [col]: [finalItem, ...((prev[col] as StoreItem[] | undefined) ?? [])],
               activities: entry ? pushEntry(prev, entry) : prev.activities,
             }));
             bumpEpoch(col as string);
-            if (entry) {
+            if (entry && isCurrentSession()) {
               /* Mirror aktivitas best-effort tanpa rekursi (langsung HTTP, bukan add()).
                  Gagal → tandai dirty agar pushPending/resync tidak menghilangkannya. */
-              remoteRepository("activities").create(entry).catch(() => markDirty("activities"));
+              remoteRepository("activities").create(entry).catch(() => {
+                if (isCurrentSession()) markDirty("activities");
+              });
             }
+            if (!isCurrentSession()) assertCurrentSession();
             setBackendError(null);
             return finalItem;
           } catch (err) {
+            if (!isCurrentSession()) assertCurrentSession();
             // 400/409/422 ber-code (VALIDATION/CONFLICT/REFERENCED/UNPROCESSABLE):
             // jangan tulis lokal - lempar agar caller toast gagal, bukan sukses.
             // (400 validasi masuk sini agar data invalid tak tersimpan lokal.)
@@ -2109,12 +2407,14 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
             if (degrade(err)) throw err;
           }
         }
+        if (!isCurrentSession()) assertCurrentSession();
+        if (col === "projects") recordProjectExistence(String(full.id), true, full);
         markDirty(col as string);
         const fallbackEntry = activity
           ? buildActivity(activity.action, activity.target ?? full.id, activity.module)
           : null;
         if (fallbackEntry) markDirty("activities");
-        setData((prev) => ({
+        setData((prev) => !isCurrentSession() ? prev : ({
           ...prev,
           [col]: [full, ...((prev[col] as StoreItem[] | undefined) ?? [])],
           activities: fallbackEntry ? pushEntry(prev, fallbackEntry) : prev.activities,
@@ -2123,6 +2423,10 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
         return full;
       },
       update: async (col, id, patch) => {
+        const { isCurrent: isCurrentSession, assertCurrent: assertCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
         /* Di-stamp SEBELUM cabang remote/offline dan sekali saja: kalau di dalam
            percobaan ulang STALE, updatedAt harus tetap menunjuk waktu aksi
            pengguna, bukan waktu percobaan kedua. */
@@ -2136,6 +2440,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
           let attempt = 0;
           let lastStale: ApiError | null = null;
           while (attempt < 2) {
+            if (!isCurrentSession()) assertCurrentSession();
             attempt += 1;
             try {
               /* Optimistic concurrency: kirim updated_at terakhir sebagai
@@ -2146,14 +2451,18 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
               const base = current?.updated_at;
               const body = typeof base === "string" && base !== "" ? { ...patch, baseUpdatedAt: base } : patch;
               const saved = await remoteRepository(col).patch(id, body);
-              setData((prev) => ({
+              if (!isCurrentSession()) assertCurrentSession();
+              if (col === "projects") recordProjectExistence(String(id), true, saved);
+              setData((prev) => !isCurrentSession() ? prev : ({
                 ...prev,
                 [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) => (r.id === id ? saved : r)),
               }));
               bumpEpoch(col as string);
+              if (!isCurrentSession()) assertCurrentSession();
               setBackendError(null);
               return;
             } catch (err) {
+              if (!isCurrentSession()) assertCurrentSession();
               /* STALE: server menang - muat versi server lalu coba ulang dengan
                  base yang sudah benar.
                  BUG YANG DITUTUP: versi lama melompat ke `return` di sini,
@@ -2170,7 +2479,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
                   branch?: string;
                   updated_at?: string;
                 };
-                setData((prev) => ({
+                setData((prev) => !isCurrentSession() ? prev : ({
                   ...prev,
                   [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) =>
                     r.id === id
@@ -2206,25 +2515,38 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
             throw lastStale;
           }
         }
+        if (!isCurrentSession()) assertCurrentSession();
+        if (col === "projects") {
+          const currentProject = dataRef.current.projects.find((project) => String(project.id) === String(id));
+          recordProjectExistence(String(id), true, currentProject ? { ...currentProject, ...patch, id: String(id) } : undefined);
+        }
         markDirty(col as string);
-        setData((prev) => ({
+        setData((prev) => !isCurrentSession() ? prev : ({
           ...prev,
           [col]: ((prev[col] as StoreItem[] | undefined) ?? []).map((r) => (r.id === id ? { ...r, ...patch } : r)),
         }));
         bumpEpoch(col as string);
       },
       remove: async (col, id) => {
+        const { isCurrent: isCurrentSession, assertCurrent: assertCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
         if (remoteActive()) {
           try {
             await remoteRepository(col).remove(id);
-            setData((prev) => ({
+            if (!isCurrentSession()) assertCurrentSession();
+            if (col === "projects") recordProjectExistence(String(id), false);
+            setData((prev) => !isCurrentSession() ? prev : ({
               ...prev,
               [col]: ((prev[col] as StoreItem[] | undefined) ?? []).filter((r) => r.id !== id),
             }));
             bumpEpoch(col as string);
+            if (!isCurrentSession()) assertCurrentSession();
             setBackendError(null);
             return;
           } catch (err) {
+            if (!isCurrentSession()) assertCurrentSession();
             // REFERENCED (masih dipakai modul lain) + 400/422: tampilkan +
             // lempar, jangan hapus lokal.
             if (err instanceof ApiError && (err.status === 400 || err.status === 409 || err.status === 422)) {
@@ -2235,27 +2557,35 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
             if (degrade(err)) throw err;
           }
         }
+        if (!isCurrentSession()) assertCurrentSession();
+        if (col === "projects") recordProjectExistence(String(id), false);
         /* Fallback lokal: catat tombstone agar DELETE terpropagasi via pushPending. */
         const set = tombstonesRef.current.get(col as string) ?? new Set<string>();
         set.add(id);
         tombstonesRef.current.set(col as string, set);
         saveTombstonesPersisted(tombstonesRef.current);
         markDirty(col as string);
-        setData((prev) => ({
+        setData((prev) => !isCurrentSession() ? prev : ({
           ...prev,
           [col]: ((prev[col] as StoreItem[] | undefined) ?? []).filter((r) => r.id !== id),
         }));
       },
       log: (action, target, module) => {
+        const { isCurrent: isCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
         const entry = buildActivity(action, target, module);
-        setData((prev) => ({ ...prev, activities: [entry, ...prev.activities].slice(0, ACTIVITIES_CAP) }));
+        setData((prev) => !isCurrentSession() ? prev : ({ ...prev, activities: [entry, ...prev.activities].slice(0, ACTIVITIES_CAP) }));
         if (remoteActive()) {
           // Best-effort mirror tanpa await - langsung via HTTP (bukan add())
           // agar tidak terjadi rekursi; gagal → tandai dirty agar tidak ter-wipe resync.
-          remoteRepository("activities").create(entry).catch(() => markDirty("activities"));
+          remoteRepository("activities").create(entry).catch(() => {
+            if (isCurrentSession()) markDirty("activities");
+          });
         } else {
           /* Offline/fallback: tandai dirty agar resync melewati koleksi activities. */
-          markDirty("activities");
+          if (isCurrentSession()) markDirty("activities");
         }
       },
       reset: () => {
@@ -2280,63 +2610,136 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
               : "Reset hanya membersihkan data lokal. Data server tidak tersentuh - muat ulang untuk menariknya kembali.",
           );
         }
+        bumpSessionGeneration();
+        collectionSyncCache.invalidateAll();
+        sideMapEpochRef.current.clear();
+        projectMutationClockRef.current = 0;
+        projectExistenceChangesRef.current.clear();
         setData(buildSeeds());
       },
       resync,
       resyncCollections,
       wbsFor: (projectId) => data.wbsByProject[projectId] ?? [],
       setWbs: async (projectId, wbs) => {
+        const { isCurrent: isCurrentSession, assertCurrent: assertCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
+        const writeToken = remoteActive() ? sideMapEpochRef.current.beginWrite("wbs", projectId) : undefined;
+        if (writeToken === undefined) bumpSideMapEpoch("wbs", projectId);
+        const conflictKey = `wbs:${projectId}`;
+        const retryingConflict = sideConflictHoldRef.current.has(conflictKey);
         const prevWbs = dataRef.current.wbsByProject[projectId];
-        setData((prev) => ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: wbs } }));
-        if (remoteActive()) {
+        const baseData = parseMaybeJson(wbsBaseRef.current.get(projectId)) ?? prevWbs ?? [];
+        setData((prev) => !isCurrentSession() ? prev : ({ ...prev, wbsByProject: { ...prev.wbsByProject, [projectId]: wbs } }));
+        if (writeToken !== undefined) {
+          if (retryingConflict) {
+            sideConflictHoldRef.current.delete(conflictKey);
+            saveConflictHolds(sideConflictHoldRef.current);
+          }
           try {
             await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/wbs`, {
               method: "PUT",
-              body: JSON.stringify({ wbs }),
-            });
+              body: JSON.stringify({ wbs, baseData }),
+            }).finally(() => sideMapEpochRef.current.finishWrite("wbs", projectId, writeToken));
+            assertCurrentSession();
+            wbsBaseRef.current.set(projectId, JSON.stringify(wbs));
+            void persistSideBase("wbsBaseByProject", Object.fromEntries(wbsBaseRef.current), isCurrentSession);
+            if (retryingConflict) clearDirty(conflictKey);
             setBackendError(null);
             return;
           } catch (err) {
+            assertCurrentSession();
+            if (err instanceof ApiError && err.status === 409 && err.code === "STALE") {
+            const serverWbs = (err.data as { wbs?: unknown } | undefined)?.wbs;
+            if (Array.isArray(serverWbs)) {
+              wbsBaseRef.current.set(projectId, JSON.stringify(serverWbs));
+            }
+            sideConflictHoldRef.current.add(conflictKey);
+            saveConflictHolds(sideConflictHoldRef.current);
+            markDirty(conflictKey);
+            void persistSideBase("wbsByProject", { ...dataRef.current.wbsByProject, [projectId]: wbs }, isCurrentSession);
+            void persistSideBase("wbsBaseByProject", Object.fromEntries(wbsBaseRef.current), isCurrentSession);
+            err.message = `${err.message}. Draf lokal dipertahankan; tinjau lalu tekan Simpan lagi untuk mengirim ulang secara eksplisit.`;
+            setBackendError(err.message);
+            throw err;
+            }
             if (degrade(err)) {
               // 403: kembalikan optimistik, jangan tandai dirty.
               setData((prev) => {
+                if (!isCurrentSession()) return prev;
                 const next = { ...prev.wbsByProject };
                 if (prevWbs === undefined) delete next[projectId];
                 else next[projectId] = prevWbs;
                 return { ...prev, wbsByProject: next };
               });
-              return;
+              throw err;
             }
           }
         }
+        assertCurrentSession();
         markDirty("wbsByProject");
         markDirty(`wbs:${projectId}`);
       },
       teamFor: (projectId) => data.teamByProject[projectId] ?? [],
       setTeam: async (projectId, ids) => {
+        const { isCurrent: isCurrentSession, assertCurrent: assertCurrentSession } = createSessionFence(
+          sessionScopeKey(sessionGenerationRef.current),
+          () => sessionScopeKey(sessionGenerationRef.current),
+        );
+        const writeToken = remoteActive() ? sideMapEpochRef.current.beginWrite("team", projectId) : undefined;
+        if (writeToken === undefined) bumpSideMapEpoch("team", projectId);
+        const conflictKey = `team:${projectId}`;
+        const retryingConflict = sideConflictHoldRef.current.has(conflictKey);
         const prevTeam = dataRef.current.teamByProject[projectId];
-        setData((prev) => ({ ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } }));
-        if (remoteActive()) {
+        const baseData = parseMaybeJson(teamBaseRef.current.get(projectId)) ?? prevTeam ?? [];
+        setData((prev) => !isCurrentSession() ? prev : ({ ...prev, teamByProject: { ...prev.teamByProject, [projectId]: ids } }));
+        if (writeToken !== undefined) {
+          if (retryingConflict) {
+            sideConflictHoldRef.current.delete(conflictKey);
+            saveConflictHolds(sideConflictHoldRef.current);
+          }
           try {
             await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/team`, {
               method: "PUT",
-              body: JSON.stringify({ memberIds: ids }),
-            });
+              body: JSON.stringify({ memberIds: ids, baseData }),
+            }).finally(() => sideMapEpochRef.current.finishWrite("team", projectId, writeToken));
+            assertCurrentSession();
+            teamBaseRef.current.set(projectId, JSON.stringify(ids));
+            void persistSideBase("teamBaseByProject", Object.fromEntries(teamBaseRef.current), isCurrentSession);
+            if (retryingConflict) clearDirty(conflictKey);
             setBackendError(null);
             return;
           } catch (err) {
+            assertCurrentSession();
+            if (err instanceof ApiError && err.status === 409 && err.code === "STALE") {
+            const serverTeam = (err.data as { memberIds?: unknown } | undefined)?.memberIds;
+            if (Array.isArray(serverTeam)) {
+              teamBaseRef.current.set(projectId, JSON.stringify(serverTeam));
+            }
+            sideConflictHoldRef.current.add(conflictKey);
+            saveConflictHolds(sideConflictHoldRef.current);
+            markDirty(conflictKey);
+            void persistSideBase("teamByProject", { ...dataRef.current.teamByProject, [projectId]: ids }, isCurrentSession);
+            void persistSideBase("teamBaseByProject", Object.fromEntries(teamBaseRef.current), isCurrentSession);
+            err.message = `${err.message}. Draf lokal dipertahankan; tinjau lalu simpan lagi untuk mengirim ulang secara eksplisit.`;
+            setBackendError(err.message);
+            throw err;
+            }
             if (degrade(err)) {
               // 403: kembalikan optimistik, jangan tandai dirty.
               setData((prev) => {
+                if (!isCurrentSession()) return prev;
                 const next = { ...prev.teamByProject };
                 if (prevTeam === undefined) delete next[projectId];
                 else next[projectId] = prevTeam;
                 return { ...prev, teamByProject: next };
               });
-              return;
+              throw err;
             }
           }
         }
+        assertCurrentSession();
         markDirty("teamByProject");
         markDirty(`team:${projectId}`);
       },
@@ -2344,7 +2747,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth";
       setBranch,
       inBranch,
     };
-  }, [data, branch, inBranch, backendMode, backendError, resync, resyncCollections, pendingSync, pushPending, activateCacheOwner, endSession, markDirty]);
+  }, [data, branch, inBranch, backendMode, backendError, resync, resyncCollections, pendingSync, pushPending, activateCacheOwner, endSession, sessionGeneration, isSessionGenerationCurrent, captureSideMapEpochs, mergeWbsCache, markDirty, persistSideBase, clearDirty, bumpEpoch, bumpSessionGeneration, bumpSideMapEpoch, recordProjectExistence]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

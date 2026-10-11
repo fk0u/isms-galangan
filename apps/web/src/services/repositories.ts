@@ -19,6 +19,8 @@ export interface ListFilter {
 
 /** Query paginasi server-side (GET /api/<table>?limit=&offset=). */
 export interface PagedQuery extends ListFilter {
+  /** Nama inventory exact-match untuk lookup terarah, bukan substring q. */
+  exactName?: string;
   /** Halaman 1-based. Default 1. */
   page?: number;
   /** Baris per halaman (1..500). Default 100. */
@@ -35,6 +37,8 @@ export interface PagedResult {
 
 export interface Repository {
   list(): Promise<StoreItem[]>;
+  /** Ambil row berdasarkan primary ID, tanpa pencarian nama yang ambigu. */
+  getById?(id: string): Promise<StoreItem>;
   /** Filter server-side (q/branch) - opsional agar adapter lama tak rusak. */
   listFiltered?(opts?: ListFilter): Promise<StoreItem[]>;
   /** Satu halaman data (limit/offset) + total - untuk tabel server-side paging. */
@@ -137,6 +141,10 @@ export function remoteRepository(resource: string, request: typeof apiFetch = ap
     return out;
   };
   return {
+    async getById(id) {
+      const row = await request<BackendRow>(`${base}/${encodeURIComponent(id)}`, { background: true });
+      return rowToItem(row);
+    },
     async list() {
       /* Keyset pagination, bukan OFFSET. OFFSET di atas `updated_at` yang
          berubah-ubah berarti baris yang diperbarui saat pagination berjalan
@@ -200,6 +208,7 @@ export function remoteRepository(resource: string, request: typeof apiFetch = ap
       const size = Math.min(500, Math.max(1, Math.trunc(opts?.size ?? 100)));
       const params = new URLSearchParams();
       if (opts?.q?.trim()) params.set("q", opts.q.trim());
+      if (opts?.exactName?.trim()) params.set("exactName", opts.exactName.trim());
       if (opts?.branch?.trim()) params.set("branch", opts.branch.trim());
       params.set("limit", String(size));
       params.set("offset", String((page - 1) * size));

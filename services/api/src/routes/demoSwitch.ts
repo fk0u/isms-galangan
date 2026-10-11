@@ -71,7 +71,12 @@ export function registerDemoSwitchRoutes(app: FastifyInstance): void {
       return reply.status(409).send(fail(`Akun demo ${account.username} kini berperan ${user.role}, bukan ${account.role}`, "CONFLICT"));
     }
 
-    const branch = await branchOfUser(user);
+    let branch: string;
+    try {
+      branch = await branchOfUser(user);
+    } catch {
+      return reply.status(503).send(fail("Scope cabang akun demo tidak dapat diverifikasi", "BRANCH_SCOPE_UNAVAILABLE"));
+    }
     const token = signToken({ id: user.id, username: user.username, role: user.role, branch, v: user.token_version ?? 0 });
     await writeAudit({
       actor: requestActor(req), action: "auth.demo_switch", table: "users", rowId: user.id,

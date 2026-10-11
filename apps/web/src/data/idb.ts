@@ -78,8 +78,16 @@ function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<
       try {
         const t = db.transaction(STORE, mode);
         const req = run(t.objectStore(STORE));
-        req.onsuccess = () => resolve(req.result as T);
+        let result: T | null = null;
+        let succeeded = false;
+        req.onsuccess = () => {
+          result = req.result as T;
+          succeeded = true;
+        };
         req.onerror = () => resolve(null);
+        t.oncomplete = () => resolve(succeeded ? result : null);
+        t.onerror = () => resolve(null);
+        t.onabort = () => resolve(null);
       } catch {
         resolve(null);
       }
@@ -87,21 +95,21 @@ function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<
   });
 }
 
-/** Tulis satu koleksi. Kembalikan false bila gagal (kuota/private mode). */
-export async function idbPut(col: string, rows: Row[]): Promise<boolean> {
-  const res = await tx("readwrite", (s) => s.put(rows, col) as IDBRequest<IDBValidKey>);
+/** Tulis satu koleksi atau map project-side. Kembalikan false bila gagal. */
+export async function idbPut(col: string, value: unknown): Promise<boolean> {
+  const res = await tx("readwrite", (s) => s.put(value, col) as IDBRequest<IDBValidKey>);
   return res !== null;
 }
 
 /** Baca semua koleksi sekaligus (satu transaksi) - untuk hidrasi boot. */
-export async function idbGetAll(): Promise<Record<string, Row[]> | null> {
+export async function idbGetAll(): Promise<Record<string, unknown> | null> {
   const db = await openDb();
   if (!db) return null;
-  return new Promise<Record<string, Row[]> | null>((resolve) => {
+  return new Promise<Record<string, unknown> | null>((resolve) => {
     try {
       const t = db.transaction(STORE, "readonly");
       const store = t.objectStore(STORE);
-      const out: Record<string, Row[]> = {};
+      const out: Record<string, unknown> = {};
       const keysReq = store.getAllKeys();
       const valsReq = store.getAll();
       let done = 0;
@@ -112,7 +120,7 @@ export async function idbGetAll(): Promise<Record<string, Row[]> | null> {
         const vals = valsReq.result ?? [];
         for (let i = 0; i < keys.length; i += 1) {
           const k = String(keys[i]);
-          if (Array.isArray(vals[i])) out[k] = vals[i] as Row[];
+          if (typeof vals[i] === "object" && vals[i] !== null) out[k] = vals[i] as unknown;
         }
         resolve(out);
       };
@@ -137,8 +145,11 @@ export async function idbClearAll(): Promise<void> {
       const t = db.transaction(STORE, "readwrite");
       const store = t.objectStore(STORE);
       const req = store.clear();
-      req.onsuccess = () => resolve();
+      req.onsuccess = () => undefined;
       req.onerror = () => resolve();
+      t.oncomplete = () => resolve();
+      t.onerror = () => resolve();
+      t.onabort = () => resolve();
     } catch {
       resolve();
     }
@@ -176,21 +187,22 @@ export async function purgeOfflineCache(): Promise<void> {
   clearIsmsLocalStorage();
 }
 
-export function lsPut(col: string, rows: Row[]): boolean {
+export function lsPut(col: string, value: unknown): boolean {
   try {
-    localStorage.setItem(LS_PREFIX + col, JSON.stringify(rows.slice(-LS_ROW_CAP)));
+    const stored = Array.isArray(value) ? value.slice(-LS_ROW_CAP) : value;
+    localStorage.setItem(LS_PREFIX + col, JSON.stringify(stored));
     return true;
   } catch {
     return false;
   }
 }
 
-export function lsGet(col: string): Row[] | null {
+export function lsGet(col: string): unknown | null {
   try {
     const raw = localStorage.getItem(LS_PREFIX + col);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as Row[]) : null;
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
   } catch {
     return null;
   }
