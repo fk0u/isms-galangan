@@ -9,7 +9,7 @@ import { AsyncButton, Card, EmptyState, Field, FormGrid, NumInput, toast } from 
 import { useStore, type StoreItem } from "../../../data/store";
 import { useAuth } from "../../../auth/auth";
 import { poIsMultiItem, poOpenQty, usePoActions } from "../../../data/usePoActions";
-import { useFulfillMaterialRequest } from "../../../data/useMaterialRequest";
+import { useFulfillMaterialRequest, useApproveMaterialRequest } from "../../../data/useMaterialRequest";
 import { useStockIssue } from "../../../data/useStockIssue";
 import { unitConversionOf } from "../../../utils/unitConversion";
 import { formatStockWithBase } from "../../../utils/stockIssue";
@@ -27,6 +27,7 @@ export default function ReceiveIssueTab() {
   const actor = user?.name ?? "Gudang";
   const poActions = usePoActions();
   const fulfill = useFulfillMaterialRequest();
+  const approveMr = useApproveMaterialRequest();
   const issue = useStockIssue();
   const inventory = data.inventory ?? [];
 
@@ -79,8 +80,10 @@ export default function ReceiveIssueTab() {
 
   // ---------- Keluar untuk permintaan ----------
   const waiting = useMemo(
-    () => (data.materialRequests ?? []).filter((m) => Number(m.shortage ?? 0) > 0)
-      .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? ""))),
+    () => (data.materialRequests ?? []).filter((m) =>
+      (m.status === "Menunggu Approval Gudang" || Number(m.shortage ?? 0) > 0) &&
+      m.status !== "Ditolak Gudang" && m.status !== "Selesai" && m.status !== "Dipenuhi dari stok"
+    ).sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? ""))),
     [data.materialRequests],
   );
   const [outPick, setOutPick] = useState<Set<string>>(new Set());
@@ -88,7 +91,15 @@ export default function ReceiveIssueTab() {
   const issueTicked = async () => {
     let done = 0;
     for (const id of outPick) {
-      try { await fulfill(id, actor); done += 1; } catch (e) { toast(`${id}: ${e instanceof Error ? e.message : String(e)}`, "info"); }
+      const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
+      try {
+        if (mr?.status === "Menunggu Approval Gudang") {
+          await approveMr(id, actor);
+        } else {
+          await fulfill(id, actor);
+        }
+        done += 1;
+      } catch (e) { toast(`${id}: ${e instanceof Error ? e.message : String(e)}`, "info"); }
     }
     setOutPick(new Set());
     if (done > 0) toast(T.outDone.replace("{n}", String(done)));

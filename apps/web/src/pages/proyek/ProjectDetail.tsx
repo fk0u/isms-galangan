@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -207,7 +207,10 @@ export default function ProjectDetail() {
      salah milestone, risk yang dobel) nyangkut permanen di proyek. */
   const [delRec, setDelRec] = useState<{ kind: "risks" | "trials" | "changeOrders" | "bast"; row: StoreItem } | null>(null);
   const [showWbs, setShowWbs] = useState(false);
-  const [wbsForm, setWbsForm] = useState({ task: "", start: "", end: "", weight: "10", progress: "0", predecessor: "" });
+  const [wbsForm, setWbsForm] = useState({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" });
+  const [showWorktree, setShowWorktree] = useState(false);
+  const [stageToDelete, setStageToDelete] = useState<string | null>(null);
+  const [showClassDetails, setShowClassDetails] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
   const [teamPick, setTeamPick] = useState("");
   const [wbsTaskUpdate, setWbsTaskUpdate] = useState<string | null>(null);
@@ -301,7 +304,7 @@ const confirmStatus = async () => {
     if (!to) { setTahapMove(null); return; }
     if (tahapMove.dir === 1) {
       const from = TAHAP[idx];
-if (from === "Desain" && to === "Produksi") {
+if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
           /* D1: gate Class Approval pindah ke Documents. Cek apakah ada
              dokumen tipe Sertifikat + subType "Sertifikat Kelas" yang sudah
              Disetujui untuk proyek ini. Fallback ke designStages lama untuk
@@ -1234,10 +1237,11 @@ const createWarranty = async (wbsTask?: string) => {
           const cur = TAHAP.indexOf(tahapOf(project));
           const done = i < cur;
           const on = i === cur;
+          const label = t === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : t;
           return (
             <span key={t} className="flex items-center gap-1.5">
               <span className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${on ? "bg-navy-700 text-white" : done ? "bg-emerald-100 text-emerald-700" : "bg-steel-100 text-steel-500"}`}>
-                {i + 1}. {t}
+                {i + 1}. {label}
               </span>
               {i < TAHAP.length - 1 && <span aria-hidden className="text-steel-300">→</span>}
             </span>
@@ -1248,7 +1252,7 @@ const createWarranty = async (wbsTask?: string) => {
           <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) >= TAHAP.length - 1} onClick={() => { setTahapMove({ dir: 1 }); setTahapReason(""); }}>{S.detTahapNext}</button>
         </span>
         <span className="ml-2 text-xs font-medium text-steel-500">
-          Posisi tahap {TAHAP.indexOf(tahapOf(project)) + 1}/{TAHAP.length}: {tahapOf(project)} · Status {project.status}
+          Posisi tahap {TAHAP.indexOf(tahapOf(project)) + 1}/{TAHAP.length}: {tahapOf(project) === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : tahapOf(project)} · Status {project.status}
         </span>
         {project.quotationId && !hasContract(project, data.contracts ?? []) ? (
           <Badge tone="amber">Belum ada kontrak</Badge>
@@ -1329,6 +1333,111 @@ const createWarranty = async (wbsTask?: string) => {
                   ))}
                   {scopeList(project.scope).length === 0 && <p className="text-sm text-steel-400">{S.detScopeEmpty}</p>}
                 </ul>
+
+                {/* Ringkasan & Breakdown Subclass Perencanaan / Class Approval */}
+                {(() => {
+                  const PLANNING_SUBCLASSES = [
+                    { id: "GA", name: "General Arrangement (Rencana Umum)", kw: /rencana umum|general arrangement|ga/i },
+                    { id: "LINES", name: "Lines Plan & Data Hidrostatis", kw: /lines plan|hidrostatis|garis/i },
+                    { id: "MIDSHIP", name: "Midship Section & Scantling BKI", kw: /midship|penampang|scantling/i },
+                    { id: "CONSTR", name: "Profil Konstruksi & Geladak", kw: /konstruksi|profile|geladak|deck/i },
+                    { id: "SHELL", name: "Shell Expansion (Bukaan Kulit)", kw: /shell|kulit|bukaan/i },
+                    { id: "MACH", name: "Machinery Arrangement & Shafting", kw: /machinery|mesin|poros|shaft/i },
+                    { id: "PIPING", name: "Piping & Bilge/Ballast Diagram", kw: /piping|perpipaan|bilga|ballast/i },
+                    { id: "ELEC", name: "Electrical One-Line Diagram", kw: /electrical|listrik|one-line/i },
+                    { id: "STAB", name: "Buku Stabilitas Kapal (Stability)", kw: /stability|stabilitas|booklet/i },
+                    { id: "SAFETY", name: "Safety Plan & Sertifikat Kelas", kw: /kelas|class|safety|sertifikat/i },
+                  ];
+
+                  const projectDocs = data.documents.filter((d) => d.project === pid);
+                  const isItemDone = (item: typeof PLANNING_SUBCLASSES[number]) => {
+                    if (classApproved && item.id === "SAFETY") return true;
+                    const docMatched = projectDocs.some((d) => item.kw.test(String(d.title ?? "")) && d.status === "Disetujui");
+                    if (docMatched) return true;
+                    const wbsMatched = wbs.some((w) => item.kw.test(String(w.task ?? "")) && Number(w.progress ?? 0) >= 100);
+                    if (wbsMatched) return true;
+                    const stageMatched = designStages.some((s) => item.kw.test(String(s.name ?? "")) && s.status === "Disetujui");
+                    return stageMatched;
+                  };
+
+                  const doneItems = PLANNING_SUBCLASSES.filter(isItemDone);
+                  const pendingItems = PLANNING_SUBCLASSES.filter((item) => !isItemDone(item));
+                  const progressPct = Math.round((doneItems.length / PLANNING_SUBCLASSES.length) * 100);
+
+                  return (
+                    <div className="mt-6 rounded-2xl border border-steel-200 bg-surface/50 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-100 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-navy-900">{S.detDesignTitle}</h3>
+                            {classApproved
+                              ? <Badge tone="green">{S.detClassOk}</Badge>
+                              : <Badge tone="amber">{S.detClassPending.replace("{a}", "Belum")}</Badge>}
+                          </div>
+                          <p className="mt-0.5 text-xs text-steel-500">
+                            {doneItems.length}/{PLANNING_SUBCLASSES.length} {locale === "en" ? "planning & class items completed" : "subclass & item perencanaan selesai"} ({progressPct}%)
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs"
+                          onClick={() => setShowClassDetails(!showClassDetails)}
+                        >
+                          {showClassDetails ? (locale === "en" ? "Hide Details" : "Tutup Rincian") : (locale === "en" ? "View Subclass Breakdown" : "Lihat Rincian Subclass")}
+                        </button>
+                      </div>
+
+                      <div className="mt-3">
+                        <ProgressBar value={progressPct} tone={progressPct >= 100 ? "green" : "navy"} />
+                      </div>
+
+                      {showClassDetails && (
+                        <div className="mt-4 grid grid-cols-1 gap-4 pt-2 border-t border-steel-100 md:grid-cols-2">
+                          {/* Item Selesai */}
+                          <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
+                            <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60 text-xs font-semibold text-emerald-800">
+                              <span>✓ {locale === "en" ? "Completed Items" : "Item Selesai"}</span>
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{doneItems.length}</span>
+                            </div>
+                            <ul className="mt-2 space-y-1.5 text-xs text-steel-700">
+                              {doneItems.length === 0 ? (
+                                <li className="italic text-steel-400 py-1">{locale === "en" ? "No completed items yet" : "Belum ada item selesai"}</li>
+                              ) : (
+                                doneItems.map((it) => (
+                                  <li key={it.id} className="flex items-start gap-1.5">
+                                    <span className="text-emerald-600 font-bold shrink-0">✔</span>
+                                    <span className="font-medium text-navy-900">{it.name}</span>
+                                  </li>
+                                ))
+                              )}
+                            </ul>
+                          </div>
+
+                          {/* Item Belum Selesai (Pending) */}
+                          <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+                            <div className="flex items-center justify-between pb-2 border-b border-amber-200/60 text-xs font-semibold text-amber-800">
+                              <span>⏳ {locale === "en" ? "Pending Items" : "Belum Selesai (Pending)"}</span>
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">{pendingItems.length}</span>
+                            </div>
+                            <ul className="mt-2 space-y-1.5 text-xs text-steel-700">
+                              {pendingItems.length === 0 ? (
+                                <li className="italic text-emerald-600 py-1">🎉 {locale === "en" ? "All items completed!" : "Semua item telah rampung!"}</li>
+                              ) : (
+                                pendingItems.map((it) => (
+                                  <li key={it.id} className="flex items-start gap-1.5">
+                                    <span className="text-amber-500 font-bold shrink-0">•</span>
+                                    <span>{it.name}</span>
+                                  </li>
+                                ))
+                              )}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="mt-6">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-navy-900">{S.detLogTitle}</h3>
@@ -1419,9 +1528,26 @@ const createWarranty = async (wbsTask?: string) => {
 
           {tab === "WBS & Anggaran" && (
             <div>
-              <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detWbsTitle}</h3>
-              {/* Alur bercabang: fase → pekerjaan → foto & riwayat. Tabel di bawah tetap untuk mengubah data. */}
-              {wbs.length > 0 && <div className="mb-4 rounded-xl border border-steel-100 p-3"><WbsTree wbs={wbs} /></div>}
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-navy-900">{S.detWbsTitle}</h3>
+                {wbs.length > 0 && (
+                  <button
+                    type="button"
+                    className={`btn-secondary text-xs flex items-center gap-1.5 ${showWorktree ? "bg-navy-50 text-navy-800 border-navy-300 font-semibold" : ""}`}
+                    onClick={() => setShowWorktree(!showWorktree)}
+                    title={showWorktree ? S.detHideWorktree : S.detShowWorktree}
+                  >
+                    <GitBranch className="h-3.5 w-3.5 text-navy-600" />
+                    {showWorktree ? S.detHideWorktree : S.detShowWorktree}
+                  </button>
+                )}
+              </div>
+              {/* Alur bercabang: fase → pekerjaan → foto & riwayat. Ditampilkan jika toggle showWorktree aktif. */}
+              {showWorktree && wbs.length > 0 && (
+                <div className="mb-4 rounded-xl border border-steel-200 bg-surface/40 p-3">
+                  <WbsTree wbs={wbs} />
+                </div>
+              )}
 {/* Search WBS. Tabel lain di tab ini TIDAK diberi search dan itu disengaja:
               tabel baseline dibatasi jumlah tahap, tabel booking/maintenance
               sudah punya tombol Detail, dan matriks risiko 5x5 bukan daftar -
@@ -1429,7 +1555,7 @@ const createWarranty = async (wbsTask?: string) => {
               dipakai. Yang bisa tumbuh panjang tanpa batas adalah WBS. */}
               <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
                 <SearchBox value={wbsQ} onChange={setWbsQ} placeholder={locale === "en" ? "Search WBS..." : "Cari WBS..."} ariaLabel={locale === "en" ? "Search WBS" : "Cari WBS"} className="w-full max-w-xs" />
-                <button className="btn-secondary text-xs" onClick={() => setShowWbs(true)}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
+                <button className="btn-secondary text-xs" onClick={() => { setWbsForm({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" }); setShowWbs(true); }}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -1503,6 +1629,12 @@ const createWarranty = async (wbsTask?: string) => {
                               tone="neutral"
                               label={`${S.detUpdateBtn} ${w.task}`}
                               onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
+                            />
+                            <RowAction
+                              icon={Trash2}
+                              tone="danger"
+                              label={`${S.detDelStageTitle} ${w.task}`}
+                              onClick={() => setStageToDelete(w.task)}
                             />
                           </div>
                         </td>
@@ -2883,9 +3015,43 @@ const createWarranty = async (wbsTask?: string) => {
           <FormGrid>
             <Field label={S.detStart}><input type="date" className="input" placeholder={S.detWbsStartPh} value={wbsForm.start === "-" ? "" : wbsForm.start} onChange={(e) => setWbsForm({ ...wbsForm, start: e.target.value })} /></Field>
             <Field label={S.detEnd}><input type="date" className="input" placeholder={S.detWbsEndPh} value={wbsForm.end === "-" ? "" : wbsForm.end} onChange={(e) => setWbsForm({ ...wbsForm, end: e.target.value })} /></Field>
-            <Field label={S.detWeight}><NumInput className="input" value={wbsForm.weight} onChange={(e) => setWbsForm({ ...wbsForm, weight: e.target.value })} /></Field>
+            <Field label={S.detWeight} hint={S.detWeightCalcRemain.replace("{n}", String(Math.max(0, 100 - wbs.reduce((s, w) => s + (Number(w.weight) || 0), 0))))}>
+              <NumInput className="input" value={wbsForm.weight} onChange={(e) => setWbsForm({ ...wbsForm, weight: e.target.value })} />
+            </Field>
             <Field label={S.detProgField}><NumInput className="input" value={wbsForm.progress} onChange={(e) => setWbsForm({ ...wbsForm, progress: e.target.value })} /></Field>
           </FormGrid>
+
+          {/* Live kalkulasi bobot WBS */}
+          {(() => {
+            const currentTotal = wbs.reduce((sum, w) => sum + (Number(w.weight) || 0), 0);
+            const remaining = Math.max(0, 100 - currentTotal);
+            const inputWeight = Number(wbsForm.weight) || 0;
+            const simTotal = currentTotal + inputWeight;
+            return (
+              <div className="rounded-xl border border-steel-200 bg-steel-50/80 p-3 text-xs space-y-1.5">
+                <div className="flex justify-between items-center text-steel-600">
+                  <span>{S.detWeightCalcCurrent.replace("{n}", String(currentTotal))}</span>
+                  <span className="font-semibold text-ocean-700">{S.detWeightCalcRemain.replace("{n}", String(remaining))}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-steel-200/70">
+                  <span className={`font-semibold ${simTotal > 100 ? "text-rose-600" : simTotal === 100 ? "text-emerald-600" : "text-navy-900"}`}>
+                    {S.detWeightCalcTotal.replace("{n}", String(simTotal))}
+                  </span>
+                  {simTotal > 100 && (
+                    <span className="rounded bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                      {S.detWeightCalcOver}
+                    </span>
+                  )}
+                  {simTotal === 100 && (
+                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                      100% Ideal
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           <Field label={S.detPred} hint={S.detPredHint}>
             <select className="input" value={wbsForm.predecessor} onChange={(e) => setWbsForm({ ...wbsForm, predecessor: e.target.value })}>
               <option value="">{S.detNoPred}</option>
@@ -2894,6 +3060,23 @@ const createWarranty = async (wbsTask?: string) => {
           </Field>
         </div>
       </Modal>
+
+      {/* Modal konfirmasi hapus tahapan WBS */}
+      <ConfirmModal
+        open={stageToDelete !== null}
+        onCancel={() => setStageToDelete(null)}
+        onConfirm={async () => {
+          if (!stageToDelete) return;
+          const next = wbs.filter((w) => w.task !== stageToDelete);
+          await setWbs(pid, next);
+          log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
+          toast(S.detDelStageSuccess.replace("{a}", stageToDelete));
+          setStageToDelete(null);
+        }}
+        title={S.detDelStageTitle}
+        desc={S.detDelStageConfirm.replace("{a}", stageToDelete ?? "")}
+        danger
+      />
 
       {/* Modal tim */}
       <Modal open={showTeam} onClose={() => setShowTeam(false)} title={S.detTeamModal}

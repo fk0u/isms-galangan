@@ -728,6 +728,7 @@ export function Modal({
   children,
   footer,
   wide = false,
+  extraWide = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -736,6 +737,7 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  extraWide?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -794,7 +796,7 @@ export function Modal({
             aria-label={title}
             tabIndex={-1}
             className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-steel-200 bg-white shadow-lift sm:rounded-2xl ${
-              wide ? "sm:max-w-3xl" : "sm:max-w-lg"
+              extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             /* Masuk dari scale 0.96 (tidak pernah dari 0), ease-out kuat;
                keluar lebih cepat dari masuk. Modal tetap berpusat. */
