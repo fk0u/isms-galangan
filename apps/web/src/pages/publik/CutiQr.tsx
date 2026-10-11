@@ -1,7 +1,7 @@
 // F3-L-06 / ADR-0019: halaman publik pengajuan cuti/izin (dibuka dari QR di bengkel).
 // Tanpa login akun dan tanpa AppShell. Karyawan mengisi NIK; server hanya
 // mengembalikan nama, jabatan, dan departemen untuk verifikasi sebelum kirim.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
@@ -28,6 +28,7 @@ export default function CutiQr() {
   const E = n_emp[locale];
   const [f, setF] = useState({ nik: "", type: "Izin", from: todayISO(), to: todayISO(), note: "" });
   const [doc, setDoc] = useState<File | null>(null);
+  const nikRef = useRef("");
   const [link, setLink] = useState<"checking" | "ok" | "gone">("checking");
   // undefined = belum dicek, null = NIK belum dikenali.
   const [preview, setPreview] = useState<Preview | null | undefined>(undefined);
@@ -54,7 +55,8 @@ export default function CutiQr() {
       if (res.status === 404) { setLink("gone"); return; }
       if (!res.ok) return;
       const json = (await res.json()) as { data?: { employee?: Preview | null } };
-      setPreview(json.data?.employee ?? null);
+      // Jawaban untuk NIK yang sudah diganti tidak boleh menimpa pratinjau NIK sekarang.
+      if (nikRef.current.trim() === nik) setPreview(json.data?.employee ?? null);
     } catch { /* pratinjau hanya bantuan; kirim tetap divalidasi server */ }
   };
 
@@ -98,7 +100,7 @@ export default function CutiQr() {
         <form onSubmit={submit} className="mt-5 space-y-3">
           <label className="block text-sm font-medium text-steel-600">{E.qrNik}
             <input className={field} inputMode="numeric" autoComplete="off" required value={f.nik}
-              onChange={(e) => { setF({ ...f, nik: e.target.value }); setPreview(undefined); }} onBlur={() => void lookup()} />
+              onChange={(e) => { nikRef.current = e.target.value; setF({ ...f, nik: e.target.value }); setPreview(undefined); }} onBlur={() => void lookup()} />
           </label>
           {preview && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5" role="status">

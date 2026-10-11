@@ -30,6 +30,9 @@ describe("unggah PDF sertifikat (#98)", () => {
   it("PDF berisi skrip → ditolak", () => {
     expect(scanContent(pdf("<< /OpenAction << /S /JavaScript /JS (app.alert(1)) >> >>"), ".pdf")).toMatch(/skrip/);
     expect(scanContent(pdf("<< /S /Launch /F (cmd.exe) >>"), ".pdf")).toMatch(/skrip/);
+    expect(scanContent(pdf("<< /Names << /EmbeddedFiles 5 0 R >> >>"), ".pdf")).toMatch(/skrip/);
+    // Skrip di luar 256 KiB pertama tetap terdeteksi.
+    expect(scanContent(pdf(`<< /OpenAction 9 0 R >>${" ".repeat(300 * 1024)}9 0 obj << /S /JavaScript >>`), ".pdf")).toMatch(/skrip/);
   });
   it("berkas bukan PDF berekstensi .pdf → ditolak", () => {
     expect(hasMagic(Buffer.from("MZ bukan pdf"), ".pdf")).toBe(false);

@@ -3,7 +3,7 @@
 import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { q, exec, closeDb } from "../src/db.js";
-import { wbsRemovalError } from "../src/domainGuards.js";
+import { wbsRuleError } from "../src/domainGuards.js";
 
 async function main(): Promise<void> {
   console.log("=== ISMS Domain Guards Probe (#67 #82 #93) ===");
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
     total += 1;
     if (cond) { passed += 1; console.log(`[PASS] ${name}`); } else { console.error(`[FAIL] ${name} ${detail}`); process.exitCode = 1; }
   };
-  const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ?", ["direktur"]))[0]!;
+  const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1", ["direktur"]))[0]!;
   const headers = { authorization: `Bearer ${signToken({ id: u.id, username: u.username, role: u.role, branch: "SEMUA", v: u.token_version })}` };
   const call = async (method: "POST" | "PUT" | "PATCH", url: string, payload: unknown) => {
     const res = await app.inject({ method, url, headers, payload: payload as object });
@@ -48,8 +48,15 @@ async function main(): Promise<void> {
     assert("ubah progres tanpa foto → 422 PHOTO_REQUIRED", tanpaFoto.status === 422 && tanpaFoto.body.error?.code === "PHOTO_REQUIRED", JSON.stringify(tanpaFoto.body));
     assert("penugasan tanpa ubah progres tidak butuh foto → 200", (await call("PUT", wbsUrl, { wbs: [{ ...kini, assignee: { type: "internal", id: empPm } }] })).status === 200);
     assert("ubah progres dengan foto baru → 200", (await call("PUT", wbsUrl, { wbs: [{ ...kini, progress: 60, photos: [{ url: "/files/2026-10/probe.jpg", note: "", date: "2026-10-12" }] }] })).status === 200);
-    assert("tahapan berpenugasan terlindungi", wbsRemovalError([{ task: "A", progress: 0, assignee: { type: "internal", id: "E1" } }], []) !== null);
-    assert("tahapan berfoto terlindungi", wbsRemovalError([{ task: "A", progress: 0, photos: [{ url: "x" }] }], []) !== null);
+    assert("tahapan berpenugasan terlindungi", wbsRuleError([{ task: "A", progress: 0, assignee: { type: "internal", id: "E1" } }], [])?.code === "STAGE_IN_USE");
+    assert("tahapan berfoto terlindungi", wbsRuleError([{ task: "A", progress: 0, photos: [{ url: "x" }] }], [])?.code === "STAGE_IN_USE");
+    const lama = { task: "A", progress: 40, history: [{ date: "d", from: 0, to: 40 }], photos: [{ url: "/f/1.jpg" }] };
+    assert("mengosongkan riwayat tahapan bernama sama → ditolak", wbsRuleError([lama], [{ ...lama, history: [] }])?.code === "STAGE_IN_USE");
+    assert("membuang foto lama → ditolak", wbsRuleError([lama], [{ ...lama, photos: [] }])?.code === "STAGE_IN_USE");
+    assert("rename dengan riwayat lain sepanjang sama → ditolak", wbsRuleError([lama], [{ ...lama, task: "B", history: [{ date: "x", from: 0, to: 1 }] }])?.code === "STAGE_IN_USE");
+    assert("menggandakan URL foto lama bukan bukti baru", wbsRuleError([lama], [{ ...lama, progress: 60, photos: [...lama.photos, { url: "/f/1.jpg" }] }])?.code === "PHOTO_REQUIRED");
+    assert("rename sambil ubah progres tanpa foto → ditolak", wbsRuleError([lama], [{ ...lama, task: "B", progress: 60 }])?.code === "PHOTO_REQUIRED");
+    assert("anggota WBS bukan objek tidak membuat galat", wbsRuleError([null], [null, 5]) === null);
 
     /* #82 */
     const bukanPm = await call("PATCH", `/api/projects/${pid}`, { data: { manager: `Fin Probe ${tag}` } });
@@ -62,14 +69,15 @@ async function main(): Promise<void> {
     if (buat.body.data?.id) made.push(buat.body.data.id);
 
     /* #93 */
-    const jumlah = async (): Promise<number> => (await q<{ n: number }>("SELECT COUNT(*) AS n FROM movements"))[0]!.n;
-    const awal = await jumlah();
-    const mv = { item: "Probe", itemId: "X", type: "Transfer", qty: 1, by: "A → A", date: "2026-10-12", tone: "in" };
+    // Hanya baris bertanda probe ini yang dihitung, agar tidak terganggu penulis lain.
+    const jumlah = async (): Promise<number> => (await q<{ n: number }>("SELECT COUNT(*) AS n FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]))[0]!.n;
+    const mv = { item: `Probe ${tag}`, itemId: "X", type: "Transfer", qty: 1, by: "A → A", date: "2026-10-12", tone: "in" };
     const sama = await call("POST", "/api/movements", { data: { ...mv, fromWh: "Gudang A", toWh: " gudang a " } });
     assert("transfer ke gudang asal → 422", sama.status === 422, JSON.stringify(sama.body));
     assert("transfer tanpa gudang tujuan → 422", (await call("POST", "/api/movements", { data: { ...mv, fromWh: "Gudang A" } })).status === 422);
-    assert("pergerakan tidak tercatat saat ditolak", (await jumlah()) === awal);
+    assert("pergerakan tidak tercatat saat ditolak", (await jumlah()) === 0);
   } finally {
+    await exec("DELETE FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]);
     for (const id of made) await exec("DELETE FROM projects WHERE id = ?", [id]);
     await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [pid]);
     await exec("DELETE FROM projects WHERE id = ?", [pid]);

@@ -3108,9 +3108,10 @@ const createWarranty = async (wbsTask?: string) => {
             .map((w) => (w.predecessor === stageToDelete ? { ...w, predecessor: undefined } : w));
           try {
             await saveWbsWithConflictRetry(next);
-            await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) });
             log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
             toast(S.detDelStageSuccess.replace("{a}", stageToDelete));
+            // Tahapan sudah terhapus; gagal menyelaraskan progres bukan gagal hapus.
+            await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) }).catch(() => undefined);
           } catch (e) {
             const pesan = e instanceof ApiError && e.code === "STAGE_IN_USE" ? S.detDelStageBlocked : S.detDelStageFailed;
             toast(pesan.replace("{a}", stageToDelete), "info");

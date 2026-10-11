@@ -7,7 +7,7 @@ import { requirePermission } from "../policy.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { exactBranchPredicate } from "./crudSearch.js";
-import { wbsPhotoError, wbsRemovalError } from "../domainGuards.js";
+import { wbsRuleError } from "../domainGuards.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
 const TeamSchema = z.object({
@@ -24,8 +24,7 @@ interface SideWriteOutcome {
   projectMissing: boolean;
   projectForbidden: boolean;
   conflict: SideRow | null;
-  stageInUse?: string;
-  photoMissing?: string;
+  rule?: { code: "STAGE_IN_USE" | "PHOTO_REQUIRED"; message: string };
 }
 
 interface ProjectScopeUser {
@@ -116,10 +115,8 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         return { projectMissing: false, projectForbidden: false, conflict: current ?? { project_id: id, data: serverData } };
       }
       const before = current ? JSON.parse(current.data) as unknown : null;
-      const stageInUse = wbsRemovalError(before, parsed.data.wbs);
-      if (stageInUse) return { projectMissing: false, projectForbidden: false, conflict: null, stageInUse };
-      const photoMissing = wbsPhotoError(before, parsed.data.wbs);
-      if (photoMissing) return { projectMissing: false, projectForbidden: false, conflict: null, photoMissing };
+      const rule = wbsRuleError(before, parsed.data.wbs);
+      if (rule) return { projectMissing: false, projectForbidden: false, conflict: null, rule };
       await upsert("wbs_by_project", id, parsed.data.wbs);
       await writeAudit({
         actor: requestActor(req),
@@ -137,8 +134,7 @@ export function registerWbsRoutes(app: FastifyInstance): void {
     if (outcome.projectMissing) {
       return reply.status(422).send(fail(`Proyek ${id} tidak ada`, "UNPROCESSABLE"));
     }
-    if (outcome.stageInUse) return reply.status(409).send(fail(outcome.stageInUse, "STAGE_IN_USE"));
-    if (outcome.photoMissing) return reply.status(422).send(fail(outcome.photoMissing, "PHOTO_REQUIRED"));
+    if (outcome.rule) return reply.status(outcome.rule.code === "STAGE_IN_USE" ? 409 : 422).send(fail(outcome.rule.message, outcome.rule.code));
     if (outcome.conflict !== null) {
       return reply.status(409).send({
         ok: false,

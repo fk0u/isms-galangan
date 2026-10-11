@@ -1,6 +1,6 @@
 # ADR-0017: Akses tanpa login akun — cuti via QR dan alat absensi
 
-- **Status:** Accepted
+- **Status:** Accepted; bagian cuti (NIK + PIN, token polos, tanpa lampiran publik) digantikan [ADR-0019](0019-cuti-mandiri-tanpa-pin.md). Bagian alat absensi tetap berlaku.
 - **Tanggal:** 2026-10-10
 - **Pemutus:** Owner proyek (lewat kartu F3-L-06, F3-L-08; keputusan Q14)
 

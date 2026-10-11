@@ -61,7 +61,7 @@ export function employeeOptions(
 export function isProjectManager(e: StoreItem): boolean {
   const t = String(e.role ?? "").trim().toLowerCase();
   const pm = t.includes("project manager") || t.includes("manajer proyek") || /(^|[^a-z])pm([^a-z]|$)/.test(t);
-  return pm && String(e.status || "Aktif") === "Aktif";
+  return pm && (String(e.status ?? "").trim() || "Aktif") === "Aktif";
 }
 
 /** True kalau nilai PIC cocok dengan salah satu karyawan yang tercatat. */

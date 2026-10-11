@@ -2,7 +2,10 @@
  * ADR-0019: tanpa PIN. Token QR di-hash, kedaluwarsa, dan dicabut saat diganti;
  * pratinjau NIK hanya nama/jabatan/departemen; dokumen pendukung divalidasi;
  * percobaan beruntun dibatasi. */
+import fs from "node:fs";
+import path from "node:path";
 import { buildApp } from "../src/app.js";
+import { uploadsRoot } from "../src/routes/files.js";
 import { signToken } from "../src/auth.js";
 import { q, exec, closeDb } from "../src/db.js";
 
@@ -27,6 +30,9 @@ async function main(): Promise<void> {
     method: "POST", url: "/api/public/leave", remoteAddress: ip,
     payload: { token: "x".repeat(48), nik, type: "Izin", from: "2026-11-02", to: "2026-11-03", note: "Keperluan keluarga", ...over },
   });
+  // QR yang sedang dipakai karyawan tidak boleh ikut berganti karena probe ini.
+  const qrAsli = (await q<{ value: string }>("SELECT value FROM access_secrets WHERE access_key = ?", ["qr:token"]))[0]?.value ?? null;
+  let berkas = "";
   try {
     const mech = await app.inject({ method: "GET", url: "/api/leave-qr", headers: { authorization: `Bearer ${await tokenFor("mekanik")}` } });
     assert("peran lapangan tidak bisa melihat status QR", mech.statusCode === 403, String(mech.statusCode));
@@ -66,6 +72,7 @@ async function main(): Promise<void> {
     const row = id ? (await q<{ data: string; branch: string }>("SELECT data, branch FROM leaves WHERE id = ?", [id]))[0] : undefined;
     const d = row ? JSON.parse(row.data) as Record<string, unknown> : {};
     assert("NIK benar tanpa PIN → 201 dan baris leaves Diajukan", good.statusCode === 201 && d.status === "Diajukan" && d.employeeId === empId && d.days === 2 && d.source === "QR" && row?.branch === "Samarinda", good.body);
+    berkas = String(d.fileUrl ?? "");
     assert("dokumen pendukung tertaut ke pengajuan", /^\/files\/\d{4}-\d{2}\/[0-9a-f]+\.pdf$/.test(String(d.fileUrl ?? "")), String(d.fileUrl));
     assert("dokumen hanya bisa dibuka dengan login", (await app.inject({ method: "GET", url: String(d.fileUrl) })).statusCode === 401 && (await app.inject({ method: "GET", url: String(d.fileUrl), headers: hr })).statusCode === 200);
     assert("respons publik hanya berisi nomor & status", Object.keys((good.json() as { data: object }).data).sort().join() === "id,status", good.body);
@@ -87,6 +94,9 @@ async function main(): Promise<void> {
     await exec("UPDATE access_secrets SET value = ? WHERE access_key = ?", [JSON.stringify(exp), "qr:token"]);
     if (id) await exec("DELETE FROM leaves WHERE id = ?", [id]);
   } finally {
+    if (qrAsli === null) await exec("DELETE FROM access_secrets WHERE access_key = ?", ["qr:token"]);
+    else await exec("UPDATE access_secrets SET value = ? WHERE access_key = ?", [qrAsli, "qr:token"]);
+    if (berkas.startsWith("/files/")) fs.rmSync(path.join(uploadsRoot(), berkas.slice("/files/".length)), { force: true });
     await exec("DELETE FROM employees WHERE id = ?", [empId]);
     await exec("DELETE FROM access_secrets WHERE access_key = ?", [`pin:${empId}`]);
   }

@@ -15,35 +15,46 @@ export function stageHasData(stage: Data): boolean {
     || str(stage.photoUrl) !== "" || (typeof stage.assignee === "object" && stage.assignee !== null);
 }
 
-/** #67: tolak penyimpanan WBS yang menghilangkan tahapan berisi data.
- *  Ganti nama tetap boleh: tahapan bernama baru harus membawa riwayat & foto
- *  tahapan lama, jadi "hapus lalu tambah kosong" tidak lolos sebagai rename. */
-export function wbsRemovalError(before: unknown, after: unknown): string | null {
-  const prev = (Array.isArray(before) ? before : []) as Data[];
-  const next = (Array.isArray(after) ? after : []) as Data[];
-  const prevNames = new Set(prev.map((s) => str(s.task)));
-  const nextNames = new Set(next.map((s) => str(s.task)));
-  const renamed = next.filter((s) => !prevNames.has(str(s.task)));
-  for (const stage of prev) {
-    if (nextNames.has(str(stage.task)) || !stageHasData(stage)) continue;
-    const i = renamed.findIndex((s) => len(s.history) >= len(stage.history) && len(s.photos) >= len(stage.photos));
-    if (i === -1) {
-      return `Tahapan "${str(stage.task)}" sudah punya progres, riwayat, foto, atau penugasan sehingga tidak bisa dihapus`;
-    }
-    renamed.splice(i, 1);
-  }
-  return null;
+// Schema rute menerima anggota array apa pun; yang bukan objek dianggap tahapan kosong.
+const stages = (v: unknown): Data[] => (Array.isArray(v) ? v : []).map((s) => (typeof s === "object" && s !== null ? s as Data : {}));
+const photoUrls = (stage: Data): string[] => (Array.isArray(stage.photos) ? stage.photos : [])
+  .map((p) => (typeof p === "object" && p !== null ? str((p as Data).url) : "")).filter((u) => u !== "");
+/** Riwayat lama harus utuh sebagai awalan dan foto lama tidak boleh hilang. */
+function keepsRecord(old: Data, next: Data): boolean {
+  const before = Array.isArray(old.history) ? old.history : [];
+  const after = Array.isArray(next.history) ? next.history : [];
+  if (after.length < before.length || before.some((h, i) => JSON.stringify(h) !== JSON.stringify(after[i]))) return false;
+  const kept = new Set(photoUrls(next));
+  return photoUrls(old).every((u) => kept.has(u));
 }
 
-/** #77: progres tahapan yang sudah ada hanya boleh berubah bila disertai foto
- *  bukti baru. Tahapan baru (template/baseline) dan perubahan non-progres
- *  seperti penugasan tidak terkena aturan ini. */
-export function wbsPhotoError(before: unknown, after: unknown): string | null {
-  const prev = new Map(((Array.isArray(before) ? before : []) as Data[]).map((s) => [str(s.task), s]));
-  for (const stage of (Array.isArray(after) ? after : []) as Data[]) {
-    const old = prev.get(str(stage.task));
-    if (!old || Number(old.progress ?? 0) === Number(stage.progress ?? 0)) continue;
-    if (len(stage.photos) <= len(old.photos)) return `Perubahan progres "${str(stage.task)}" wajib disertai minimal satu foto bukti`;
+/** #67 + #77: aturan penyimpanan WBS.
+ *  - Tahapan berisi data tidak boleh hilang. Ganti nama boleh, asal tahapan
+ *    bernama baru membawa riwayat & foto tahapan lama secara utuh.
+ *  - Tahapan yang tetap ada tidak boleh kehilangan riwayat atau fotonya.
+ *  - Progres tahapan yang sudah ada hanya boleh berubah bila ada foto bukti
+ *    BARU (URL yang belum pernah tercatat di tahapan itu). */
+export function wbsRuleError(before: unknown, after: unknown): { code: "STAGE_IN_USE" | "PHOTO_REQUIRED"; message: string } | null {
+  const prev = stages(before);
+  const next = stages(after);
+  const byName = new Map(next.map((s) => [str(s.task), s]));
+  const prevNames = new Set(prev.map((s) => str(s.task)));
+  const renamed = next.filter((s) => !prevNames.has(str(s.task)));
+  for (const old of prev) {
+    const name = str(old.task);
+    let now = byName.get(name);
+    if (!now) {
+      if (!stageHasData(old)) continue;
+      const i = renamed.findIndex((s) => keepsRecord(old, s));
+      if (i === -1) return { code: "STAGE_IN_USE", message: `Tahapan "${name}" sudah punya progres, riwayat, foto, atau penugasan sehingga tidak bisa dihapus` };
+      now = renamed.splice(i, 1)[0] as Data;
+    } else if (!keepsRecord(old, now)) {
+      return { code: "STAGE_IN_USE", message: `Riwayat atau foto tahapan "${name}" tidak boleh dihapus` };
+    }
+    if (Number(old.progress ?? 0) !== Number(now.progress ?? 0)) {
+      const known = new Set(photoUrls(old));
+      if (!photoUrls(now).some((u) => !known.has(u))) return { code: "PHOTO_REQUIRED", message: `Perubahan progres "${name}" wajib disertai minimal satu foto bukti baru` };
+    }
   }
   return null;
 }
@@ -66,7 +77,7 @@ export async function projectManagerError(table: string, before: Data | null, af
   const rows = await q<{ data: string }>("SELECT data FROM employees");
   const found = rows.some((r) => {
     const e = JSON.parse(r.data) as Data;
-    return str(e.name) === manager && isProjectManagerTitle(e.role) && str(e.status || "Aktif") === "Aktif";
+    return str(e.name) === manager && isProjectManagerTitle(e.role) && (str(e.status) || "Aktif") === "Aktif";
   });
   return found ? null : `"${manager}" bukan karyawan aktif berjabatan Project Manager`;
 }

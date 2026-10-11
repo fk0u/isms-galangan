@@ -1,6 +1,6 @@
 # ADR-0019: Cuti mandiri tanpa PIN, token QR ber-hash dan berkedaluwarsa
 
-- **Status:** Accepted (mengubah bagian "NIK + PIN" di ADR-0017)
+- **Status:** Accepted. Menggantikan keputusan cuti di [ADR-0017](0017-akses-tanpa-login-cuti-qr-dan-alat-absensi.md): identifikasi NIK + PIN, penyimpanan token polos, dan larangan lampiran dari halaman publik
 - **Tanggal:** 2026-10-12
 - **Pemutus:** Owner proyek (issue #99, #100; daftar revisi 12 Okt: "sembunyikan form PIN", "tampilkan nama, jabatan, departemen setelah NIK", "upload dokumen pendukung", "link lama tidak bisa dipakai saat link baru dibuat")
 
@@ -20,7 +20,7 @@ ADR-0017 mengenali karyawan di halaman publik cuti dari NIK + PIN 6 angka yang d
 - Endpoint PIN (`/api/employees/:id/leave-pin`) dibiarkan, tidak dipakai alur ini.
 
 ## Konsekuensi
-- **Keamanan turun secara sadar:** siapa pun yang memegang QR dan mengetahui NIK seseorang dapat (a) melihat nama, jabatan, departemen orang itu, dan (b) membuat pengajuan cuti atas namanya. Batasnya: pengajuan berstatus `Diajukan` dan tidak berdampak sampai HR menyetujui; semua percobaan tercatat di audit dengan IP; kuota per IP dan per NIK membatasi penyalahgunaan massal.
+- **Keamanan turun secara sadar:** siapa pun yang memegang QR dan mengetahui NIK seseorang dapat (a) melihat nama, jabatan, departemen orang itu, dan (b) membuat pengajuan cuti atas namanya. Batasnya: pengajuan berstatus `Diajukan` dan tidak berdampak sampai HR menyetujui; pengajuan yang berhasil dan yang ditolak karena NIK tak dikenal tercatat di audit dengan IP (pratinjau NIK dan percobaan dengan token salah tidak diaudit, hanya dibatasi kuota); kuota per IP dan per NIK membatasi penyalahgunaan massal.
 - HR tidak bisa menampilkan ulang QR yang sudah dibuat; mencetak ulang berarti membuat QR baru dan QR yang tertempel harus diganti.
 - QR harus diperbarui paling lambat tiap 90 hari.
 - Membalik keputusan: wajibkan kembali `pin` di `SubmitSchema` dan pemeriksaan hash `pin:<id>`; data token dan pengajuan tidak perlu diubah.
