@@ -37,7 +37,7 @@ export interface MaterialRequestResult {
   status: MaterialStatus;
 }
 
-export type MrStatus = "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai";
+export type MrStatus = "Dipenuhi dari stok" | "Menunggu PO" | "Sebagian diterima" | "Selesai" | "Menunggu Approval Gudang" | "Ditolak Gudang";
 
 /** Sama dengan mrStatus di server (services/api/src/materialRequests.ts). */
 export function mrStatus(issued: number, shortage: number, hadShortage: boolean): MrStatus {
@@ -68,65 +68,146 @@ export function useMaterialRequest(): (args: MaterialRequestArgs) => Promise<Mat
       return res;
     }
 
-    // Mode lokal: logika setara server.
+    // Mode lokal: permintaan material diajukan ke inventori (tidak langsung memotong stok).
+    // Wajib ada approval pihak inventori (ACC) sebelum barang keluar dan stok terpotong.
     const item = (data.inventory ?? []).find((i) => String(i.id) === args.itemId);
     if (!item) throw new Error(`Item inventori ${args.itemId} tidak ditemukan`);
     const itemName = String(item.name ?? args.itemId);
     const unit = String(item.unit ?? "pcs");
     const stock = Math.max(0, Number(item.stock ?? 0) || 0);
-    const issued = Math.min(stock, args.qty);
-    const shortage = args.qty - issued;
     const today = todayISO();
     const actor = args.actor || "Pengguna";
+    const unitPrice = Number(item.cost ?? item.price ?? item.unitPrice ?? 0) || 0;
+
+    // Kekurangan stok terhadap kebutuhan dihitung untuk pengajuan PR jika perlu pembelian
+    const shortageFromStock = Math.max(0, args.qty - stock);
+
     const mr = await add("materialRequests", {
       projectId: args.projectId, itemId: String(item.id), item: itemName, unit, purpose: args.purpose,
-      wbsTask: args.wbsTask ?? "", requested: args.qty, issued, shortage,
-      status: mrStatus(issued, shortage, false), requestedBy: actor, date: today,
+      wbsTask: args.wbsTask ?? "", requested: args.qty, issued: 0, shortage: args.qty,
+      status: "Menunggu Approval Gudang", approvalStatus: "Menunggu ACC", requestedBy: actor, date: today,
       movementIds: [], requisitionId: null, sparepartId: null, note: args.note ?? "",
-    }, { action: "permintaan barang proyek", module: "Procurement" });
+    }, { action: "pengajuan permintaan barang proyek", module: "Procurement" });
     const mrId = String(mr.id);
     const ref = { projectId: args.projectId, materialRequestId: mrId, ...(args.wbsTask ? { wbsId: args.wbsTask, wbsTask: args.wbsTask } : {}) };
-    const unitPrice = Number(item.cost ?? item.price ?? item.unitPrice ?? 0) || 0;
-    let movementId: string | null = null;
+
     let requisitionId: string | null = null;
     let sparepartId: string | null = null;
-    if (issued > 0) {
-      await update("inventory", String(item.id), { stock: stock - issued });
-      const mv = await add("movements", {
-        item: itemName, itemId: String(item.id), type: "Pengeluaran", qty: issued, unit,
-        by: args.wbsTask ? `${actor} (WBS: ${args.wbsTask})` : actor, date: today, tone: "out", ref, note: args.note ?? "",
-      }, { action: "pengeluaran material proyek", module: "Inventori" });
-      movementId = String(mv.id);
-    }
-    if (shortage > 0) {
+
+    if (shortageFromStock > 0) {
       const pr = await add("requisitions", {
-        projectId: args.projectId, item: itemName, itemId: String(item.id), qty: shortage, unit,
+        projectId: args.projectId, item: itemName, itemId: String(item.id), qty: shortageFromStock, unit,
         status: "Diajukan", date: today, requestedBy: actor, by: actor, project: args.projectId,
-        amount: Math.round(unitPrice * shortage), ref, sourceRequestIds: [mrId],
-        note: `Permintaan material proyek ${args.projectId}: butuh ${args.qty}, stok ${stock}`,
+        amount: Math.round(unitPrice * shortageFromStock), ref, sourceRequestIds: [mrId],
+        note: `Permintaan material proyek ${args.projectId}: butuh ${args.qty}, stok ${stock} (menunggu PO)`,
       }, { action: "permintaan pembelian material", module: "Procurement" });
       requisitionId = String(pr.id);
     }
-    const status = materialStatus(issued, shortage);
+
+    const status: MaterialStatus = shortageFromStock === 0 ? "Dari stok" : "Menunggu PO";
+
     if (args.purpose === "sparepart") {
       const sp = await add("spareparts", {
         name: itemName, partNumber: String(item.sku ?? item.code ?? item.id),
         category: args.sparepart?.category ?? String(item.category ?? "Lainnya"),
-        status: shortage === 0 ? "Sedang" : "Akan", cost: Math.round(unitPrice * args.qty),
+        status: "Akan", cost: Math.round(unitPrice * args.qty),
         notes: args.sparepart?.notes ?? "", technician: args.sparepart?.technician ?? "-",
-        usedDate: shortage === 0 ? today : "-", warrantyUntil: args.sparepart?.warrantyUntil ?? "-",
+        usedDate: "-", warrantyUntil: args.sparepart?.warrantyUntil ?? "-",
         projectId: args.projectId, vesselId: "", requestDate: today,
         inventoryItemId: String(item.id), materialRequestId: mrId, qty: args.qty, unit,
-        fulfillment: { status, issued, shortage, movementId, requisitionId },
-      }, { action: "menambahkan sparepart dari inventori", module: "Sparepart" });
+        fulfillment: { status: "Menunggu PO", issued: 0, shortage: args.qty, movementId: null, requisitionId },
+      }, { action: "mengajukan sparepart dari inventori", module: "Sparepart" });
       sparepartId = String(sp.id);
     }
-    await update("materialRequests", mrId, { movementIds: movementId ? [movementId] : [], requisitionId, sparepartId });
+
+    await update("materialRequests", mrId, { movementIds: [], requisitionId, sparepartId });
     return {
-      itemId: String(item.id), itemName, requested: args.qty, issued, shortage,
-      stockAfter: stock - issued, movementId, requisitionId, sparepartId, materialRequestId: mrId, status,
+      itemId: String(item.id), itemName, requested: args.qty, issued: 0, shortage: args.qty,
+      stockAfter: stock, movementId: null, requisitionId, sparepartId, materialRequestId: mrId, status,
     };
   }, [data.inventory, add, update, resyncCollections]);
+}
+
+/** Approval pihak inventori untuk mengeluarkan barang dari gudang (ACC) */
+export function useApproveMaterialRequest(): (id: string, actor?: string) => Promise<FulfillResult> {
+  const { data, add, update, resyncCollections } = useStore();
+
+  return useCallback(async (id: string, actor?: string): Promise<FulfillResult> => {
+    const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
+    if (!mr) throw new Error(`Permintaan ${id} tidak ditemukan`);
+    const item = (data.inventory ?? []).find((i) => String(i.id) === String(mr.itemId));
+    if (!item) throw new Error(`Item inventori ${String(mr.itemId)} tidak ditemukan`);
+    const stock = Math.max(0, Number(item.stock ?? 0) || 0);
+    const requested = Number(mr.requested ?? 0);
+    const alreadyIssued = Number(mr.issued ?? 0);
+    const needed = Math.max(0, requested - alreadyIssued);
+
+    if (stock <= 0) {
+      throw new Error(`Stok fisik item ${String(item.name)} kosong (0). Menunggu pengadaan PO.`);
+    }
+
+    const give = Math.min(stock, needed);
+    const today = todayISO();
+    const approver = actor || "Gudang";
+
+    // Potong stok inventori secara resmi setelah approval pihak inventori
+    await update("inventory", String(item.id), { stock: stock - give });
+
+    // Catat kartu mutasi / movement pengeluaran
+    const mv = await add("movements", {
+      item: String(mr.item ?? item.name), itemId: String(item.id), type: "Pengeluaran", qty: give,
+      unit: String(mr.unit ?? item.unit ?? "pcs"), by: `${approver} (ACC Gudang)`, date: today, tone: "out",
+      ref: { projectId: mr.projectId, materialRequestId: id }, note: `Disetujui pihak inventori untuk permintaan ${id}`,
+    }, { action: "pengeluaran barang resmi disetujui", module: "Inventori" });
+
+    const newIssued = alreadyIssued + give;
+    const newShortage = Math.max(0, requested - newIssued);
+    const status: MrStatus = newShortage === 0 ? "Dipenuhi dari stok" : "Sebagian diterima";
+    const mvIds = Array.isArray(mr.movementIds) ? (mr.movementIds as string[]) : [];
+
+    await update("materialRequests", id, {
+      issued: newIssued, shortage: newShortage, status, approvalStatus: "Disetujui",
+      approvedBy: approver, approvedAt: today, movementIds: [...mvIds, String(mv.id)],
+    });
+
+    // Update sparepart jika terhubung
+    const spId = String(mr.sparepartId ?? "");
+    const sp = spId ? (data.spareparts ?? []).find((x) => String(x.id) === spId) : undefined;
+    if (sp) {
+      const f = (sp.fulfillment ?? {}) as Record<string, unknown>;
+      await update("spareparts", spId, {
+        ...(newShortage === 0 ? { status: "Sedang", usedDate: today } : {}),
+        fulfillment: { ...f, issued: newIssued, shortage: newShortage, status: newShortage === 0 ? "Dari stok" : "Sebagian", movementId: String(mv.id) },
+      });
+    }
+
+    await resyncCollections(["inventory", "movements", "materialRequests", "spareparts"]);
+    return { id, given: give, issued: newIssued, shortage: newShortage, status };
+  }, [data.materialRequests, data.inventory, data.spareparts, add, update, resyncCollections]);
+}
+
+/** Penolakan pengeluaran barang oleh pihak inventori */
+export function useRejectMaterialRequest(): (id: string, reason?: string, actor?: string) => Promise<void> {
+  const { data, update, resyncCollections } = useStore();
+
+  return useCallback(async (id: string, reason?: string, actor?: string): Promise<void> => {
+    const mr = (data.materialRequests ?? []).find((m) => String(m.id) === id);
+    if (!mr) throw new Error(`Permintaan ${id} tidak ditemukan`);
+    const today = todayISO();
+    const rejector = actor || "Gudang";
+
+    await update("materialRequests", id, {
+      status: "Ditolak Gudang", approvalStatus: "Ditolak", rejectedBy: rejector,
+      rejectedAt: today, rejectReason: reason || "Ditolak oleh pihak gudang/inventori",
+    });
+
+    const spId = String(mr.sparepartId ?? "");
+    if (spId) {
+      await update("spareparts", spId, { status: "Akan", notes: `Ditolak inventori: ${reason || "Alokasi dibatalkan"}` });
+    }
+
+    await resyncCollections(["materialRequests", "spareparts"]);
+  }, [data.materialRequests, update, resyncCollections]);
 }
 
 export interface FulfillResult {

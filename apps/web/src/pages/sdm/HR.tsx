@@ -1954,12 +1954,13 @@ const finishTraining = async (t: StoreItem) => {
       </div>
 
       {/* ---------- modal karyawan ---------- */}
+      {/* ---------- modal karyawan ---------- */}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
         title={editingId ? S.mEmpTEdit : S.btnTambahKaryawan}
         subtitle={S.mEmpS}
-        wide
+        extraWide
         footer={
           <>
             <button className="btn-secondary" onClick={() => setShowForm(false)}>{S.btnBatal}</button>
@@ -1967,83 +1968,130 @@ const finishTraining = async (t: StoreItem) => {
           </>
         }
       >
-        <div className="space-y-3">
-          <FormGrid>
-            <Field label={S.fNik} hint="NIK = username login karyawan (16 digit angka, dipakai untuk masuk aplikasi)."><input className="input" inputMode="numeric" pattern="[0-9]*" maxLength={16} value={form.nik} onChange={(e) => setForm({ ...form, nik: e.target.value.replace(/[^0-9]/g, "").slice(0, 16) })} placeholder={S.phNik} /></Field>
-            <Field label={S.fNama}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.phNamaHr} /></Field>
-            <Field label={S.thJabatan}><input className="input" list="job-titles" title={E.jobHint} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder={S.phWelder} />
-              <datalist id="job-titles">{[...new Set(data.employees.map((x) => String(x.role ?? "")).filter(Boolean))].sort().map((r) => <option key={r} value={r} />)}</datalist></Field>
-            <Field label={S.fDept}>
-              <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
-                {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fCabang}>
-              <select className="input" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })}>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label={S.dlStatus}>
-              <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                <option>Aktif</option>
-                <option>Nonaktif</option>
-                <option>Cuti</option>
-              </select>
-            </Field>
-            <Field label={S.fJoin}><input type="date" className="input" value={form.join} onChange={(e) => setForm({ ...form, join: e.target.value })} /></Field>
-            <Field label={S.fTipeKaryawan}>
-              <select className="input" value={form.tipe} onChange={(e) => setForm({ ...form, tipe: e.target.value })}>
-                {TIPE_KARYAWAN.map((t) => <option key={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fBasic}><NumInput min="0" className="input" value={form.basic} onChange={(e) => setForm({ ...form, basic: e.target.value })} placeholder={S.phBasic} /></Field>
-            <Field label={S.fAllow}><NumInput min="0" className="input" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} placeholder={S.phAllow} /></Field>
-            <Field label={S.fContractEnd}><input type="date" className="input" value={form.contractEnd} onChange={(e) => setForm({ ...form, contractEnd: e.target.value })} /></Field>
-            <Field label={E.gender}>
-              <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                <option value="L">{E.male}</option><option value="P">{E.female}</option>
-              </select>
-            </Field>
-            <Field label={E.education}>
-              <select className="input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
-                {EDUCATION.map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </Field>
-            <Field label={E.marital}>
-              <select className="input" value={form.marital} onChange={(e) => setForm({ ...form, marital: e.target.value })}>
-                <option value="TK">{E.single}</option><option value="K">{E.married}</option>
-              </select>
-            </Field>
-            <Field label={S.fTanggungan}>
-              <select className="input" value={form.dependents} onChange={(e) => setForm({ ...form, dependents: e.target.value })}>
-                {["0", "1", "2", "3"].map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </Field>
-            <Field label={E.ptkpAuto} hint={E.ptkpHint}>
-              <input className="input bg-steel-50 font-mono" readOnly value={ptkpCode(form.marital, form.dependents)} />
-            </Field>
-            <Field label={E.lastContractNo}><input className="input" value={form.lastContractNo} onChange={(e) => setForm({ ...form, lastContractNo: e.target.value })} /></Field>
-            <Field label={E.lastContractStart}><input type="date" className="input" value={form.lastContractStart} onChange={(e) => setForm({ ...form, lastContractStart: e.target.value })} /></Field>
-            {(form.tipe === "Outsourcing" || form.partnerName !== "") && (
-              <>
-                <Field label={E.partnerName}><input className="input" value={form.partnerName} onChange={(e) => setForm({ ...form, partnerName: e.target.value })} /></Field>
-                <Field label={E.partnerNo}><input className="input" value={form.partnerContractNo} onChange={(e) => setForm({ ...form, partnerContractNo: e.target.value })} /></Field>
-              </>
-            )}
-          </FormGrid>
-          {/* Foto & dokumen pribadi (UU PDP): hanya peran yang boleh membuka form ini (HR/direktur). */}
-          <p className="mt-4 text-xs font-semibold text-navy-900">{E.docs}</p>
-          <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3">
-            {([["photoUrl", E.photo], ["ktpUrl", E.ktp], ["ijazahUrl", E.ijazah]] as const).map(([key, label]) => (
-              <Field key={key} label={label}>
-                <PhotoUploader
-                  value={form[key] ? [{ url: form[key], caption: "" }] : []}
-                  onChange={(photos) => setForm({ ...form, [key]: photos[photos.length - 1]?.url ?? "" })}
-                  labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: label }}
-                  onUploadError={() => toast(P.detPhotoUploadError, "info")}
-                />
+        <div className="space-y-5">
+          {/* Bagian 1: Data Identitas & Pribadi */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 border-b border-steel-200/80 pb-1.5 mb-3">
+              1. Data Pribadi & Identitas
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <Field label={S.fNik} hint="16 digit angka (username login)">
+                <input className="input" inputMode="numeric" pattern="[0-9]*" maxLength={16} value={form.nik} onChange={(e) => setForm({ ...form, nik: e.target.value.replace(/[^0-9]/g, "").slice(0, 16) })} placeholder={S.phNik} />
               </Field>
-            ))}
+              <Field label={S.fNama}>
+                <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.phNamaHr} />
+              </Field>
+              <Field label={E.gender}>
+                <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                  <option value="L">{E.male}</option><option value="P">{E.female}</option>
+                </select>
+              </Field>
+              <Field label={E.education}>
+                <select className="input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+                  {EDUCATION.map((d) => <option key={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label={E.marital}>
+                <select className="input" value={form.marital} onChange={(e) => setForm({ ...form, marital: e.target.value })}>
+                  <option value="TK">{E.single}</option><option value="K">{E.married}</option>
+                </select>
+              </Field>
+              <Field label={S.fTanggungan}>
+                <select className="input" value={form.dependents} onChange={(e) => setForm({ ...form, dependents: e.target.value })}>
+                  {["0", "1", "2", "3"].map((d) => <option key={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label={E.ptkpAuto} hint={E.ptkpHint}>
+                <input className="input bg-steel-50 font-mono text-xs" readOnly value={ptkpCode(form.marital, form.dependents)} />
+              </Field>
+            </div>
+          </div>
+
+          {/* Bagian 2: Pekerjaan & Penempatan */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 border-b border-steel-200/80 pb-1.5 mb-3">
+              2. Pekerjaan & Penempatan
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <Field label={S.thJabatan}>
+                <input className="input" list="job-titles" title={E.jobHint} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder={S.phWelder} />
+                <datalist id="job-titles">{[...new Set(data.employees.map((x) => String(x.role ?? "")).filter(Boolean))].sort().map((r) => <option key={r} value={r} />)}</datalist>
+              </Field>
+              <Field label={S.fDept}>
+                <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
+                  {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label={S.fCabang}>
+                <select className="input" value={form.branch} onChange={(e) => setForm({ ...form, branch: e.target.value })}>
+                  {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label={S.dlStatus}>
+                <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option>Aktif</option>
+                  <option>Nonaktif</option>
+                  <option>Cuti</option>
+                </select>
+              </Field>
+              <Field label={S.fTipeKaryawan}>
+                <select className="input" value={form.tipe} onChange={(e) => setForm({ ...form, tipe: e.target.value })}>
+                  {TIPE_KARYAWAN.map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </Field>
+              <Field label={S.fJoin}>
+                <input type="date" className="input" value={form.join} onChange={(e) => setForm({ ...form, join: e.target.value })} />
+              </Field>
+              <Field label={S.fContractEnd}>
+                <input type="date" className="input" value={form.contractEnd} onChange={(e) => setForm({ ...form, contractEnd: e.target.value })} />
+              </Field>
+              <Field label={E.lastContractNo}>
+                <input className="input" value={form.lastContractNo} onChange={(e) => setForm({ ...form, lastContractNo: e.target.value })} />
+              </Field>
+              <Field label={E.lastContractStart}>
+                <input type="date" className="input" value={form.lastContractStart} onChange={(e) => setForm({ ...form, lastContractStart: e.target.value })} />
+              </Field>
+              {(form.tipe === "Outsourcing" || form.partnerName !== "") && (
+                <>
+                  <Field label={E.partnerName}><input className="input" value={form.partnerName} onChange={(e) => setForm({ ...form, partnerName: e.target.value })} /></Field>
+                  <Field label={E.partnerNo}><input className="input" value={form.partnerContractNo} onChange={(e) => setForm({ ...form, partnerContractNo: e.target.value })} /></Field>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Bagian 3: Gaji & Kompensasi */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 border-b border-steel-200/80 pb-1.5 mb-3">
+              3. Kompensasi & Gaji
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <Field label={S.fBasic}>
+                <NumInput min="0" className="input" value={form.basic} onChange={(e) => setForm({ ...form, basic: e.target.value })} placeholder={S.phBasic} />
+              </Field>
+              <Field label={S.fAllow}>
+                <NumInput min="0" className="input" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} placeholder={S.phAllow} />
+              </Field>
+            </div>
+          </div>
+
+          {/* Bagian 4: Foto & Berkas Pribadi */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 border-b border-steel-200/80 pb-1.5 mb-3">
+              4. {E.docs}
+            </h4>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+              {([["photoUrl", E.photo], ["ktpUrl", E.ktp], ["ijazahUrl", E.ijazah]] as const).map(([key, label]) => (
+                <Field key={key} label={label}>
+                  <PhotoUploader
+                    value={form[key] ? [{ url: form[key], caption: "" }] : []}
+                    onChange={(photos) => setForm({ ...form, [key]: photos[photos.length - 1]?.url ?? "" })}
+                    labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: label }}
+                    onUploadError={() => toast(P.detPhotoUploadError, "info")}
+                  />
+                </Field>
+              ))}
+            </div>
           </div>
         </div>
       </Modal>

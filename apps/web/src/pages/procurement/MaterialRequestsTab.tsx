@@ -7,7 +7,7 @@ import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
 import { Badge, EmptyState, SearchBox, rowMatches, toast, AsyncButton } from "../../components/ui";
 import { useStore, type StoreItem } from "../../data/store";
-import { useFulfillMaterialRequest } from "../../data/useMaterialRequest";
+import { useFulfillMaterialRequest, useApproveMaterialRequest, useRejectMaterialRequest } from "../../data/useMaterialRequest";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { useT } from "../../i18n/LanguageContext";
 import { n_mr } from "../../i18n/n_mr";
@@ -18,6 +18,7 @@ type Filter = "Semua" | "Terbuka";
 /* "Menunggu stok" = kekurangan sudah dipesan (PR jadi PO), tinggal barang masuk. */
 export function mrDisplayStatus(mr: StoreItem, requisitions: StoreItem[]): string {
   const st = String(mr.status ?? "");
+  if (st === "Menunggu Approval Gudang" || st === "Ditolak Gudang") return st;
   if (Number(mr.shortage ?? 0) > 0) {
     const pr = requisitions.find((r) => String(r.id) === String(mr.requisitionId ?? ""));
     if (pr && String(pr.status) === "Sudah PO") return "Menunggu stok";
@@ -31,6 +32,8 @@ export default function MaterialRequestsTab() {
   const { data } = useStore();
   const { user } = useAuth();
   const fulfill = useFulfillMaterialRequest();
+  const approveMr = useApproveMaterialRequest();
+  const rejectMr = useRejectMaterialRequest();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("Terbuka");
   const canIssue = hasPermission(user?.permissions, "movements", "w");
@@ -40,17 +43,18 @@ export default function MaterialRequestsTab() {
     [data.materialRequests],
   );
   // Status tampilan (termasuk "Menunggu stok" turunan) ikut bisa dicari.
-  const shown = all.filter((m) => (filter === "Semua" || Number(m.shortage ?? 0) > 0)
+  const shown = all.filter((m) => (filter === "Semua" || Number(m.shortage ?? 0) > 0 || m.status === "Menunggu Approval Gudang")
     && rowMatches({ ...m, shownStatus: mrDisplayStatus(m, data.requisitions ?? []) } as StoreItem, q,
       ["id", "projectId", "item", "requestedBy", "shownStatus", "requisitionId", "wbsTask"]));
-  const openCount = all.filter((m) => Number(m.shortage ?? 0) > 0).length;
+  const openCount = all.filter((m) => Number(m.shortage ?? 0) > 0 || m.status === "Menunggu Approval Gudang").length;
   const prCount = all.filter((m) => String(m.requisitionId ?? "") !== "").length;
 
   const stLabel: Record<string, string> = {
     "Menunggu stok": T.stWaitStock, "Dipenuhi dari stok": T.stFromStock, "Menunggu PO": T.stWaitPo,
     "Sebagian diterima": T.stPartial, Selesai: T.stDone,
+    "Menunggu Approval Gudang": T.stWaitApproval, "Ditolak Gudang": T.stRejected,
   };
-  const stTone = (st: string) => (st === "Selesai" || st === "Dipenuhi dari stok" ? "green" : st === "Menunggu PO" ? "red" : "amber");
+  const stTone = (st: string) => (st === "Selesai" || st === "Dipenuhi dari stok" ? "green" : st === "Menunggu PO" || st === "Ditolak Gudang" ? "red" : "amber");
   const stockOf = (itemId: unknown) => {
     const it = (data.inventory ?? []).find((i) => String(i.id) === String(itemId));
     return Math.max(0, Number(it?.stock ?? 0) || 0);
@@ -99,6 +103,26 @@ export default function MaterialRequestsTab() {
       }),
     };
   });
+
+  const doApprove = async (m: StoreItem) => {
+    try {
+      const res = await approveMr(String(m.id), user?.name);
+      toast(T.toastAccIssued.replace("{id}", String(m.id)).replace("{n}", fmtJumlah(res.given)).replace("{unit}", String(m.unit ?? "")));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), "info");
+    }
+  };
+
+  const doReject = async (m: StoreItem) => {
+    const ok = window.confirm(`Tolak permintaan ${String(m.id)} (${String(m.item)})?`);
+    if (!ok) return;
+    try {
+      await rejectMr(String(m.id), "Ditolak oleh pihak inventori", user?.name);
+      toast(T.toastRejected.replace("{id}", String(m.id)));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), "info");
+    }
+  };
 
   const doFulfill = async (m: StoreItem) => {
     try {
@@ -182,7 +206,19 @@ export default function MaterialRequestsTab() {
                     <td className="td font-mono text-xs">{String(m.requisitionId ?? "") || "-"}</td>
                     <td className="td"><Badge tone={stTone(st)}>{stLabel[st] ?? st}</Badge></td>
                     <td className="td">
-                      {short > 0 && canIssue ? (
+                      {st === "Menunggu Approval Gudang" && canIssue ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="flex items-center gap-1">
+                            <AsyncButton className="btn-primary text-xs py-0.5 px-2" disabled={stock === 0} onAction={() => doApprove(m)}>
+                              {T.btnAccIssue}
+                            </AsyncButton>
+                            <AsyncButton className="btn-secondary text-xs py-0.5 px-2 text-rose-600 hover:bg-rose-50" onAction={() => doReject(m)}>
+                              {T.btnReject}
+                            </AsyncButton>
+                          </div>
+                          <span className="text-[11px] text-steel-500">{stock === 0 ? T.noStock : T.fulfillHint.replace("{n}", fmtJumlah(stock)).replace("{unit}", unit)}</span>
+                        </div>
+                      ) : short > 0 && canIssue ? (
                         <div className="flex flex-col items-start gap-0.5">
                           <AsyncButton className="btn-secondary text-xs" disabled={stock === 0} onAction={() => doFulfill(m)}>{T.fulfill}</AsyncButton>
                           <span className="text-[11px] text-steel-500">{stock === 0 ? T.noStock : T.fulfillHint.replace("{n}", fmtJumlah(stock)).replace("{unit}", unit)}</span>

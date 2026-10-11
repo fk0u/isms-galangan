@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload, FolderTree, Paperclip, History, Link2, GitBranch, Table2, Printer } from "lucide-react";
+import { Plus, ScrollText, FileText, Eye, Pencil, Trash2, Archive, RotateCcw, Download, Upload, FolderTree, Paperclip, History, Link2, GitBranch, Table2, Printer, AlertCircle, CheckCircle2, Send, Check } from "lucide-react";
 import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
 import { Card, PageHeader, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, toast, StatusBadge, usePager, AsyncButton, EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { FilterPopover } from "../../components/FilterPopover";
+import { useAuth } from "../../auth/auth";
 import { useStore, type StoreItem, type CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { DocumentPreviewCell, DocumentPreviewPanel, InlineDocPreview } from "../../components/DocumentPreview";
@@ -154,6 +155,8 @@ function attachFields(typed: string): { fileUrl?: string; fileName?: string } {
 
 export default function Documents() {
   const { data, add, update, remove, log, branch, inBranch } = useStore();
+  const { user } = useAuth();
+  const sessionName = user?.name || "Pengguna";
   const { locale } = useT();
   const S = n_dry[locale];
   const modAlert = useModuleAlert("dokumen");
@@ -240,11 +243,31 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
   const active = inBranch(data.documents.filter((d) => !d.archived));
   const archived = inBranch(data.documents.filter((d) => d.archived));
 
+  /* Dokumen yang memerlukan tindakan pemeriksaan, pengajuan, atau approval */
+  const needsActionDocs = useMemo(() => {
+    return active.filter((d) => {
+      const st = canonStatus(String(d.status ?? ""));
+      const rawSt = String(d.status ?? "");
+      const appSt = String(d.approvalStatus ?? "");
+      return (
+        rawSt === "Draft" ||
+        rawSt === "Diajukan" ||
+        rawSt === "Menunggu Approval" ||
+        rawSt === "Dalam Review" ||
+        st === "Diajukan" ||
+        appSt === "Draft" ||
+        appSt === "Menunggu Approval" ||
+        Boolean(d.needsApproval)
+      );
+    });
+  }, [active]);
+
 /* `docHay` masih dipakai untuk pencarian isi lampiran/OCR - field yang bukan
-       properti rekam. Pencarian properti memakai `rowMatches` supaya multi-kata
-       ("kontrak 2026") bisa dicocokkan lintas field, dan supaya field yang
-       tidak disebut tidak ikut terambil. */
-    const list = (type === "Arsip" ? archived : active.filter((d) => type === "Semua" || d.type === type)).filter((d) => {
+        properti rekam. Pencarian properti memakai `rowMatches` supaya multi-kata
+        ("kontrak 2026") bisa dicocokkan lintas field, dan supaya field yang
+        tidak disebut tidak ikut terambil. */
+    const baseList = type === "Perlu Tindakan" ? needsActionDocs : active.filter((d) => type === "Semua" || d.type === type);
+    const list = (type === "Arsip" ? archived : baseList).filter((d) => {
       if (q.trim() === "") return true;
       const fields = ["id", "title", "project", "vessel", "owner", "type", "subType"];
       if (rowMatches(d as unknown as Record<string, unknown>, q, fields)) return true;
@@ -651,6 +674,40 @@ const doExport = () => {
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
+      {/* Trigger Action: Indikator dokumen baru / diajukan yang butuh pemeriksaan & approval */}
+      {needsActionDocs.length > 0 && type !== "Arsip" && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50/50 to-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-amber-500/10 p-2 text-amber-700">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-navy-900">{S.docActionNeededBannerTitle}</h4>
+                  <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-900">
+                    {needsActionDocs.length}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-steel-600">
+                  {S.docActionNeededBannerSub.replace("{n}", String(needsActionDocs.length))}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setType("Perlu Tindakan")}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-navy-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-navy-800"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
+                {S.docFilterAllNeedsAction}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {type === "BoQ" ? (
         <div className="mb-4 space-y-3">
           <div className="rounded-xl border border-ocean-200 bg-gradient-to-r from-ocean-50/80 via-sky-50/50 to-white p-4 shadow-sm">
@@ -727,13 +784,16 @@ const doExport = () => {
 
         {/* Quick type tabs */}
         <div className="flex flex-wrap items-center gap-1">
-          {(["Semua", "BoQ", "Kontrak", "Sertifikat", "Laporan", "Arsip"] as const).map((tab) => {
+          {(["Semua", "Perlu Tindakan", "BoQ", "Kontrak", "Sertifikat", "Laporan", "Arsip"] as const).map((tab) => {
             const isActive = type === tab;
             const count = tab === "Arsip"
               ? archived.length
               : tab === "Semua"
               ? active.length
+              : tab === "Perlu Tindakan"
+              ? needsActionDocs.length
               : active.filter((d) => d.type === tab).length;
+            const isAlertTab = tab === "Perlu Tindakan" && count > 0;
             return (
               <button
                 key={tab}
@@ -742,12 +802,18 @@ const doExport = () => {
                 className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                   isActive
                     ? "bg-navy-900 text-white shadow-sm"
+                    : isAlertTab
+                    ? "border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
                     : "border border-steel-200 bg-white text-steel-700 hover:bg-steel-50"
                 }`}
               >
-                {tab}
+                {tab === "Perlu Tindakan" ? S.docActionNeededTab : tab}
                 <span className={`ml-1.5 rounded-full px-1.5 py-0.2 text-[10px] ${
-                  isActive ? "bg-white/20 text-white" : "bg-steel-100 text-steel-600"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : isAlertTab
+                    ? "bg-amber-200 text-amber-950 font-bold"
+                    : "bg-steel-100 text-steel-600"
                 }`}>
                   {count}
                 </span>
@@ -919,6 +985,43 @@ const doExport = () => {
                         </>
                       ) : (
                         <>
+                          {/* Quick Action: Trigger Ajukan Dokumen bila berstatus Draft */}
+                          {String(d.status) === "Draft" && (
+                            <button
+                              className="rounded-lg p-1.5 text-amber-600 hover:bg-amber-50"
+                              title={S.docActionBtnSubmitNow}
+                              aria-label={S.docActionBtnSubmitNow}
+                              onClick={async () => {
+                                try {
+                                  const rev = [...(d.revisions ?? []), { version: String(d.version ?? "v1.0"), at: todayISO(), by: sessionName, note: "Diajukan untuk approval" }];
+                                  await update("documents", d.id, { status: "Diajukan", approvalStatus: "Menunggu Approval", updated: todayISO(), revisions: rev });
+                                  log("mengajukan dokumen untuk approval", String(d.id), "Dokumen");
+                                  toast(S.docActionQuickSubmitted.replace("{a}", String(d.id)));
+                                } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+                              }}
+                            >
+                              <Send className="h-4 w-4" />
+                            </button>
+                          )}
+                          {/* Quick Action: Trigger Approve Dokumen bila berstatus Diajukan / Menunggu Approval */}
+                          {(String(d.status) === "Diajukan" || String(d.status) === "Menunggu Approval" || String(d.status) === "Dalam Review" || d.approvalStatus === "Menunggu Approval") && (
+                            <button
+                              className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
+                              title={S.docActionBtnApproveNow}
+                              aria-label={S.docActionBtnApproveNow}
+                              onClick={async () => {
+                                try {
+                                  const nextSt = d.type === "Sertifikat" || d.type === "Laporan" ? "Berlaku" : "Disetujui";
+                                  const rev = [...(d.revisions ?? []), { version: String(d.version ?? "v1.0"), at: todayISO(), by: sessionName, note: `Disetujui (${nextSt})` }];
+                                  await update("documents", d.id, { status: nextSt, approvalStatus: "Disetujui", updated: todayISO(), revisions: rev });
+                                  log("menyetujui dokumen", String(d.id), "Dokumen");
+                                  toast(S.docActionQuickApproved.replace("{a}", String(d.id)));
+                                } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+                              }}
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                          )}
                           <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actEdit} aria-label={S.actEditOf.replace("{a}", String(d.id))} onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></button>
                           <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actArchive} aria-label={S.actArchiveOf.replace("{a}", String(d.id))} onClick={() => openArchive(d)}><Archive className="h-4 w-4" /></button>
                         </>
