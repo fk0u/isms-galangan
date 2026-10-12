@@ -112,7 +112,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | selesai | --max-warnings 74 (web) / 29 (api) |
 | F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |
 | #67 #82 #93 | Guard server: hapus tahapan WBS, Project Manager, transfer gudang | P1 | GitHub issue | Claude | review | `services/api/src/domainGuards.ts` + `probe:domain-guards` (25 cek, termasuk #77 foto wajib saat progres berubah); #93 dijaga di pencatatan pergerakan, endpoint transfer atomik belum |
-| #98 | Upload PDF sertifikat karyawan | P1 | GitHub issue | Claude | review | pemindai PDF tidak lagi menolak `/OpenAction`/`/AA` (penyebab PDF pindai/Word tertolak); test unit ditambah; penyebab belum dikonfirmasi dengan berkas asli klien |
+| #98 | Upload PDF sertifikat karyawan | P1 | GitHub issue | Claude | selesai | pemindai PDF menerima PDF hasil pindai/Word (/OpenAction, /AA); upload sertifikat karyawan terlindungi RBAC data pribadi HR (isPrivateFile); UI modal tervalidasi accept, aksi hapus lampiran, reset pembatalan; probe:files-privacy + vitest regresi |
 | #99 #100 | Cuti mandiri: token QR ber-hash + kedaluwarsa, tanpa PIN, pratinjau NIK, dokumen pendukung | P1 | GitHub issue | Claude | review | ADR-0019; `probe:public-leave` 22 cek; QR tampil sekali saat dibuat |
 | #101 | Riwayat & nomor kontrak otomatis di modal Buat Surat | P1 | GitHub issue | Claude | review | nomor diisi dari kontrak terakhir, berganti karyawan memuat ulang |
 | #79 | Aktivitas Terkini dashboard tidak terpotong | P2 | GitHub issue | Claude | review | teks dibungkus, badge modul tidak menutupi isi |

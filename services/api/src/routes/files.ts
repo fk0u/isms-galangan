@@ -105,7 +105,7 @@ export function uploadsRoot(): string {
 }
 
 const PRIVATE_FIELDS = ["ktpUrl", "ijazahUrl"];
-/** true bila URL berkas dipakai sebagai KTP/ijazah seorang karyawan. */
+/** true bila URL berkas dipakai sebagai KTP, ijazah, atau sertifikat seorang karyawan. */
 export async function isPrivateFile(url: string): Promise<boolean> {
   const rows = await q<{ data: string }>("SELECT data FROM employees", []);
   for (const r of rows) {
@@ -113,6 +113,13 @@ export async function isPrivateFile(url: string): Promise<boolean> {
     try {
       const d = JSON.parse(r.data) as Record<string, unknown>;
       if (PRIVATE_FIELDS.some((f) => String(d[f] ?? "").endsWith(url))) return true;
+      if (Array.isArray(d.certs)) {
+        for (const c of d.certs) {
+          if (typeof c === "object" && c !== null && String((c as Record<string, unknown>).fileUrl ?? "").endsWith(url)) {
+            return true;
+          }
+        }
+      }
     } catch { /* baris rusak dilewati */ }
   }
   return false;

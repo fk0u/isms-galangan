@@ -844,11 +844,22 @@ export default function KaryawanDetail() {
 
       <Modal
         open={showCert}
-        onClose={() => setShowCert(false)}
+        onClose={() => {
+          setShowCert(false);
+          setCertForm({ ...CERT_KOSONG, expires: todayISO() });
+        }}
         title={S.mAddCertT}
         footer={
           <>
-            <button className="btn-secondary" onClick={() => setShowCert(false)}>{S.btnBatal}</button>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setShowCert(false);
+                setCertForm({ ...CERT_KOSONG, expires: todayISO() });
+              }}
+            >
+              {S.btnBatal}
+            </button>
             <AsyncButton className="btn-primary" onAction={saveCert}>{S.btnSimpan}</AsyncButton>
           </>
         }
@@ -863,8 +874,24 @@ export default function KaryawanDetail() {
           </FormGrid>
           <Field label={E.certFile}>
             <div className="flex items-center gap-2">
-              <FileUploadButton label={E.upload} onUploaded={(url) => setCertForm((f) => ({ ...f, fileUrl: url }))} />
-              {certForm.fileUrl && <span className="text-xs text-emerald-700">{E.uploaded}</span>}
+              <FileUploadButton
+                accept=".pdf,.png,.jpg,.jpeg"
+                label={E.upload}
+                onUploaded={(url) => setCertForm((f) => ({ ...f, fileUrl: url }))}
+              />
+              {certForm.fileUrl && (
+                <div className="flex items-center gap-1 text-xs text-emerald-700">
+                  <span className="font-medium">{E.uploaded}</span>
+                  <button
+                    type="button"
+                    className="ml-1 text-steel-400 hover:text-rose-600 font-bold"
+                    title={E.certFileRemove}
+                    onClick={() => setCertForm((f) => ({ ...f, fileUrl: "" }))}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
             </div>
           </Field>
         </div>
