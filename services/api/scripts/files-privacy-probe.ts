@@ -19,14 +19,27 @@ async function main(): Promise<void> {
   const stamp = Date.now().toString(36);
   const empId = `EMP-PRV-${stamp.toUpperCase()}`;
   const ktp = `/files/2026-10/ktp${stamp}.png`;
+  const cert = `/files/2026-10/cert${stamp}.pdf`;
   const photo = `/files/2026-10/foto${stamp}.png`;
-  await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [empId, "Samarinda", JSON.stringify({ name: "Probe Privasi", ktpUrl: ktp, photoUrl: photo }), new Date().toISOString()]);
+  await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    empId,
+    "Samarinda",
+    JSON.stringify({
+      name: "Probe Privasi",
+      ktpUrl: ktp,
+      photoUrl: photo,
+      certs: [{ name: "Sertifikat Las", fileUrl: cert }],
+    }),
+    new Date().toISOString(),
+  ]);
   try {
     const get = async (role: string | null, url: string) => (await app.inject({ method: "GET", url, headers: role ? await headersFor(role) : {} })).statusCode;
     assert("tanpa login → 401", (await get(null, ktp)) === 401);
     assert("mekanik membuka KTP → 403", (await get("mekanik", ktp)) === 403);
+    assert("mekanik membuka sertifikat karyawan → 403", (await get("mekanik", cert)) === 403);
     // Berkasnya memang tidak ada di disk: lolos pemeriksaan izin = 404, bukan 403.
     assert("direktur membuka KTP → lolos izin (404 berkas uji)", (await get("direktur", ktp)) === 404);
+    assert("direktur membuka sertifikat karyawan → lolos izin (404 berkas uji)", (await get("direktur", cert)) === 404);
     assert("mekanik membuka foto profil (bukan berkas pribadi) → lolos izin", (await get("mekanik", photo)) === 404);
   } finally {
     await exec("DELETE FROM employees WHERE id = ?", [empId]);
