@@ -62,7 +62,12 @@ import { PhotoUploader } from "../../components/PhotoUploader";
 import type { PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
 import { PRIORITAS } from "./Projects";
-import { TAHAP, tahapOf, hasContract, isOverdue } from "./Projects";
+import { TAHAP, tahapOf, hasContract, isOverdue, tahapLabel } from "./Projects";
+import {
+  PLANNING_SUBCLASSES,
+  getStageTransitionBlockers,
+  isClassApprovalSatisfied,
+} from "../../utils/classApprovalBlockers";
 import { getSetting } from "../../utils/settings";
 import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../utils/sb";
 import { exportExcel } from "../../utils/export";
@@ -307,29 +312,10 @@ const confirmStatus = async () => {
     if (!to) { setTahapMove(null); return; }
     if (tahapMove.dir === 1) {
       const from = TAHAP[idx];
-if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
-          /* D1: gate Class Approval pindah ke Documents. Cek apakah ada
-             dokumen tipe Sertifikat + subType "Sertifikat Kelas" yang sudah
-             Disetujui untuk proyek ini. Fallback ke designStages lama untuk
-             data proyek yang belum punya dokumen Class Approval. */
-          const classDoc = data.documents.find(
-            (d) => d.project === pid && d.type === "Sertifikat" && d.subType === "Sertifikat Kelas" && d.status === "Disetujui",
-          );
-          const stages = (project.designStages ?? []) as { name: string; status: string }[];
-          const ca = stages.find((s) => s.name === "Class Approval");
-          const approved = Boolean(classDoc) || ca?.status === "Disetujui";
-          if (!approved) { toast(S.detToastGate, "info"); return; }
-        }
-      // Gate kontrak: tahap awal dikunci bila proyek hasil konversi belum punya kontrak.
-      if (idx <= 2 && project.quotationId && !hasContract(project, data.contracts ?? [])) {
-        toast(`Tahap ${from} dikunci - buat kontrak untuk quotation ${project.quotationId} dulu`, "info");
+      const blockers = getStageTransitionBlockers(from, to, project, data, locale);
+      if (blockers.length > 0) {
+        toast(`${blockers[0].name}: ${blockers[0].statusReason}`, "info");
         return;
-      }
-      // Aturan silang tahap×status: masuk Handover wajib lolos cek tutup proyek,
-      // lalu status otomatis ikut Selesai (Handover wajib status Selesai).
-      if (to === "Handover") {
-        const block = closeBlockReason();
-        if (block) { toast(`Masuk Handover ditolak: ${block}`, "info"); return; }
       }
     }
     try {
@@ -974,14 +960,10 @@ const createWarranty = async (wbsTask?: string) => {
   // D1: blok edit dihapus; data tetap ada di store untuk backward compat.
   // Gate kini membaca dokumen Sertifikat Kelas + fallback ke designStages.
   const designStages = (project.designStages ?? []) as { name: string; status: string; society: string; date: string; doc: string }[];
-  const classApproval = designStages.find((s) => s.name === "Class Approval");
 
   // D1: Class Approved = ada dokumen Sertifikat Kelas yang Disetujui,
   // ATAU designStages lama yang statusnya Disetujui (backward compat).
-  const classDocApproved = data.documents.some(
-    (d) => d.project === pid && d.type === "Sertifikat" && d.subType === "Sertifikat Kelas" && d.status === "Disetujui",
-  );
-  const classApproved = classDocApproved || classApproval?.status === "Disetujui";
+  const classApproved = isClassApprovalSatisfied(project, data);
 
   // D1: baris tabel Log Penawaran dan Tagihan.
   // Sumber: quotation terkait project, contract terkait project, invoices.
@@ -1322,10 +1304,27 @@ const createWarranty = async (wbsTask?: string) => {
             </span>
           );
         })}
-        <span className="ml-1 flex gap-1.5">
-          <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) <= 0} onClick={() => { setTahapMove({ dir: -1 }); setTahapReason(""); }}>{S.detTahapBack}</button>
-          <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) >= TAHAP.length - 1} onClick={() => { setTahapMove({ dir: 1 }); setTahapReason(""); }}>{S.detTahapNext}</button>
-        </span>
+        {canAutoWrite ? (
+          <span className="ml-1 flex items-center gap-1.5">
+            <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) <= 0} onClick={() => { setTahapMove({ dir: -1 }); setTahapReason(""); }}>{S.detTahapBack}</button>
+            <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) >= TAHAP.length - 1} onClick={() => { setTahapMove({ dir: 1 }); setTahapReason(""); }}>{S.detTahapNext}</button>
+            {(() => {
+              const curIdx = TAHAP.indexOf(tahapOf(project));
+              const nextStage = curIdx < TAHAP.length - 1 ? TAHAP[curIdx + 1] : null;
+              const nxtBlockers = nextStage ? getStageTransitionBlockers(tahapOf(project), nextStage, project, data, locale) : [];
+              if (nxtBlockers.length === 0) return null;
+              return (
+                <Badge tone="amber" title={nxtBlockers.map((b) => `${b.name}: ${b.statusReason}`).join("; ")}>
+                  {S.detBlockerBadge.replace("{n}", String(nxtBlockers.length))}
+                </Badge>
+              );
+            })()}
+          </span>
+        ) : (
+          <span className="ml-2 text-xs text-steel-400 italic">
+            ({S.detBlockerReadOnlyNotice})
+          </span>
+        )}
         <span className="ml-2 text-xs font-medium text-steel-500">
           Posisi tahap {TAHAP.indexOf(tahapOf(project)) + 1}/{TAHAP.length}: {tahapOf(project) === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : tahapOf(project)} · Status {project.status}
         </span>
@@ -1412,19 +1411,6 @@ const createWarranty = async (wbsTask?: string) => {
 
                 {/* Ringkasan & Breakdown Subclass Perencanaan / Class Approval */}
                 {(() => {
-                  const PLANNING_SUBCLASSES = [
-                    { id: "GA", name: "General Arrangement (Rencana Umum)", kw: /rencana umum|general arrangement|ga/i },
-                    { id: "LINES", name: "Lines Plan & Data Hidrostatis", kw: /lines plan|hidrostatis|garis/i },
-                    { id: "MIDSHIP", name: "Midship Section & Scantling BKI", kw: /midship|penampang|scantling/i },
-                    { id: "CONSTR", name: "Profil Konstruksi & Geladak", kw: /konstruksi|profile|geladak|deck/i },
-                    { id: "SHELL", name: "Shell Expansion (Bukaan Kulit)", kw: /shell|kulit|bukaan/i },
-                    { id: "MACH", name: "Machinery Arrangement & Shafting", kw: /machinery|mesin|poros|shaft/i },
-                    { id: "PIPING", name: "Piping & Bilge/Ballast Diagram", kw: /piping|perpipaan|bilga|ballast/i },
-                    { id: "ELEC", name: "Electrical One-Line Diagram", kw: /electrical|listrik|one-line/i },
-                    { id: "STAB", name: "Buku Stabilitas Kapal (Stability)", kw: /stability|stabilitas|booklet/i },
-                    { id: "SAFETY", name: "Safety Plan & Sertifikat Kelas", kw: /kelas|class|safety|sertifikat/i },
-                  ];
-
                   const projectDocs = data.documents.filter((d) => d.project === pid);
                   const isItemDone = (item: typeof PLANNING_SUBCLASSES[number]) => {
                     if (classApproved && item.id === "SAFETY") return true;
@@ -1439,6 +1425,7 @@ const createWarranty = async (wbsTask?: string) => {
                   const doneItems = PLANNING_SUBCLASSES.filter(isItemDone);
                   const pendingItems = PLANNING_SUBCLASSES.filter((item) => !isItemDone(item));
                   const progressPct = Math.round((doneItems.length / PLANNING_SUBCLASSES.length) * 100);
+                  const classBlockers = getStageTransitionBlockers("Desain", "Produksi", project, data, locale);
 
                   return (
                     <div className="mt-6 rounded-2xl border border-steel-200 bg-surface/50 p-4 shadow-sm">
@@ -1482,29 +1469,52 @@ const createWarranty = async (wbsTask?: string) => {
                                 doneItems.map((it) => (
                                   <li key={it.id} className="flex items-start gap-1.5">
                                     <span className="text-emerald-600 font-bold shrink-0">✔</span>
-                                    <span className="font-medium text-navy-900">{it.name}</span>
+                                    <span className="font-medium text-navy-900">{locale === "en" ? it.nameEn : it.name}</span>
                                   </li>
                                 ))
                               )}
                             </ul>
                           </div>
 
-                          {/* Item Belum Selesai (Pending) */}
+                          {/* Item Belum Selesai (Pending) dengan Status & Tombol Buka Bagian */}
                           <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
                             <div className="flex items-center justify-between pb-2 border-b border-amber-200/60 text-xs font-semibold text-amber-800">
                               <span>⏳ {locale === "en" ? "Pending Items" : "Belum Selesai (Pending)"}</span>
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">{pendingItems.length}</span>
                             </div>
-                            <ul className="mt-2 space-y-1.5 text-xs text-steel-700">
+                            <ul className="mt-2 space-y-2 text-xs text-steel-700">
                               {pendingItems.length === 0 ? (
                                 <li className="italic text-emerald-600 py-1">🎉 {locale === "en" ? "All items completed!" : "Semua item telah rampung!"}</li>
                               ) : (
-                                pendingItems.map((it) => (
-                                  <li key={it.id} className="flex items-start gap-1.5">
-                                    <span className="text-amber-500 font-bold shrink-0">•</span>
-                                    <span>{it.name}</span>
-                                  </li>
-                                ))
+                                pendingItems.map((it) => {
+                                  const blk = classBlockers.find((b) => b.id === `SUBCLASS_${it.id}`);
+                                  return (
+                                    <li key={it.id} className="flex flex-wrap items-center justify-between gap-1.5 rounded-lg border border-amber-100 bg-white/80 p-2 shadow-2xs">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-amber-500 font-bold shrink-0">•</span>
+                                          <span className="font-medium text-navy-900">{locale === "en" ? it.nameEn : it.name}</span>
+                                        </div>
+                                        {blk && (
+                                          <p className="mt-0.5 ml-3 text-[11px] text-steel-500">{blk.statusReason}</p>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary text-[11px] py-1 px-2 shrink-0"
+                                        onClick={() => {
+                                          setTab(blk?.tab || "Dokumen");
+                                          if (blk?.targetDocId) {
+                                            const doc = data.documents.find((d) => d.id === blk.targetDocId);
+                                            if (doc) setDocDetail(doc);
+                                          }
+                                        }}
+                                      >
+                                        {S.detBlockerAction} →
+                                      </button>
+                                    </li>
+                                  );
+                                })
                               )}
                             </ul>
                           </div>
@@ -2793,14 +2803,82 @@ const createWarranty = async (wbsTask?: string) => {
         </Field>
       </Modal>
 
-      {/* Modal geser tahap (kaku: E1 gate + alasan wajib) */}
-      <Modal open={tahapMove !== null} onClose={() => { setTahapMove(null); setTahapReason(""); }} title={S.detTahapTitle.replace("{a}", pid)}
-        footer={<><button className="btn-secondary" onClick={() => { setTahapMove(null); setTahapReason(""); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={confirmTahapMove}>{S.saveBtn}</AsyncButton></>}>
-        <p className="text-sm text-steel-600">{tahapOf(project)} → {tahapMove ? TAHAP[TAHAP.indexOf(tahapOf(project)) + tahapMove.dir] : "-"}</p>
-        <Field label={S.detTahapReason}>
-          <textarea className="input" rows={3} value={tahapReason} onChange={(e) => setTahapReason(e.target.value)} />
-        </Field>
-      </Modal>
+      {/* Modal geser tahap (kaku: E1 gate + alasan wajib + rincian blocker) */}
+      {(() => {
+        const destTahap = tahapMove ? TAHAP[TAHAP.indexOf(tahapOf(project)) + tahapMove.dir] : "";
+        const moveBlockers = tahapMove && tahapMove.dir === 1 && destTahap
+          ? getStageTransitionBlockers(tahapOf(project), destTahap, project, data, locale)
+          : [];
+        const isBlocked = moveBlockers.length > 0;
+
+        return (
+          <Modal
+            open={tahapMove !== null}
+            onClose={() => { setTahapMove(null); setTahapReason(""); }}
+            title={S.detTahapTitle.replace("{a}", pid)}
+            wide={isBlocked}
+            footer={<>
+              <button className="btn-secondary" onClick={() => { setTahapMove(null); setTahapReason(""); }}>{S.cancelBtn}</button>
+              <AsyncButton
+                className="btn-primary"
+                disabled={isBlocked}
+                onAction={confirmTahapMove}
+              >
+                {S.saveBtn}
+              </AsyncButton>
+            </>}
+          >
+            <p className="text-sm font-semibold text-navy-900">
+              {tahapOf(project)} → {destTahap || "-"}
+            </p>
+
+            {isBlocked && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-amber-900">
+                  <span className="text-amber-600">⚠️</span>
+                  <h4>{S.detBlockerTitle}</h4>
+                </div>
+                <p className="mt-1 text-amber-800">
+                  {S.detBlockerDesc.replace("{to}", tahapLabel(destTahap, locale))}
+                </p>
+                <div className="mt-2.5 max-h-60 overflow-y-auto space-y-2 pr-1">
+                  {moveBlockers.map((b) => (
+                    <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-white p-2.5 shadow-2xs">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-navy-900">{b.name}</span>
+                          <Badge tone={b.statusTone}>{b.section}</Badge>
+                        </div>
+                        <p className="mt-0.5 text-steel-600">{b.statusReason}</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary text-[11px] shrink-0"
+                        onClick={() => {
+                          setTahapMove(null);
+                          setTahapReason("");
+                          setTab(b.tab);
+                          if (b.targetDocId) {
+                            const targetDoc = data.documents.find((d) => d.id === b.targetDocId);
+                            if (targetDoc) setDocDetail(targetDoc);
+                          }
+                          toast(`${b.name} (${b.section})`, "info");
+                        }}
+                      >
+                        {S.detBlockerAction} →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Field label={S.detTahapReason}>
+              <textarea className="input" rows={3} value={tahapReason} onChange={(e) => setTahapReason(e.target.value)} placeholder="Tulis alasan perubahan tahap..." />
+            </Field>
+          </Modal>
+        );
+      })()}
 
       {/* Modal share */}
       <Modal open={docDetail !== null} onClose={() => setDocDetail(null)} wide
