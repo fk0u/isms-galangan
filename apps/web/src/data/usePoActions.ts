@@ -39,8 +39,8 @@ function statusAfter(po: StoreItem, current: string): string {
 const prIdsOf = (po: StoreItem): string[] =>
   [...new Set([String(po.req ?? ""), ...(Array.isArray(po.prIds) ? (po.prIds as unknown[]).map(String) : [])].filter((x) => x !== "" && x !== "-"))];
 
-export interface ReceiveLineArgs { itemId?: string; name?: string; qty: number }
-export interface ReceiveArgs { qty?: number; itemId?: string; noFaktur?: string; tglFaktur?: string; dendaRp?: number; actor?: string; lines?: ReceiveLineArgs[] }
+export interface ReceiveLineArgs { itemId?: string; name?: string; qty: number; warehouse?: string; rack?: string; bin?: string }
+export interface ReceiveArgs { qty?: number; itemId?: string; warehouse?: string; rack?: string; bin?: string; noFaktur?: string; tglFaktur?: string; dendaRp?: number; actor?: string; lines?: ReceiveLineArgs[] }
 export interface ReceiveOutcome { status: string; fulfilled: { id: string; given?: number }[] }
 export interface ReturnArgs { qty: number; itemId: string; note: string; actor?: string }
 
@@ -119,6 +119,13 @@ export function usePoActions() {
         }
 
         const invPatch: Record<string, unknown> = { stock };
+        const lineWh = rl.warehouse || a.warehouse;
+        if (lineWh) invPatch.warehouse = lineWh;
+        if (rl.rack || a.rack) {
+          invPatch.rack = rl.rack || a.rack;
+          invPatch.location = rl.rack || a.rack;
+        }
+        if (rl.bin || a.bin) invPatch.bin = rl.bin || a.bin;
         if (unitPrice > 0) invPatch.avgCost = Math.round(((oldStock * oldAvg + lineQty * unitPrice) / (oldStock + lineQty)) * 100) / 100;
         await update("inventory", resolvedItemId, invPatch);
       }
@@ -155,6 +162,15 @@ export function usePoActions() {
     const oldStock = Math.max(0, num(item.stock));
     const oldAvg = num(item.avgCost) > 0 ? num(item.avgCost) : num(item.cost);
     let stock = oldStock + singleQty;
+    const singlePatch: Record<string, unknown> = { stock };
+    if (a.warehouse) singlePatch.warehouse = a.warehouse;
+    if (a.rack) {
+      singlePatch.rack = a.rack;
+      singlePatch.location = a.rack;
+    }
+    if (a.bin) singlePatch.bin = a.bin;
+    if (unitPrice > 0) singlePatch.avgCost = Math.round(((oldStock * oldAvg + singleQty * unitPrice) / (oldStock + singleQty)) * 100) / 100;
+    await update("inventory", String(item.id), singlePatch);
     await add("movements", {
       item: String(item.name), itemId: String(item.id), type: "Penerimaan", qty: singleQty, unit: String(item.unit ?? "pcs"),
       by: String(po.id), date: todayISO(), tone: "in", ref: { poId: po.id },

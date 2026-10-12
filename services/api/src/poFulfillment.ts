@@ -82,11 +82,17 @@ export interface ReceiveLineInput {
   itemId?: string;
   name?: string;
   qty: number;
+  warehouse?: string;
+  rack?: string;
+  bin?: string;
 }
 
 export interface ReceiveInput {
   qty?: number;
   itemId?: string;
+  warehouse?: string;
+  rack?: string;
+  bin?: string;
   noFaktur?: string;
   tglFaktur?: string;
   dendaRp?: number;
@@ -171,6 +177,15 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
         const oldAvg = num(invItem.avgCost) > 0 ? num(invItem.avgCost) : num(invItem.cost);
         const nextInvItem: Data = { ...invItem, stock: oldStock + lineQty };
         if (unitPrice > 0) nextInvItem.avgCost = Math.round(((oldStock * oldAvg + lineQty * unitPrice) / (oldStock + lineQty)) * 100) / 100;
+        const targetWh = rl.warehouse ?? input.warehouse;
+        const targetRack = rl.rack ?? input.rack;
+        const targetBin = rl.bin ?? input.bin;
+        if (targetWh) nextInvItem.warehouse = targetWh;
+        if (targetRack) {
+          nextInvItem.rack = targetRack;
+          nextInvItem.location = targetRack;
+        }
+        if (targetBin) nextInvItem.bin = targetBin;
 
         const invRes = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
           JSON.stringify(nextInvItem), now, invRow.id, invRow.updated_at, invRow.data,
@@ -243,6 +258,12 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     const oldAvg = num(item.avgCost) > 0 ? num(item.avgCost) : num(item.cost);
     const nextItem: Data = { ...item, stock: oldStock + qty };
     if (unitPrice > 0) nextItem.avgCost = Math.round(((oldStock * oldAvg + qty * unitPrice) / (oldStock + qty)) * 100) / 100;
+    if (input.warehouse) nextItem.warehouse = input.warehouse;
+    if (input.rack) {
+      nextItem.rack = input.rack;
+      nextItem.location = input.rack;
+    }
+    if (input.bin) nextItem.bin = input.bin;
     const invRes = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
       JSON.stringify(nextItem), now, inv[0].id, inv[0].updated_at, inv[0].data,
     ]);
