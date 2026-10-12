@@ -1103,7 +1103,7 @@ export default function QCSafety() {
                   </div>
                 </Card>
                 <Card className="lg:col-span-2">
-                  <CardHeader title={S.cardInspT} subtitle={`${S.cardInspS} · Per bulan (cth Sep 2026) — bulan berjalan paling kanan`} />
+                  <CardHeader title={S.cardInspT} subtitle={`${S.cardInspS} · Per bulan (cth Sep 2026); bulan berjalan paling kanan`} />
                   <div className="h-44 p-4 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={itpChart} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -1230,7 +1230,7 @@ export default function QCSafety() {
                     <p className="mt-1 text-[11px] text-steel-500">
                       {String(n.status) === "Terbuka" && (!n.due ? "Lengkapi tenggat CAPA dulu, lalu Proses → isi korektif + PIC." : "Siap diproses → isi tindakan korektif + PIC untuk ke Dalam Perbaikan.")}
                       {String(n.status) === "Dalam Perbaikan" && (String(n.severity) === "Critical" ? "Penutupan Critical butuh verifier Direktur + catatan verifikasi." : "Penutupan butuh verifikasi (verifier + catatan), rework > 0 otomatis dijurnal.")}
-                      {String(n.status) === "Tertutup" && (!n.followUpDate ? "Tertutup — jadwalkan verifikasi lanjutan H+30 bila perlu." : `Follow-up ${fmtTanggal(String(n.followUpDate))} tercatat.`)}
+                      {String(n.status) === "Tertutup" && (!n.followUpDate ? "Tertutup: jadwalkan verifikasi lanjutan H+30 bila perlu." : `Follow-up ${fmtTanggal(String(n.followUpDate))} tercatat.`)}
                     </p>
                   </div>
                 </Card>
@@ -1521,7 +1521,7 @@ export default function QCSafety() {
                               bukan pratinjau berkas kapal - hilangnya dari
                               kartu akan memutus jalur ke dokumen QC. */}
                           {url === "" && (
-                            <p className="mt-1.5 text-xs text-steel-500">Belum ada file sertifikat — hubungi QA.</p>
+                            <p className="mt-1.5 text-xs text-steel-500">Belum ada file sertifikat. Hubungi QA.</p>
                           )}
                           {projectId && (
                             <details className="mt-1.5 rounded-lg border border-steel-100 bg-surface p-2">
@@ -1530,7 +1530,7 @@ export default function QCSafety() {
                               </summary>
                               {certDocs.length === 0 ? (
                                 <p className="mt-1.5 text-[11px] text-steel-400">
-                                  Belum ada dokumen bertipe Sertifikat pada proyek ini — unggah lewat Detail Proyek → Dokumen &amp; Laporan.
+                                  Belum ada dokumen bertipe Sertifikat pada proyek ini. Unggah lewat Detail Proyek → Dokumen &amp; Laporan.
                                 </p>
                               ) : (
                                 <div className="mt-1.5 space-y-1.5">
@@ -1718,7 +1718,7 @@ export default function QCSafety() {
                 <button className="btn-primary mt-2 text-xs" onClick={() => void acceptNcr(ncrDetail)}>Terima (sebagai {user?.name ?? "client"})</button>
               )}
               {!ncrDetail.acceptedAt && !isClient && (
-                <p className="mt-1 text-xs text-steel-500">Menunggu penerimaan owner{ncrDetail.penerima ? ` (${String(ncrDetail.penerima)})` : ""} — tombol Terima hanya untuk peran client.</p>
+                <p className="mt-1 text-xs text-steel-500">Menunggu penerimaan owner{ncrDetail.penerima ? ` (${String(ncrDetail.penerima)})` : ""}; tombol Terima hanya untuk peran client.</p>
               )}
             </div>
             <div className="mt-3 border-t border-steel-100 pt-3">

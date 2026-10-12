@@ -1700,8 +1700,8 @@ const sparkVendors = useMemo(() => {
                               <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => `${l.name} ×${l.qty}`).join("; ")}>{S.barisPr.replace("{n}", String(poLines(po).length)).replace("{a}", String(po.req ?? ""))}</p>
                             )}
                             {poLines(po).some((l) => l.spec || l.need) && (
-                              <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => [l.name, l.spec, l.need].filter(Boolean).join(" — ")).join("; ")}>
-                                {poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" — ")).filter(Boolean).join("; ")}
+                              <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => [l.name, l.spec, l.need].filter(Boolean).join(" · ")).join("; ")}>
+                                {poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" · ")).filter(Boolean).join("; ")}
                               </p>
                             )}
                             {po.noFaktur && (
@@ -1817,8 +1817,8 @@ const sparkVendors = useMemo(() => {
                                 </div>
                               )}
                               {poLines(po).some((l) => l.spec || l.need) && (
-                                <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" — ")).join("; ")}>
-                                  {poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" — ")).filter(Boolean).join("; ")}
+                                <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" · ")).join("; ")}>
+                                  {poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" · ")).filter(Boolean).join("; ")}
                                 </p>
                               )}
                             </td>

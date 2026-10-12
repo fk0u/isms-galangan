@@ -257,12 +257,12 @@ export async function fulfillMaterialRequest(id: string, actor: string): Promise
       if (pr[0] && prData && PR_OPEN.has(String(prData.status ?? ""))) {
         const unitPrice = Number(prData.qty) > 0 ? Number(prData.amount ?? 0) / Number(prData.qty) : 0;
         const nextPr: Data = shortage === 0
-          ? { ...prData, qty: 0, amount: 0, status: "Dibatalkan", note: `${String(prData.note ?? "")} — dipenuhi dari stok (${id})`.trim() }
+          ? { ...prData, qty: 0, amount: 0, status: "Dibatalkan", note: `${String(prData.note ?? "")} (dipenuhi dari stok ${id})`.trim() }
           : { ...prData, qty: shortage, amount: Math.round(unitPrice * shortage) };
         const prRes = await exec("UPDATE requisitions SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
           JSON.stringify(nextPr), now, prId, pr[0].updated_at,
         ]);
-        if (prRes.changes !== 1) throw new MaterialError(409, "PR berubah oleh pengguna lain — muat ulang", "STALE");
+        if (prRes.changes !== 1) throw new MaterialError(409, "PR berubah oleh pengguna lain, silakan muat ulang", "STALE");
       }
     }
     return { id, given: give, issued, shortage, status, movementId };

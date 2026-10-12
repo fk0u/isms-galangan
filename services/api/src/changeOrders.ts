@@ -70,7 +70,7 @@ async function saveCo(row: Row, data: Data, now: string): Promise<void> {
   const res = await exec("UPDATE changeOrders SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
     JSON.stringify(data), now, row.id, row.updated_at, row.data,
   ]);
-  if (res.changes !== 1) throw new CoError(409, "Change order berubah oleh pengguna lain — muat ulang", "STALE");
+  if (res.changes !== 1) throw new CoError(409, "Change order berubah oleh pengguna lain, silakan muat ulang", "STALE");
 }
 
 /** Keputusan owner: Disetujui / Ditolak (dari Diajukan). */
@@ -98,7 +98,7 @@ export async function applyChangeOrder(id: string, actor: string): Promise<Apply
        hanya pada data lama yang disetujui sebelum aturan ini. */
     const approval = (co.data.ownerApproval ?? {}) as { decision?: string; by?: string };
     if (String(co.data.status ?? "") !== "Disetujui") {
-      throw new CoError(409, "Change order belum disetujui owner — belum bisa diterapkan", "NOT_APPROVED");
+      throw new CoError(409, "Change order belum disetujui owner: belum bisa diterapkan", "NOT_APPROVED");
     }
     const now = new Date().toISOString();
     const boqDocId = String(co.data.boqDocId ?? "").trim();

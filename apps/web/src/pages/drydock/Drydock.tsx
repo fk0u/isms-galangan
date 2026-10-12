@@ -358,7 +358,7 @@ export default function Drydock() {
         // Cek NCR terbuka proyek ini sebelum menutup alur.
         const openNcr = (data.ncr ?? []).filter((n) => String(n.project) === String(sel.project) && String(n.status) !== "Tertutup");
         if (openNcr.length > 0) {
-          toast(`Slot ${sel.id} Selesai — perhatian: ${openNcr.length} NCR masih terbuka (${openNcr.map((n) => String(n.id)).join(", ")})`, "info");
+          toast(`Slot ${sel.id} Selesai: perhatian, ${openNcr.length} NCR masih terbuka (${openNcr.map((n) => String(n.id)).join(", ")})`, "info");
           log("undock dengan NCR terbuka", `${sel.id} · ${openNcr.map((n) => String(n.id)).join(", ")}`, "Drydock");
         } else {
           toast(S.tUndockDone.replace("{a}", sel.id));
@@ -400,7 +400,7 @@ export default function Drydock() {
     const kwh = Math.max(0, Number(s.powerKwh || 0));
     const m3 = Math.max(0, Number(s.waterM3 || 0));
     const total = dockAmt + kwh * tarifKwh + m3 * tarifAir;
-    if (total <= 0) { toast("Tagihan nol — isi tarif/hari atau konsumsi dulu", "info"); return; }
+    if (total <= 0) { toast("Tagihan nol: isi tarif/hari atau konsumsi dulu", "info"); return; }
     const due = (() => {
       const d = new Date(`${todayISO()}T00:00:00`);
       d.setDate(d.getDate() + 30);
@@ -1166,7 +1166,7 @@ export default function Drydock() {
           </dl>
           <button className="btn-primary mt-2 w-full justify-center text-xs" onClick={() => void createInvoiceFromSlot(sel)}>Buat invoice dari slot (draft Milestone)</button>
           <div className="mt-3 border-t border-steel-100 pt-3">
-            <p className="text-xs font-semibold text-steel-500">{S.utilSection} (tambah — diakumulasi)</p>
+            <p className="text-xs font-semibold text-steel-500">{S.utilSection} (tambah: diakumulasi)</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Field label={`+ ${S.lblPower}`}><NumInput min={0} className="input" value={utilDraft.power} onChange={(e) => setUtilDraft({ ...utilDraft, power: e.target.value })} placeholder={S.phPower} /></Field>
               <Field label={`+ ${S.lblWater}`}><NumInput min={0} className="input" value={utilDraft.water} onChange={(e) => setUtilDraft({ ...utilDraft, water: e.target.value })} placeholder={S.phWater} /></Field>
@@ -1185,7 +1185,7 @@ export default function Drydock() {
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-steel-500">{S.undockSection}</p>
               {sel.undockDone
-                ? <Badge tone="green">Selesai — undock tuntas</Badge>
+                ? <Badge tone="green">Selesai: undock tuntas</Badge>
                 : <Badge tone={undockList(sel).every(Boolean) ? "green" : "amber"}>{undockList(sel).every(Boolean) ? S.undockReady : S.undockProgress.replace("{n}", String(undockList(sel).filter(Boolean).length))}</Badge>}
             </div>
             <div className="mt-2 space-y-1.5">

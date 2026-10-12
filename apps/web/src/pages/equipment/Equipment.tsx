@@ -217,9 +217,9 @@ function depreciationOf(e: StoreItem): { annual: number; book: number } | null {
 /* Indikator utilisasi (global): <40% rendah-nganggur, 40–85% optimal, >85% overuse.
    Target global 176 jam/bulan. Makin tinggi belum tentu baik — >85% berarti butuh maintenance/reschedule. */
 function utilGrade(v: number, en: boolean): { label: string; tone: "green" | "amber" | "red"; desc: string } {
-  if (v > 85) return { label: en ? "Overuse · perlu maintenance" : "Overuse · butuh maintenance", tone: "red", desc: en ? "over 85% — schedule maintenance / add unit" : ">85% — jadwalkan maintenance / tambah unit" };
+  if (v > 85) return { label: en ? "Overuse · perlu maintenance" : "Overuse · butuh maintenance", tone: "red", desc: en ? "over 85%: schedule maintenance / add unit" : ">85%: jadwalkan maintenance / tambah unit" };
   if (v >= 40) return { label: en ? "Optimal" : "Optimal", tone: "green", desc: en ? "healthy load 40–85% (booking ÷ 176h)" : "beban sehat 40–85% (jam booking ÷ 176)" };
-  return { label: en ? "Rendah · nganggur" : "Rendah · nganggur", tone: "amber", desc: en ? "under 40% — unit idle" : "<40% — alat nganggur" };
+  return { label: en ? "Rendah · nganggur" : "Rendah · nganggur", tone: "amber", desc: en ? "under 40%: unit idle" : "<40%: alat nganggur" };
 }
 
 /* Indikator baik/buruk OEE: ≥70% baik, 40–70% cukup, <40% buruk. */
@@ -2532,7 +2532,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                   <p className="mt-1 text-center text-xs text-steel-500">{S.eqOverallUtilCap}</p>
                 </Card>
                 <Card className="lg:col-span-2">
-                  <CardHeader title={S.eqHoursPerMonth} subtitle="Per bulan (cth Sep 2026) — bulan berjalan paling kanan" />
+                  <CardHeader title={S.eqHoursPerMonth} subtitle="Per bulan (cth Sep 2026); bulan berjalan paling kanan" />
                   <div className="h-52 p-4 pt-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={hoursChart} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>

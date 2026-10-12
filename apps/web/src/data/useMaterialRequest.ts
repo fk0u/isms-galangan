@@ -252,7 +252,7 @@ export function useFulfillMaterialRequest(): (id: string, actor?: string) => Pro
     if (!item) throw new Error(`Item inventori ${String(mr.itemId)} tidak ditemukan`);
     const stock = Math.max(0, Number(item.stock ?? 0) || 0);
     const given = Math.min(stock, remaining);
-    if (given === 0) throw new Error("Stok gudang masih kosong — tunggu barang PO masuk");
+    if (given === 0) throw new Error("Stok gudang masih kosong; tunggu barang PO masuk");
     await update("inventory", String(item.id), { stock: stock - given });
     const mv = await add("movements", {
       item: String(mr.item ?? item.name), itemId: String(item.id), type: "Pengeluaran", qty: given,
@@ -279,7 +279,7 @@ export function useFulfillMaterialRequest(): (id: string, actor?: string) => Pro
     if (pr && PR_OPEN.has(String(pr.status ?? ""))) {
       const unitPrice = Number(pr.qty) > 0 ? Number(pr.amount ?? 0) / Number(pr.qty) : 0;
       await update("requisitions", prId, shortage === 0
-        ? { qty: 0, amount: 0, status: "Dibatalkan", note: `${String(pr.note ?? "")} — dipenuhi dari stok (${id})`.trim() }
+        ? { qty: 0, amount: 0, status: "Dibatalkan", note: `${String(pr.note ?? "")} (dipenuhi dari stok ${id})`.trim() }
         : { qty: shortage, amount: Math.round(unitPrice * shortage) });
     }
     return { id, given, issued, shortage, status };
