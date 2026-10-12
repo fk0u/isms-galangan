@@ -39,6 +39,8 @@ interface DocRow {
   approvedBy?: string;
   approvedAt?: string;
   note?: string;
+  assigner?: string;
+  createdBy?: string;
 }
 
 const STATUS_TONE: Record<DocStatus, "gray" | "amber" | "green" | "red" | "navy"> = {
@@ -91,10 +93,34 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
 
   const createDoc = async () => {
     const number = nextNumber();
+    const actorName = user?.name ?? "Commercial Estimator";
     try {
       const created = await add("boqDocs", {
         projectId, number, revision: 0, status: "Draft", issuedAt: todayISO(), note: "", total: 0,
+        assigner: actorName, createdBy: actorName,
       }, { action: "membuat surat BoQ", target: number, module: "BoQ" });
+      const pr = data.projects.find((p) => p.id === projectId);
+      const vessel = pr ? String(pr.vessel ?? "") : "";
+      const docId = `DOC-${created.id}`;
+      if (!data.documents.some((d) => d.id === docId)) {
+        await add("documents", {
+          id: docId,
+          title: `BoQ ${number} Rev 0`,
+          type: "BoQ",
+          subType: "BoQ Proyek",
+          project: projectId,
+          vessel,
+          version: "Rev 0",
+          status: "Draft",
+          updated: todayISO(),
+          owner: actorName,
+          assigner: actorName,
+          boqDocId: String(created.id),
+          archived: false,
+          docCopy: "Terkendali",
+          branch: String(pr?.branch ?? ""),
+        });
+      }
       toast(S.bqdCreated.replace("{a}", number), "success");
       setOpenId(String(created.id));
     } catch (e) {
@@ -118,28 +144,41 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
       if (to === "Disetujui" && doc.supersedes) {
         await update("boqDocs", doc.supersedes, { status: "Digantikan", supersededBy: doc.id });
       }
-      if (to === "Disetujui") {
-        const docId = `DOC-${doc.id}`;
-        const pr = data.projects.find((p) => p.id === projectId);
-        const vessel = pr ? String(pr.vessel ?? "") : "";
-        const exists = data.documents.some((d) => d.id === docId);
-        if (!exists) {
-          await add("documents", {
-            id: docId,
-            title: `BoQ ${doc.number} Rev ${doc.revision}`,
-            type: "BoQ",
-            subType: doc.revision > 0 ? "Revisi BoQ" : "BoQ Proyek",
-            project: projectId,
-            vessel,
-            version: `Rev ${doc.revision}`,
-            status: "Disetujui",
-            updated: todayISO(),
-            owner: user?.name ?? "Commercial Estimator",
-            boqDocId: doc.id,
-            archived: false,
-            docCopy: "Terkendali",
-            branch: String(pr?.branch ?? ""),
-          });
+      const docId = `DOC-${doc.id}`;
+      const pr = data.projects.find((p) => p.id === projectId);
+      const vessel = pr ? String(pr.vessel ?? "") : "";
+      const exists = data.documents.find((d) => d.id === docId);
+      const docAssigner = String(doc.assigner || (doc as unknown as Record<string, unknown>).createdBy || user?.name || "");
+      if (exists) {
+        await update("documents", docId, {
+          status: to,
+          updated: todayISO(),
+          archived: to === "Digantikan",
+          ...(to === "Disetujui" ? { approvedBy: user?.name ?? "-" } : {}),
+        });
+      } else {
+        await add("documents", {
+          id: docId,
+          title: `BoQ ${doc.number} Rev ${doc.revision}`,
+          type: "BoQ",
+          subType: doc.revision > 0 ? "Revisi BoQ" : "BoQ Proyek",
+          project: projectId,
+          vessel,
+          version: `Rev ${doc.revision}`,
+          status: to,
+          updated: todayISO(),
+          owner: docAssigner || "Commercial Estimator",
+          assigner: docAssigner,
+          boqDocId: doc.id,
+          archived: to === "Digantikan",
+          docCopy: "Terkendali",
+          branch: String(pr?.branch ?? ""),
+        });
+      }
+      if (to === "Disetujui" && doc.supersedes) {
+        const prevDocId = `DOC-${doc.supersedes}`;
+        if (data.documents.some((d) => d.id === prevDocId)) {
+          await update("documents", prevDocId, { status: "Digantikan", archived: true, updated: todayISO() });
         }
       }
     }
@@ -151,15 +190,17 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
     let newId: string;
     if (remote()) {
       const res = await apiFetch<{ id: string; revision: number }>(`/api/boqDocs/${encodeURIComponent(doc.id)}/revise`, { method: "POST" });
-      await resyncCollections(["boqDocs", "boq", "activities"]);
+      await resyncCollections(["boqDocs", "boq", "activities", "documents"]);
       newId = res.id;
     } else {
       if (docs.some((d) => d.supersedes === doc.id && !LOCKED.includes(d.status))) {
         throw new Error(S.bqdRevisePending);
       }
+      const docAssigner = String(doc.assigner || (doc as unknown as Record<string, unknown>).createdBy || user?.name || "");
       const created = await add("boqDocs", {
         projectId, number: doc.number, revision: doc.revision + 1, status: "Draft",
         supersedes: doc.id, issuedAt: todayISO(), note: "", total: totalOf(doc.id),
+        assigner: docAssigner, createdBy: user?.name ?? "Commercial Estimator",
       }, { action: "membuat revisi surat BoQ", target: doc.number, module: "BoQ" });
       newId = String(created.id);
       for (const it of itemsOf(doc.id)) {
@@ -167,6 +208,26 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
         void _drop;
         await add("boq", { ...rest, boqDocId: newId, status: "Draft", copiedFrom: it.id });
       }
+      const pr = data.projects.find((p) => p.id === projectId);
+      const vessel = pr ? String(pr.vessel ?? "") : "";
+      const docId = `DOC-${newId}`;
+      await add("documents", {
+        id: docId,
+        title: `BoQ ${doc.number} Rev ${doc.revision + 1}`,
+        type: "BoQ",
+        subType: "Revisi BoQ",
+        project: projectId,
+        vessel,
+        version: `Rev ${doc.revision + 1}`,
+        status: "Draft",
+        updated: todayISO(),
+        owner: docAssigner || "Commercial Estimator",
+        assigner: docAssigner,
+        boqDocId: newId,
+        archived: false,
+        docCopy: "Terkendali",
+        branch: String(pr?.branch ?? ""),
+      });
     }
     toast(S.bqdRevised.replace("{a}", `${doc.number} Rev ${doc.revision + 1}`), "success");
     setOpenId(newId);

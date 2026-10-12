@@ -240,8 +240,58 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
 
   const docPreview = nextDocId(form.type, data.documents);
 
-  const active = inBranch(data.documents.filter((d) => !d.archived));
-  const archived = inBranch(data.documents.filter((d) => d.archived));
+  const allDocs = useMemo(() => {
+    const rawDocs = inBranch(data.documents);
+    const existingBoqIds = new Set(
+      rawDocs
+        .filter((d) => d.type === "BoQ" || d.boqDocId)
+        .map((d) => String(d.boqDocId ?? d.id).replace(/^DOC-/, "")),
+    );
+    const branchBoqDocs = inBranch(data.boqDocs ?? []);
+    const prjMap = new Map((data.projects ?? []).map((p) => [String(p.id), p]));
+    const synthDocs: StoreItem[] = branchBoqDocs
+      .filter((b) => !existingBoqIds.has(String(b.id).replace(/^DOC-/, "")) && !rawDocs.some((d) => d.id === `DOC-${b.id}` || d.id === b.id))
+      .map((b) => {
+        const prj = prjMap.get(String(b.projectId ?? ""));
+        return {
+          id: `DOC-${b.id}`,
+          title: `BoQ ${b.number} Rev ${b.revision}`,
+          type: "BoQ",
+          subType: Number(b.revision ?? 0) > 0 ? "Revisi BoQ" : "BoQ Proyek",
+          project: String(b.projectId ?? "-"),
+          vessel: String(prj?.vessel ?? "-"),
+          version: `Rev ${b.revision ?? 0}`,
+          status: b.status,
+          updated: b.issuedAt || todayISO(),
+          owner: b.assigner || b.createdBy || b.owner || "",
+          assigner: b.assigner || b.createdBy || b.owner || "",
+          boqDocId: b.id,
+          archived: b.status === "Digantikan",
+          docCopy: "Terkendali",
+          branch: b.branch,
+        };
+      });
+    return [...rawDocs, ...synthDocs].map((d) => {
+      if (d.type === "BoQ" || d.boqDocId) {
+        const cleanId = String(d.boqDocId ?? d.id).replace(/^DOC-/, "");
+        const b = branchBoqDocs.find((x) => x.id === d.boqDocId || x.id === cleanId || x.id === d.id);
+        if (b) {
+          const assigner = String(b.assigner || b.createdBy || d.assigner || d.owner || "");
+          return {
+            ...d,
+            status: b.status || d.status,
+            assigner: assigner || undefined,
+            owner: assigner || d.owner,
+            version: `Rev ${b.revision ?? 0}`,
+          };
+        }
+      }
+      return d;
+    });
+  }, [data.documents, data.boqDocs, data.projects, inBranch]);
+
+  const active = useMemo(() => allDocs.filter((d) => !d.archived), [allDocs]);
+  const archived = useMemo(() => allDocs.filter((d) => d.archived), [allDocs]);
 
   /* Dokumen yang memerlukan tindakan pemeriksaan, pengajuan, atau approval */
   const needsActionDocs = useMemo(() => {
@@ -886,6 +936,10 @@ const doExport = () => {
                   <td className="td max-w-[260px]">
                     <p className="truncate font-medium text-navy-900" title={String(d.title)}>{d.title}</p>
                     <p className="font-mono text-xs text-steel-500">{d.id} · {d.owner}{d.berlakuHingga ? S.untilSuffix.replace("{a}", fmtTanggal(d.berlakuHingga)) : ""}</p>
+                    <p className="mt-0.5 text-xs text-steel-600">
+                      <span className="font-medium text-steel-700">{S.assignerLabel}:</span>{" "}
+                      {d.assigner ? String(d.assigner) : (d.type === "BoQ" && d.owner ? String(d.owner) : S.assignerEmpty)}
+                    </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       <Badge tone={String(d.docCopy ?? "Terkendali") === "Salinan" ? "amber" : "teal"}>{String(d.docCopy ?? "Terkendali")}</Badge>
                       {d.subType ? <Badge tone="gray">{String(d.subType)}</Badge> : null}
@@ -894,7 +948,19 @@ const doExport = () => {
                     </div>
                   </td>
                   <td className="td"><Badge tone="navy">{d.type}</Badge></td>
-                  <td className="td text-steel-600 text-xs font-mono max-w-[180px] truncate" title={`${String(d.project)} · ${String(d.vessel)}`}>{d.project} · {d.vessel}</td>
+                  <td className="td text-steel-600 text-xs font-mono max-w-[180px] truncate" title={`${String(d.project)} · ${String(d.vessel)}`}>
+                    {d.project && d.project !== "-" ? (
+                      <a
+                        href={`/proyek/${encodeURIComponent(String(d.project))}?tab=BoQ`}
+                        className="text-ocean-700 hover:underline"
+                        title={locale === "en" ? `Open project ${d.project} (BoQ)` : `Buka proyek ${d.project} (BoQ)`}
+                      >
+                        {d.project} · {d.vessel}
+                      </a>
+                    ) : (
+                      `${d.project} · ${d.vessel}`
+                    )}
+                  </td>
                   <td className="td text-steel-600">{d.version}</td>
                   <td className="td"><StatusBadge status={d.status} /></td>
                   <td className="td text-steel-600">{fmtTanggal(d.updated)}</td>
@@ -1190,6 +1256,7 @@ const doExport = () => {
                 [S.lblValidUntil2, fmtTanggal(detail.berlakuHingga)],
                 [S.colRevUpdated, fmtTanggal(detail.updated)],
                 [S.lblOwner, detail.owner],
+                [S.assignerLabel, String(detail.assigner || (detail.type === "BoQ" ? detail.owner : "") || S.assignerEmpty)],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4"><dt className="text-steel-500">{k}</dt><dd className="font-medium text-navy-900">{v}</dd></div>
               ))}
