@@ -1253,6 +1253,7 @@ export default function Procurement() {
         qty: totalRecvQty,
         itemId: finalLines[0]?.itemId || String(recvPo.itemId || ""),
         lines: finalLines,
+        warehouse: recvWarehouse,
         noFaktur: recvNoFaktur.trim(),
         tglFaktur: recvTglFaktur,
         dendaRp,

@@ -993,7 +993,7 @@ if (k === "mattype") return matTypeOf(i);
       const canKeepExisting = Boolean(editing && !conversionEdited && unitConversionOf(editing));
       if (shouldRequire && !conversion && !canKeepExisting) { toast(S.conversionRequired, "info"); return; }
     }
-    setMaterialFormStep((current) => Math.min(current + 1, 3));
+    setMaterialFormStep((current) => Math.min(current + 1, 2));
   };
 
   /* Upload foto ke backend (/api/files); mode lokal tetap pakai URL manual. */
@@ -1082,23 +1082,22 @@ if (k === "mattype") return matTypeOf(i);
     const conversion = conversionDraft ?? (canKeepExisting ? existingConversion : null);
     const conversionRequired = unitConversionRequiredForEdit(form.category, form.unit, form.eceran, form, conversionBaseline);
     if (conversionRequired && !conversion) { toast(S.conversionRequired, "info"); return; }
-    // #92: material baru selalu mulai dari stok 0; stok hanya bertambah lewat penerimaan barang.
-    const numStock = !editing || form.stock.trim() === "" ? 0 : Number(form.stock);
+    // #92: material baru selalu mulai dari stok 0; stok & lokasi ditetapkan lewat penerimaan PO/barang masuk.
     const numMin = form.minStock.trim() === "" ? 0 : Number(form.minStock);
     const numCost = parseRupiah(form.cost);
-    if (!Number.isFinite(numStock) || numStock < 0) { toast(S.stockInvalid, "info"); return; }
     if (!Number.isFinite(numMin) || numMin < 0) { toast(S.minInvalid, "info"); return; }
     if (!Number.isFinite(numCost) || numCost < 0) { toast(S.costInvalid, "info"); return; }
-    const rack = form.rack.trim();
-    const bin = form.bin.trim();
     const matType = (MAT_TYPES as readonly string[]).includes(String(form.matType ?? "").trim()) ? String(form.matType).trim() : "habis-pakai";
     const minWhMap = (editing?.minStockByWarehouse as Record<string, number> | undefined) ?? {};
     if (editing) {
-      /* Stok read-only di form edit - hanya field non-stok yang disimpan. */
+      /* Kompatibilitas data lama: jangan menghapus lokasi atau saldo stok yang telah tercatat. */
       try {
         await update("inventory", editing.id, {
-          name: form.name.trim(), category: form.category, sku: form.sku.trim(), warehouse: form.warehouse,
-          rack, bin, location: rack, minStock: numMin, unit: form.unit,
+          name: form.name.trim(), category: form.category, sku: form.sku.trim(),
+          warehouse: editing.warehouse ?? "",
+          rack: editing.rack ?? "", bin: editing.bin ?? "", location: editing.location ?? editing.rack ?? "",
+          stock: editing.stock ?? 0,
+          minStock: numMin, unit: form.unit,
           cost: numCost, volume: volume || 0, batch: form.batch.trim(),
           conversion, uom2: conversion?.baseUnit ?? "", konversi: conversion?.perUnit ?? 0,
           minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), matType, eceran: form.eceran,
@@ -1109,16 +1108,16 @@ if (k === "mattype") return matTypeOf(i);
         return;
       }
     } else {
-      const stock = numStock;
       const batch = form.batch.trim();
       try {
         const created = await add("inventory", {
-          name: form.name.trim(), category: form.category, sku: form.sku.trim(), warehouse: form.warehouse,
-          rack, bin, stock, minStock: numMin, unit: form.unit,
-          cost: numCost, location: rack, volume: volume || 0, batch,
+          name: form.name.trim(), category: form.category, sku: form.sku.trim(),
+          warehouse: "", rack: "", bin: "", location: "",
+          stock: 0, minStock: numMin, unit: form.unit,
+          cost: numCost, volume: volume || 0, batch,
           conversion, uom2: conversion?.baseUnit ?? "", konversi: conversion?.perUnit ?? 0,
-          minStockByWarehouse: minWhMap, photoUrl: form.photoUrl.trim(), avgCost: 0, matType, eceran: form.eceran,
-          batches: batch ? [{ batch, qty: stock, date: todayISO() }] : [],
+          minStockByWarehouse: {}, photoUrl: form.photoUrl.trim(), avgCost: 0, matType, eceran: form.eceran,
+          batches: [],
           reserved: [],
         }, { action: "mendaftarkan material", module: "Inventori" });
         toast(S.materialAdded.replace("{n}", created.id));

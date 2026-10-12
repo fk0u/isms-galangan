@@ -12,7 +12,7 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc, syncBoqDocToDocuments } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
-import { projectManagerError, stampRole, transferError } from "../domainGuards.js";
+import { catalogStockGuardError, projectManagerError, stampRole, transferError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -566,6 +566,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (table === "inventory") {
       const conversionError = inventoryConversionError(rowData);
       if (conversionError) return reply.status(422).send(fail(conversionError, "UNPROCESSABLE"));
+      const stockError = catalogStockGuardError(table, rowData as Record<string, unknown>);
+      if (stockError) return reply.status(422).send(fail(stockError, "UNPROCESSABLE"));
     }
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {

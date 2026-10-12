@@ -119,3 +119,13 @@ export function transferError(table: string, data: Data): string | null {
   if (from === "" || to === "") return "Transfer wajib menyebut gudang asal dan gudang tujuan";
   return from === to ? "Gudang tujuan tidak boleh sama dengan gudang asal" : null;
 }
+
+/** #92: pembuatan material lewat katalog tidak boleh membuat stok awal.
+ *  Stok hanya bertambah lewat penerimaan barang masuk / PO. */
+export function catalogStockGuardError(table: string, data: Data): string | null {
+  if (table !== "inventory") return null;
+  if (data.stock !== undefined && Number(data.stock) > 0) {
+    return "Material baru tidak boleh memiliki stok awal lewat katalog; stok diisi melalui penerimaan barang PO";
+  }
+  return null;
+}

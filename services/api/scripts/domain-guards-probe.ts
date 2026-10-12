@@ -113,10 +113,20 @@ async function main(): Promise<void> {
     assert("transfer ke gudang asal → 422", sama.status === 422, JSON.stringify(sama.body));
     assert("transfer tanpa gudang tujuan → 422", (await call("POST", "/api/movements", { data: { ...mv, fromWh: "Gudang A" } })).status === 422);
     assert("pergerakan tidak tercatat saat ditolak", (await jumlah()) === 0);
+
+    /* #92: stok awal material lewat katalog ditolak */
+    const invStockBaru = await call("POST", "/api/inventory", { data: { name: `Material Probe ${tag}`, category: "Baja", sku: `SKU-G-${tag}`, stock: 50, unit: "pcs" } });
+    assert("tambah material baru dengan stok awal > 0 → 422", invStockBaru.status === 422, JSON.stringify(invStockBaru.body));
+    const invNol = await call("POST", "/api/inventory", { data: { name: `Material Probe ${tag}`, category: "Baja", sku: `SKU-G-${tag}`, stock: 0, unit: "pcs" } });
+    assert("tambah material baru dengan stok 0 → 200/201", invNol.status === 200 || invNol.status === 201, JSON.stringify(invNol.body));
+    if (invNol.body.data?.id) made.push(invNol.body.data.id);
   } finally {
     for (const undo of cleanup) await undo();
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]);
-    for (const id of made) await exec("DELETE FROM projects WHERE id = ?", [id]);
+    for (const id of made) {
+      await exec("DELETE FROM projects WHERE id = ?", [id]);
+      await exec("DELETE FROM inventory WHERE id = ?", [id]);
+    }
     await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [pid]);
     await exec("DELETE FROM projects WHERE id = ?", [pid]);
     await exec("DELETE FROM employees WHERE id IN (?, ?)", [empPm, empFin]);

@@ -84,7 +84,7 @@ export default function CatalogMaterialForm({
   editing,
   form,
   step,
-  warehouses,
+  warehouses: _warehouses,
   photoInputRef,
   uploadingPhoto,
   onFieldChange,
@@ -99,11 +99,9 @@ export default function CatalogMaterialForm({
   const rule = conversionRuleForCategory(form.category);
   const preview = buildUnitConversion(form.category, form.unit, form);
   const stepTitle = S.formSteps[step] ?? S.formSteps[0];
-  /* #92: material baru tidak lagi punya langkah "Stok & gudang" - stok awal
-     selalu 0 dan gudang/rak/bin ditentukan saat penerimaan barang PO.
-     Mengubah material lama tetap menampilkan langkah itu agar lokasi yang
-     sudah tercatat tidak hilang. */
-  const lastStep = editing ? 3 : 2;
+  /* #92: form katalog hanya memiliki 3 langkah ("Identitas", "Satuan beli", "Konversi").
+     Stok awal selalu 0 dan gudang/rak/bin ditentukan saat penerimaan barang PO. */
+  const lastStep = 2;
 
   return (
     <Modal
@@ -263,42 +261,12 @@ export default function CatalogMaterialForm({
           </div>
         )}
 
-        {step === 2 && !editing && (
+        {step === 2 && (
           <FormGrid>
             <Field label={S.minLbl}>
               <NumInput min={0} className="input" value={form.minStock} onChange={(event) => onFieldChange("minStock", event.target.value)} />
             </Field>
           </FormGrid>
-        )}
-
-        {step === 3 && editing && (
-          <div className="space-y-3">
-            <FormGrid>
-              <Field label={S.whLbl}>
-                <select className="input" value={form.warehouse} onChange={(event) => onFieldChange("warehouse", event.target.value)}>
-                  {(warehouses.length > 0 ? warehouses : [form.warehouse]).map((warehouse) => <option key={warehouse} value={warehouse}>{warehouse}</option>)}
-                </select>
-              </Field>
-              {editing ? (
-                <Field label={S.stockNowLbl} hint={S.hintStockNow}>
-                  <input className="input bg-steel-50" value={Number(editing.stock || 0).toLocaleString(locale === "en" ? "en-US" : "id-ID")} disabled readOnly />
-                </Field>
-              ) : (
-                <Field label={S.stock0Lbl}>
-                  <NumInput min={0} className="input" value={form.stock} onChange={(event) => onFieldChange("stock", event.target.value)} />
-                </Field>
-              )}
-              <Field label={S.minLbl}>
-                <NumInput min={0} className="input" value={form.minStock} onChange={(event) => onFieldChange("minStock", event.target.value)} />
-              </Field>
-              <Field label={S.rackLbl} hint={S.hintRack}>
-                <input className="input font-mono" value={form.rack} onChange={(event) => onFieldChange("rack", event.target.value)} placeholder={S.phRack} />
-              </Field>
-              <Field label={S.binLbl} hint={S.hintBin}>
-                <input className="input font-mono" value={form.bin} onChange={(event) => onFieldChange("bin", event.target.value)} placeholder={S.phBin} />
-              </Field>
-            </FormGrid>
-          </div>
         )}
       </div>
     </Modal>
