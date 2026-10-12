@@ -10,6 +10,7 @@ import { useStore } from "../../data/store";
 import type { StoreItem } from "../../data/store";
 import { fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
+import { isProjectManager } from "../../utils/employeeOptions";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -82,10 +83,9 @@ export default function QuotationDetail() {
   const riwayat: StoreItem[] = Array.isArray(quotation.riwayat) ? quotation.riwayat : [];
   const locked = quotation.stage === "Terkonversi";
   const pmCandidates = (data.employees ?? [])
-    .filter((e) => String(e.dept) === "Proyek" || String(e.role ?? "").includes("Manager"))
+    .filter(isProjectManager)
     .map((e) => String(e.name));
   const picName = String(quotation.pic ?? quotation.manager ?? "");
-  const pmNames = picName && !pmCandidates.includes(picName) ? [picName, ...pmCandidates] : pmCandidates;
 
   const setLine = (idx: number, k: keyof QLine, v: string) => {
     const base = [...activeLines];
@@ -147,7 +147,7 @@ export default function QuotationDetail() {
   const openConvert = () => {
     setHoChecks([false, false, false, false]);
     setHoBy("Tim Commercial");
-    setConvManager(String(quotation.pic ?? quotation.manager ?? ""));
+    setConvManager(pmCandidates.includes(picName) ? picName : "");
     setConvStart(todayISO());
     setConvEnd("");
     setConvertOpen(true);
@@ -425,8 +425,8 @@ export default function QuotationDetail() {
           <FormGrid>
             <Field label={S.pmLabel}>
               <select className="input" value={convManager} onChange={(e) => setConvManager(e.target.value)}>
-                <option value="">{S.pickPmOpt}</option>
-                {pmNames.map((n) => <option key={n} value={n}>{n}</option>)}
+                <option value="">{pmCandidates.length > 0 ? S.pickPmOpt : S.noPmCandidates}</option>
+                {pmCandidates.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </Field>
             <Field label={S.startPlanLabel}><input type="date" className="input" value={convStart} onChange={(e) => setConvStart(e.target.value)} /></Field>

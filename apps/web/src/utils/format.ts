@@ -70,7 +70,10 @@ export function fmtPersen(n: number): string {
 }
 
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  /* Tanggal LOKAL perangkat. toISOString() memakai UTC, sehingga di WITA
+     (UTC+8) form yang dibuka sebelum 08.00 terisi tanggal kemarin. */
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 }
 
 /**

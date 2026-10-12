@@ -10,6 +10,7 @@ import type { StoreItem } from "../data/store";
 import { useStore } from "../data/store";
 import { useAuth } from "../auth/auth";
 import { parseRupiah, todayISO } from "../utils/format";
+import { isProjectManager } from "../utils/employeeOptions";
 import ClientModal from "./ClientModal";
 
 const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
@@ -100,14 +101,7 @@ export default function ProjectAddModal({
   const pmOptions = useMemo(
     () =>
       employees
-        .filter((e) => {
-          const role = String(e.role ?? "").toLowerCase();
-          const dept = String(e.dept ?? "").toLowerCase();
-          /* #82: hanya Project Manager - manager bidang lain (finance, gudang, ...)
-             dan staf proyek non-PM tidak ikut ditawarkan. */
-          void dept;
-          return role.includes("project manager") || /(^|[^a-z])pm([^a-z]|$)/.test(role) || role.includes("manajer proyek");
-        })
+        .filter(isProjectManager)
         .map((e) => ({
           value: String(e.name ?? ""),
           label: String(e.name ?? ""),

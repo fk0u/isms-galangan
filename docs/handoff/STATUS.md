@@ -86,7 +86,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F3-L-03 | Skill matriks dengan persentase | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
 | F3-L-04 | Sertifikat lengkap | P1 | F3-L-sdm-absensi.md | | selesai | PR batch P1 (10 Okt) |
 | F3-L-05 | Surat: kontrak, perpanjangan, SP, preview & kop | P0 | F3-L-sdm-absensi.md | | selesai | form kop surat di Pengaturan (setting COMPANY_KOP); logo gambar belum |
-| F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | sebagian | QR + NIK + PIN, endpoint publik ber-rate-limit, ADR-0017; lampiran dari halaman publik sengaja tidak ada |
+| F3-L-06 | Cuti/izin mandiri via QR | P1 | F3-L-sdm-absensi.md | | sebagian | QR + NIK tanpa PIN, pratinjau identitas, lampiran opsional, token QR ber-hash 90 hari (ADR-0019 menggantikan bagian cuti ADR-0017) |
 | F3-L-07 | Absensi: rekap bulanan, tanpa shift, lembur otomatis | P0 | F3-L-sdm-absensi.md | Claude | review | feat/F3-L-sdm — rekap bulanan karyawan × tanggal (filter bulan & tahun), tanpa shift, lembur otomatis dengan batas harian/mingguan (utils/overtime.ts) |
 | F3-L-08 | Integrasi alat absensi | P2 | F3-L-sdm-absensi.md | | selesai | ingest per alat (API key) + impor CSV; adaptor merk menunggu Q14 |
 | F3-M-01 | Detail data kapal | P1 | F3-M-lainnya.md | agent | review | Branch feat/F3-M-01-detail-data-kapal; basis origin/main e984be5; PR #38; root check + build lulus; UI diverifikasi |
@@ -111,3 +111,7 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | F6-03 | Kunci i18n yang tidak dipakai | P1 | F6-cleanup.md | PEMBERSIH | sebagian | probe simetri ID/EN masuk check; penghapusan kunci mati belum |
 | F6-04 | Lint nol error, warning turun | P1 | F6-cleanup.md | PEMBERSIH | selesai | --max-warnings 74 (web) / 29 (api) |
 | F6-05 | Pecah file raksasa yang disentuh sprint | P2 | F6-cleanup.md | PEMBERSIH | todo | |
+| #67 #82 #93 | Guard server: hapus tahapan WBS, Project Manager, transfer gudang | P1 | GitHub issue | Claude | review | `services/api/src/domainGuards.ts` + `probe:domain-guards` (25 cek, termasuk #77 foto wajib saat progres berubah); #93 dijaga di pencatatan pergerakan, endpoint transfer atomik belum |
+| #98 | Upload PDF sertifikat karyawan | P1 | GitHub issue | Claude | review | pemindai PDF tidak lagi menolak `/OpenAction`/`/AA` (penyebab PDF pindai/Word tertolak); test unit ditambah; penyebab belum dikonfirmasi dengan berkas asli klien |
+| #99 #100 | Cuti mandiri: token QR ber-hash + kedaluwarsa, tanpa PIN, pratinjau NIK, dokumen pendukung | P1 | GitHub issue | Claude | review | ADR-0019; `probe:public-leave` 22 cek; QR tampil sekali saat dibuat |
+| #101 | Riwayat & nomor kontrak otomatis di modal Buat Surat | P1 | GitHub issue | Claude | review | nomor diisi dari kontrak terakhir, berganti karyawan memuat ulang |

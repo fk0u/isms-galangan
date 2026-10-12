@@ -285,13 +285,18 @@ export default function HR() {
   const [certForm, setCertForm] = useState({ name: "", expires: todayISO() });
 
   /* ---------- QR cuti mandiri ---------- */
-  const [leaveQr, setLeaveQr] = useState<string | null>(null);
+  /* #99: server hanya menyimpan hash token, jadi QR tampil sekali saat dibuat.
+     Membuka modal cukup menampilkan status QR yang sedang aktif. */
+  interface LeaveQrInfo { active: boolean; createdAt: string | null; createdBy: string | null; expiresAt: string | null; token?: string }
+  const [leaveQrInfo, setLeaveQrInfo] = useState<LeaveQrInfo | null>(null);
+  const leaveQr = leaveQrInfo?.token ?? null;
   const leaveQrUrl = leaveQr ? `${window.location.origin}/f/cuti/${leaveQr}` : "";
+  // Cap waktu server UTC: dipotong 10 huruf pertama akan mundur sehari di WITA.
+  const tglLokal = (iso: string | null): string => (iso ? new Date(iso).toLocaleDateString(locale === "en" ? "en-GB" : "id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-");
   const openLeaveQr = async (rotate: boolean): Promise<void> => {
     if (!isBackendConfigured()) { toast(E.qrServerOnly, "info"); return; }
     try {
-      const res = await apiFetch<{ token: string }>(rotate ? "/api/leave-qr/rotate" : "/api/leave-qr", rotate ? { method: "POST" } : undefined);
-      setLeaveQr(res.token);
+      setLeaveQrInfo(await apiFetch<LeaveQrInfo>(rotate ? "/api/leave-qr/rotate" : "/api/leave-qr", rotate ? { method: "POST" } : undefined));
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1091,18 +1096,32 @@ const finishTraining = async (t: StoreItem) => {
    *  saveSurat supaya keduanya tidak pernah berbeda - versi lama memanggil
    *  nextSuratId() di dalam suratPreview sehingga nomor yang tampil saat preview
    *  tidak sama dengan nomor yang benar-benar terbit saat disimpan. */
-  /* Surat kontrak terakhir karyawan terpilih (selain yang sedang diubah). */
-  const prevKontrak = arsipSurat
-    .filter((s) => s.employeeId === suratForm.employeeId && isKontrak(String(s.jenis)) && String(s.id) !== suratEditId)
-    .sort((a, b) => String(b.contractEnd ?? "").localeCompare(String(a.contractEnd ?? "")))[0];
-  /* Perpanjangan membaca kontrak terakhir: mulai = sehari setelah berakhir. */
+  /* Riwayat surat kontrak seorang karyawan, terbaru dulu (selain yang sedang diubah). */
+  const kontrakOf = (employeeId: string): StoreItem[] => arsipSurat
+    .filter((s) => s.employeeId === employeeId && isKontrak(String(s.jenis)) && String(s.id) !== suratEditId)
+    .sort((a, b) => String(b.contractEnd ?? "").localeCompare(String(a.contractEnd ?? "")));
+  const kontrakHistory = suratForm.employeeId ? kontrakOf(suratForm.employeeId) : [];
+  const prevKontrak = kontrakHistory[0];
+  /* Perpanjangan membaca kontrak terakhir: mulai = sehari setelah berakhir.
+     #101: nomor kontrak diisi dari kontrak terakhir karyawan itu; berganti
+     karyawan memuat ulang nomor & masa kontrak supaya data tidak tercampur. */
   const pickJenis = (jenis: string, employeeId = suratForm.employeeId): void => {
     const emp = data.employees.find((e) => e.id === employeeId);
-    const end = String(emp?.contractEnd ?? "");
+    const end = String(emp?.contractEnd || kontrakOf(employeeId)[0]?.contractEnd || "");
     const next = jenis === "Perpanjang Kontrak" && /^\d{4}-\d{2}-\d{2}$/.test(end)
       ? new Date(Date.parse(`${end}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
       : "";
-    setSuratForm((f) => ({ ...f, jenis, employeeId, contractStart: isKontrak(jenis) ? (next || f.contractStart) : "", contractEnd: isKontrak(jenis) ? f.contractEnd : "", contractNo: isKontrak(jenis) ? f.contractNo : "" }));
+    const lastNo = String(kontrakOf(employeeId)[0]?.contractNo ?? emp?.lastContractNo ?? "");
+    setSuratForm((f) => {
+      const ganti = employeeId !== f.employeeId;
+      if (!isKontrak(jenis)) return { ...f, jenis, employeeId, contractStart: "", contractEnd: "", contractNo: "" };
+      return {
+        ...f, jenis, employeeId,
+        contractStart: next || (ganti ? "" : f.contractStart),
+        contractEnd: ganti ? "" : f.contractEnd,
+        contractNo: ganti || !f.contractNo ? lastNo : f.contractNo,
+      };
+    });
   };
   const suratNomor = nextSuratId(suratForm.tanggal || todayISO());
 
@@ -2358,15 +2377,29 @@ const finishTraining = async (t: StoreItem) => {
       </Modal>
 
       {/* ---------- modal QR cuti mandiri (F3-L-06) ---------- */}
-      <Modal open={leaveQr !== null} onClose={() => setLeaveQr(null)} title={E.qrModalTitle} subtitle={E.qrModalHint}
+      <Modal open={leaveQrInfo !== null} onClose={() => setLeaveQrInfo(null)} title={E.qrModalTitle} subtitle={E.qrModalHint}
         footer={<>
-          <button className="btn-secondary" title={E.qrRotateHint} onClick={() => void openLeaveQr(true)}>{E.qrRotate}</button>
-          <button className="btn-primary" onClick={() => { void navigator.clipboard?.writeText(leaveQrUrl).then(() => toast(E.qrCopied)); }}>{E.qrCopy}</button>
+          <AsyncButton className={leaveQr ? "btn-secondary" : "btn-primary"} title={E.qrRotateHint} onAction={() => openLeaveQr(true)}>{E.qrRotate}</AsyncButton>
+          {leaveQr && <button className="btn-primary" onClick={() => { void navigator.clipboard?.writeText(leaveQrUrl).then(() => toast(E.qrCopied)); }}>{E.qrCopy}</button>}
         </>}>
-        {leaveQr !== null && (
+        {leaveQrInfo !== null && (
           <div className="flex flex-col items-center gap-3">
-            <div className="rounded-2xl bg-white p-4"><QRCodeSVG value={leaveQrUrl} size={220} /></div>
-            <p className="break-all text-center font-mono text-xs text-steel-500">{leaveQrUrl}</p>
+            {leaveQr ? (
+              <>
+                <div className="rounded-2xl bg-white p-4"><QRCodeSVG value={leaveQrUrl} size={220} /></div>
+                <p className="break-all text-center font-mono text-xs text-steel-500">{leaveQrUrl}</p>
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-800">{E.qrOnce}</p>
+              </>
+            ) : (
+              <p className="w-full rounded-xl border border-steel-200 bg-surface px-3 py-3 text-sm text-steel-600">
+                {leaveQrInfo.active ? E.qrActive : leaveQrInfo.expiresAt ? E.qrExpired : E.qrNone}
+              </p>
+            )}
+            {leaveQrInfo.expiresAt && (
+              <p className="text-center text-xs text-steel-500">
+                {E.qrMeta.replace("{a}", tglLokal(leaveQrInfo.createdAt)).replace("{b}", leaveQrInfo.createdBy ?? "-").replace("{c}", tglLokal(leaveQrInfo.expiresAt))}
+              </p>
+            )}
           </div>
         )}
       </Modal>
@@ -2416,6 +2449,23 @@ const finishTraining = async (t: StoreItem) => {
                 <input type="date" className="input" value={suratForm.contractEnd} onChange={(e) => setSuratForm({ ...suratForm, contractEnd: e.target.value })} />
               </Field>
             </FormGrid>
+          )}
+          {isKontrak(suratForm.jenis) && suratForm.employeeId && (
+            <div className="rounded-xl border border-steel-200 bg-surface p-3">
+              <p className="text-xs font-semibold text-steel-600">{E.contractHistory}</p>
+              {kontrakHistory.length === 0 && <p className="mt-1 text-xs text-steel-400">{E.contractHistoryEmpty}</p>}
+              <ul className="mt-1 space-y-1">
+                {kontrakHistory.map((k) => (
+                  <li key={String(k.id)} className="flex flex-wrap items-center justify-between gap-2 text-xs text-steel-600">
+                    <span><span className="font-mono text-navy-900">{String(k.contractNo || k.id)}</span> · {E.jenis[String(k.jenis) as keyof typeof E.jenis] ?? String(k.jenis)}</span>
+                    <span className="flex items-center gap-2">
+                      {fmtTanggal(String(k.contractStart ?? ""))} - {fmtTanggal(String(k.contractEnd ?? ""))}
+                      <Badge tone={String(k.contractEnd ?? "") >= todayISO() ? "green" : "slate"}>{String(k.contractEnd ?? "") >= todayISO() ? E.contractActive : E.contractEnded}</Badge>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           <Field label={S.fIsi}><textarea className="input" rows={4} value={suratForm.isi} onChange={(e) => setSuratForm({ ...suratForm, isi: e.target.value })} placeholder={S.phSurat} /></Field>
 <Field label={locale === "en" ? "Scan / attachment (optional)" : "Pindai / Lampiran (opsional)"} hint={locale === "en" ? "PDF or image, shown side-by-side with the text" : "PDF atau gambar, tampil berdampingan dengan teks"}>

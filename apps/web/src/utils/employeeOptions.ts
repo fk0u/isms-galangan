@@ -55,6 +55,15 @@ export function employeeOptions(
     .filter((o) => o.value !== "");
 }
 
+/** #82: karyawan aktif berjabatan Project Manager. Aturannya harus sama dengan
+ *  `isProjectManagerTitle` di services/api/src/domainGuards.ts - server menolak
+ *  penetapan manager proyek di luar daftar ini. */
+export function isProjectManager(e: StoreItem): boolean {
+  const t = String(e.role ?? "").trim().toLowerCase();
+  const pm = t.includes("project manager") || t.includes("manajer proyek") || /(^|[^a-z])pm([^a-z]|$)/.test(t);
+  return pm && (String(e.status ?? "").trim() || "Aktif") === "Aktif";
+}
+
 /** True kalau nilai PIC cocok dengan salah satu karyawan yang tercatat. */
 export function isKnownEmployee(employees: readonly StoreItem[], name: unknown): boolean {
   const n = String(name ?? "").trim().toLowerCase();

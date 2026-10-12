@@ -1667,7 +1667,12 @@ const createWarranty = async (wbsTask?: string) => {
                               icon={Trash2}
                               tone="danger"
                               label={`${S.detDelStageTitle} ${w.task}`}
-                              onClick={() => setStageToDelete(w.task)}
+                              onClick={() => {
+                                /* #67: aturan yang sama ditegakkan server (409 STAGE_IN_USE). */
+                                const terpakai = Number(w.progress) > 0 || (w.history?.length ?? 0) > 0 || (w.photos?.length ?? 0) > 0 || Boolean(w.photoUrl) || Boolean(w.assignee);
+                                if (terpakai) { toast(S.detDelStageBlocked.replace("{a}", w.task), "info"); return; }
+                                setStageToDelete(w.task);
+                              }}
                             />
                           </div>
                         </td>
@@ -3098,10 +3103,19 @@ const createWarranty = async (wbsTask?: string) => {
         onCancel={() => setStageToDelete(null)}
         onConfirm={async () => {
           if (!stageToDelete) return;
-          const next = wbs.filter((w) => w.task !== stageToDelete);
-          await saveWbsWithConflictRetry(next);
-          log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
-          toast(S.detDelStageSuccess.replace("{a}", stageToDelete));
+          // Predecessor yang menunjuk tahapan terhapus ikut dilepas agar tidak yatim.
+          const next = wbs.filter((w) => w.task !== stageToDelete)
+            .map((w) => (w.predecessor === stageToDelete ? { ...w, predecessor: undefined } : w));
+          try {
+            await saveWbsWithConflictRetry(next);
+            log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
+            toast(S.detDelStageSuccess.replace("{a}", stageToDelete));
+            // Tahapan sudah terhapus; gagal menyelaraskan progres bukan gagal hapus.
+            await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) }).catch(() => undefined);
+          } catch (e) {
+            const pesan = e instanceof ApiError && e.code === "STAGE_IN_USE" ? S.detDelStageBlocked : S.detDelStageFailed;
+            toast(pesan.replace("{a}", stageToDelete), "info");
+          }
           setStageToDelete(null);
         }}
         title={S.detDelStageTitle}
