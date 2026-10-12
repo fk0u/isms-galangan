@@ -57,6 +57,22 @@ export default function ChecklistTab() {
   const tpl = templates.find((t) => String(t.id) === tplId);
   const preview = tpl ? scoreChecklist(tpl as unknown as ScTemplate, answers) : null;
 
+  const currProject = useMemo(() => {
+    if (!inspect?.pid) return null;
+    return (data.projects ?? []).find((p) => String(p.id) === inspect.pid) ?? null;
+  }, [inspect, data.projects]);
+
+  const availableTemplates = useMemo(() => {
+    return templates.filter((t) => (inspect?.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC"));
+  }, [templates, inspect]);
+
+  const startInspection = (target: { pid: string; task: string; empId?: string }) => {
+    const matchTpls = templates.filter((t) => (target.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC"));
+    setInspect(target);
+    setAnswers({});
+    setTplId(matchTpls.length === 1 ? String(matchTpls[0].id) : "");
+  };
+
   const saveInspection = async () => {
     if (!inspect) return;
     if (!tpl) { toast(T.needTemplate, "info"); return; }
@@ -185,7 +201,7 @@ export default function ChecklistTab() {
                         {rs[0] ? <Badge tone={scoreTone(Number(rs[0].score), threshold)}>{String(rs[0].score)}</Badge> : <span className="text-xs text-steel-400">{T.noHistory}</span>}
                         {rs.length > 0 && <button type="button" className="ml-2 text-xs text-ocean-600 hover:underline" onClick={() => setOpenHist(openHist === key ? null : key)}>{T.history.replace("{n}", String(rs.length))}</button>}
                       </td>
-                      <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => { setInspect({ pid, task: key }); setAnswers({}); setTplId(""); }}>{T.start}</button>}</td>
+                      <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => startInspection({ pid, task: key })}>{T.start}</button>}</td>
                     </tr>,
                     openHist === key ? (
                       <tr key={`${key}-h`}>
@@ -224,7 +240,7 @@ export default function ChecklistTab() {
                     <td className="td tabular-nums">{rs.length}</td>
                     <td className="td">{rs[0] ? <><Badge tone={scoreTone(Number(rs[0].score), threshold)}>{String(rs[0].score)}</Badge><span className="ml-2 text-xs text-steel-500">{fmtTanggal(String(rs[0].at ?? "").slice(0, 10))}</span></> : <span className="text-steel-400">-</span>}</td>
                     <td className="td tabular-nums">{avg ?? "-"}</td>
-                    <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => { setInspect({ pid: "", task: String(e.name ?? e.id), empId: String(e.id) }); setAnswers({}); setTplId(""); }}>{T.fill}</button>}</td>
+                    <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => startInspection({ pid: "", task: String(e.name ?? e.id), empId: String(e.id) })}>{T.fill}</button>}</td>
                   </tr>
                 );
               })}
@@ -267,39 +283,183 @@ export default function ChecklistTab() {
       )}
 
       {/* Isi kuesioner */}
-      <Modal open={inspect !== null} onClose={() => setInspect(null)} wide title={T.modalTitle.replace("{n}", inspect?.task ?? "")} subtitle={inspect?.pid}
-        footer={<><span className="mr-auto text-xs text-steel-600">{preview ? T.preview.replace("{s}", String(preview.score)).replace("{a}", String(preview.answered)).replace("{t}", String(preview.total)) : ""}</span><button type="button" className="btn-secondary" onClick={() => setInspect(null)}>×</button><AsyncButton className="btn-primary" onAction={saveInspection}>{T.save}</AsyncButton></>}>
+      <Modal open={inspect !== null} onClose={() => setInspect(null)} wide title={T.modalTitle.replace("{n}", inspect?.task ?? "")} subtitle={inspect?.pid ? `${inspect.pid} · ${String(currProject?.vessel ?? "")}` : inspect?.empId}
+        footer={
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {preview ? (
+                <>
+                  <span className="font-semibold text-navy-900">{T.preview.replace("{s}", String(preview.score)).replace("{a}", String(preview.answered)).replace("{t}", String(preview.total))}</span>
+                  {preview.score >= threshold ? (
+                    <Badge tone="green">{T.statusPassed.replace("{t}", String(threshold))}</Badge>
+                  ) : (
+                    <Badge tone="amber">{T.statusFailed.replace("{t}", String(threshold))}</Badge>
+                  )}
+                  {preview.total > preview.answered && (
+                    <span className="text-amber-600 font-medium">({T.incompleteWarn.replace("{n}", String(preview.total - preview.answered))})</span>
+                  )}
+                </>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary text-xs" onClick={() => setInspect(null)}>{T.remove}</button>
+              <AsyncButton className="btn-primary text-xs" onAction={saveInspection}>{T.save}</AsyncButton>
+            </div>
+          </div>
+        }>
         <div className="space-y-4">
+          {/* Kartu Konteks Inspeksi */}
+          <div className="rounded-xl border border-steel-200 bg-surface/60 p-3.5 text-xs text-navy-900">
+            <div className="mb-2 flex items-center justify-between border-b border-steel-100 pb-2">
+              <span className="font-semibold uppercase tracking-wider text-steel-500">{T.contextCard}</span>
+              <span className="rounded bg-ocean-50 px-2 py-0.5 font-medium text-ocean-700">{T.passThreshold}: {threshold}%</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <p className="text-[11px] text-steel-500">{inspect?.empId ? T.targetWorker : T.projAndVessel}</p>
+                <p className="font-medium text-navy-900">{inspect?.empId ? inspect.task : `${String(currProject?.vessel ?? "-")} (${inspect?.pid})`}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-steel-500">{inspect?.empId ? T.colWorker : T.wbsItem}</p>
+                <p className="font-medium text-navy-900">{inspect?.task}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-steel-500">{T.inspector}</p>
+                <p className="font-medium text-navy-900">{user?.name ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-steel-500">{T.date}</p>
+                <p className="font-medium text-navy-900">{fmtTanggal(todayISO())}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pemilihan Template */}
           <Field label={T.template}>
-            <select className="input" value={tplId} onChange={(e) => { setTplId(e.target.value); setAnswers({}); }}>
+            <select
+              className="input text-xs"
+              value={tplId}
+              onChange={(e) => {
+                setTplId(e.target.value);
+                setAnswers({});
+              }}
+            >
               <option value="">{T.pickTemplate}</option>
-              {templates.filter((t) => (inspect?.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC")).map((t) => <option key={String(t.id)} value={String(t.id)}>{String(t.name)}</option>)}
+              {availableTemplates.map((t) => (
+                <option key={String(t.id)} value={String(t.id)}>
+                  {String(t.name)} · {itemsOf(t).length} {T.item}
+                </option>
+              ))}
             </select>
           </Field>
+
+          {/* Indikator Skor & Progres Pengisian Real-Time */}
+          {tpl && preview && (
+            <div className="rounded-xl border border-steel-200 bg-white p-3 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="font-semibold text-navy-900">{T.progressLabel}: </span>
+                  <span className="tabular-nums text-steel-600">{preview.answered} / {preview.total} {T.item}</span>
+                  {preview.answered === preview.total ? (
+                    <span className="ml-2 text-emerald-600 font-medium">✓ {T.allAnswered}</span>
+                  ) : (
+                    <span className="ml-2 text-amber-600 font-medium">{T.incompleteWarn.replace("{n}", String(preview.total - preview.answered))}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-steel-500">{T.preview.split(":")[0]}:</span>
+                  <Badge tone={scoreTone(preview.score, threshold)} className="text-xs font-bold px-2 py-0.5">
+                    {preview.score} / 100
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-2">
+                <ProgressBar value={preview.total > 0 ? Math.round((preview.answered / preview.total) * 100) : 0} className="h-2 w-full" />
+              </div>
+            </div>
+          )}
+
+          {/* Pertanyaan Kuesioner per Seksi */}
           {tpl && ((tpl.sections ?? []) as { title?: string; items?: (ScItem & { text?: string })[] }[]).map((s, si) => (
-            <fieldset key={si} className="rounded-xl border border-steel-200 p-3">
+            <fieldset key={si} className="rounded-xl border border-steel-200 bg-white p-3.5">
               <legend className="px-1 text-xs font-semibold text-navy-900">{String(s.title || `${T.section} ${si + 1}`)}</legend>
-              <div className="space-y-3">
-                {(s.items ?? []).map((it) => (
-                  <div key={it.id}>
-                    <p className="text-sm text-navy-900">{it.text} {it.type !== "teks" && <span className="text-[11px] text-steel-400">· {T.itemWeight} {Number(it.weight ?? 1)}</span>}</p>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {it.type === "ya_tidak" && ([["ya", T.yes], ["tidak", T.no], ["na", T.na]] as const).map(([v, l]) => (
-                        <button key={v} type="button" aria-pressed={answers[it.id] === v} onClick={() => setAnswers({ ...answers, [it.id]: v })}
-                          className={`rounded-lg border px-3 py-1 text-xs font-medium ${answers[it.id] === v ? "border-navy-900 bg-navy-900 text-white" : "border-steel-200 text-steel-600 hover:border-steel-400"}`}>{l}</button>
-                      ))}
-                      {it.type === "skala_1_5" && [1, 2, 3, 4, 5].map((v) => (
-                        <button key={v} type="button" aria-pressed={answers[it.id] === v} onClick={() => setAnswers({ ...answers, [it.id]: v })}
-                          className={`h-8 w-8 rounded-lg border text-xs font-semibold ${answers[it.id] === v ? "border-navy-900 bg-navy-900 text-white" : "border-steel-200 text-steel-600 hover:border-steel-400"}`}>{v}</button>
-                      ))}
-                      {it.type === "pilihan" && (it.options ?? []).map((o) => (
-                        <button key={o.label} type="button" aria-pressed={answers[it.id] === o.label} onClick={() => setAnswers({ ...answers, [it.id]: o.label })}
-                          className={`rounded-lg border px-3 py-1 text-xs font-medium ${answers[it.id] === o.label ? "border-navy-900 bg-navy-900 text-white" : "border-steel-200 text-steel-600 hover:border-steel-400"}`}>{o.label}</button>
-                      ))}
-                      {it.type === "teks" && <input className="input" value={String(answers[it.id] ?? "")} onChange={(e) => setAnswers({ ...answers, [it.id]: e.target.value })} />}
+              <div className="space-y-4">
+                {(s.items ?? []).map((it) => {
+                  const answered = answers[it.id] !== undefined && answers[it.id] !== "";
+                  return (
+                    <div key={it.id} className={`rounded-lg border p-2.5 transition-colors ${answered ? "border-steel-200 bg-surface/30" : "border-amber-200 bg-amber-50/20"}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-navy-900">
+                          {it.text}
+                          {it.type !== "teks" && (
+                            <span className="ml-1 text-[11px] font-normal text-steel-500">
+                              · {T.itemWeight} {Number(it.weight ?? 1)}
+                            </span>
+                          )}
+                        </p>
+                        {answered ? (
+                          <span className="inline-flex shrink-0 items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">✓</span>
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">•</span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {it.type === "ya_tidak" && ([["ya", T.yes], ["tidak", T.no], ["na", T.na]] as const).map(([v, l]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            aria-pressed={answers[it.id] === v}
+                            onClick={() => setAnswers({ ...answers, [it.id]: v })}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                              answers[it.id] === v
+                                ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                                : "border-steel-200 bg-white text-steel-700 hover:border-steel-400 hover:bg-surface"
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                        {it.type === "skala_1_5" && [1, 2, 3, 4, 5].map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            aria-pressed={answers[it.id] === v}
+                            onClick={() => setAnswers({ ...answers, [it.id]: v })}
+                            className={`h-8 w-8 rounded-lg border text-xs font-semibold transition-colors ${
+                              answers[it.id] === v
+                                ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                                : "border-steel-200 bg-white text-steel-700 hover:border-steel-400 hover:bg-surface"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                        {it.type === "pilihan" && (it.options ?? []).map((o) => (
+                          <button
+                            key={o.label}
+                            type="button"
+                            aria-pressed={answers[it.id] === o.label}
+                            onClick={() => setAnswers({ ...answers, [it.id]: o.label })}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                              answers[it.id] === o.label
+                                ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                                : "border-steel-200 bg-white text-steel-700 hover:border-steel-400 hover:bg-surface"
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                        {it.type === "teks" && (
+                          <input
+                            className="input text-xs"
+                            value={String(answers[it.id] ?? "")}
+                            onChange={(e) => setAnswers({ ...answers, [it.id]: e.target.value })}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </fieldset>
           ))}
