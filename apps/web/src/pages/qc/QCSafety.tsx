@@ -126,10 +126,10 @@ export default function QCSafety() {
   const toolboxTalks = inBranch(data.toolbox);
   // JSA tersimpan sebagai koleksi toolbox bertipe "JSA" (bukan state lokal).
   const jsaList = toolboxTalks.filter((t) => String(t.type ?? "") === "JSA");
-  // Cabang global sebagai fallback; select cabang di form default "" = ikut global.
-  const globalBranch = branch === "SEMUA" ? "" : branch;
-  const branchCities = data.branches.map((b) => String(b.city ?? b.name ?? b.id));
-  const branchOf = (v: string): string => v || globalBranch;
+  // Cabang default untuk prototype satu cabang (default Samarinda dari sesi/konfigurasi yang sah).
+  const defaultBranch = (branch && branch !== "SEMUA") ? branch : (user?.branch || "Samarinda");
+  const globalBranch = defaultBranch;
+  const branchOf = (v?: string): string => v || defaultBranch;
   const qualityStaff = data.employees.filter((e) => e.dept === "Quality");
   const [tab, setTab] = useState("Inspeksi (ITP)");
   const [inspQ, setInspQ] = useState("");
@@ -1298,12 +1298,6 @@ export default function QCSafety() {
                     </select>
                   </Field>
                   <Field label={S.thTanggal}><input type="date" className="input" value={ppeForm.date} onChange={(e) => setPpeForm({ ...ppeForm, date: e.target.value })} /></Field>
-                  <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-                    <select className="input" value={ppeForm.branch} onChange={(e) => setPpeForm({ ...ppeForm, branch: e.target.value })}>
-                      <option value="">{S.optIkutGlobal}</option>
-                      {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </Field>
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {PPE_ITEMS.map((item) => (
@@ -1588,12 +1582,6 @@ export default function QCSafety() {
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
               </select>
             </Field>
-            <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-              <select className="input" value={inspForm.branch} onChange={(e) => setInspForm({ ...inspForm, branch: e.target.value })}>
-                <option value="">{S.optIkutGlobal}</option>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
             <Field label={S.fNomorItp} hint={S.hintItpNext.replace("{n}", nextItp(inspections))}>
               <input className="input font-mono" value={nextItp(inspections)} disabled readOnly />
             </Field>
@@ -1657,12 +1645,6 @@ export default function QCSafety() {
               <select className="input" value={ncrForm.project} onChange={(e) => setNcrForm({ ...ncrForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-              <select className="input" value={ncrForm.branch} onChange={(e) => setNcrForm({ ...ncrForm, branch: e.target.value })}>
-                <option value="">{S.optIkutGlobal}</option>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
             <Field label={S.fKapalOps}><input className="input" value={ncrForm.vessel} onChange={(e) => setNcrForm({ ...ncrForm, vessel: e.target.value })} placeholder={S.phOtomatis} /></Field>
@@ -1897,12 +1879,6 @@ export default function QCSafety() {
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
               </select>
             </Field>
-            <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-              <select className="input" value={incForm.branch} onChange={(e) => setIncForm({ ...incForm, branch: e.target.value })}>
-                <option value="">{S.optIkutGlobal}</option>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
             <Field label={S.fJenis}>
               <select className="input" value={incForm.type} onChange={(e) => setIncForm({ ...incForm, type: e.target.value })}>
                 {["Near Miss", "First Aid", "Lost Time", "Kebakaran", "Lainnya"].map((t) => <option key={t}>{t}</option>)}
@@ -1933,12 +1909,6 @@ export default function QCSafety() {
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
               </select>
             </Field>
-            <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-              <select className="input" value={jsaForm.branch} onChange={(e) => setJsaForm({ ...jsaForm, branch: e.target.value })}>
-                <option value="">{S.optIkutGlobal}</option>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
             <Field label={S.thTanggal}><input type="date" className="input" value={jsaForm.date} onChange={(e) => setJsaForm({ ...jsaForm, date: e.target.value })} /></Field>
             <Field label={S.fPic}><EntityPicker value={jsaForm.pic} onChange={(v) => setJsaForm({ ...jsaForm, pic: v })} options={picOptions} placeholder={S.phPic} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(jsaForm.pic)} /></Field>
             <Field label={S.fPekerjaan}><input className="input" value={jsaForm.job} onChange={(e) => setJsaForm({ ...jsaForm, job: e.target.value })} placeholder={S.phPekerjaan} /></Field>
@@ -1958,12 +1928,6 @@ export default function QCSafety() {
               <select className="input" value={tbmForm.project} onChange={(e) => setTbmForm({ ...tbmForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fCabang} hint={S.hintIkutGlobal.replace("{n}", branch)}>
-              <select className="input" value={tbmForm.branch} onChange={(e) => setTbmForm({ ...tbmForm, branch: e.target.value })}>
-                <option value="">{S.optIkutGlobal}</option>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
             <Field label={S.thTanggal}><input type="date" className="input" value={tbmForm.date} onChange={(e) => setTbmForm({ ...tbmForm, date: e.target.value })} /></Field>
