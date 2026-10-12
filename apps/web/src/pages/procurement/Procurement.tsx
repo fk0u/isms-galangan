@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText, Paperclip, Upload, Download, ExternalLink, Loader2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -36,7 +36,7 @@ import { FilterPopover } from "../../components/FilterPopover";
 import { n_mr } from "../../i18n/n_mr";
 import MaterialRequestsTab from "./MaterialRequestsTab";
 import { itemPriceTrack, poIsMultiItem, poOpenQty, poPendingReassign, usePoActions, vendorPriceHistory } from "../../data/usePoActions";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
 import { warehouseNames } from "../../utils/warehouse";
@@ -293,9 +293,11 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
 
 export default function Procurement() {
   const busy = useBusy();
-  const { data, add, update, remove, log, branch, inBranch, sessionGeneration } = useStore();
+  const { data, add, update, remove, log, branch, inBranch, sessionGeneration, resyncCollections } = useStore();
   const poActions = usePoActions();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const canWriteInventory = hasPermission(user?.permissions, "inventory", "w");
   const { locale } = useT();
   const S = n_proc[locale];
   const modAlert = useModuleAlert("procurement");
@@ -389,7 +391,9 @@ export default function Procurement() {
 
   /* ---- PR ---- */
   const [showPr, setShowPr] = useState(false);
-  const [prForm, setPrForm] = useState({ item: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+  const [prForm, setPrForm] = useState({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+  const [prItemSearch, setPrItemSearch] = useState("");
+  const [prSelectedItem, setPrSelectedItem] = useState<StoreItem | null>(null);
   const [konsIds, setKonsIds] = useState<string[]>([]);
   const [konsVendor, setKonsVendor] = useState("");
   const [konsProject, setKonsProject] = useState("");
@@ -466,6 +470,27 @@ export default function Procurement() {
     }
     return inBranch([...byId.values()]);
   }, [invList, inventoryLookupRows, inBranch]);
+
+  const openPrModal = useCallback(() => {
+    setPrForm({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+    setPrSelectedItem(null);
+    setPrItemSearch("");
+    setShowPr(true);
+    void resyncCollections(["inventory"]);
+  }, [resyncCollections]);
+
+  const catalogSearchResults = useMemo(() => {
+    const q = prItemSearch.trim().toLowerCase();
+    if (!q) return inventoryChoices.slice(0, 15);
+    return inventoryChoices
+      .filter((item) => {
+        const name = String(item.name ?? "").toLowerCase();
+        const sku = String(item.sku ?? "").toLowerCase();
+        const cat = String(item.category ?? "").toLowerCase();
+        return name.includes(q) || sku.includes(q) || cat.includes(q);
+      })
+      .slice(0, 30);
+  }, [inventoryChoices, prItemSearch]);
 
   const rememberInventory = useCallback((rows: readonly StoreItem[]) => {
     setInventoryLookupRows((previous) => {
@@ -1573,7 +1598,7 @@ const sparkVendors = useMemo(() => {
               <button className="btn-primary-gradient" onClick={() => setShowVendor(true)}><Plus className="h-4 w-4" /> {S.btnTambahVendor}</button>
             ) : (
               <>
-                <button className="btn-primary-gradient" onClick={() => setShowPr(true)}><Plus className="h-4 w-4" /> {locale === "en" ? "Request goods" : "Minta Barang"}</button>
+                <button className="btn-primary-gradient" onClick={() => openPrModal()}><Plus className="h-4 w-4" /> {locale === "en" ? "Request goods" : "Minta Barang"}</button>
                 {tab === "PO Besar (Kantor)" && (
                   <button className="btn-secondary text-xs" onClick={() => setShowBig(true)}>{S.btnCreateBig}</button>
                 )}
@@ -2009,7 +2034,7 @@ const sparkVendors = useMemo(() => {
               </Card>
               <div>
                 <div className="mb-3 flex justify-end">
-                  <button className="btn-secondary text-xs" onClick={() => setShowPr(true)}><Plus className="h-3.5 w-3.5" /> {S.btnBuatPr}</button>
+                  <button className="btn-secondary text-xs" onClick={() => openPrModal()}><Plus className="h-3.5 w-3.5" /> {S.btnBuatPr}</button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -3098,18 +3123,104 @@ const sparkVendors = useMemo(() => {
       <Modal open={showPr} onClose={() => setShowPr(false)} title={S.mPrT}
         footer={<><button className="btn-secondary" onClick={() => setShowPr(false)}>{S.btnBatal}</button><button className="btn-primary" onClick={async () => {
           try {
-          if (!prForm.item.trim()) { toast(S.tItemWajib, "info"); return; }
+          if (!prForm.item.trim() || !prForm.itemId) { toast(S.hintPilihDariKatalog, "info"); return; }
           if (!parseRupiah(prForm.amount) || parseRupiah(prForm.amount) <= 0) { toast(S.tEstPos, "info"); return; }
           const prQty = Number(prForm.qty || 0);
           if (!prQty || prQty <= 0) { toast(S.tQtyPos, "info"); return; }
           if (!prForm.unit.trim()) { toast(S.tSatuan, "info"); return; }
-          const created = await add("requisitions", { item: prForm.item.trim(), by: prForm.by.trim() || "Anda", amount: parseRupiah(prForm.amount), qty: prQty, unit: prForm.unit.trim(), project: prForm.project || "-", vessel: prForm.project ? String(data.projects.find((p) => p.id === prForm.project)?.vessel || "") : "", status: "Menunggu Approval" },
+          const created = await add("requisitions", { item: prForm.item.trim(), itemId: prForm.itemId, by: prForm.by.trim() || (user?.name || "Anda"), amount: parseRupiah(prForm.amount), qty: prQty, unit: prForm.unit.trim(), project: prForm.project || "-", vessel: prForm.project ? String(data.projects.find((p) => p.id === prForm.project)?.vessel || "") : "", status: "Menunggu Approval" },
             { action: "mengajukan PR", module: "Procurement" });
-          toast(S.tPrDiajukan.replace("{n}", created.id)); setShowPr(false); setPrForm({ item: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+          toast(S.tPrDiajukan.replace("{n}", created.id)); setShowPr(false); setPrForm({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" }); setPrSelectedItem(null); setPrItemSearch("");
           } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
         }}>{S.btnAjukan}</button></>}>
         <div className="space-y-3">
-          <Field label={S.itemButuh}><input className="input" value={prForm.item} onChange={(e) => setPrForm({ ...prForm, item: e.target.value })} /></Field>
+          {prSelectedItem ? (
+            <div className="rounded-xl border border-steel-200 bg-steel-50/70 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium text-steel-500">{S.itemKatalogTerpilih}</p>
+                  <p className="font-semibold text-steel-900">{prSelectedItem.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-steel-600">
+                    {prSelectedItem.category && <span className="rounded bg-steel-200/70 px-1.5 py-0.5">{String(prSelectedItem.category)}</span>}
+                    {prSelectedItem.sku && <span className="font-mono text-steel-500">SKU: {String(prSelectedItem.sku)}</span>}
+                    <span className="text-steel-400">·</span>
+                    <span>{S.stokTersedia.replace("{n}", `${fmtJumlah(Number(prSelectedItem.stock ?? 0))} ${prSelectedItem.unit ?? "pcs"}`)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={() => {
+                    setPrSelectedItem(null);
+                    setPrForm((prev) => ({ ...prev, item: "", itemId: "" }));
+                  }}
+                >
+                  {S.gantiItem}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Field label={S.itemButuh} hint={S.hintPilihDariKatalog}>
+                <input
+                  className="input"
+                  placeholder={S.cariKatalogInv}
+                  value={prItemSearch}
+                  onChange={(e) => setPrItemSearch(e.target.value)}
+                  autoFocus
+                />
+              </Field>
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-steel-200 bg-white divide-y divide-steel-100 shadow-inner">
+                {catalogSearchResults.length > 0 ? (
+                  catalogSearchResults.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-steel-50 flex items-center justify-between transition-colors"
+                      onClick={() => {
+                        setPrSelectedItem(item);
+                        setPrForm((prev) => ({
+                          ...prev,
+                          item: String(item.name ?? ""),
+                          itemId: String(item.id ?? ""),
+                          unit: String(item.unit ?? prev.unit ?? "pcs"),
+                          ...(item.cost && !prev.amount ? { amount: String(item.cost) } : {}),
+                        }));
+                        setPrItemSearch("");
+                      }}
+                    >
+                      <div>
+                        <p className="font-medium text-sm text-steel-900">{item.name}</p>
+                        <p className="text-xs text-steel-500">
+                          {item.category ? `${item.category} · ` : ""}
+                          {item.sku ? `SKU: ${item.sku} · ` : ""}
+                          {S.stokTersedia.replace("{n}", `${fmtJumlah(Number(item.stock ?? 0))} ${item.unit ?? "pcs"}`)}
+                        </p>
+                      </div>
+                      <span className="text-xs text-brand-600 font-medium">{S.btnPilihItem}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-3 text-center space-y-2">
+                    <p className="text-xs text-steel-500">{S.tidakDitemukanKatalog}</p>
+                    {canWriteInventory && (
+                      <button
+                        type="button"
+                        className="btn-secondary text-xs inline-flex items-center gap-1.5"
+                        onClick={() => {
+                          setShowPr(false);
+                          navigate(`/inventori?tab=Katalog&action=tambah&name=${encodeURIComponent(prItemSearch.trim())}`);
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {S.btnTambahMaterialInv}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <FormGrid>
             <Field label={S.pemohon}><input className="input" value={prForm.by} onChange={(e) => setPrForm({ ...prForm, by: e.target.value })} placeholder={S.phPeminta} /></Field>
             <Field label={S.estNilai}><MoneyInput className="input" value={prForm.amount} onChange={(v) => setPrForm({ ...prForm, amount: v })} /></Field>

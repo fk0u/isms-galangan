@@ -82,6 +82,7 @@ import CatalogMaterialForm, { type MaterialFormValues } from "./tabs/CatalogMate
 import ReceiveIssueTab from "./tabs/ReceiveIssueTab";
 import { n_recv } from "../../i18n/n_recv";
 import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequiredForEdit } from "../../utils/unitConversion";
+import { useAuth, hasPermission } from "../../auth/auth";
 
 const emptyForm: MaterialFormValues = {
   name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "",
@@ -413,13 +414,24 @@ export default function Inventory() {
   const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
   const pdfDoc = usePdfDoc();
+  const { user } = useAuth();
+  const canWrite = hasPermission(user?.permissions, "inventory", "w");
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
   const [tab, setTab] = useState(() => tabParams.get("tab") || "Katalog");
   useEffect(() => {
     const wanted = tabParams.get("tab");
     if (wanted) setTab(wanted);
-  }, [tabParams]);
+    const action = tabParams.get("action") || tabParams.get("modal");
+    if (canWrite && (action === "tambah" || action === "add" || action === "tambah-material" || tabParams.get("tambah") === "material")) {
+      const initialName = tabParams.get("name") || tabParams.get("nama") || "";
+      setForm({ ...emptyForm, ...(initialName ? { name: initialName } : {}) });
+      setEditing(null);
+      setMaterialFormStep(0);
+      setConversionEdited(false);
+      setShowAdd(true);
+    }
+  }, [tabParams, canWrite]);
   const [bomProject, setBomProject] = useState("Semua proyek");
   const [q, setQ] = useState("");
   const [showScan, setShowScan] = useState(false);
@@ -1949,7 +1961,9 @@ if (k === "mattype") return matTypeOf(i);
         actions={
           <div className="flex items-center gap-2">
             <button className="btn-secondary" onClick={openPick}><ListChecks className="h-4 w-4" /> {S.pickTitle}</button>
-            <button className="btn-primary-gradient" onClick={() => { setForm(emptyForm); setEditing(null); setMaterialFormStep(0); setConversionEdited(false); setShowAdd(true); }}><Plus className="h-4 w-4" /> {S.btnNew}</button>
+            {canWrite && (
+              <button className="btn-primary-gradient" onClick={() => { setForm(emptyForm); setEditing(null); setMaterialFormStep(0); setConversionEdited(false); setShowAdd(true); }}><Plus className="h-4 w-4" /> {S.btnNew}</button>
+            )}
           </div>
         }
       />
