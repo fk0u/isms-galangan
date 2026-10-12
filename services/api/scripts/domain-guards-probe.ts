@@ -88,6 +88,7 @@ async function main(): Promise<void> {
     await exec("INSERT INTO drydocks (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [dockId, "Samarinda", JSON.stringify({ name: `Dock Probe ${tag}`, maxLoa: 60, maxBeam: 12 }), now]);
     cleanup.push(() => exec("DELETE FROM dockSlots WHERE id = ?", [slotId]), () => exec("DELETE FROM drydocks WHERE id = ?", [dockId]));
     assert("batas dock negatif → 422", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: -5 } })).status === 422);
+    assert("batas dock bukan angka → 422", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: "abc" } })).status === 422 && (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxBeam: true } })).status === 422);
     assert("hapus batas dock tanpa booking → 200", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxBeam: 0 } })).status === 200);
     await exec("INSERT INTO dockSlots (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [slotId, "Samarinda", JSON.stringify({ dockId, project: pid, from: 1, to: 5 }), now]);
     const hapusBatas = await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: 0 } });

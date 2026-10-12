@@ -58,7 +58,8 @@ export async function dockLimitError(table: string, id: string | null, before: D
   for (const [limit, , label] of DIMS) {
     const raw = after[limit];
     if (raw === undefined || raw === null || raw === "") continue;
-    const n = Number(raw);
+    // Number() mengubah true/[] jadi 1/0; hanya angka atau teks angka yang diterima.
+    const n = typeof raw === "number" || (typeof raw === "string" && raw.trim() !== "") ? Number(raw) : NaN;
     if (!Number.isFinite(n) || n < 0) return { status: 422, message: `Batas ${label} dock harus angka 0 atau lebih` };
   }
   if (!before || !id) return null;

@@ -276,6 +276,9 @@ export default function Drydock() {
     if (!areaModal) return;
     const dims = [limitDraft.maxLoa, limitDraft.maxBeam, limitDraft.maxDraft].map((v) => (v === "" ? 0 : Number(v)));
     if (dims.some((n) => !Number.isFinite(n) || n < 0)) { toast(S.tLimitInvalid, "info"); return; }
+    // Mengosongkan batas yang sudah ada harus lewat tombol hapus yang berkonfirmasi.
+    const lama = [areaModal.maxLoa, areaModal.maxBeam, areaModal.maxDraft].map((v) => Number(v) || 0);
+    if (lama.some((v, i) => v > 0 && !((dims[i] ?? 0) > 0))) { toast(S.tLimitUseClear, "info"); return; }
     try {
       await update("drydocks", areaModal.id, {
         area: areaDraft.trim(),
@@ -1347,7 +1350,7 @@ export default function Drydock() {
         <p className="mt-1 text-xs text-steel-400">{S.limitHint}</p>
         {hasLimit && <button type="button" className="btn-secondary mt-3 text-xs text-rose-600" onClick={() => setConfirmClearLimit(true)}>{S.btnClearLimit}</button>}
       </Modal>
-      <ConfirmModal open={confirmClearLimit} danger title={S.btnClearLimit} desc={S.clearLimitDesc.replace("{a}", String(areaModal?.name ?? ""))}
+      <ConfirmModal open={confirmClearLimit} danger title={S.btnClearLimit} confirmLabel={S.btnClearLimit} desc={S.clearLimitDesc.replace("{a}", String(areaModal?.name ?? ""))}
         onCancel={() => setConfirmClearLimit(false)} onConfirm={clearLimits} />
 
       <ConfirmModal open={bastOffer !== null} title={`Buat BAST draft untuk slot ${bastOffer?.id ?? ""}?`}
