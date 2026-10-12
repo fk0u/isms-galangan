@@ -15,6 +15,10 @@ export function stageHasData(stage: Data): boolean {
     || str(stage.photoUrl) !== "" || (typeof stage.assignee === "object" && stage.assignee !== null);
 }
 
+/** JSON tanpa `actorRole`: cap itu milik server (stampRole), jadi salinan klien
+ *  yang belum resync tidak memilikinya dan tidak boleh dianggap berbeda. */
+export const withoutRole = (v: unknown): string => JSON.stringify(v, (k, val: unknown) => (k === "actorRole" ? undefined : val));
+
 // Schema rute menerima anggota array apa pun; yang bukan objek dianggap tahapan kosong.
 const stages = (v: unknown): Data[] => (Array.isArray(v) ? v : []).map((s) => (typeof s === "object" && s !== null ? s as Data : {}));
 const photoUrls = (stage: Data): string[] => (Array.isArray(stage.photos) ? stage.photos : [])
@@ -23,7 +27,8 @@ const photoUrls = (stage: Data): string[] => (Array.isArray(stage.photos) ? stag
 function keepsRecord(old: Data, next: Data): boolean {
   const before = Array.isArray(old.history) ? old.history : [];
   const after = Array.isArray(next.history) ? next.history : [];
-  if (after.length < before.length || before.some((h, i) => JSON.stringify(h) !== JSON.stringify(after[i]))) return false;
+  // Cap peran ditambahkan server (stampRole), jadi salinan klien yang belum resync tidak memilikinya.
+  if (after.length < before.length || before.some((h, i) => withoutRole(h) !== withoutRole(after[i]))) return false;
   const kept = new Set(photoUrls(next));
   return photoUrls(old).every((u) => kept.has(u));
 }
@@ -57,6 +62,30 @@ export function wbsRuleError(before: unknown, after: unknown): { code: "STAGE_IN
     }
   }
   return null;
+}
+
+/** #90: entri log progres BARU dicap peran akun dari token, bukan dari isian
+ *  klien, supaya label peran di Monitoring tidak bisa dipalsukan. Entri lama
+ *  dikembalikan apa adanya (termasuk yang belum punya peran). */
+export function stampRole(before: unknown, after: unknown, role: string): unknown {
+  if (!Array.isArray(after)) return after;
+  const old = Array.isArray(before) ? before : [];
+  return after.map((entry, i) => (i < old.length ? old[i] : typeof entry === "object" && entry !== null ? { ...entry, actorRole: role } : entry));
+}
+
+/** Cap peran pada riwayat tiap tahapan WBS (dicocokkan lewat nama tahapan). */
+export function stampWbsRoles(before: unknown, after: unknown, role: string): unknown {
+  if (!Array.isArray(after)) return after;
+  const prevList = stages(before);
+  const prev = new Map(prevList.map((s) => [str(s.task), s]));
+  const names = new Set(stages(after).map((s) => str(s.task)));
+  return after.map((stage) => {
+    if (typeof stage !== "object" || stage === null || !Array.isArray((stage as Data).history)) return stage;
+    const s = stage as Data;
+    // Tahapan yang diganti nama: riwayat lamanya dicari lewat isi, supaya peran lama tidak tertimpa.
+    const old = prev.get(str(s.task)) ?? prevList.find((o) => !names.has(str(o.task)) && len(o.history) > 0 && keepsRecord(o, s));
+    return { ...s, history: stampRole(old?.history, s.history, role) };
+  });
 }
 
 /** Jabatan Project Manager di data karyawan (HR). Sistem tidak punya peran akun

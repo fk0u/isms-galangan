@@ -12,7 +12,7 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
-import { projectManagerError, transferError } from "../domainGuards.js";
+import { projectManagerError, stampRole, transferError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -544,6 +544,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
+    if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
     const ruleCreate = transferError(table, rowData) ?? await projectManagerError(table, null, rowData);
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     const loanCreate = await loanOverlapError(table, null, rowData);
@@ -661,6 +663,10 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
     // Baris Transfer lama (tanpa fromWh/toWh) tetap bisa diedit selama gudangnya tidak disentuh.
     const whChanged = (["type", "fromWh", "toWh"] as const).some((k) => oldData[k] !== (merged as Record<string, unknown>)[k]);
+    if (table === "workOrders" && Array.isArray((merged as Record<string, unknown>).progressLog)) {
+      const m = merged as Record<string, unknown>;
+      merged = { ...merged, progressLog: stampRole(oldData.progressLog, m.progressLog, normalizeRole(req.user?.role)) } as typeof merged;
+    }
     const rulePatch = (whChanged ? transferError(table, merged as Record<string, unknown>) : null)
       ?? await projectManagerError(table, oldData, merged as Record<string, unknown>);
     if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));

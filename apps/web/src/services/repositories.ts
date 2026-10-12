@@ -9,6 +9,7 @@
 // - PATCH /api/<table>/:id← { branch?, data? }      → BackendRow
 // - DELETE /api/<table>/:id → { id, deleted: true }
 
+import { createdAtOf } from "../utils/timestamps";
 import type { StoreItem } from "../data/store";
 import { apiFetch } from "./http";
 
@@ -119,6 +120,17 @@ function isBackendPage(v: unknown): v is BackendPage {
   return typeof v === "object" && v !== null && Array.isArray((v as { rows?: unknown }).rows);
 }
 
+/** #111: urutan daftar yang tidak bergantung pada waktu ubah.
+ *  Server mengirim baris urut `updated_at` (dibutuhkan keyset pagination), jadi
+ *  tanpa ini baris yang baru diedit pindah posisi setiap data ditarik ulang.
+ *  Kuncinya tanggal buat (terbaru dulu, sama seperti baris baru yang ditaruh di
+ *  atas saat ditambah), lalu id; baris lama tanpa tanggal buat urut id saja. */
+export function stableOrder(rows: StoreItem[]): StoreItem[] {
+  // Dinormalkan lewat createdAtOf: tanggal lama seperti "2026-9-5" tidak boleh mengalahkan "2026-10-01".
+  const key = (r: StoreItem): string => createdAtOf(r) ?? "";
+  return [...rows].sort((a, b) => key(b).localeCompare(key(a)) || String(b.id ?? "").localeCompare(String(a.id ?? "")));
+}
+
 /** Adapter HTTP: dipakai otomatis saat VITE_API_URL diisi. */
 export function remoteRepository(resource: string, request: typeof apiFetch = apiFetch): Repository {
   const base = `/api/${resource}`;
@@ -138,7 +150,7 @@ export function remoteRepository(resource: string, request: typeof apiFetch = ap
       out.push(item);
     }
     void limit;
-    return out;
+    return stableOrder(out);
   };
   return {
     async getById(id) {

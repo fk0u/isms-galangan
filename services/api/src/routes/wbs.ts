@@ -7,7 +7,8 @@ import { requirePermission } from "../policy.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { exactBranchPredicate } from "./crudSearch.js";
-import { wbsRuleError } from "../domainGuards.js";
+import { stampWbsRoles, wbsRuleError, withoutRole } from "../domainGuards.js";
+import { normalizeRole } from "../policy.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
 const TeamSchema = z.object({
@@ -25,6 +26,7 @@ interface SideWriteOutcome {
   projectForbidden: boolean;
   conflict: SideRow | null;
   rule?: { code: "STAGE_IN_USE" | "PHOTO_REQUIRED"; message: string };
+  wbs?: unknown;
 }
 
 interface ProjectScopeUser {
@@ -111,22 +113,24 @@ export function registerWbsRoutes(app: FastifyInstance): void {
       const beforeRows = await q<SideRow>(`SELECT project_id, data FROM wbs_by_project WHERE project_id = ?${lockClause}`, [id]);
       const current = beforeRows[0] as SideRow | undefined;
       const serverData = current?.data ?? "[]";
-      if (parsed.data.baseData !== undefined && JSON.stringify(parsed.data.baseData) !== serverData) {
+      // Cap peran ditambahkan server setelah klien mencatat baseline-nya, jadi tidak ikut dibandingkan.
+      if (parsed.data.baseData !== undefined && withoutRole(parsed.data.baseData) !== withoutRole(JSON.parse(serverData))) {
         return { projectMissing: false, projectForbidden: false, conflict: current ?? { project_id: id, data: serverData } };
       }
       const before = current ? JSON.parse(current.data) as unknown : null;
       const rule = wbsRuleError(before, parsed.data.wbs);
       if (rule) return { projectMissing: false, projectForbidden: false, conflict: null, rule };
-      await upsert("wbs_by_project", id, parsed.data.wbs);
+      const wbs = stampWbsRoles(before, parsed.data.wbs, normalizeRole(req.user?.role));
+      await upsert("wbs_by_project", id, wbs);
       await writeAudit({
         actor: requestActor(req),
         action: before === null ? "create" : "update",
         table: "wbs_by_project",
         rowId: id,
-        diff: { before, after: parsed.data.wbs },
+        diff: { before, after: wbs },
         ip: requestIp(req),
       }, { required: true });
-      return { projectMissing: false, projectForbidden: false, conflict: null };
+      return { projectMissing: false, projectForbidden: false, conflict: null, wbs };
     });
     if (outcome.projectForbidden) {
       return reply.status(404).send(fail("Not found", "NOT_FOUND"));
@@ -142,7 +146,7 @@ export function registerWbsRoutes(app: FastifyInstance): void {
         data: { projectId: id, wbs: JSON.parse(outcome.conflict.data) as unknown },
       });
     }
-    return ok({ projectId: id, wbs: parsed.data.wbs });
+    return ok({ projectId: id, wbs: outcome.wbs ?? parsed.data.wbs });
   });
 
   /* Tarik WBS terarah dalam satu request, tanpa team kecuali diminta pemanggil. */

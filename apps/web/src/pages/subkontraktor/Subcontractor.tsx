@@ -173,7 +173,7 @@ export default function Subcontractor() {
   useModuleSync(SUB_COLS);
 
   const [showSub, setShowSub] = useState(false);
-  const [subForm, setSubForm] = useState({ name: "", services: "", contract: "", k3: "A", contractType: "Borongan", payScheme: "unit", noBG: "", bgExpiry: "", bgValue: "" });
+  const [subForm, setSubForm] = useState({ name: "", services: "", contract: "", k3: "A", contractType: "Borongan", payScheme: "unit", noBG: "", bgExpiry: "", bgValue: "", npwp: "", address: "" });
   const [subConfirm, setSubConfirm] = useState<{ id: string; name: string; next: string } | null>(null);
   const [msSub, setMsSub] = useState<StoreItem | null>(null);
   const [msForm, setMsForm] = useState({ title: "", pct: "", due: "" });
@@ -181,6 +181,8 @@ export default function Subcontractor() {
   const EMPTY_WO = { sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1", value: "", wbsTask: "", schemeType: "Kontan" as TerminSchemeType, parts: [{ label: "", pct: "", amount: "" }] as SchemePartForm[], taxPct: "2", taxOther: "", retPct: "5" };
   const [woForm, setWoForm] = useState(EMPTY_WO);
   const [progPhotos, setProgPhotos] = useState<PhotoUploadItem[]>([]);
+  // #95: simpan ditahan sampai semua foto selesai diunggah.
+  const [progUploading, setProgUploading] = useState(false);
   const [woProg, setWoProg] = useState<StoreItem | null>(null);
   const [progMs, setProgMs] = useState<string[]>([]);
   const [progNote, setProgNote] = useState("");
@@ -335,6 +337,19 @@ export default function Subcontractor() {
     return data.incidents.filter((i) => i.project && projs.includes(i.project));
   };
 
+  /* #94: NPWP & alamat subkon yang sudah terdaftar bisa dilengkapi - keduanya tercetak di SPK. */
+  const [profSub, setProfSub] = useState<StoreItem | null>(null);
+  const [profForm, setProfForm] = useState({ npwp: "", address: "" });
+  const saveProfile = async () => {
+    if (!profSub) return;
+    try {
+      await update("subcontractors", profSub.id, { npwp: profForm.npwp.trim(), address: profForm.address.trim() });
+      log("mengubah profil subkontraktor", String(profSub.name), "Subkontraktor");
+      toast(S.subProfileSaved.replace("{n}", String(profSub.name)));
+      setProfSub(null);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
   const saveSub = async () => {
     try {
     if (!subForm.name.trim()) { toast(S.tSubNameRequired, "info"); return; }
@@ -345,11 +360,12 @@ export default function Subcontractor() {
       rating: 80, active: 0, contract: parseRupiah(subForm.contract) || 0, status: "Kualifikasi", k3: subForm.k3,
       contractType: subForm.contractType, payScheme: subForm.payScheme,
       noBG: subForm.noBG.trim(), bgExpiry: subForm.bgExpiry, bgValue,
+      npwp: subForm.npwp.trim(), address: subForm.address.trim(),
       milestones: [],
     }, { action: "meregistrasi subkontraktor", module: "Subkontraktor" });
     toast(S.tSubRegistered.replace("{n}", created.id));
     setShowSub(false);
-    setSubForm({ name: "", services: "", contract: "", k3: "A", contractType: "Borongan", payScheme: "unit", noBG: "", bgExpiry: "", bgValue: "" });
+    setSubForm({ name: "", services: "", contract: "", k3: "A", contractType: "Borongan", payScheme: "unit", noBG: "", bgExpiry: "", bgValue: "", npwp: "", address: "" });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1079,6 +1095,9 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                     >
                       {S.msSowBtn}
                     </button>
+                    <button className="btn-secondary text-xs" onClick={() => { setProfSub(s); setProfForm({ npwp: String(s.npwp ?? ""), address: String(s.address ?? "") }); }}>
+                      {S.subProfileBtn}
+                    </button>
                     {SUB_NEXT[normSub(s.status)].map((next) => (
                       <button
                         key={next}
@@ -1474,6 +1493,8 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <div className="space-y-3">
           <Field label={S.companyNameLabel}><input className="input" value={subForm.name} onChange={(e) => setSubForm({ ...subForm, name: e.target.value })} placeholder={S.companyNamePh} /></Field>
           <Field label={S.servicesLabel}><input className="input" value={subForm.services} onChange={(e) => setSubForm({ ...subForm, services: e.target.value })} placeholder={S.servicesPh} /></Field>
+          <Field label="NPWP" hint={S.subProfileHint}><input className="input font-mono" value={subForm.npwp} onChange={(e) => setSubForm({ ...subForm, npwp: e.target.value })} /></Field>
+          <Field label={S.subAddressLabel}><textarea className="input" rows={2} value={subForm.address} onChange={(e) => setSubForm({ ...subForm, address: e.target.value })} /></Field>
           <FormGrid>
             <Field label={S.contractAmountLabel}><MoneyInput className="input" value={subForm.contract} onChange={(v) => setSubForm({ ...subForm, contract: v })} /></Field>
             <Field label={S.k3RatingLabel}>
@@ -1520,6 +1541,14 @@ const printSpk = async (w: StoreItem): Promise<void> => {
             <Field label={S.dueLabel}><input type="date" className="input" value={msForm.due} onChange={(e) => setMsForm({ ...msForm, due: e.target.value })} /></Field>
           </FormGrid>
           <button className="btn-primary text-xs" onClick={saveMilestone}><Plus className="h-3.5 w-3.5" /> {S.addMsBtn}</button>
+        </div>
+      </Modal>
+
+      <Modal open={profSub !== null} onClose={() => setProfSub(null)} title={S.subProfileBtn} subtitle={String(profSub?.name ?? "")}
+        footer={<><button className="btn-secondary" onClick={() => setProfSub(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveProfile}>{S.saveBtn}</AsyncButton></>}>
+        <div className="space-y-3">
+          <Field label="NPWP" hint={S.subProfileHint}><input className="input font-mono" value={profForm.npwp} onChange={(e) => setProfForm({ ...profForm, npwp: e.target.value })} /></Field>
+          <Field label={S.subAddressLabel}><textarea className="input" rows={3} value={profForm.address} onChange={(e) => setProfForm({ ...profForm, address: e.target.value })} /></Field>
         </div>
       </Modal>
 
@@ -1650,7 +1679,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       {/* Modal progres WO = milestone checklist + input numerik (tanpa slider, terintegrasi termin/timesheet) */}
       <Modal open={woProg !== null} onClose={() => { setWoProg(null); setProgPhotos([]); }} title={S.progTitle.replace("{n}", woProg?.id ?? "")}
         subtitle={woProg ? `${woProg.sub} · ${woProg.project} · saat ini ${effProgress(woProg)}%` : ""}
-        footer={<><button className="btn-secondary" onClick={() => setWoProg(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWoProgress}>{S.saveBtn}</button></>}>
+        footer={<><button className="btn-secondary" onClick={() => setWoProg(null)}>{S.cancelBtn}</button><button className="btn-primary" disabled={progUploading} onClick={saveWoProgress}>{progUploading ? P.detPhotoUploading : S.saveBtn}</button></>}>
         <div className="space-y-3">
           {(() => {
             /* Milestone yang dirender = milestone WO itu sendiri, sama persis
@@ -1717,6 +1746,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               onChange={setProgPhotos}
               labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: P.detPhotoImage }}
               onUploadError={() => toast(P.detPhotoUploadError, "info")}
+              onBusyChange={setProgUploading}
             />
           </Field>
           {woProg && (

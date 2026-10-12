@@ -90,7 +90,7 @@ export function spk(input: SpkInput, opts: DocOptions = {}): Document {
         { label: L(locale, "Ruang Lingkup", "Scope"), value: input.scopeOfWork },
         { label: L(locale, "Mulai", "Start"), value: longDate(input.startDate) },
         { label: L(locale, "Selesai", "End"), value: longDate(input.endDate) },
-        { label: L(locale, "Nilai Kontrak", "Contract Value"), value: rupiah(input.contractValue), bold: true },
+        { label: L(locale, "Nilai Kontrak", "Contract Value"), value: input.contractValue > 0 ? rupiah(input.contractValue) : L(locale, "Belum ditetapkan", "Not set"), bold: true },
         { label: L(locale, "Syarat Pembayaran", "Payment Terms"), value: input.paymentTerms },
       ],
     }),

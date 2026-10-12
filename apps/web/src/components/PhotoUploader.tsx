@@ -31,12 +31,15 @@ export function PhotoUploader({
   labels,
   disabled = false,
   onUploadError,
+  onBusyChange,
 }: {
   value: readonly PhotoUploadItem[];
   onChange: (photos: PhotoUploadItem[]) => void;
   labels: PhotoUploaderLabels;
   disabled?: boolean;
   onUploadError?: (error: Error) => void;
+  /** Dipanggil saat unggahan mulai/selesai, supaya form induk menahan tombol simpan. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
@@ -50,9 +53,19 @@ export function PhotoUploader({
     valuesRef.current = value;
   }, [value]);
 
-  useEffect(() => () => {
-    for (const url of objectUrls.current) URL.revokeObjectURL(url);
-    objectUrls.current.clear();
+  const busyCb = useRef(onBusyChange);
+  useEffect(() => { busyCb.current = onBusyChange; }, [onBusyChange]);
+  useEffect(() => { busyCb.current?.(uploading); }, [uploading]);
+
+  // Unggahan yang selesai setelah form ditutup tidak boleh menempel ke form berikutnya.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      for (const url of objectUrls.current) URL.revokeObjectURL(url);
+      objectUrls.current.clear();
+    };
   }, []);
 
   const addFiles = async (files: FileList | null) => {
@@ -72,6 +85,7 @@ export function PhotoUploader({
       for (const draft of drafts) {
         try {
           const url = await uploadFile(draft.file);
+          if (!alive.current) return;
           const next = [...valuesRef.current, { url, caption: "" }];
           valuesRef.current = next;
           onChange(next);

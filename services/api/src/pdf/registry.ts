@@ -433,7 +433,14 @@ const spkRecipe: Recipe<SpkInput> = {
        tidak berbeda angka. */
     const wo = await loadEntity({ field: "workOrders", prefix: "WO" }, id);
     if (!wo) throw new Error(`Work Order ${id} tidak ditemukan`);
-    const sub = await loadEntity({ field: "subcontractors", prefix: "SUB" }, str(wo, "sub"));
+    /* #94: WO menyimpan NAMA subkon, jadi pencarian lewat id saja selalu gagal
+       dan NPWP/alamat tercetak kosong. Dicari lewat id dulu, lalu nama persis;
+       hanya di cabang dokumen; bila dua profil bernama sama, tidak ada yang dipakai - lebih baik kosong
+       daripada mencetak data pihak lain. */
+    const subKey = str(wo, "sub");
+    const byName = (await loadMany({ field: "subcontractors", prefix: "SUB" }, { branch: ctx.branch }))
+      .filter((s) => str(s, "name").trim().toLowerCase() === subKey.trim().toLowerCase());
+    const sub = (await loadEntity({ field: "subcontractors", prefix: "SUB" }, subKey)) ?? (byName.length === 1 ? byName[0] as Record<string, unknown> : null);
     const proj = await loadEntity({ field: "projects", prefix: "PRJ" }, str(wo, "project"));
     const mulai = str(wo, "date", "startDate") !== "-" ? str(wo, "date", "startDate") : today();
     return {
@@ -442,11 +449,12 @@ const spkRecipe: Recipe<SpkInput> = {
       projectName: proj ? str(proj, "name") : str(wo, "projectName"),
       subcontractorName: sub ? str(sub, "name") : str(wo, "subName"),
       subcontractorAddress: sub && str(sub, "address") !== "-" ? str(sub, "address") : undefined,
-      subcontractorNPWP: sub ? str(sub, "npwp") : undefined,
+      subcontractorNPWP: sub && str(sub, "npwp") !== "-" ? str(sub, "npwp") : undefined,
       scopeOfWork: str(wo, "scope"),
       startDate: mulai,
       endDate: str(wo, "targetDate", "endDate"),
-      contractValue: num(wo, "value") || num(sub ?? {}, "contract"),
+      // Hanya nilai WO ini. Total kontrak subkon mencakup WO lain, jadi tidak dipakai sebagai pengganti.
+      contractValue: num(wo, "value"),
       paymentTerms: str(wo, "paymentTerms") !== "-" ? str(wo, "paymentTerms") : "Termin",
       /*SPK tanpa pasal K3 tetap sah secara hukum, tapi untuk galangan clauses
          K3 itulah yang pertama kali ditanyakan pengawas. Persyaratan tidak
