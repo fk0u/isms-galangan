@@ -1212,7 +1212,7 @@ export function toggleSort(prev: SortState, key: string): SortState {
   return { key, dir: "asc" };
 }
 
-function cmpVal(a: string | number | null | undefined, b: string | number | null | undefined): number {
+export function cmpVal(a: string | number | null | undefined, b: string | number | null | undefined): number {
   const aEmpty = a === null || a === undefined || a === "";
   const bEmpty = b === null || b === undefined || b === "";
   if (aEmpty && bEmpty) return 0;
