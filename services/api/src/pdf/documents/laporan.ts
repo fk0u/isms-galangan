@@ -73,6 +73,33 @@ export interface ProjectReportModel {
 export interface AnalyticModel {
   scope: "Dashboard" | "Analytics";
   periodLabel: string;
+  branch?: string;
+  targets?: {
+    revenue: number;
+    projects: number;
+  };
+  executiveSummary?: {
+    activeContractsValue: number;
+    activeEmployees: number;
+    stockValue: number;
+    lowStockCount: number;
+    seaTrialVessel: string;
+    pipelineActiveValue: number;
+    openNcrCount: number;
+    criticalNcrCount: number;
+    arOutstandingValue: number;
+    wonContractValue: number;
+    wonContractCount?: number;
+  };
+  activeProjectsList?: Array<{
+    id: string;
+    vessel: string;
+    client: string;
+    type: string;
+    budget: number;
+    progress: number;
+    status: string;
+  }>;
   series: MonthPoint[];
   kpi: PortfolioKpi;
   growth: { revenue: number; margin: number };
@@ -393,36 +420,127 @@ export function projectReport(input: ProjectReportModel, opts: DocOptions = {}):
 export function analyticReport(input: AnalyticModel, opts: DocOptions = {}): Document {
   const locale = input.locale;
   const k = input.kpi;
+  const isDashboard = input.scope === "Dashboard";
+  const branchText = input.branch && input.branch !== "SEMUA" ? input.branch : lt(locale, "Semua Cabang (Konsolidasi)", "All Branches (Consolidated)");
+
   const d = new Document({
-    title: input.scope === "Dashboard" ? "Ringkasan Portofolio" : "Laporan Analitik",
-    subject: `${input.scope} - ${input.periodLabel}`,
+    title: isDashboard ? lt(locale, "Ringkasan Portofolio Eksekutif", "Executive Portfolio Summary") : lt(locale, "Laporan Analitik", "Analytics Report"),
+    subject: `${input.scope} - ${branchText} - ${input.periodLabel}`,
     orientation: "landscape",
+    footer: (p: number, t: number) => lt(locale, `Halaman ${p} dari ${t}`, `Page ${p} of ${t}`),
     ...opts,
   });
 
   reportHeader(
     d,
-    input.scope === "Dashboard" ? lt(locale, "RINGKASAN PORTOFOLIO", "PORTFOLIO SUMMARY") : lt(locale, "LAPORAN ANALITIK", "ANALYTICS REPORT"),
-    input.periodLabel,
+    isDashboard ? lt(locale, "RINGKASAN PORTOFOLIO EKSEKUTIF", "EXECUTIVE PORTFOLIO SUMMARY") : lt(locale, "LAPORAN ANALITIK", "ANALYTICS REPORT"),
+    `${lt(locale, "Cabang", "Branch")}: ${branchText} | ${lt(locale, "Periode", "Period")}: ${input.periodLabel}`,
     locale,
   );
 
+  /* Target vs Aktual (Cabang) */
+  if (input.targets && (input.targets.revenue > 0 || input.targets.projects > 0)) {
+    const revPct = input.targets.revenue > 0 ? ((k.totalBudget / input.targets.revenue) * 100).toFixed(1) : "0";
+    const projPct = input.targets.projects > 0 ? ((k.activeProjects / input.targets.projects) * 100).toFixed(0) : "0";
+    d.add(sectionBlock(lt(locale, "Target vs Aktual", "Target vs Actual"), `${lt(locale, "Pencapaian Target Cabang", "Branch Target Achievement")}: ${branchText}`));
+    d.add(
+      metricGrid(
+        [
+          { label: lt(locale, "Target Pendapatan", "Revenue Target"), value: short(input.targets.revenue) },
+          { label: lt(locale, "Aktual Pendapatan", "Actual Revenue"), value: `${short(k.totalBudget)} (${revPct}%)` },
+          { label: lt(locale, "Target Proyek", "Project Target"), value: String(input.targets.projects) },
+          { label: lt(locale, "Aktual Proyek Aktif", "Active Projects"), value: `${k.activeProjects} (${projPct}%)` },
+        ],
+        { cols: 4 },
+      ),
+    );
+  }
+
+  /* Indikator Kinerja Utama (KPI) */
+  d.add(sectionBlock(lt(locale, "Indikator Kinerja Utama (KPI)", "Key Performance Indicators (KPI)")));
+  const equipUtilPct = k.equipmentTotal > 0 ? Math.round((k.equipmentBusy / k.equipmentTotal) * 100) : 0;
   d.add(
     metricGrid(
       [
-        { label: lt(locale, "Proyek", "Projects"), value: `${k.activeProjects}/${k.totalProjects}` },
-        { label: lt(locale, "Anggaran", "Budget"), value: short(k.totalBudget) },
-        { label: lt(locale, "Realisasi", "Realized"), value: short(k.totalActual) },
-        { label: lt(locale, "Progres rata-rata", "Avg progress"), value: pct(k.avgProgress) },
-        { label: lt(locale, "Pendapatan (YTD)", "Revenue (YTD)"), value: short(k.revenueYtd) },
-        { label: lt(locale, "Margin rata-rata", "Avg margin"), value: pct(k.marginAvg) },
-        { label: lt(locale, "NCR terbuka", "Open NCR"), value: String(k.openNcr) },
-        { label: lt(locale, "Karyawan aktif", "Active staff"), value: String(k.activeEmployees) },
+        { label: lt(locale, "Total Kontrak Aktif", "Active Contracts"), value: short(input.executiveSummary?.activeContractsValue ?? k.totalBudget) },
+        { label: lt(locale, "Proyek Berjalan", "Active Projects"), value: `${k.activeProjects}/${k.totalProjects}` },
+        { label: lt(locale, "Proyek Terlambat", "Delayed Projects"), value: String(k.lateProjects), color: k.lateProjects > 0 ? [190, 42, 42] : undefined },
+        { label: lt(locale, "Rata-rata Progres", "Avg Progress"), value: pct(k.avgProgress) },
+        { label: lt(locale, "Pendapatan YTD", "Revenue (YTD)"), value: short(k.revenueYtd) },
+        { label: lt(locale, "Margin Rata-rata", "Avg Margin"), value: pct(k.marginAvg) },
+        { label: lt(locale, "Utilisasi Peralatan", "Equipment Utilization"), value: `${equipUtilPct}%` },
+        { label: lt(locale, "Karyawan Aktif", "Active Staff"), value: String(k.activeEmployees) },
       ],
       { cols: 4 },
     ),
   );
 
+  /* Ringkasan Operasional Terpadu */
+  if (input.executiveSummary) {
+    const ex = input.executiveSummary;
+    d.add(sectionBlock(lt(locale, "Ringkasan Operasional Terpadu", "Integrated Operational Summary"), lt(locale, "Inventori, Komersial, Keuangan & Mutu", "Inventory, Commercial, Finance & Quality")));
+    d.add(
+      metricGrid(
+        [
+          { label: lt(locale, "Nilai Stok Inventori", "Inventory Stock Value"), value: short(ex.stockValue) },
+          { label: lt(locale, "Item Stok Menipis", "Low Stock Items"), value: `${ex.lowStockCount} item`, color: ex.lowStockCount > 0 ? [190, 42, 42] : undefined },
+          { label: lt(locale, "Kapal Sea Trial", "Sea Trial Vessel"), value: ex.seaTrialVessel || "-" },
+          { label: lt(locale, "Pipeline Penawaran CRM", "CRM Pipeline"), value: short(ex.pipelineActiveValue) },
+          { label: lt(locale, "Piutang Usaha (AR)", "AR Outstanding"), value: short(ex.arOutstandingValue) },
+          { label: lt(locale, "Kontrak Menang CRM", "Won Contracts (CRM)"), value: `${short(ex.wonContractValue)} (${ex.wonContractCount ?? 0} kontrak)` },
+        ],
+        { cols: 3 },
+      ),
+    );
+  }
+
+  /* Status & Daftar Proyek Berjalan (Tabel) */
+  if (input.activeProjectsList && input.activeProjectsList.length > 0) {
+    const list = input.activeProjectsList;
+    d.add(sectionBlock(lt(locale, "Status Proyek Berjalan", "Active Projects Status"), lt(locale, `${list.length} proyek aktif di galangan`, `${list.length} active projects in shipyard`)));
+    const totalActiveBudget = list.reduce((s, p) => s + p.budget, 0);
+    const avgProg = Math.round(list.reduce((s, p) => s + p.progress, 0) / list.length);
+    const rows = [
+      ...list.map((p) => [
+        p.id,
+        p.vessel,
+        p.client,
+        p.type,
+        rupiah(p.budget),
+        `${p.progress}%`,
+        p.status,
+      ]),
+      [
+        `${lt(locale, "TOTAL", "TOTAL")} (${list.length} ${lt(locale, "proyek", "projects")})`,
+        "",
+        "",
+        "",
+        rupiah(totalActiveBudget),
+        `${avgProg}%`,
+        "",
+      ],
+    ];
+    d.add(
+      table({
+        head: [
+          lt(locale, "ID Proyek", "Project ID"),
+          lt(locale, "Nama Kapal", "Vessel Name"),
+          lt(locale, "Klien", "Client"),
+          lt(locale, "Jenis", "Type"),
+          lt(locale, "Anggaran", "Budget"),
+          lt(locale, "Progres", "Progress"),
+          lt(locale, "Status", "Status"),
+        ],
+        widths: [28, "auto", 44, 25, 34, 20, 28],
+        align: ["left", "left", "left", "left", "right", "right", "left"],
+        rows,
+        totalRow: rows.length - 1,
+      }),
+    );
+  }
+
+  /* Grafik Tren Finansial Bulanan */
+  d.add(sectionBlock(lt(locale, "Kinerja Finansial Bulanan", "Monthly Financial Performance")));
   d.add(
     chartBlock({
       title: lt(locale, "Pendapatan dan biaya", "Revenue and cost"),
@@ -451,6 +569,7 @@ export function analyticReport(input: AnalyticModel, opts: DocOptions = {}): Doc
     }),
   );
 
+  /* Komposisi dan Distribusi Portofolio */
   if (input.projectStatus.some((s) => s.value > 0)) {
     d.add(
       chartBlock({
@@ -481,6 +600,7 @@ export function analyticReport(input: AnalyticModel, opts: DocOptions = {}): Doc
     d.add(profitTable(input.profitByBranch, locale));
   }
 
+  /* Risiko & Pengendalian Mutu */
   d.add(sectionBlock(lt(locale, "Risiko & rekomendasi", "Risk & recommendations")));
   const risk = input.risk;
   d.add(
