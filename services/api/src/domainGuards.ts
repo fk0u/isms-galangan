@@ -15,6 +15,10 @@ export function stageHasData(stage: Data): boolean {
     || str(stage.photoUrl) !== "" || (typeof stage.assignee === "object" && stage.assignee !== null);
 }
 
+/** JSON tanpa `actorRole`: cap itu milik server (stampRole), jadi salinan klien
+ *  yang belum resync tidak memilikinya dan tidak boleh dianggap berbeda. */
+export const withoutRole = (v: unknown): string => JSON.stringify(v, (k, val: unknown) => (k === "actorRole" ? undefined : val));
+
 // Schema rute menerima anggota array apa pun; yang bukan objek dianggap tahapan kosong.
 const stages = (v: unknown): Data[] => (Array.isArray(v) ? v : []).map((s) => (typeof s === "object" && s !== null ? s as Data : {}));
 const photoUrls = (stage: Data): string[] => (Array.isArray(stage.photos) ? stage.photos : [])
@@ -24,8 +28,7 @@ function keepsRecord(old: Data, next: Data): boolean {
   const before = Array.isArray(old.history) ? old.history : [];
   const after = Array.isArray(next.history) ? next.history : [];
   // Cap peran ditambahkan server (stampRole), jadi salinan klien yang belum resync tidak memilikinya.
-  const plain = (h: unknown): string => JSON.stringify(typeof h === "object" && h !== null ? { ...h, actorRole: undefined } : h);
-  if (after.length < before.length || before.some((h, i) => plain(h) !== plain(after[i]))) return false;
+  if (after.length < before.length || before.some((h, i) => withoutRole(h) !== withoutRole(after[i]))) return false;
   const kept = new Set(photoUrls(next));
   return photoUrls(old).every((u) => kept.has(u));
 }
@@ -73,11 +76,15 @@ export function stampRole(before: unknown, after: unknown, role: string): unknow
 /** Cap peran pada riwayat tiap tahapan WBS (dicocokkan lewat nama tahapan). */
 export function stampWbsRoles(before: unknown, after: unknown, role: string): unknown {
   if (!Array.isArray(after)) return after;
-  const prev = new Map(stages(before).map((s) => [str(s.task), s]));
+  const prevList = stages(before);
+  const prev = new Map(prevList.map((s) => [str(s.task), s]));
+  const names = new Set(stages(after).map((s) => str(s.task)));
   return after.map((stage) => {
     if (typeof stage !== "object" || stage === null || !Array.isArray((stage as Data).history)) return stage;
     const s = stage as Data;
-    return { ...s, history: stampRole(prev.get(str(s.task))?.history, s.history, role) };
+    // Tahapan yang diganti nama: riwayat lamanya dicari lewat isi, supaya peran lama tidak tertimpa.
+    const old = prev.get(str(s.task)) ?? prevList.find((o) => !names.has(str(o.task)) && len(o.history) > 0 && keepsRecord(o, s));
+    return { ...s, history: stampRole(old?.history, s.history, role) };
   });
 }
 

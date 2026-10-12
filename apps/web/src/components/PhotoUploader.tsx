@@ -57,9 +57,15 @@ export function PhotoUploader({
   useEffect(() => { busyCb.current = onBusyChange; }, [onBusyChange]);
   useEffect(() => { busyCb.current?.(uploading); }, [uploading]);
 
-  useEffect(() => () => {
-    for (const url of objectUrls.current) URL.revokeObjectURL(url);
-    objectUrls.current.clear();
+  // Unggahan yang selesai setelah form ditutup tidak boleh menempel ke form berikutnya.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      for (const url of objectUrls.current) URL.revokeObjectURL(url);
+      objectUrls.current.clear();
+    };
   }, []);
 
   const addFiles = async (files: FileList | null) => {
@@ -79,6 +85,7 @@ export function PhotoUploader({
       for (const draft of drafts) {
         try {
           const url = await uploadFile(draft.file);
+          if (!alive.current) return;
           const next = [...valuesRef.current, { url, caption: "" }];
           valuesRef.current = next;
           onChange(next);

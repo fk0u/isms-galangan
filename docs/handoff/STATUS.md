@@ -118,3 +118,4 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | #79 | Aktivitas Terkini dashboard tidak terpotong | P2 | GitHub issue | Claude | review | teks dibungkus, badge modul tidak menutupi isi |
 | #90 | Monitoring: peran updater + feed tabel di bawah kartu tahapan | P1 | GitHub issue | Claude | review | peran dicap server dari token pada entri baru (WBS & WO); update lama tanpa label peran |
 | #95 #111 | Posisi daftar stabil setelah edit; simpan progres WO menunggu upload foto | P1 | GitHub issue | Claude | review | urutan daftar dari server kini menurut tanggal buat (bukan waktu ubah) di `repositories.ts`; test regresi; posisi scroll/paginasi #111 belum diuji per modul |
+| #94 | PDF SPK: NPWP, alamat, nilai kontrak dari relasi yang benar | P1 | GitHub issue | Claude | review | subkon dicari lewat nama di WO; nilai hanya dari WO (kosong = "Belum ditetapkan"); isian NPWP & alamat di registrasi dan tombol profil subkon |

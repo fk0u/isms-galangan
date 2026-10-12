@@ -140,7 +140,7 @@ export default function MonitoringFeed({ projects, canUpdate }: Props) {
                   <td className="py-2 text-right">
                     <div className="flex justify-end gap-1.5">
                       <Link
-                        to={`/proyek/${e.pid}?tab=${encodeURIComponent("WBS & Anggaran")}`}
+                        to={`/proyek/${e.pid}?tab=${encodeURIComponent(e.kind === "wbs" ? "WBS & Anggaran" : "Subkon")}`}
                         state={{ from: "/proyek/monitoring" }}
                         className="btn-secondary h-8 whitespace-nowrap px-3 text-xs"
                       >

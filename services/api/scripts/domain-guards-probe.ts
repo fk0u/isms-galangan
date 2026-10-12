@@ -4,6 +4,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { q, exec, closeDb } from "../src/db.js";
 import { wbsRuleError } from "../src/domainGuards.js";
+import { findRecipe, prepareModel } from "../src/pdf/registry.js";
 
 async function main(): Promise<void> {
   console.log("=== ISMS Domain Guards Probe (#67 #82 #93) ===");
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
   const empFin = `EMP-GFN-${tag}`;
   const now = new Date().toISOString();
   const made: string[] = [];
+  const cleanup: Array<() => Promise<unknown>> = [];
   await exec("INSERT INTO projects (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [pid, "Samarinda", JSON.stringify({ vessel: "TB Probe", client: "PT Probe", manager: "Orang Lama", status: "Dalam Proses" }), now]);
   await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [empPm, "Samarinda", JSON.stringify({ name: `PM Probe ${tag}`, role: "Project Manager", status: "Aktif" }), now]);
   await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [empFin, "Samarinda", JSON.stringify({ name: `Fin Probe ${tag}`, role: "Finance Manager", status: "Aktif" }), now]);
@@ -63,7 +65,23 @@ async function main(): Promise<void> {
     const palsu = await call("PUT", wbsUrl, { wbs: [{ ...tersimpan[0], history: [...(tersimpan[0]!.history ?? []), { date: "2026-10-12", actor: "probe", from: 60, to: 60, actorRole: "developer" }] }] });
     const cap = JSON.parse((await q<{ data: string }>("SELECT data FROM wbs_by_project WHERE project_id = ?", [pid]))[0]!.data) as Array<{ history: Array<{ actorRole?: string }> }>;
     assert("entri riwayat baru dicap peran dari token, bukan dari klien", palsu.status === 200 && cap[0]!.history.at(-1)?.actorRole === "direktur", JSON.stringify(cap[0]!.history.at(-1)));
+    const lagi = await call("PUT", wbsUrl, { wbs: [{ ...tersimpan[0], history: [...(tersimpan[0]!.history ?? []), { date: "2026-10-12", actor: "probe", from: 60, to: 60 }], station: "A" }], baseData: [{ ...tersimpan[0], history: [...(tersimpan[0]!.history ?? []), { date: "2026-10-12", actor: "probe", from: 60, to: 60 }] }] });
+    assert("simpan berikutnya dengan baseline klien tanpa cap peran tidak dianggap STALE", lagi.status === 200, JSON.stringify(lagi.body).slice(0, 160));
     assert("entri riwayat lama tidak diubah", JSON.stringify(cap[0]!.history[0]) === JSON.stringify(tersimpan[0]!.history?.[0]));
+
+    /* #94: SPK mengambil NPWP/alamat dari profil subkon lewat NAMA di WO */
+    const subA = `SUB-GA-${tag}`; const subB = `SUB-GB-${tag}`; const woA = `WO-GA-${tag}`; const woB = `WO-GB-${tag}`;
+    await exec("INSERT INTO subcontractors (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [subA, "Samarinda", JSON.stringify({ name: `PT Probe Lengkap ${tag}`, npwp: "00.000.000.0-000.000", address: "Jl. Sintetis 1", contract: 999 }), now]);
+    await exec("INSERT INTO subcontractors (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [subB, "Samarinda", JSON.stringify({ name: `PT Probe Kosong ${tag}`, contract: 555 }), now]);
+    await exec("INSERT INTO workOrders (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [woA, "Samarinda", JSON.stringify({ sub: `PT Probe Lengkap ${tag}`, project: pid, scope: "Uji", value: 12345 }), now]);
+    await exec("INSERT INTO workOrders (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [woB, "Samarinda", JSON.stringify({ sub: `PT Probe Kosong ${tag}`, project: pid, scope: "Uji" }), now]);
+    cleanup.push(() => exec("DELETE FROM subcontractors WHERE id IN (?, ?)", [subA, subB]), () => exec("DELETE FROM workOrders WHERE id IN (?, ?)", [woA, woB]));
+    const recipe = findRecipe("spk")!;
+    const ctx = { locale: "id", branch: "Samarinda" } as Parameters<typeof prepareModel>[2];
+    const a = await prepareModel(recipe, woA, ctx) as Record<string, unknown>;
+    const b = await prepareModel(recipe, woB, ctx) as Record<string, unknown>;
+    assert("SPK: NPWP, alamat, nilai dari profil & WO yang benar", a.subcontractorNPWP === "00.000.000.0-000.000" && a.subcontractorAddress === "Jl. Sintetis 1" && a.contractValue === 12345, JSON.stringify(a).slice(0, 300));
+    assert("SPK: profil tanpa NPWP/alamat & WO tanpa nilai tetap kosong, tidak meminjam data lain", b.subcontractorNPWP === undefined && b.subcontractorAddress === undefined && b.contractValue === 0, JSON.stringify(b).slice(0, 300));
 
     /* #82 */
     const bukanPm = await call("PATCH", `/api/projects/${pid}`, { data: { manager: `Fin Probe ${tag}` } });
@@ -84,6 +102,7 @@ async function main(): Promise<void> {
     assert("transfer tanpa gudang tujuan → 422", (await call("POST", "/api/movements", { data: { ...mv, fromWh: "Gudang A" } })).status === 422);
     assert("pergerakan tidak tercatat saat ditolak", (await jumlah()) === 0);
   } finally {
+    for (const undo of cleanup) await undo();
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]);
     for (const id of made) await exec("DELETE FROM projects WHERE id = ?", [id]);
     await exec("DELETE FROM wbs_by_project WHERE project_id = ?", [pid]);

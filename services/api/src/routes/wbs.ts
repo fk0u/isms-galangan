@@ -7,7 +7,7 @@ import { requirePermission } from "../policy.js";
 import { exec, getDialect, q, withTx } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { exactBranchPredicate } from "./crudSearch.js";
-import { stampWbsRoles, wbsRuleError } from "../domainGuards.js";
+import { stampWbsRoles, wbsRuleError, withoutRole } from "../domainGuards.js";
 import { normalizeRole } from "../policy.js";
 
 const WbsSchema = z.object({ wbs: z.array(z.unknown()), baseData: z.unknown().optional() });
@@ -113,7 +113,8 @@ export function registerWbsRoutes(app: FastifyInstance): void {
       const beforeRows = await q<SideRow>(`SELECT project_id, data FROM wbs_by_project WHERE project_id = ?${lockClause}`, [id]);
       const current = beforeRows[0] as SideRow | undefined;
       const serverData = current?.data ?? "[]";
-      if (parsed.data.baseData !== undefined && JSON.stringify(parsed.data.baseData) !== serverData) {
+      // Cap peran ditambahkan server setelah klien mencatat baseline-nya, jadi tidak ikut dibandingkan.
+      if (parsed.data.baseData !== undefined && withoutRole(parsed.data.baseData) !== withoutRole(JSON.parse(serverData))) {
         return { projectMissing: false, projectForbidden: false, conflict: current ?? { project_id: id, data: serverData } };
       }
       const before = current ? JSON.parse(current.data) as unknown : null;

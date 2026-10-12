@@ -9,6 +9,7 @@
 // - PATCH /api/<table>/:id← { branch?, data? }      → BackendRow
 // - DELETE /api/<table>/:id → { id, deleted: true }
 
+import { createdAtOf } from "../utils/timestamps";
 import type { StoreItem } from "../data/store";
 import { apiFetch } from "./http";
 
@@ -125,7 +126,8 @@ function isBackendPage(v: unknown): v is BackendPage {
  *  Kuncinya tanggal buat (terbaru dulu, sama seperti baris baru yang ditaruh di
  *  atas saat ditambah), lalu id; baris lama tanpa tanggal buat urut id saja. */
 export function stableOrder(rows: StoreItem[]): StoreItem[] {
-  const key = (r: StoreItem): string => (typeof r.createdAt === "string" ? r.createdAt : "");
+  // Dinormalkan lewat createdAtOf: tanggal lama seperti "2026-9-5" tidak boleh mengalahkan "2026-10-01".
+  const key = (r: StoreItem): string => createdAtOf(r) ?? "";
   return [...rows].sort((a, b) => key(b).localeCompare(key(a)) || String(b.id ?? "").localeCompare(String(a.id ?? "")));
 }
 

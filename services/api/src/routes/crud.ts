@@ -544,6 +544,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
+    if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
     const ruleCreate = transferError(table, rowData) ?? await projectManagerError(table, null, rowData);
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     const loanCreate = await loanOverlapError(table, null, rowData);
