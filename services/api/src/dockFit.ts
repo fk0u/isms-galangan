@@ -57,7 +57,8 @@ export async function dockLimitError(table: string, id: string | null, before: D
   if (table !== "drydocks") return null;
   for (const [limit, , label] of DIMS) {
     const raw = after[limit];
-    if (raw === undefined || raw === null || raw === "") continue;
+    // Kosong atau hanya spasi = tidak dibatasi (data lama menyimpannya begitu).
+    if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")) continue;
     // Number() mengubah true/[] jadi 1/0; hanya angka atau teks angka yang diterima.
     const n = typeof raw === "number" || (typeof raw === "string" && raw.trim() !== "") ? Number(raw) : NaN;
     if (!Number.isFinite(n) || n < 0) return { status: 422, message: `Batas ${label} dock harus angka 0 atau lebih` };

@@ -8,7 +8,15 @@ cd "$(dirname "$0")/.."
 STAMP=${1:-$(date +%Y-%m-%d)}
 COMPOSE="docker compose -p isms --env-file deploy/.env -f docker-compose.yml -f deploy/compose.host-nginx.yml"
 # Jangan pernah menimpa cadangan yang sudah ada (dump MySQL akan terpotong).
-$COMPOSE exec -T api sh -c "[ ! -e '/data/backups/$STAMP' ]" || { echo "[backup-cron] /data/backups/$STAMP sudah ada, dibatalkan"; exit 1; }
+case "$STAMP" in *[!A-Za-z0-9._-]*|"") echo "[backup-cron] nama folder hanya boleh huruf, angka, titik, garis"; exit 2 ;; esac
+# Nama dikirim sebagai argumen, bukan disisipkan ke perintah shell. Status 3 = folder sudah ada;
+# kegagalan docker sendiri dibiarkan muncul apa adanya.
+set +e
+$COMPOSE exec -T api sh -c '[ -e "/data/backups/$1" ] && exit 3; exit 0' sh "$STAMP"
+RC=$?
+set -e
+[ "$RC" -eq 3 ] && { echo "[backup-cron] /data/backups/$STAMP sudah ada, dibatalkan"; exit 1; }
+[ "$RC" -ne 0 ] && exit "$RC"
 $COMPOSE exec -T api npx tsx src/backup.ts "/data/backups/$STAMP"
 # Buang backup yang lebih tua dari 14 hari.
 $COMPOSE exec -T api sh -c 'find /data/backups -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +'
