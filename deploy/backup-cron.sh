@@ -4,7 +4,8 @@
 #   15 2 * * * /home/<user>/isms/deploy/backup-cron.sh >> /home/<user>/isms-backup.log 2>&1
 set -eu
 cd "$(dirname "$0")/.."
-STAMP=$(date +%Y-%m-%d)
+# Argumen opsional: nama folder lain (mis. cadangan pra-deploy di hari yang sama; backup.ts menolak folder yang sudah ada).
+STAMP=${1:-$(date +%Y-%m-%d)}
 COMPOSE="docker compose -p isms --env-file deploy/.env -f docker-compose.yml -f deploy/compose.host-nginx.yml"
 $COMPOSE exec -T api npx tsx src/backup.ts "/data/backups/$STAMP"
 # Buang backup yang lebih tua dari 14 hari.

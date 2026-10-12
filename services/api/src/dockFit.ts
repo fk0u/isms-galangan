@@ -48,3 +48,26 @@ export async function dockFitError(table: string, after: Data | null, role: stri
   }
   return null;
 }
+
+/** #91: batas dimensi dock harus angka >= 0, dan batas yang sudah ada tidak
+ *  boleh dihapus (jadi 0/kosong) selama dock masih punya booking - booking itu
+ *  disetujui berdasarkan batas tersebut. Mengubah nilainya tetap boleh.
+ *  null = boleh; selain itu { status, message }. */
+export async function dockLimitError(table: string, id: string | null, before: Data | null, after: Data): Promise<{ status: 409 | 422; message: string } | null> {
+  if (table !== "drydocks") return null;
+  for (const [limit, , label] of DIMS) {
+    const raw = after[limit];
+    if (raw === undefined || raw === null || raw === "") continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return { status: 422, message: `Batas ${label} dock harus angka 0 atau lebih` };
+  }
+  if (!before || !id) return null;
+  const removed = DIMS.filter(([limit]) => Number(before[limit]) > 0 && !(Number(after[limit]) > 0)).map(([, , label]) => label);
+  if (removed.length === 0) return null;
+  // ponytail: memindai semua slot; beri kolom dock_id berindeks bila jadwal membesar.
+  const slots = await q<{ data: string }>("SELECT data FROM dockSlots", []);
+  const booked = slots.some((r) => {
+    try { const d = JSON.parse(r.data) as Data; return String(d.dockId ?? "") === id && String(d.project ?? "") !== "MAINT"; } catch { return false; }
+  });
+  return booked ? { status: 409, message: `Batas ${removed.join(", ")} tidak bisa dihapus selama dock masih punya booking. Ubah nilainya, atau selesaikan/pindahkan booking lebih dulu.` } : null;
+}

@@ -83,6 +83,17 @@ async function main(): Promise<void> {
     assert("SPK: NPWP, alamat, nilai dari profil & WO yang benar", a.subcontractorNPWP === "00.000.000.0-000.000" && a.subcontractorAddress === "Jl. Sintetis 1" && a.contractValue === 12345, JSON.stringify(a).slice(0, 300));
     assert("SPK: profil tanpa NPWP/alamat & WO tanpa nilai tetap kosong, tidak meminjam data lain", b.subcontractorNPWP === undefined && b.subcontractorAddress === undefined && b.contractValue === 0, JSON.stringify(b).slice(0, 300));
 
+    /* #91: batas dimensi dock */
+    const dockId = `DD-G-${tag}`; const slotId = `SL-G-${tag}`;
+    await exec("INSERT INTO drydocks (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [dockId, "Samarinda", JSON.stringify({ name: `Dock Probe ${tag}`, maxLoa: 60, maxBeam: 12 }), now]);
+    cleanup.push(() => exec("DELETE FROM dockSlots WHERE id = ?", [slotId]), () => exec("DELETE FROM drydocks WHERE id = ?", [dockId]));
+    assert("batas dock negatif → 422", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: -5 } })).status === 422);
+    assert("hapus batas dock tanpa booking → 200", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxBeam: 0 } })).status === 200);
+    await exec("INSERT INTO dockSlots (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [slotId, "Samarinda", JSON.stringify({ dockId, project: pid, from: 1, to: 5 }), now]);
+    const hapusBatas = await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: 0 } });
+    assert("hapus batas dock yang punya booking → 409 dengan penjelasan", hapusBatas.status === 409 && /booking/.test(hapusBatas.body.error?.message ?? ""), JSON.stringify(hapusBatas.body));
+    assert("ubah nilai batas dock yang punya booking → 200", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: 70 } })).status === 200);
+
     /* #82 */
     const bukanPm = await call("PATCH", `/api/projects/${pid}`, { data: { manager: `Fin Probe ${tag}` } });
     assert("manager non-PM → 422", bukanPm.status === 422, JSON.stringify(bukanPm.body));
