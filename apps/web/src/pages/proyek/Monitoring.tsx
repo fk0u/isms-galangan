@@ -233,8 +233,6 @@ export default function Monitoring() {
         </p>
       )}
 
-      <MonitoringFeed projects={feedProjects} canUpdate={canUpdate} />
-
       {/* F3-E-03: "Perhatian khusus" — kartu merah agar menonjol. */}
       <Card className={`mb-4 p-5 ${attention.length > 0 ? "border-red-200 bg-red-50/60" : ""}`}>
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-red-700">
@@ -347,6 +345,9 @@ export default function Monitoring() {
       </div>
       )}
       </div>
+
+      {/* #90: daftar update pekerjaan ditempatkan setelah kartu tahapan. */}
+      <MonitoringFeed projects={feedProjects} canUpdate={canUpdate} />
     </div>
   );
 }

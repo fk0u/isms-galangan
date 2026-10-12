@@ -23,7 +23,9 @@ const photoUrls = (stage: Data): string[] => (Array.isArray(stage.photos) ? stag
 function keepsRecord(old: Data, next: Data): boolean {
   const before = Array.isArray(old.history) ? old.history : [];
   const after = Array.isArray(next.history) ? next.history : [];
-  if (after.length < before.length || before.some((h, i) => JSON.stringify(h) !== JSON.stringify(after[i]))) return false;
+  // Cap peran ditambahkan server (stampRole), jadi salinan klien yang belum resync tidak memilikinya.
+  const plain = (h: unknown): string => JSON.stringify(typeof h === "object" && h !== null ? { ...h, actorRole: undefined } : h);
+  if (after.length < before.length || before.some((h, i) => plain(h) !== plain(after[i]))) return false;
   const kept = new Set(photoUrls(next));
   return photoUrls(old).every((u) => kept.has(u));
 }
@@ -57,6 +59,26 @@ export function wbsRuleError(before: unknown, after: unknown): { code: "STAGE_IN
     }
   }
   return null;
+}
+
+/** #90: entri log progres BARU dicap peran akun dari token, bukan dari isian
+ *  klien, supaya label peran di Monitoring tidak bisa dipalsukan. Entri lama
+ *  dikembalikan apa adanya (termasuk yang belum punya peran). */
+export function stampRole(before: unknown, after: unknown, role: string): unknown {
+  if (!Array.isArray(after)) return after;
+  const old = Array.isArray(before) ? before : [];
+  return after.map((entry, i) => (i < old.length ? old[i] : typeof entry === "object" && entry !== null ? { ...entry, actorRole: role } : entry));
+}
+
+/** Cap peran pada riwayat tiap tahapan WBS (dicocokkan lewat nama tahapan). */
+export function stampWbsRoles(before: unknown, after: unknown, role: string): unknown {
+  if (!Array.isArray(after)) return after;
+  const prev = new Map(stages(before).map((s) => [str(s.task), s]));
+  return after.map((stage) => {
+    if (typeof stage !== "object" || stage === null || !Array.isArray((stage as Data).history)) return stage;
+    const s = stage as Data;
+    return { ...s, history: stampRole(prev.get(str(s.task))?.history, s.history, role) };
+  });
 }
 
 /** Jabatan Project Manager di data karyawan (HR). Sistem tidak punya peran akun

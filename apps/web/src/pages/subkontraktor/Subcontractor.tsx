@@ -181,6 +181,8 @@ export default function Subcontractor() {
   const EMPTY_WO = { sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1", value: "", wbsTask: "", schemeType: "Kontan" as TerminSchemeType, parts: [{ label: "", pct: "", amount: "" }] as SchemePartForm[], taxPct: "2", taxOther: "", retPct: "5" };
   const [woForm, setWoForm] = useState(EMPTY_WO);
   const [progPhotos, setProgPhotos] = useState<PhotoUploadItem[]>([]);
+  // #95: simpan ditahan sampai semua foto selesai diunggah.
+  const [progUploading, setProgUploading] = useState(false);
   const [woProg, setWoProg] = useState<StoreItem | null>(null);
   const [progMs, setProgMs] = useState<string[]>([]);
   const [progNote, setProgNote] = useState("");
@@ -1650,7 +1652,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       {/* Modal progres WO = milestone checklist + input numerik (tanpa slider, terintegrasi termin/timesheet) */}
       <Modal open={woProg !== null} onClose={() => { setWoProg(null); setProgPhotos([]); }} title={S.progTitle.replace("{n}", woProg?.id ?? "")}
         subtitle={woProg ? `${woProg.sub} · ${woProg.project} · saat ini ${effProgress(woProg)}%` : ""}
-        footer={<><button className="btn-secondary" onClick={() => setWoProg(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWoProgress}>{S.saveBtn}</button></>}>
+        footer={<><button className="btn-secondary" onClick={() => setWoProg(null)}>{S.cancelBtn}</button><button className="btn-primary" disabled={progUploading} onClick={saveWoProgress}>{progUploading ? P.detPhotoUploading : S.saveBtn}</button></>}>
         <div className="space-y-3">
           {(() => {
             /* Milestone yang dirender = milestone WO itu sendiri, sama persis
@@ -1717,6 +1719,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               onChange={setProgPhotos}
               labels={{ add: P.detPhotoUpload, caption: P.detPhotoCaption, remove: P.detPhotoRemove, empty: P.detPhotoEmpty, uploading: P.detPhotoUploading, uploadError: P.detPhotoUploadError, imageAlt: P.detPhotoImage }}
               onUploadError={() => toast(P.detPhotoUploadError, "info")}
+              onBusyChange={setProgUploading}
             />
           </Field>
           {woProg && (

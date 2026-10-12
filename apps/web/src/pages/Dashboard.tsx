@@ -960,16 +960,17 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
             <CardHeader title={S.recentActivity} subtitle={S.realtimeLog} />
             <div className="max-h-80 space-y-1 overflow-y-auto p-3">
               {activities.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-surface">
+                <div key={a.id} className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface">
                   <Avatar name={a.actor} className="h-8 w-8 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-steel-700" title={`${a.actor} ${a.action} ${a.target}`}>
+                    {/* #79: isi aktivitas dibungkus, tidak dipotong - target panjang (kode proyek + nama) tetap terbaca. */}
+                    <p className="break-words text-sm text-steel-700">
                       <span className="font-semibold text-navy-900">{a.actor}</span> {a.action}{" "}
                       <span className="font-medium text-navy-800">{a.target}</span>
                     </p>
-                    <p className="text-[11px] text-steel-400">{a.module} · {a.time}</p>
+                    <p className="text-[11px] text-steel-400">{a.time}</p>
                   </div>
-                  <Badge tone={a.tone as never}>{a.module}</Badge>
+                  <span className="shrink-0"><Badge tone={a.tone as never}>{a.module}</Badge></span>
                 </div>
               ))}
             </div>

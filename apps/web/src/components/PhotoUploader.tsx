@@ -31,12 +31,15 @@ export function PhotoUploader({
   labels,
   disabled = false,
   onUploadError,
+  onBusyChange,
 }: {
   value: readonly PhotoUploadItem[];
   onChange: (photos: PhotoUploadItem[]) => void;
   labels: PhotoUploaderLabels;
   disabled?: boolean;
   onUploadError?: (error: Error) => void;
+  /** Dipanggil saat unggahan mulai/selesai, supaya form induk menahan tombol simpan. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
@@ -49,6 +52,10 @@ export function PhotoUploader({
   useEffect(() => {
     valuesRef.current = value;
   }, [value]);
+
+  const busyCb = useRef(onBusyChange);
+  useEffect(() => { busyCb.current = onBusyChange; }, [onBusyChange]);
+  useEffect(() => { busyCb.current?.(uploading); }, [uploading]);
 
   useEffect(() => () => {
     for (const url of objectUrls.current) URL.revokeObjectURL(url);

@@ -58,6 +58,13 @@ async function main(): Promise<void> {
     assert("rename sambil ubah progres tanpa foto → ditolak", wbsRuleError([lama], [{ ...lama, task: "B", progress: 60 }])?.code === "PHOTO_REQUIRED");
     assert("anggota WBS bukan objek tidak membuat galat", wbsRuleError([null], [null, 5]) === null);
 
+    /* #90: peran updater dicap server dari token */
+    const tersimpan = JSON.parse((await q<{ data: string }>("SELECT data FROM wbs_by_project WHERE project_id = ?", [pid]))[0]!.data) as Array<{ history?: Array<{ actorRole?: string }> }>;
+    const palsu = await call("PUT", wbsUrl, { wbs: [{ ...tersimpan[0], history: [...(tersimpan[0]!.history ?? []), { date: "2026-10-12", actor: "probe", from: 60, to: 60, actorRole: "developer" }] }] });
+    const cap = JSON.parse((await q<{ data: string }>("SELECT data FROM wbs_by_project WHERE project_id = ?", [pid]))[0]!.data) as Array<{ history: Array<{ actorRole?: string }> }>;
+    assert("entri riwayat baru dicap peran dari token, bukan dari klien", palsu.status === 200 && cap[0]!.history.at(-1)?.actorRole === "direktur", JSON.stringify(cap[0]!.history.at(-1)));
+    assert("entri riwayat lama tidak diubah", JSON.stringify(cap[0]!.history[0]) === JSON.stringify(tersimpan[0]!.history?.[0]));
+
     /* #82 */
     const bukanPm = await call("PATCH", `/api/projects/${pid}`, { data: { manager: `Fin Probe ${tag}` } });
     assert("manager non-PM → 422", bukanPm.status === 422, JSON.stringify(bukanPm.body));

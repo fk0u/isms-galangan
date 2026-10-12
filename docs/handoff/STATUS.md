@@ -115,3 +115,6 @@ Perbarui baris saat mulai/selesai. Status: `todo` · `jalan` · `review` · `seb
 | #98 | Upload PDF sertifikat karyawan | P1 | GitHub issue | Claude | review | pemindai PDF tidak lagi menolak `/OpenAction`/`/AA` (penyebab PDF pindai/Word tertolak); test unit ditambah; penyebab belum dikonfirmasi dengan berkas asli klien |
 | #99 #100 | Cuti mandiri: token QR ber-hash + kedaluwarsa, tanpa PIN, pratinjau NIK, dokumen pendukung | P1 | GitHub issue | Claude | review | ADR-0019; `probe:public-leave` 22 cek; QR tampil sekali saat dibuat |
 | #101 | Riwayat & nomor kontrak otomatis di modal Buat Surat | P1 | GitHub issue | Claude | review | nomor diisi dari kontrak terakhir, berganti karyawan memuat ulang |
+| #79 | Aktivitas Terkini dashboard tidak terpotong | P2 | GitHub issue | Claude | review | teks dibungkus, badge modul tidak menutupi isi |
+| #90 | Monitoring: peran updater + feed tabel di bawah kartu tahapan | P1 | GitHub issue | Claude | review | peran dicap server dari token pada entri baru (WBS & WO); update lama tanpa label peran |
+| #95 #111 | Posisi daftar stabil setelah edit; simpan progres WO menunggu upload foto | P1 | GitHub issue | Claude | review | urutan daftar dari server kini menurut tanggal buat (bukan waktu ubah) di `repositories.ts`; test regresi; posisi scroll/paginasi #111 belum diuji per modul |
