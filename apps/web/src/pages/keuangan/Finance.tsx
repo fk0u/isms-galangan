@@ -941,8 +941,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* Sort per tabel - satu state per tabel agar tidak bentrok antar tab. */
   const [arSort, setArSort] = useState<SortState>({ key: null, dir: "asc" });
   const [apSort, setApSort] = useState<SortState>({ key: null, dir: "asc" });
-  const [kasSort, setKasSort] = useState<SortState>({ key: null, dir: "asc" });
   const [jadwalSort, setJadwalSort] = useState<SortState>({ key: null, dir: "asc" });
+  const [plSort, setPlSort] = useState<SortState>({ key: null, dir: "asc" });
+  const [kasSort, setKasSort] = useState<SortState>({ key: null, dir: "asc" });
+  const [kasMutSort, setKasMutSort] = useState<SortState>({ key: null, dir: "asc" });
   const [invSort, setInvSort] = useState<SortState>({ key: null, dir: "asc" });
   const [invFQ, setInvFQ] = useState("");
   const [invFStatus, setInvFStatus] = useState("Semua");
@@ -1025,6 +1027,65 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const arPager = usePager(filteredAr.length);
   const apPager = usePager(filteredAp.length);
   const juPager = usePager(filteredJu.length);
+
+  const plProjectRows = useMemo(() => {
+    return projectsVisible.map((p) => {
+      const rev = (data.invoices ?? []).filter((i) => i.project === p.id).reduce((s, i) => s + invNeto(i), 0);
+      const actualCost = num(p.actual);
+      const margin = rev - actualCost;
+      const marginPct = rev ? Math.round((margin / rev) * 100) : 0;
+      return {
+        ...p,
+        vessel: String(p.vessel ?? ""),
+        client: String(p.client ?? ""),
+        status: String(p.status ?? ""),
+        hasAdvance: Boolean(p.hasAdvance),
+        rev,
+        actualCost,
+        margin,
+        marginPct,
+      };
+    });
+  }, [projectsVisible, data.invoices]);
+
+  const filteredPlProjects = useMemo(() => {
+    return plProjectRows.filter((p) =>
+      rowMatches(p, plQ, ["id", "vessel", "client", "status"])
+    );
+  }, [plProjectRows, plQ]);
+
+  const sortedPlProjects = useMemo(() => {
+    return sortRows(filteredPlProjects, plSort, (p, k) =>
+      k === "vessel" ? String(p.vessel ?? "") :
+      k === "client" ? String(p.client ?? "") :
+      k === "rev" ? p.rev :
+      k === "actual" ? p.actualCost :
+      k === "margin" ? p.margin :
+      k === "marginPct" ? p.marginPct :
+      k === "status" ? String(p.status ?? "") : String(p.id)
+    );
+  }, [filteredPlProjects, plSort]);
+  const plPager = usePager(filteredPlProjects.length, 10);
+
+  const filteredAset = useMemo(() => assetRows.filter((a) => rowMatches(a as unknown as Record<string, unknown>, asetQ, ["nama", "kelompok", "bulan", "tahun", "metode"])), [assetRows, asetQ]);
+  const sortedAset = useMemo(() => sortRows(filteredAset.map((a, i) => ({ a, i })), asetSort, ({ a }, k) =>
+    k === "nama" ? String(a.nama ?? "") : k === "kel" ? String(a.kelompok ?? "") : k === "bulan" ? String(a.bulan ?? "") :
+    k === "tahun" ? String(a.tahun ?? "") : k === "nilai" ? num(a.nilai) : k === "metode" ? String(a.metode ?? "") :
+    k === "susut" ? num(a.susutTahun) : String(a.id ?? "")), [filteredAset, asetSort]);
+  const asetPager = usePager(filteredAset.length, 15);
+
+  const filteredAlloc = useMemo(() => (data.payroll ?? []).filter((p) => p.status === "Dibayar").filter((p) => rowMatches(p, allocQ, ["id", "employeeId", "period", "allocProject", "status"])), [data.payroll, allocQ]);
+  const sortedAlloc = useMemo(() => sortRows(filteredAlloc, alokasiSort, (p, k) =>
+    k === "emp" ? String(p.employeeId ?? "") : k === "period" ? String(p.period ?? "") :
+    k === "net" ? payNet(p) : k === "alloc" ? String(p.allocProject ?? "") : String(p.id)), [filteredAlloc, alokasiSort]);
+  const allocPager = usePager(filteredAlloc.length, 10);
+
+  const filteredMutJournals = useMemo(() => manJournals.filter((j) => (String(j.sumber) === "Kas" || String(j.sumber) === "Bank") && matchHist(String(j.date ?? ""), kasHist) && rowMatches(j as unknown as Record<string, unknown>, kasQ, ["date", "dokumen", "uraian", "db", "kr", "amount"])), [manJournals, kasHist, kasQ]);
+  const sortedMutJournals = useMemo(() => sortRows(filteredMutJournals, kasMutSort, (j, k) =>
+    k === "date" ? String(j.date ?? "") : k === "dok" ? String(j.dokumen ?? "") : k === "uraian" ? String(j.uraian ?? "") :
+    k === "db" ? String(j.db ?? "") : k === "kr" ? String(j.kr ?? "") : k === "amount" ? num(j.amount) : String(j.id ?? "")), [filteredMutJournals, kasMutSort]);
+  const mutPager = usePager(filteredMutJournals.length, 15);
+
   useEffect(() => {
     invPager.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1035,6 +1096,26 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     juPager.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invHist, apHist, juHist, tab]);
+  useEffect(() => {
+    schedPager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jadwalQ]);
+  useEffect(() => {
+    plPager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plQ]);
+  useEffect(() => {
+    asetPager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asetQ]);
+  useEffect(() => {
+    allocPager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allocQ]);
+  useEffect(() => {
+    mutPager.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kasQ, kasHist]);
 
   // Terlambat otomatis dari due (menggantikan flag manual): invoice Belum Dibayar
   // yang lewat jatuh tempo otomatis berstatus Terlambat. ageDays sudah ada.
@@ -1492,6 +1573,11 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     return rows.sort((a, b) => String(a.due).localeCompare(String(b.due)));
   }, [payables, arOpen, today]);
   const schedTotal = schedItems.filter((r) => schedSel.includes(r.key)).reduce((s, r) => s + r.amount, 0);
+  const schedFiltered = useMemo(() => schedItems.filter((r) => rowMatches(r as unknown as Record<string, unknown>, jadwalQ, ["kind", "id", "ref", "desc", "due"])), [schedItems, jadwalQ]);
+  const sortedSched = useMemo(() => sortRows(schedFiltered, jadwalSort, (r, k) =>
+    k === "kind" ? String(r.kind) : k === "id" ? String(r.id) : k === "ref" ? String(r.ref) :
+    k === "desc" ? String(r.desc) : k === "due" ? String(r.due) : Number(r.amount)), [schedFiltered, jadwalSort]);
+  const schedPager = usePager(schedFiltered.length, 15);
 
   // 5. Pemetaan biaya ke proyek (kunci AP "ID / docNo" -> split ambil ID)
   const poIdOf = (poRef: unknown): string => String(poRef ?? "").split(" / ")[0].trim();
@@ -3270,10 +3356,17 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <div className="overflow-x-auto px-1 pb-3">
                   <table className="w-full">
                     <thead className="bg-surface sticky top-0 z-10">
-                      <tr><th className="th">Tanggal</th><th className="th">Dokumen</th><th className="th">Uraian</th><th className="th">DB</th><th className="th">KR</th><th className="th">Nominal</th></tr>
+                      <tr>
+                        <SortTh label={S.colTanggal} sortKey="date" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colDokumen} sortKey="dok" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colUraian} sortKey="uraian" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colAkunDB} sortKey="db" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colAkunKR} sortKey="kr" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colNominal} sortKey="amount" sort={kasMutSort} onSort={(k) => setKasMutSort((s) => toggleSort(s, k))} />
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-steel-100">
-                      {manJournals.filter((j) => (String(j.sumber) === "Kas" || String(j.sumber) === "Bank") && matchHist(String(j.date ?? ""), kasHist)).slice(0, 100).map((j) => (
+                      {mutPager.slice(sortedMutJournals).map((j) => (
                         <tr key={String(j.id)} className="hover:bg-surface">
                           <td className="td font-mono text-xs text-steel-600">{fmtTanggal(String(j.date ?? ""))}</td>
                           <td className="td font-mono text-xs">{String(j.dokumen ?? "-")}</td>
@@ -3283,12 +3376,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           <td className="td text-xs font-semibold">{fmtRupiah(num(j.amount))}</td>
                         </tr>
                       ))}
-                      {manJournals.filter((j) => (String(j.sumber) === "Kas" || String(j.sumber) === "Bank") && matchHist(String(j.date ?? ""), kasHist)).length === 0 && (
+                      {filteredMutJournals.length === 0 && (
                         <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.kasMutEmpty}</td></tr>
                       )}
                     </tbody>
                   </table>
                 </div>
+                {mutPager.bar}
               </Card>
             </div>
           )}
@@ -3326,9 +3420,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-steel-100">
-                      {sortRows(schedItems.filter((r) => rowMatches(r as unknown as Record<string, unknown>, jadwalQ, ["kind", "id", "ref", "desc", "due"])), jadwalSort, (r, k) =>
-                        k === "kind" ? String(r.kind) : k === "id" ? String(r.id) : k === "ref" ? String(r.ref) :
-                        k === "desc" ? String(r.desc) : k === "due" ? String(r.due) : Number(r.amount)).map((r) => (
+                      {schedPager.slice(sortedSched).map((r) => (
                         <tr key={r.key} className="hover:bg-surface">
                           <td className="td"><input type="checkbox" aria-label={S.selectItem.replace("{a}", r.id)} checked={schedSel.includes(r.key)} onChange={() => toggleSched(r.key)} /></td>
                           <td className="td"><Badge tone={r.kind === "AP" ? "navy" : "amber"}>{r.kind}</Badge></td>
@@ -3342,6 +3434,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     </tbody>
                     </table>
                   </div>
+                  {schedPager.bar}
                 </div>
               )}
             </div>
@@ -3732,24 +3825,76 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   <KpiCard label={S.unallocatedCard} value={fmtMiliar(profitCalc.unallocPayable + profitCalc.unallocTermin + profitCalc.unallocPayroll)} hint={S.costBreakdown.replace("{a}", fmtMiliar(profitCalc.unallocPayable)).replace("{b}", fmtMiliar(profitCalc.unallocTermin)).replace("{c}", fmtMiliar(profitCalc.unallocPayroll))} chip="amber" />
                 </div>
               )}
-              <div className="grid max-h-80 grid-cols-1 gap-4 overflow-y-auto pr-1 lg:grid-cols-3">
-                {projectsVisible.filter((p) => rowMatches(p, plQ, ["id", "vessel", "client", "status"])).map((p) => {
-                  const rev = (data.invoices ?? []).filter((i) => i.project === p.id).reduce((s, i) => s + invNeto(i), 0);
-                  const margin = rev - num(p.actual);
-                  return (
-                    <Card key={p.id} className="card-hover p-4">
-                      <p className="text-xs text-steel-500 font-mono truncate" title={`${p.id} · ${p.vessel}`}>{p.id} · {p.vessel}{p.hasAdvance ? S.advanceTag : ""}</p>
-                      <p className="mt-1 text-sm font-semibold text-navy-900">{S.marginVal.replace("{a}", fmtMiliar(margin))}</p>
-                      <div className="mt-2 text-xs text-steel-500">
-                        <p>{S.billedCost.replace("{a}", fmtMiliar(rev)).replace("{b}", fmtMiliar(num(p.actual)))}</p>
-                        <p className={`mt-1 font-medium ${margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                          {S.marginPct.replace("{n}", String(rev ? Math.round((margin / rev) * 100) : 0))}
-                        </p>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
+              <Card className="p-4">
+                <CardHeader
+                  title={S.projectPlListTitle}
+                  subtitle={S.projectPlListSub}
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-surface sticky top-0 z-10">
+                      <tr>
+                        <SortTh label={S.colID} sortKey="id" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colVessel} sortKey="vessel" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colKlien} sortKey="client" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colPendapatan} sortKey="rev" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colBiayaRiil} sortKey="actual" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colMargin} sortKey="margin" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colMarginPct} sortKey="marginPct" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colStatus} sortKey="status" sort={plSort} onSort={(k) => setPlSort((s) => toggleSort(s, k))} />
+                        <th className="th text-right">{S.actionTh}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-steel-100">
+                      {plPager.slice(sortedPlProjects).map((p) => {
+                        const isSelected = p.id === profitPid;
+                        return (
+                          <tr key={p.id} className={`hover:bg-surface ${isSelected ? "bg-ocean-50/70 font-medium" : ""}`}>
+                            <td className="td font-mono text-xs font-semibold text-navy-900">{p.id}</td>
+                            <td className="td text-xs text-navy-900 font-medium">
+                              {p.vessel}
+                              {p.hasAdvance && <span className="ml-1 text-[11px] text-amber-600 font-normal">{S.advanceTag}</span>}
+                            </td>
+                            <td className="td text-xs text-steel-600">{String(p.client ?? "-")}</td>
+                            <td className="td text-xs font-semibold text-navy-900">{fmtRupiah(p.rev)}</td>
+                            <td className="td text-xs text-steel-600">{fmtRupiah(p.actualCost)}</td>
+                            <td className={`td text-xs font-semibold ${p.margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                              {fmtRupiah(p.margin)}
+                            </td>
+                            <td className="td text-xs">
+                              <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-semibold ${p.margin >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                                {p.marginPct}%
+                              </span>
+                            </td>
+                            <td className="td"><StatusBadge status={String(p.status ?? "-")} /></td>
+                            <td className="td text-right">
+                              <button
+                                type="button"
+                                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+                                  isSelected
+                                    ? "bg-ocean-600 text-white font-medium shadow-xs"
+                                    : "btn-secondary text-xs"
+                                }`}
+                                onClick={() => {
+                                  setProfitProjectId(p.id);
+                                  const pr = projectById[p.id];
+                                  setOverheadPct(String(pr?.overheadPct ?? 5));
+                                }}
+                              >
+                                {isSelected ? S.proyekAktif : S.pilihProyek}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {sortedPlProjects.length === 0 && (
+                        <tr><td className="td text-xs italic text-steel-400 text-center py-6" colSpan={9}>{S.noProjectMatch}</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {plPager.bar}
+              </Card>
               <Card>
                 <CardHeader title={S.allocTitle2} subtitle={S.allocSub2} />
                 <div className="px-5 pb-2"><SearchBox value={allocQ} onChange={setAllocQ} placeholder={S.cardSearchPh} ariaLabel={S.cardSearchPh} /></div>
@@ -3767,10 +3912,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-steel-100">
-                      {sortRows((data.payroll ?? []).filter((p) => p.status === "Dibayar").filter((p) => rowMatches(p, allocQ, ["id", "employeeId", "period", "allocProject", "status"])), alokasiSort, (p, k) =>
-                        k === "emp" ? String(p.employeeId ?? "") : k === "period" ? String(p.period ?? "") :
-                        k === "net" ? payNet(p) :
-                        k === "alloc" ? String(p.allocProject ?? "") : String(p.id)).map((p) => (
+                      {allocPager.slice(sortedAlloc).map((p) => (
                         <tr key={p.id} className="hover:bg-surface">
                           <td className="td font-mono text-xs font-semibold text-navy-900">{p.id}</td>
                           <td className="td font-mono text-xs text-steel-600">{String(p.employeeId ?? "")}</td>
@@ -3780,10 +3922,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           <td className="td"><RowAction icon={Boxes} tone="primary" label={S.colAlokasi} ariaLabel={`${S.colAlokasi} ${String(p.id)}`} onClick={() => { setAllocTarget(p); setAllocForm({ project: String(p.allocProject ?? profitPid), pct: String(p.allocPct ?? 100) }); }} /></td>
                         </tr>
                       ))}
+                      {filteredAlloc.length === 0 && (
+                        <tr><td className="td text-xs italic text-steel-400 text-center py-4" colSpan={6}>{S.unallocatedCell}</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
                 </div>
+                {allocPager.bar}
               </Card>
               {cbs && (
                 <Card>
@@ -4165,41 +4311,47 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
-                    {sortRows(assetRows.filter((a) => rowMatches(a as unknown as Record<string, unknown>, asetQ, ["nama", "kelompok", "bulan", "tahun", "metode"])).map((a, i) => ({ a, i })), asetSort, ({ a }, k) =>
-                      k === "nama" ? String(a.nama ?? "") : k === "kel" ? String(a.kelompok ?? "") : k === "bulan" ? String(a.bulan ?? "") :
-                      k === "tahun" ? String(a.tahun ?? "") : k === "nilai" ? num(a.nilai) : k === "metode" ? String(a.metode ?? "") :
-                      k === "susut" ? num(a.susutTahun) : String(a.id ?? "")).map(({ a, i }) => {
-                      const gol = String(a.nama ?? "");
-                      const beban = gol === "Bangunan" ? "6-021 C" : gol === "Alat Berat" ? "6-021 A" : gol === "Kendaraan" ? "6-021" : gol.includes("Mesin") ? "6-021 B" : "6-022";
-                      const akum = gol === "Bangunan" ? "1-270" : gol === "Alat Berat" ? "1-281" : gol === "Kendaraan" ? "1-280" : gol.includes("Mesin") ? "1-282" : "1-290";
-                      const seed = String(a.id ?? "").startsWith("AST-EX-");
-                      return (
-                      <tr key={String(a.id ?? i)} className="hover:bg-surface">
-                        <td className="td font-mono text-xs text-steel-500">{i + 1}</td>
-                        <td className="td text-xs font-medium text-navy-900">{gol}</td>
-                        <td className="td font-mono text-xs text-steel-600">{String(a.kelompok ?? "-")}</td>
-                        <td className="td text-xs text-steel-600">{String(a.bulan ?? "-")}</td>
-                        <td className="td text-xs text-steel-600">{String(a.tahun ?? "-")}</td>
-                        <td className="td text-xs font-semibold">{fmtRupiah(num(a.nilai))}</td>
-                        <td className="td font-mono text-xs text-steel-600">{String(a.metode ?? "GL")}</td>
-                        <td className="td text-xs">{fmtRupiah(num(a.susutTahun))}</td>
-                        <td className="td text-xs text-steel-600">{fmtRupiah(Math.round(num(a.susutTahun) / 12))}</td>
-                        <td className="td font-mono text-[11px] text-steel-600">{beban}</td>
-                        <td className="td font-mono text-[11px] text-steel-600">{akum}</td>
-                        <td className="td">
-                          {!seed && (
-                            <div className="flex gap-1">
-                              <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => openAstEdit(a)} />
-                              <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => setDelAsset(a)} />
-                            </div>
-                          )}
+                    {filteredAset.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="p-8 text-center text-sm text-steel-400">
+                          {S.noAssetMatch}
                         </td>
                       </tr>
-                      );
-                    })}
+                    ) : (
+                      asetPager.slice(sortedAset).map(({ a, i }) => {
+                        const gol = String(a.nama ?? "");
+                        const beban = gol === "Bangunan" ? "6-021 C" : gol === "Alat Berat" ? "6-021 A" : gol === "Kendaraan" ? "6-021" : gol.includes("Mesin") ? "6-021 B" : "6-022";
+                        const akum = gol === "Bangunan" ? "1-270" : gol === "Alat Berat" ? "1-281" : gol === "Kendaraan" ? "1-280" : gol.includes("Mesin") ? "1-282" : "1-290";
+                        const seed = String(a.id ?? "").startsWith("AST-EX-");
+                        return (
+                          <tr key={String(a.id ?? i)} className="hover:bg-surface">
+                            <td className="td font-mono text-xs text-steel-500">{i + 1}</td>
+                            <td className="td text-xs font-medium text-navy-900">{gol}</td>
+                            <td className="td font-mono text-xs text-steel-600">{String(a.kelompok ?? "-")}</td>
+                            <td className="td text-xs text-steel-600">{String(a.bulan ?? "-")}</td>
+                            <td className="td text-xs text-steel-600">{String(a.tahun ?? "-")}</td>
+                            <td className="td text-xs font-semibold">{fmtRupiah(num(a.nilai))}</td>
+                            <td className="td font-mono text-xs text-steel-600">{String(a.metode ?? "GL")}</td>
+                            <td className="td text-xs">{fmtRupiah(num(a.susutTahun))}</td>
+                            <td className="td text-xs text-steel-600">{fmtRupiah(Math.round(num(a.susutTahun) / 12))}</td>
+                            <td className="td font-mono text-[11px] text-steel-600">{beban}</td>
+                            <td className="td font-mono text-[11px] text-steel-600">{akum}</td>
+                            <td className="td">
+                              {!seed && (
+                                <div className="flex gap-1">
+                                  <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => openAstEdit(a)} />
+                                  <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => setDelAsset(a)} />
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+              {asetPager.bar}
             </div>
           )}
 
