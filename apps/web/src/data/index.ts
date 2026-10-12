@@ -1034,6 +1034,8 @@ export interface BoQDoc {
   approvedAt?: string;
   note: string;
   total: number;
+  assigner?: string;
+  createdBy?: string;
 }
 
 export const seedBoqDocs: BoQDoc[] = [
@@ -1042,24 +1044,28 @@ export const seedBoqDocs: BoQDoc[] = [
     number: "BQ/RP-2026-003/001", revision: 0, status: "Digantikan",
     issuedAt: "2026-07-01", approvedBy: "Direktur Demo", approvedAt: "2026-07-20",
     supersededBy: "BQD-RP-2026-003-R1", note: "Surat awal sebelum revisi 1.", total: 732000000,
+    assigner: "Commercial Estimator", createdBy: "Commercial Estimator",
   },
   {
     id: "BQD-RP-2026-003-R1", branch: "Samarinda", projectId: "RP-2026-003",
     number: "BQ/RP-2026-003/001", revision: 1, status: "Disetujui",
     supersedes: "BQD-RP-2026-003-R0", issuedAt: "2026-08-01", approvedBy: "Direktur Demo", approvedAt: "2026-08-15",
     note: "Revisi 1 menyesuaikan harga coating.", total: 738000000,
+    assigner: "Commercial Estimator", createdBy: "Commercial Estimator",
   },
   {
     id: "BQD-NB-2025-012-R0", branch: "Samarinda", projectId: "NB-2025-012",
     number: "BQ/NB-2025-012/001", revision: 0, status: "Disetujui",
     issuedAt: "2025-11-01", approvedBy: "Direktur Demo", approvedAt: "2025-11-01",
     note: "Surat BoQ demo Rev 0.", total: 1390000000,
+    assigner: "Commercial Estimator", createdBy: "Commercial Estimator",
   },
   {
     id: "BQD-RP-2026-005-R0", branch: "Samarinda", projectId: "RP-2026-005",
     number: "BQ/RP-2026-005/001", revision: 0, status: "Disetujui",
     issuedAt: "2026-07-15", approvedBy: "Direktur Demo", approvedAt: "2026-07-15",
     note: "Surat BoQ demo Rev 0.", total: 320000000,
+    assigner: "Commercial Estimator", createdBy: "Commercial Estimator",
   },
 ];
 

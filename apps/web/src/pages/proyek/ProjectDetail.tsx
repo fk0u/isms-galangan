@@ -503,7 +503,50 @@ if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
      username agar tidak pernah tersimpan string kosong. */
   const sessionName = String(session?.name ?? "").trim() || String(session?.username ?? "").trim();
   const slots = data.dockSlots.filter((s) => s.project === pid);
-  const docs = data.documents.filter((d) => d.project === pid);
+  const docs = (() => {
+    const rawDocs = data.documents.filter((d) => d.project === pid);
+    const existingBoqIds = new Set(
+      rawDocs
+        .filter((d) => d.type === "BoQ" || d.boqDocId)
+        .map((d) => String(d.boqDocId ?? d.id).replace(/^DOC-/, "")),
+    );
+    const projectBoqDocs = (data.boqDocs ?? []).filter((b) => String(b.projectId ?? "") === pid);
+    const synthDocs: StoreItem[] = projectBoqDocs
+      .filter((b) => !existingBoqIds.has(String(b.id).replace(/^DOC-/, "")) && !rawDocs.some((d) => d.id === `DOC-${b.id}` || d.id === b.id))
+      .map((b) => ({
+        id: `DOC-${b.id}`,
+        title: `BoQ ${b.number} Rev ${b.revision}`,
+        type: "BoQ",
+        subType: Number(b.revision ?? 0) > 0 ? "Revisi BoQ" : "BoQ Proyek",
+        project: pid,
+        vessel: String(project.vessel ?? ""),
+        version: `Rev ${b.revision ?? 0}`,
+        status: b.status,
+        updated: b.issuedAt || todayISO(),
+        owner: b.assigner || b.createdBy || b.owner || "",
+        assigner: b.assigner || b.createdBy || b.owner || "",
+        boqDocId: b.id,
+        archived: b.status === "Digantikan",
+        docCopy: "Terkendali",
+      }));
+    return [...rawDocs, ...synthDocs].map((d) => {
+      if (d.type === "BoQ" || d.boqDocId) {
+        const cleanId = String(d.boqDocId ?? d.id).replace(/^DOC-/, "");
+        const b = projectBoqDocs.find((x) => x.id === d.boqDocId || x.id === cleanId || x.id === d.id);
+        if (b) {
+          const assigner = String(b.assigner || b.createdBy || d.assigner || d.owner || "");
+          return {
+            ...d,
+            status: b.status || d.status,
+            assigner: assigner || undefined,
+            owner: assigner || d.owner,
+            version: `Rev ${b.revision ?? 0}`,
+          };
+        }
+      }
+      return d;
+    });
+  })();
   /* PRJ-20: dokumen dikelompokkan per tipe (BoQ, Kontrak, Drawing, ...). */
   const docsByType = [...docs].sort((x, y) => String(x.type ?? "").localeCompare(String(y.type ?? "")));
   const TR = n_tree[locale];
@@ -2058,8 +2101,22 @@ const createWarranty = async (wbsTask?: string) => {
                         </span>
                       )}
                       <p className="text-xs text-steel-500">{d.id} · {d.type} · {d.version} · {d.updated}{fname !== "" ? ` · lampiran: ${fname}` : ""}</p>
+                      <p className="mt-1 text-xs text-steel-600">
+                        <span className="font-medium text-steel-700">{S.detAssignerLabel}:</span>{" "}
+                        {d.assigner ? String(d.assigner) : (d.type === "BoQ" && d.owner ? String(d.owner) : <span className="font-normal text-steel-400">-</span>)}
+                      </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      {d.type === "BoQ" && (
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs text-ocean-700 hover:bg-ocean-50"
+                          onClick={() => setTab("BoQ")}
+                          title={S.detGoToBoq}
+                        >
+                          {S.detGoToBoq}
+                        </button>
+                      )}
                       <button className="btn-secondary text-xs" aria-label={`${locale === "en" ? "Detail" : "Detail"}: ${d.title}`} onClick={() => setDocDetail(d)}>
                         <Eye className="h-3.5 w-3.5" /> {locale === "en" ? "Detail" : "Detail"}
                       </button>
@@ -2751,6 +2808,18 @@ const createWarranty = async (wbsTask?: string) => {
         subtitle={docDetail ? `${String(docDetail.id)} · ${String(docDetail.type)} · ${String(docDetail.version)}` : undefined}
         footer={<>
           <button className="btn-secondary" onClick={() => setDocDetail(null)}>{S.cancelBtn}</button>
+          {docDetail && docDetail.type === "BoQ" && (
+            <button
+              type="button"
+              className="btn-secondary text-ocean-700 hover:bg-ocean-50"
+              onClick={() => {
+                setDocDetail(null);
+                setTab("BoQ");
+              }}
+            >
+              {S.detGoToBoq}
+            </button>
+          )}
           {docDetail && (
             /* Excel tetap ada, tapi sebagai aksi kedua di dalam modal - bukan
                satu-satunya jalan melihat isi dokumen. */
@@ -2770,6 +2839,7 @@ const createWarranty = async (wbsTask?: string) => {
           const d = docDetail;
           const att = docAttachment(d);
           const revs = Array.isArray(d.revisions) ? (d.revisions as Array<Record<string, unknown>>) : [];
+          const assignerVal = String(d.assigner || (d.type === "BoQ" ? d.owner : "") || "");
           const fields: Array<[string, string]> = [
             [locale === "en" ? "Document ID" : "ID dokumen", String(d.id)],
             [locale === "en" ? "Title" : "Judul", String(d.title)],
@@ -2777,6 +2847,7 @@ const createWarranty = async (wbsTask?: string) => {
             [locale === "en" ? "Project" : "Proyek", pid],
             [locale === "en" ? "Version" : "Versi", String(d.version)],
             [locale === "en" ? "Status" : "Status", String(d.status)],
+            [S.detAssignerLabel, assignerVal ? assignerVal : "-"],
             [locale === "en" ? "Owner" : "Pemilik", String(d.owner)],
             [locale === "en" ? "Updated" : "Diperbarui", fmtTanggal(String(d.updated))],
             [locale === "en" ? "Copy" : "Salinan", String(d.docCopy ?? "Terkendali")],

@@ -127,7 +127,73 @@ export function normalizeNewDoc(data: Data): Data {
     revision: Number.isInteger(Number(data.revision)) ? Number(data.revision) : 0,
     status: "Draft",
     total: 0,
+    assigner: data.assigner ? String(data.assigner).trim() : (data.createdBy ? String(data.createdBy).trim() : undefined),
   };
+}
+
+/** Sinkronkan surat BoQ ke tabel documents agar selalu tampil di register Dokumen & Laporan. */
+export async function syncBoqDocToDocuments(id: string, boqData: Data, branch: string, actor?: string): Promise<void> {
+  const docId = `DOC-${id}`;
+  const now = new Date().toISOString();
+  const exists = await q<{ id: string; data: string }>("SELECT id, data FROM documents WHERE id = ?", [docId]);
+  const pr = await q<{ data: string }>("SELECT data FROM projects WHERE id = ?", [String(boqData.projectId ?? "")]);
+  let vessel = "";
+  try {
+    vessel = String((JSON.parse(pr[0]?.data ?? "{}") as Data).vessel ?? "");
+  } catch {
+    /* proyek tanpa data */
+  }
+
+  const assigner = String(boqData.assigner || boqData.createdBy || boqData.owner || (actor && actor !== "system" ? actor : "") || "");
+  const status = String(boqData.status ?? "Draft");
+  const rev = Number(boqData.revision ?? 0);
+  const title = `BoQ ${String(boqData.number ?? id)} Rev ${rev}`;
+
+  if (exists.length === 0) {
+    const docRecord: Data = {
+      title,
+      type: "BoQ",
+      subType: rev > 0 ? "Revisi BoQ" : "BoQ Proyek",
+      project: String(boqData.projectId ?? ""),
+      vessel,
+      version: `Rev ${rev}`,
+      status,
+      updated: now.slice(0, 10),
+      owner: assigner || actor || "",
+      assigner: assigner || "",
+      boqDocId: id,
+      archived: status === "Digantikan",
+      docCopy: "Terkendali",
+    };
+    await exec("INSERT INTO documents (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+      docId, branch, JSON.stringify(docRecord), now,
+    ]);
+  } else {
+    let prev: Data = {};
+    try {
+      prev = JSON.parse(exists[0].data ?? "{}") as Data;
+    } catch {
+      /* noop */
+    }
+    const updated: Data = {
+      ...prev,
+      title,
+      type: "BoQ",
+      subType: rev > 0 ? "Revisi BoQ" : "BoQ Proyek",
+      project: String(boqData.projectId ?? ""),
+      vessel: vessel || prev.vessel || "",
+      version: `Rev ${rev}`,
+      status,
+      updated: now.slice(0, 10),
+      owner: assigner || prev.owner || actor || "",
+      assigner: assigner || prev.assigner || "",
+      boqDocId: id,
+      archived: status === "Digantikan",
+    };
+    await exec("UPDATE documents SET data = ?, updated_at = ? WHERE id = ?", [
+      JSON.stringify(updated), now, docId,
+    ]);
+  }
 }
 
 export async function setDocStatus(id: string, to: string, actor: string, note = ""): Promise<Data> {
@@ -151,28 +217,15 @@ export async function setDocStatus(id: string, to: string, actor: string, note =
     if (target === "Disetujui" && prevId !== "") {
       const prev = await loadDoc(prevId);
       if (prev) {
+        const prevNext = { ...prev.data, status: "Digantikan", supersededBy: id };
         await exec("UPDATE boqDocs SET data = ?, updated_at = ? WHERE id = ?", [
-          JSON.stringify({ ...prev.data, status: "Digantikan", supersededBy: id }), now, prevId,
+          JSON.stringify(prevNext), now, prevId,
         ]);
+        await syncBoqDocToDocuments(prevId, prevNext, prev.row.branch, actor);
       }
     }
-    /* F3-C-04: surat yang disetujui otomatis masuk arsip Dokumen proyek
-       (tab Dokumen & Laporan). Id deterministik supaya persetujuan ulang
-       tidak menggandakan entri. */
-    if (target === "Disetujui") {
-      const docId = `DOC-${id}`;
-      const exists = await q<{ id: string }>("SELECT id FROM documents WHERE id = ?", [docId]);
-      if (exists.length === 0) {
-        const pr = await q<{ data: string }>("SELECT data FROM projects WHERE id = ?", [String(next.projectId ?? "")]);
-        let vessel = "";
-        try { vessel = String((JSON.parse(pr[0]?.data ?? "{}") as Data).vessel ?? ""); } catch { /* proyek tanpa data */ }
-        await exec("INSERT INTO documents (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [docId, doc.row.branch, JSON.stringify({
-          title: `BoQ ${String(next.number ?? id)} Rev ${String(next.revision ?? 0)}`, type: "BoQ",
-          project: String(next.projectId ?? ""), vessel, version: `Rev ${String(next.revision ?? 0)}`,
-          status: "Disetujui", updated: now.slice(0, 10), owner: actor, boqDocId: id,
-        }), now]);
-      }
-    }
+    /* Surat BoQ semua status (Draft, Diajukan, Disetujui, Digantikan) disinkronkan ke register Dokumen */
+    await syncBoqDocToDocuments(id, next, doc.row.branch, actor);
     return { id, ...next };
   });
 }
@@ -199,6 +252,7 @@ export async function reviseDoc(id: string): Promise<{ id: string; revision: num
     const nextDoc: Data = {
       projectId: doc.data.projectId, number: doc.data.number, revision, status: "Draft",
       supersedes: id, note: "", total: 0,
+      assigner: doc.data.assigner || doc.data.createdBy || doc.data.owner || undefined,
     };
     await exec("INSERT INTO boqDocs (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
       newDocId, doc.row.branch, JSON.stringify(nextDoc), now,
@@ -213,9 +267,11 @@ export async function reviseDoc(id: string): Promise<{ id: string; revision: num
       ]);
       copied += 1;
     }
+    const finalDoc = { ...nextDoc, total: await docTotal(newDocId) };
     await exec("UPDATE boqDocs SET data = ?, updated_at = ? WHERE id = ?", [
-      JSON.stringify({ ...nextDoc, total: await docTotal(newDocId) }), now, newDocId,
+      JSON.stringify(finalDoc), now, newDocId,
     ]);
+    await syncBoqDocToDocuments(newDocId, finalDoc, doc.row.branch);
     return { id: newDocId, revision, items: copied };
   });
 }

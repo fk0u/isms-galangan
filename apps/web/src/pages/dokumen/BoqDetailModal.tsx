@@ -51,6 +51,7 @@ export function BoqDetailModal({
   const approvedBy = boqDoc?.approvedBy ? String(boqDoc.approvedBy) : undefined;
   const approvedAt = boqDoc?.approvedAt ? String(boqDoc.approvedAt) : undefined;
   const note = String(boqDoc?.note ?? "");
+  const assigner = String(boqDoc?.assigner || boqDoc?.createdBy || doc?.assigner || (doc?.type === "BoQ" ? doc?.owner : "") || "");
 
   // Hitung total dari items atau boqDoc
   const computedItems: BoqPrintItem[] = useMemo(() => {
@@ -217,7 +218,7 @@ export function BoqDetailModal({
             </button>
             {projectId && projectId !== "-" && (
               <a
-                href={`/proyek?id=${encodeURIComponent(projectId)}&tab=BoQ`}
+                href={`/proyek/${encodeURIComponent(projectId)}?tab=BoQ`}
                 className="btn-secondary inline-flex items-center gap-1.5 text-xs text-ocean-600 hover:text-ocean-700"
                 target="_blank"
                 rel="noreferrer"
@@ -263,6 +264,12 @@ export function BoqDetailModal({
                   <span>{isEn ? "Pending Approval" : "Menunggu Persetujuan"}</span>
                 </>
               )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-medium text-steel-500">{isEn ? "Assigner" : "Penugas"}</dt>
+            <dd className="mt-0.5 font-semibold text-navy-900">
+              {assigner ? assigner : <span className="font-normal text-steel-400">-</span>}
             </dd>
           </div>
           <div>

@@ -9,7 +9,7 @@ import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate }
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
-import { boqLockError, normalizeNewDoc } from "../boqDocs.js";
+import { boqLockError, normalizeNewDoc, syncBoqDocToDocuments } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { projectManagerError, stampRole, transferError } from "../domainGuards.js";
@@ -591,6 +591,9 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       if (overlapError) return reply.status(409).send(fail(overlapError, "CONFLICT"));
     } else {
       await persist();
+    }
+    if (table === "boqDocs") {
+      await syncBoqDocToDocuments(id as string, rowData, branch, requestActor(req));
     }
     return reply.status(201).send(ok({ id, branch, data: rowData, updated_at: now }));
   });
