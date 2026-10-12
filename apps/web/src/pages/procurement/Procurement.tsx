@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut, ChartTooltip, Modal, Field, FormGrid, ConfirmModal, toast, EmptyState, SortTh, toggleSort, sortRows, usePager,
@@ -37,11 +37,13 @@ import { itemPriceTrack, poIsMultiItem, poOpenQty, poPendingReassign, usePoActio
 import { useAuth } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
+import { warehouseNames } from "../../utils/warehouse";
+
 /* Tab baru F3-J-01/F3-J-04 punya pencarian sendiri: filter bersama disembunyikan. */
 const OWN_FILTER_TABS = new Set(["Permintaan", "Persetujuan Service"]);
 
 /* Baris PO string-state (pola smallForm): simpan string, Number() saat validasi. */
-interface POLine { name: string; qty: string; unit: string; price: string; spec?: string; need?: string }
+interface POLine { name: string; qty: string; unit: string; price: string; spec?: string; need?: string; itemId?: string; receivedQty?: number }
 interface Quote { vendor: string; price: number; eta: string }
 interface Approval { level: string; by: string; date: string }
 interface VendorScore { po: string; q: number; d: number; p: number; score: number; date: string }
@@ -362,8 +364,8 @@ export default function Procurement() {
 
   /* ---- PO Besar ---- */
   const [showBig, setShowBig] = useState(false);
-  const [bigForm, setBigForm] = useState({ tujuan: "kapal" as "kapal" | "stok", prId: "", itemId: "", vendor: "", project: "", vessel: "", eta: "", includePpn: true, override: false, overrideReason: "" });
-  const [bigLines, setBigLines] = useDraftState<POLine[]>("isms.draft.procurement.bigLines", [{ name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "" }]);
+  const [bigForm, setBigForm] = useState({ tujuan: "kapal" as "kapal" | "stok", warehouse: "", prId: "", vendor: "", project: "", vessel: "", eta: "", includePpn: true, override: false, overrideReason: "" });
+  const [bigLines, setBigLines] = useDraftState<POLine[]>("isms.draft.procurement.bigLines", [{ name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "", itemId: "" }]);
   const [vCatF, setVCatF] = useState("Semua");
   const [poDetail, setPoDetail] = useState<StoreItem | null>(null);
 
@@ -401,20 +403,12 @@ export default function Procurement() {
   const [reassignFor, setReassignFor] = useState<StoreItem | null>(null);
   const [reassignVendor, setReassignVendor] = useState("");
   const [reassignPrice, setReassignPrice] = useState("");
-  const [recvItem, setRecvItem] = useState("");
-  const [recvQty, setRecvQty] = useState("");
+  const [recvLines, setRecvLines] = useState<{ name: string; itemId: string; orderedQty: number; receivedQty: number; openQty: number; qtyToReceive: string; unit: string; spec?: string }[]>([]);
+  const [recvWarehouse, setRecvWarehouse] = useState("");
   const [recvNoFaktur, setRecvNoFaktur] = useState("");
   const [recvTglFaktur, setRecvTglFaktur] = useState("");
   const [recvDendaPct, setRecvDendaPct] = useState("0.1");
-  const [inventoryPickerQuery, setInventoryPickerQuery] = useState("");
-  const [inventoryPickerPage, setInventoryPickerPage] = useState(1);
-  const [inventoryPickerRows, setInventoryPickerRows] = useState<StoreItem[]>([]);
-  const [inventoryPickerTotal, setInventoryPickerTotal] = useState(0);
-  const [inventoryPickerPages, setInventoryPickerPages] = useState(1);
-  const [inventoryPickerLoading, setInventoryPickerLoading] = useState(false);
   const [inventoryLookupRows, setInventoryLookupRows] = useState<StoreItem[]>([]);
-  const inventoryPickerCacheRef = useRef(new Map<string, { at: number; rows: StoreItem[]; total: number; pages: number }>());
-  const inventoryPickerRequestRef = useRef(0);
   const [retPo, setRetPo] = useState<StoreItem | null>(null);
   const [retQty, setRetQty] = useState("");
   const [retNote, setRetNote] = useState("");
@@ -518,92 +512,11 @@ export default function Procurement() {
     }
   }, [branch, inBranch, inventoryChoices, rememberInventory]);
 
-  const inventoryPickerOpen = showBig || recvPo !== null;
   useEffect(() => {
-    if (!inventoryPickerOpen) return;
-    let active = true;
-    const requestId = ++inventoryPickerRequestRef.current;
-    const query = inventoryPickerQuery.trim();
-    const pageNo = inventoryPickerPage;
-    const branchKey = branch && branch !== "SEMUA" ? branch : "";
-    const cacheKey = `${sessionGeneration}|${branchKey}|${query.toLocaleLowerCase()}|${pageNo}`;
-    const cached = inventoryPickerCacheRef.current.get(cacheKey);
-    if (cached && Date.now() - cached.at < 30_000) {
-      setInventoryPickerRows(cached.rows);
-      setInventoryPickerTotal(cached.total);
-      setInventoryPickerPages(cached.pages);
-      setInventoryPickerLoading(false);
-      return () => { active = false; };
-    }
-
-    const timer = window.setTimeout(() => {
-      setInventoryPickerLoading(true);
-      const load = async (): Promise<void> => {
-        let rows: StoreItem[];
-        let total: number;
-        let pages: number;
-        try {
-          if (!isBackendConfigured() || !getJwt()) throw new Error("offline");
-          const repository = remoteRepository("inventory");
-          const result = await repository.listPaged?.({
-            q: query,
-            page: pageNo,
-            size: 25,
-            ...(branchKey ? { branch: branchKey } : {}),
-          });
-          if (!result) throw new Error("Paginasi inventory tidak tersedia");
-          rows = result.rows;
-          total = result.total;
-          pages = result.pages;
-        } catch (error) {
-          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-            rows = [];
-            total = 0;
-          } else {
-            const needle = query.toLocaleLowerCase();
-            const matched = invList.filter((item) => !needle || `${item.name ?? ""} ${item.sku ?? ""} ${item.code ?? ""}`.toLocaleLowerCase().includes(needle));
-            total = matched.length;
-            rows = matched.slice((pageNo - 1) * 25, pageNo * 25);
-          }
-          pages = Math.max(1, Math.ceil(total / 25));
-        }
-        if (!active || requestId !== inventoryPickerRequestRef.current) return;
-        inventoryPickerCacheRef.current.set(cacheKey, { at: Date.now(), rows, total, pages });
-        setInventoryPickerRows(rows);
-        setInventoryPickerTotal(total);
-        setInventoryPickerPages(pages);
-        rememberInventory(rows);
-        setInventoryPickerLoading(false);
-      };
-      void load();
-    }, 250);
-
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [inventoryPickerOpen, inventoryPickerQuery, inventoryPickerPage, branch, invList, rememberInventory, sessionGeneration]);
-
-  useEffect(() => {
-    inventoryPickerCacheRef.current.clear();
-  }, [data.inventory]);
-
-  useEffect(() => {
-    inventoryPickerCacheRef.current.clear();
     setInventoryLookupRows([]);
-    setInventoryPickerRows([]);
     setShowBig(false);
     setRecvPo(null);
-    setRecvItem("");
-    setBigForm((previous) => ({ ...previous, itemId: "" }));
   }, [sessionGeneration]);
-
-  const pickerOptions = useMemo(() => {
-    const selectedId = showBig ? bigForm.itemId : recvItem;
-    const selected = inventoryChoices.find((item) => String(item.id) === selectedId);
-    const rows = selected ? [...inventoryPickerRows, selected] : inventoryPickerRows;
-    return [...new Map(rows.map((item) => [String(item.id), item])).values()];
-  }, [bigForm.itemId, inventoryChoices, inventoryPickerRows, recvItem, showBig]);
 
   const bigList = purchaseOrders.filter((p) => p.poType !== "Kecil");
   const smallList = purchaseOrders.filter((p) => p.poType === "Kecil");
@@ -761,12 +674,12 @@ export default function Procurement() {
   const saveBig = async () => {
     try {
     if (!bigForm.prId) { toast(S.tPrWajib, "info"); return; }
-    const invItem = await ensureInventoryRow(bigForm.itemId, pickerOptions.find((i) => String(i.id) === bigForm.itemId)?.name ?? "");
-    if (!invItem) { toast(S.tItemInv, "info"); return; }
     if (!bigForm.vendor) { toast(S.tVendorWajib, "info"); return; }
     if (bigForm.tujuan === "kapal") {
       if (!bigForm.project) { toast(S.tKapalProyek, "info"); return; }
       if (!bigForm.vessel.trim()) { toast(S.tKapalUtk, "info"); return; }
+    } else {
+      if (!bigForm.warehouse.trim()) { toast(S.tGudangWajib, "info"); return; }
     }
     if (!bigForm.eta) { toast(S.tEtaWajib, "info"); return; }
     if (bigLines.length === 0) { toast(S.tMinBaris, "info"); return; }
@@ -784,11 +697,25 @@ export default function Procurement() {
     const pr = requisitions.find((r) => r.id === bigForm.prId);
     const docNo = sbPoNumber(nextPoSeq());
     const isStok = bigForm.tujuan === "stok";
+    const primaryItemName = bigLines.map((l) => l.name.trim()).join(", ");
+    const primaryItemId = bigLines.find((l) => l.itemId)?.itemId || "";
     const created = await add("purchaseOrders", {
-      poType: "Besar", item: invItem.name, itemId: invItem.id, vendor: bigForm.vendor,
+      poType: "Besar", item: primaryItemName, itemId: primaryItemId, vendor: bigForm.vendor,
       req: bigForm.prId, amount: bigTotal, qty: bigLines.reduce((s, l) => s + Number(l.qty), 0),
-      lines: bigLines.map((l) => ({ name: l.name.trim(), qty: Number(l.qty), unit: l.unit, price: Number(l.price), spec: (l.spec ?? "").trim(), need: (l.need ?? "").trim() })),
-      project: isStok ? "-" : (bigForm.project || "-"), vessel: isStok ? "" : bigForm.vessel.trim(), eta: bigForm.eta || "",
+      lines: bigLines.map((l) => ({
+        name: l.name.trim(),
+        itemId: l.itemId || "",
+        qty: Number(l.qty),
+        unit: l.unit,
+        price: Number(l.price),
+        receivedQty: 0,
+        spec: (l.spec ?? "").trim(),
+        need: (l.need ?? "").trim(),
+      })),
+      project: isStok ? "-" : (bigForm.project || "-"),
+      vessel: isStok ? "" : bigForm.vessel.trim(),
+      warehouse: isStok ? bigForm.warehouse.trim() : "",
+      eta: bigForm.eta || "",
       docNo, includePpn: bigForm.includePpn, tujuan: bigForm.tujuan,
       receivedQty: 0, returnedQty: 0, status: "Draft", date: todayISO(), revisi: "",
       amendments: [], approvals: [], overrideReason: bigOver ? bigForm.overrideReason.trim() : "",
@@ -796,8 +723,8 @@ export default function Procurement() {
     if (pr && pr.status === "Disetujui") await update("requisitions", pr.id, { status: "Sudah PO" });
     toast(S.tBigCreated.replace("{a}", created.id).replace("{b}", docNo));
     setShowBig(false);
-    setBigForm({ tujuan: "kapal", prId: "", itemId: "", vendor: "", project: "", vessel: "", eta: "", includePpn: true, override: false, overrideReason: "" });
-    setBigLines([{ name: "", qty: "1", unit: "pcs", price: "" }]);
+    setBigForm({ tujuan: "kapal", warehouse: "", prId: "", vendor: "", project: "", vessel: "", eta: "", includePpn: true, override: false, overrideReason: "" });
+    setBigLines([{ name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "", itemId: "" }]);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1128,12 +1055,44 @@ export default function Procurement() {
   /* ============ TERIMA & RETUR (qty persis) ============ */
   const openRecv = (po: StoreItem) => {
     setRecvPo(po);
-    setRecvItem(po.itemId ?? "");
-    setInventoryPickerQuery(String(po.item ?? ""));
-    setInventoryPickerPage(1);
-    setRecvQty(Number(po.qty || 0) > 0 ? String(poOpenQty(po)) : "");
+    const rawLines = Array.isArray(po.lines) && po.lines.length > 0 ? (po.lines as Record<string, unknown>[]) : [];
+    if (rawLines.length > 0) {
+      setRecvLines(
+        rawLines.map((l) => {
+          const oQty = Number(l.qty || 0);
+          const rQty = Number(l.receivedQty || 0);
+          const rem = Math.max(0, oQty - rQty);
+          return {
+            name: String(l.name || ""),
+            itemId: String(l.itemId || ""),
+            orderedQty: oQty,
+            receivedQty: rQty,
+            openQty: rem,
+            qtyToReceive: String(rem),
+            unit: String(l.unit || "pcs"),
+            spec: l.spec ? String(l.spec) : undefined,
+          };
+        }),
+      );
+    } else {
+      const oQty = Number(po.qty || 0);
+      const rQty = Number(po.receivedQty || 0);
+      const rem = poOpenQty(po);
+      setRecvLines([
+        {
+          name: String(po.item || ""),
+          itemId: String(po.itemId || ""),
+          orderedQty: oQty,
+          receivedQty: rQty,
+          openQty: rem,
+          qtyToReceive: oQty > 0 ? String(rem) : "",
+          unit: String(po.unit || "pcs"),
+        },
+      ]);
+    }
+    setRecvWarehouse(String(po.warehouse || (data.warehouses?.[0]?.name ?? "")));
     setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
-    setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : "");
+    setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : todayISO());
     setRecvDendaPct("0.1");
   };
 
@@ -1168,72 +1127,93 @@ export default function Procurement() {
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
-  /* F3-J-02: status PO (Diterima / Diterima Sebagian / Dibatalkan Sebagian)
-     dihitung dari kuantitas, bukan dipilih pengguna. Stok, movement, status,
-     dan pemenuhan permintaan proyek berjalan lewat usePoActions().receive
-     (endpoint transaksional saat tersambung server). */
+  const totalRecvQty = recvLines.reduce((s, l) => s + (Number(l.qtyToReceive) || 0), 0);
+
   const confirmRecv = async () => {
     if (!recvPo) return;
-    const qty = Number(recvQty);
-    if (!qty || qty <= 0) { toast(S.tRecvQty, "info"); return; }
-    const orderedQty = Number(recvPo.qty || 0);
-    if (orderedQty > 0 && qty > poOpenQty(recvPo)) { toast(S.tRecvOver.replace("{a}", String(orderedQty)).replace("{b}", String(Number(recvPo.receivedQty || 0) + Number(recvPo.cancelledQty || 0))), "info"); return; }
     const isBig = recvPo.poType !== "Kecil";
     if (isBig && (!recvNoFaktur.trim() || !recvTglFaktur)) { toast(S.tFakturWajib, "info"); return; }
     if (!isBig && !recvNoFaktur.trim()) { toast(S.tNotaWajib, "info"); return; }
+    if (totalRecvQty <= 0) { toast(S.tMinOneItem, "info"); return; }
+
+    for (const rl of recvLines) {
+      const q = Number(rl.qtyToReceive);
+      if (q > 0 && q > rl.openQty) {
+        toast(`${rl.name}: Melebihi sisa item (${rl.openQty})`, "info");
+        return;
+      }
+    }
+
     try {
-    const invItem = await ensureInventoryRow(recvItem, pickerOptions.find((i) => String(i.id) === recvItem)?.name ?? String(recvPo.item ?? ""));
-    if (!invItem) { toast(isBig ? S.tPilihItem : S.tKecilItem, "info"); return; }
-    /* Denda: hari telat × % per hari dari nilai PO, dibatasi 5%. */
-    const prevDenda = Number(recvPo.dendaRp || 0);
-    let dendaRp = prevDenda;
-    const late = lateDaysOf(recvPo);
-    const pct = Math.min(5, Math.max(0, Number(recvDendaPct) || 0));
-    if (prevDenda <= 0 && late > 0 && pct > 0) {
-      dendaRp = Math.round(Math.min(Number(recvPo.amount || 0) * 0.05, Number(recvPo.amount || 0) * (pct / 100) * late));
-    }
-    const dendaBaru = Math.max(0, dendaRp - prevDenda);
-    const outcome = await poActions.receive(recvPo, {
-      qty, itemId: invItem.id, noFaktur: recvNoFaktur.trim(), tglFaktur: recvTglFaktur, dendaRp, actor: user?.name,
-    });
-    /* Auto-AP dari penerimaan (3-way match PO-terima-invoice): hutang vendor terbentuk saat terima.
-       Idempoten: kunci po PERSIS sama dengan yang ditulis ("ID / docNo"), dicek ke
-       payables segar; sudah ada → toast info + lewati insert. */
-    const poKey = recvPo.docNo ? `${recvPo.id} / ${recvPo.docNo}` : String(recvPo.id);
-    const apExists = (await freshPayables(data.payables ?? [])).some((a) => String(a.po ?? "") === poKey);
-    if (apExists && Number(recvPo.amount || 0) > 0) {
-      toast(locale === "en" ? `Payable ${poKey} already exists - skipping duplicate entry` : `Hutang ${poKey} sudah ada - lewati pencatatan ganda`, "info");
-    }
-    if (!apExists && Number(recvPo.amount || 0) > 0) {
-      const poAmount = Number(recvPo.amount || 0);
-      const apAmt = orderedQty > 0 ? Math.round((poAmount * qty) / orderedQty) : poAmount;
-      const apTotal = apAmt + dendaBaru;
-      const dueDate = (() => {
-        const t = Date.parse(recvTglFaktur || todayISO());
-        if (Number.isNaN(t)) return todayISO();
-        return new Date(t + 30 * 86400000).toISOString().slice(0, 10);
-      })();
-      await add("payables", {
-        v: String(recvPo.vendor ?? ""), kodePembantu: String(recvPo.vendor ?? ""),
-        po: poKey,
-        openAwal: 0, amt: apTotal, due: dueDate,
-        pph: "2%", st: "Belum Dibayar", vessel: String(recvPo.vessel ?? ""),
-        item: String(recvPo.item ?? ""), pay1: 0, pay2: 0,
-        noFaktur: recvNoFaktur.trim(), tglFaktur: recvTglFaktur,
-      }, { action: "auto-hutang dari penerimaan barang", target: `${recvPo.id} (3-way match)`, module: "Procurement" });
-      log("auto-hutang penerimaan barang", `${recvPo.id} → hutang ${recvPo.vendor} ${fmtRupiah(apTotal)}`, "Procurement");
-    }
-    if (late > 0 && dendaRp > 0) log("denda keterlambatan", `${recvPo.id}: telat ${late} hari → ${fmtRupiah(dendaRp)}`, "Procurement");
-    toast(`${recvPo.id} ${outcome.status === "Diterima" ? S.tRecvPenuh : S.tRecvSebagian}${S.tRecvStok.replace("{a}", invItem.name).replace("{b}", String(qty))}${dendaRp > 0 ? S.tRecvDenda.replace("{n}", fmtRupiah(dendaRp)) : ""}`);
-    if (outcome.fulfilled.length > 0) {
-      toast(n_mr[locale].poAutoFulfilled.replace("{n}", outcome.fulfilled.map((f) => f.id).join(", ")));
-    }
-    setRecvPo(null);
-    setRecvItem("");
-    setRecvQty("");
-    setRecvNoFaktur("");
-    setRecvTglFaktur("");
-    setRecvDendaPct("0.1");
+      const late = lateDaysOf(recvPo);
+      const prevDenda = Number(recvPo.dendaRp || 0);
+      let dendaRp = prevDenda;
+      const pct = Math.min(5, Math.max(0, Number(recvDendaPct) || 0));
+      if (prevDenda <= 0 && late > 0 && pct > 0) {
+        dendaRp = Math.round(Math.min(Number(recvPo.amount || 0) * 0.05, Number(recvPo.amount || 0) * (pct / 100) * late));
+      }
+      const dendaBaru = Math.max(0, dendaRp - prevDenda);
+
+      const finalLines = [];
+      for (const rl of recvLines) {
+        const q = Number(rl.qtyToReceive);
+        if (q > 0) {
+          let boundItemId = rl.itemId;
+          if (!boundItemId) {
+            const invItem = await ensureInventoryRow("", rl.name);
+            boundItemId = invItem ? String(invItem.id) : "";
+          }
+          finalLines.push({
+            name: rl.name,
+            itemId: boundItemId,
+            qty: q,
+          });
+        }
+      }
+
+      const outcome = await poActions.receive(recvPo, {
+        qty: totalRecvQty,
+        itemId: finalLines[0]?.itemId || String(recvPo.itemId || ""),
+        lines: finalLines,
+        noFaktur: recvNoFaktur.trim(),
+        tglFaktur: recvTglFaktur,
+        dendaRp,
+        actor: user?.name,
+      });
+
+      const poKey = recvPo.docNo ? `${recvPo.id} / ${recvPo.docNo}` : String(recvPo.id);
+      const apExists = (await freshPayables(data.payables ?? [])).some((a) => String(a.po ?? "") === poKey);
+      if (!apExists && Number(recvPo.amount || 0) > 0) {
+        const poAmount = Number(recvPo.amount || 0);
+        const orderedQty = Number(recvPo.qty || 0);
+        const apAmt = orderedQty > 0 ? Math.round((poAmount * totalRecvQty) / orderedQty) : poAmount;
+        const apTotal = apAmt + dendaBaru;
+        const dueDate = (() => {
+          const t = Date.parse(recvTglFaktur || todayISO());
+          if (Number.isNaN(t)) return todayISO();
+          return new Date(t + 30 * 86400000).toISOString().slice(0, 10);
+        })();
+        await add("payables", {
+          v: String(recvPo.vendor ?? ""), kodePembantu: String(recvPo.vendor ?? ""),
+          po: poKey,
+          openAwal: 0, amt: apTotal, due: dueDate,
+          pph: "2%", st: "Belum Dibayar", vessel: String(recvPo.vessel ?? ""),
+          item: String(recvPo.item ?? ""), pay1: 0, pay2: 0,
+          noFaktur: recvNoFaktur.trim(), tglFaktur: recvTglFaktur,
+        }, { action: "auto-hutang dari penerimaan barang", target: `${recvPo.id} (3-way match)`, module: "Procurement" });
+        log("auto-hutang penerimaan barang", `${recvPo.id} → hutang ${recvPo.vendor} ${fmtRupiah(apTotal)}`, "Procurement");
+      }
+
+      if (late > 0 && dendaRp > 0) log("denda keterlambatan", `${recvPo.id}: telat ${late} hari → ${fmtRupiah(dendaRp)}`, "Procurement");
+      toast(`${recvPo.id} ${outcome.status === "Diterima" ? S.tRecvPenuh : S.tRecvSebagian} (${fmtJumlah(totalRecvQty)} item)${dendaRp > 0 ? S.tRecvDenda.replace("{n}", fmtRupiah(dendaRp)) : ""}`);
+      if (outcome.fulfilled.length > 0) {
+        toast(n_mr[locale].poAutoFulfilled.replace("{n}", outcome.fulfilled.map((f) => f.id).join(", ")));
+      }
+      setRecvPo(null);
+      setRecvLines([]);
+      setRecvWarehouse("");
+      setRecvNoFaktur("");
+      setRecvTglFaktur("");
     } catch (e) {
       toast(e instanceof Error && e.message ? e.message : S.tRecvFail.replace("{n}", recvPo.id), "info");
     }
@@ -1532,7 +1512,7 @@ const sparkVendors = useMemo(() => {
               <>
                 <button className="btn-primary-gradient" onClick={() => setShowPr(true)}><Plus className="h-4 w-4" /> {locale === "en" ? "Request goods" : "Minta Barang"}</button>
                 {tab === "PO Besar (Kantor)" && (
-                  <button className="btn-secondary text-xs" onClick={() => { setInventoryPickerQuery(""); setInventoryPickerPage(1); setShowBig(true); }}>{S.btnCreateBig}</button>
+                  <button className="btn-secondary text-xs" onClick={() => setShowBig(true)}>{S.btnCreateBig}</button>
                 )}
                 {tab === "PO Kecil (Workshop)" && (
                   <button className="btn-secondary text-xs" onClick={() => setShowSmall(true)}>{S.btnCreateSmall}</button>
@@ -2223,7 +2203,7 @@ const sparkVendors = useMemo(() => {
       {/* Modal PO Besar */}
       <Modal open={showBig} onClose={() => setShowBig(false)} title={S.mBigT} subtitle={S.mBigS}
         wide footer={<><button className="btn-secondary" onClick={() => setShowBig(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveBig}>{S.btnSimpanBig}</AsyncButton></>}>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={S.ariaTujuan}>
             {(["kapal", "stok"] as const).map((t) => (
               <label key={t} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${bigForm.tujuan === t ? "border-navy-700 bg-navy-50 text-navy-900" : "border-steel-200 text-steel-600"}`}>
@@ -2232,67 +2212,80 @@ const sparkVendors = useMemo(() => {
               </label>
             ))}
           </div>
+
           <FormGrid>
+            {bigForm.tujuan === "kapal" ? (
+              <>
+                <Field label={S.proyekBudget} hint={S.hintWajibKapal}>
+                  <select className="input" value={bigForm.project} onChange={(e) => setBigForm({ ...bigForm, project: e.target.value })}>
+                    <option value="">{S.optTanpaProyek}</option>
+                    {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
+                  </select>
+                </Field>
+                <Field label={S.fUtk} hint={S.hintUtkContoh}>
+                  <input className="input" value={bigForm.vessel} onChange={(e) => setBigForm({ ...bigForm, vessel: e.target.value })} placeholder={S.phUtk} />
+                </Field>
+              </>
+            ) : (
+              <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
+                <select className="input" value={bigForm.warehouse} onChange={(e) => setBigForm({ ...bigForm, warehouse: e.target.value })}>
+                  <option value="">{S.optPilihGudang}</option>
+                  {warehouseNames(data.warehouses ?? []).map((w) => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label={S.fPrDisetujui} hint={S.hintPrWajib}>
               <select className="input" value={bigForm.prId} onChange={(e) => setBigForm({ ...bigForm, prId: e.target.value })}>
                 <option value="">{S.optPilihPr}</option>
                 {approvedPRs.map((r) => <option key={r.id} value={r.id}>{r.id} - {r.item} · {fmtRupiah(r.amount)}</option>)}
               </select>
             </Field>
-            <Field label={S.fItemInv} hint={S.hintItemWajib}>
-              <input
-                type="search"
-                className="input mb-2"
-                value={inventoryPickerQuery}
-                onChange={(e) => { setInventoryPickerQuery(e.target.value); setInventoryPickerPage(1); }}
-                placeholder={S.invSearchPh}
-                aria-label={S.invSearchAria}
-              />
-              <select className="input" value={bigForm.itemId} onChange={(e) => setBigForm({ ...bigForm, itemId: e.target.value })}>
-                <option value="">{S.optPilihItem}</option>
-                {pickerOptions.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
-              </select>
-              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-steel-500">
-                <span>{inventoryPickerLoading ? S.invLoading : inventoryPickerRows.length === 0 ? S.invEmpty : S.invPage.replace("{a}", String(inventoryPickerPage)).replace("{b}", String(inventoryPickerPages)).replace("{n}", fmtJumlah(inventoryPickerTotal))}</span>
-                <div className="flex shrink-0 gap-1">
-                  <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage <= 1} onClick={() => setInventoryPickerPage((page) => Math.max(1, page - 1))}>{S.invPrev}</button>
-                  <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage >= inventoryPickerPages} onClick={() => setInventoryPickerPage((page) => Math.min(inventoryPickerPages, page + 1))}>{S.invNext}</button>
-                </div>
-              </div>
-            </Field>
           </FormGrid>
-          <FormGrid>
-            <Field label={S.vendor}>
-              <select className="input" value={bigForm.vendor} onChange={(e) => setBigForm({ ...bigForm, vendor: e.target.value })}>
-                <option value="">{S.optPilihVendor}</option>
-                {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}{payungOf(v) ? ` (Payung: ${fmtRupiah(payungOf(v)!.plafon)})` : ""}</option>)}
-              </select>
-            </Field>
-            <Field label={S.proyekBudget} hint={bigForm.tujuan === "kapal" ? S.hintWajibKapal : S.hintStokAuto}>
-              <select className="input" value={bigForm.project} disabled={bigForm.tujuan === "stok"} onChange={(e) => setBigForm({ ...bigForm, project: e.target.value })}>
-                <option value="">{S.optTanpaProyek}</option>
-                {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
-            </Field>
-          </FormGrid>
-          <Field label={S.etaWajib}><input type="date" className="input" value={bigForm.eta} onChange={(e) => setBigForm({ ...bigForm, eta: e.target.value })} /></Field>
-          <FormGrid>
-            <Field label={S.fUtk} hint={bigForm.tujuan === "kapal" ? S.hintUtkContoh : S.hintUtkStok}><input className="input" value={bigForm.vessel} disabled={bigForm.tujuan === "stok"} onChange={(e) => setBigForm({ ...bigForm, vessel: e.target.value })} placeholder={S.phUtk} /></Field>
-            <Field label={S.harga} hint={S.hintHarga.replace("{n}", String(ppnRate))}>
-              <select className="input" value={bigForm.includePpn ? "include" : "exclude"} onChange={(e) => setBigForm({ ...bigForm, includePpn: e.target.value === "include" })}>
-                <option value="include">{S.optIncludePpn.replace("{n}", String(ppnRate))}</option>
-                <option value="exclude">{S.optExcludePpn}</option>
-              </select>
-            </Field>
-          </FormGrid>
-          <p className="text-xs text-steel-500">{S.docSb} <span className="font-mono">{sbPoNumber(nextPoSeq())}</span> {S.docSbFmt}</p>
-          <div>
-            <p className="label">{S.barisMin}</p>
+
+          {/* Editor baris item di BAGIAN ATAS form */}
+          <div className="rounded-xl border border-steel-200 bg-steel-50/50 p-3">
+            <p className="label !mb-2">{S.barisMin}</p>
+            <datalist id="inv-item-catalog-list">
+              {(data.inventory ?? []).map((inv) => (
+                <option key={inv.id} value={inv.name}>{inv.name} · stok {fmtJumlah(Number(inv.stock))} {inv.unit}</option>
+              ))}
+            </datalist>
             <div className="space-y-2">
               {bigLines.map((l, idx) => (
-                <div key={idx} className="rounded-xl border border-steel-200 p-2">
+                <div key={idx} className="rounded-xl border border-steel-200 bg-white p-2.5 shadow-sm">
                   <div className="grid grid-cols-12 gap-2">
-                    <input className="input col-span-4" placeholder={S.phNamaBaris} value={l.name} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, name: e.target.value } : x)))} />
+                    <div className="col-span-4">
+                      <input
+                        list="inv-item-catalog-list"
+                        className="input w-full"
+                        placeholder={S.phNamaBaris}
+                        value={l.name}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const matched = (data.inventory ?? []).find((i) => String(i.name ?? "").toLowerCase() === val.trim().toLowerCase());
+                          setBigLines((s) =>
+                            s.map((x, i) =>
+                              i === idx
+                                ? {
+                                    ...x,
+                                    name: val,
+                                    ...(matched
+                                      ? {
+                                          itemId: String(matched.id),
+                                          unit: String(matched.unit || x.unit || "pcs"),
+                                          price: matched.cost ? String(matched.cost) : x.price,
+                                          spec: x.spec || (matched.spec ? String(matched.spec) : ""),
+                                        }
+                                      : {}),
+                                  }
+                                : x,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
                     <input className="input col-span-3" placeholder="Spesifikasi (cth: MS 6x100)" value={l.spec ?? ""} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, spec: e.target.value } : x)))} />
                     <NumInput min={0} className="input col-span-1" placeholder={S.qty} value={l.qty} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
                     <select className="input col-span-1" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
@@ -2308,9 +2301,32 @@ const sparkVendors = useMemo(() => {
                 </div>
               ))}
             </div>
-            <button className="btn-secondary mt-2 text-xs" onClick={() => setBigLines((s) => [...s, { name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "" }])}><Plus className="h-3.5 w-3.5" /> {S.btnTambahBaris}</button>
-            <p className="mt-2 text-sm font-semibold text-navy-900">{S.totalLevel.replace("{a}", fmtRupiah(bigTotal)).replace("{b}", levelOf(bigTotal, APPROVE_PO_LIMIT))}</p>
+            <div className="mt-2 flex items-center justify-between">
+              <button className="btn-secondary text-xs" onClick={() => setBigLines((s) => [...s, { name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "", itemId: "" }])}><Plus className="h-3.5 w-3.5" /> {S.btnTambahBaris}</button>
+              <p className="text-sm font-semibold text-navy-900">{S.totalLevel.replace("{a}", fmtRupiah(bigTotal)).replace("{b}", levelOf(bigTotal, APPROVE_PO_LIMIT))}</p>
+            </div>
           </div>
+
+          <FormGrid>
+            <Field label={S.vendor}>
+              <select className="input" value={bigForm.vendor} onChange={(e) => setBigForm({ ...bigForm, vendor: e.target.value })}>
+                <option value="">{S.optPilihVendor}</option>
+                {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}{payungOf(v) ? ` (Payung: ${fmtRupiah(payungOf(v)!.plafon)})` : ""}</option>)}
+              </select>
+            </Field>
+            <Field label={S.etaWajib}><input type="date" className="input" value={bigForm.eta} onChange={(e) => setBigForm({ ...bigForm, eta: e.target.value })} /></Field>
+          </FormGrid>
+
+          <FormGrid>
+            <Field label={S.harga} hint={S.hintHarga.replace("{n}", String(ppnRate))}>
+              <select className="input" value={bigForm.includePpn ? "include" : "exclude"} onChange={(e) => setBigForm({ ...bigForm, includePpn: e.target.value === "include" })}>
+                <option value="include">{S.optIncludePpn.replace("{n}", String(ppnRate))}</option>
+                <option value="exclude">{S.optExcludePpn}</option>
+              </select>
+            </Field>
+          </FormGrid>
+          <p className="text-xs text-steel-500">{S.docSb} <span className="font-mono">{sbPoNumber(nextPoSeq())}</span> {S.docSbFmt}</p>
+
           {bigOver && bigBudget && (
             <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {S.overBig.replace("{n}", fmtRupiah(bigBudget.aktif)).replace("{a}", fmtRupiah(bigTotal)).replace("{b}", fmtRupiah(bigBudget.sisa))}
@@ -2437,38 +2453,83 @@ const sparkVendors = useMemo(() => {
 
       {/* Modal terima barang */}
       <Modal open={recvPo !== null} onClose={() => setRecvPo(null)} title={S.mRecvT.replace("{n}", recvPo?.id ?? "")} subtitle={S.mRecvS}
-        footer={<>
+        wide footer={<>
           <button className="btn-secondary" onClick={() => setRecvPo(null)}>{S.btnBatal}</button>
           <AsyncButton className="btn-primary" onAction={confirmRecv}>{n_mr[locale].poReceiveBtn}</AsyncButton>
         </>}>
-        <div className="space-y-3">
-          <Field label={S.itemTujuan} hint={recvPo?.poType === "Kecil" ? S.hintKecilOps : undefined}>
-            <input
-              type="search"
-              className="input mb-2"
-              value={inventoryPickerQuery}
-              onChange={(e) => { setInventoryPickerQuery(e.target.value); setInventoryPickerPage(1); }}
-              placeholder={S.invSearchPh}
-              aria-label={S.invSearchAria}
-            />
-            <select className="input" value={recvItem} onChange={(e) => setRecvItem(e.target.value)}>
-              <option value="">{S.optPilihItem}</option>
-              {pickerOptions.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
-            </select>
-            <div className="mt-2 flex items-center justify-between gap-2 text-xs text-steel-500">
-              <span>{inventoryPickerLoading ? S.invLoading : inventoryPickerRows.length === 0 ? S.invEmpty : S.invPage.replace("{a}", String(inventoryPickerPage)).replace("{b}", String(inventoryPickerPages)).replace("{n}", fmtJumlah(inventoryPickerTotal))}</span>
-              <div className="flex shrink-0 gap-1">
-                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage <= 1} onClick={() => setInventoryPickerPage((page) => Math.max(1, page - 1))}>{S.invPrev}</button>
-                <button type="button" className="btn-secondary px-2 py-1 text-xs" disabled={inventoryPickerLoading || inventoryPickerPage >= inventoryPickerPages} onClick={() => setInventoryPickerPage((page) => Math.min(inventoryPickerPages, page + 1))}>{S.invNext}</button>
-              </div>
+        <div className="space-y-4">
+          {/* 1. DAFTAR ITEM PO TERLEBIH DAHULU */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700 mb-2">{S.daftarItemPo}</h4>
+            <div className="overflow-x-auto rounded-lg border border-steel-200">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-steel-50 text-steel-600 font-semibold border-b border-steel-200">
+                  <tr>
+                    <th className="px-3 py-2">{S.kolomItem}</th>
+                    <th className="px-3 py-2 text-right">{S.kolomDipesan}</th>
+                    <th className="px-3 py-2 text-right">{S.kolomDiterima}</th>
+                    <th className="px-3 py-2 text-right">{S.kolomSisa}</th>
+                    <th className="px-3 py-2 w-32">{S.kolomQtyTerima}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-steel-100">
+                  {recvLines.map((line, idx) => (
+                    <tr key={idx} className="hover:bg-steel-50/50">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-navy-900">{line.name}</div>
+                        {line.spec && <div className="text-[11px] text-steel-500">{line.spec}</div>}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono">{fmtJumlah(line.orderedQty)} {line.unit}</td>
+                      <td className="px-3 py-2 text-right font-mono">{fmtJumlah(line.receivedQty)} {line.unit}</td>
+                      <td className="px-3 py-2 text-right font-mono font-medium text-amber-700">{fmtJumlah(line.openQty)} {line.unit}</td>
+                      <td className="px-3 py-2">
+                        <NumInput
+                          min={0}
+                          max={line.openQty}
+                          className="input !py-1 text-xs"
+                          value={line.qtyToReceive}
+                          onChange={(e) =>
+                            setRecvLines((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, qtyToReceive: e.target.value } : item)),
+                            )
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </Field>
-          {recvPo && Number(recvPo.qty || 0) > 0 && (
-            <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">
-              {n_mr[locale].poQtySummary.replace("{q}", fmtJumlah(Number(recvPo.qty))).replace("{r}", fmtJumlah(Number(recvPo.receivedQty || 0))).replace("{c}", fmtJumlah(Number(recvPo.cancelledQty || 0))).replace("{o}", fmtJumlah(poOpenQty(recvPo)))}
-            </p>
-          )}
-          <Field label={S.qtyDiterimaF}><NumInput min={0} className="input" value={recvQty} onChange={(e) => setRecvQty(e.target.value)} /></Field>
+          </div>
+
+          {/* 2. TUJUAN PENERIMAAN & KUANTITAS TERISI OTOMATIS SEBAGAI NILAI UNTUK DIPERIKSA */}
+          <div className="rounded-xl border border-steel-200 bg-steel-50/70 p-3 space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700">{S.tujuanPenerimaan}</h4>
+            <FormGrid>
+              {recvPo && (recvPo.tujuan === "stok" || recvPo.project === "-") ? (
+                <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
+                  <select className="input bg-white" value={recvWarehouse} onChange={(e) => setRecvWarehouse(e.target.value)}>
+                    {warehouseNames(data.warehouses ?? []).map((w) => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                </Field>
+              ) : (
+                <Field label={S.proyekBudget}>
+                  <div className="input bg-steel-100 text-navy-900 flex items-center">
+                    {S.tujuanProyekFmt.replace("{a}", String(recvPo?.project ?? "-")).replace("{b}", String(recvPo?.vessel ?? "-"))}
+                  </div>
+                </Field>
+              )}
+              <Field label={S.qtyDiterimaF}>
+                <div className="input bg-steel-100 font-mono font-semibold text-navy-900 flex items-center">
+                  {fmtJumlah(totalRecvQty)} {recvLines[0]?.unit ?? "item"}
+                </div>
+              </Field>
+            </FormGrid>
+          </div>
+
+          {/* 3. FAKTUR PAJAK / SURAT JALAN */}
           <FormGrid>
             <Field label={S.noFaktur} hint={recvPo?.poType === "Kecil" ? S.hintOpsKecil : S.hintWajibBesar}>
               <input className="input font-mono" value={recvNoFaktur} onChange={(e) => setRecvNoFaktur(e.target.value)} placeholder={S.phFaktur} />
@@ -2477,6 +2538,7 @@ const sparkVendors = useMemo(() => {
               <input type="date" className="input" value={recvTglFaktur} onChange={(e) => setRecvTglFaktur(e.target.value)} />
             </Field>
           </FormGrid>
+
           {recvPo && recvLate > 0 && (
             <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
               {S.lateInfo.replace("{n}", String(recvLate)).replace("{a}", fmtTanggal(recvPo.eta)).replace("{b}", fmtRupiah(recvDendaPreview))}

@@ -78,12 +78,19 @@ function prIdsOf(po: Data): string[] {
   return [...new Set(ids.filter((x) => x !== "" && x !== "-"))];
 }
 
-export interface ReceiveInput {
+export interface ReceiveLineInput {
+  itemId?: string;
+  name?: string;
   qty: number;
+}
+
+export interface ReceiveInput {
+  qty?: number;
   itemId?: string;
   noFaktur?: string;
   tglFaktur?: string;
   dendaRp?: number;
+  lines?: ReceiveLineInput[];
 }
 
 export interface ReceiveResult {
@@ -95,13 +102,129 @@ export interface ReceiveResult {
 /** Terima barang PO: stok naik + movement IN + status PO, lalu penuhi
  *  permintaan barang proyek yang menunggu PR/PO ini (satu transaksi). */
 export async function receivePo(id: string, input: ReceiveInput, actor: string): Promise<ReceiveResult> {
+  const hasLines = Array.isArray(input.lines) && input.lines.length > 0;
   const qty = Number(input.qty);
-  if (!Number.isFinite(qty) || qty <= 0) throw new PoError(422, "Jumlah terima harus lebih dari 0", "UNPROCESSABLE");
+  if (!hasLines && (!Number.isFinite(qty) || qty <= 0)) {
+    throw new PoError(422, "Jumlah terima harus lebih dari 0", "UNPROCESSABLE");
+  }
   return withTx(async () => {
     const row = await loadPo(id);
     const po = parse(row);
     const st = String(po.status ?? "");
     if (!RECEIVABLE.has(st)) throw new PoError(409, `PO berstatus ${st} — belum/tidak bisa diterima`, "INVALID_TRANSITION");
+
+    const now = new Date().toISOString();
+    const fulfilled: FulfillResult[] = [];
+    let lastMovementId = "";
+
+    if (hasLines) {
+      const recvLines = input.lines as ReceiveLineInput[];
+      const totalLineQty = recvLines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+      if (totalLineQty <= 0) throw new PoError(422, "Jumlah terima harus lebih dari 0", "UNPROCESSABLE");
+
+      const poLines = (Array.isArray(po.lines) ? (po.lines as Data[]) : []).map((l) => ({ ...l }));
+      if (poLines.length === 0) {
+        throw new PoError(422, "PO tidak memiliki baris item untuk diterima per baris", "UNPROCESSABLE");
+      }
+
+      for (const rl of recvLines) {
+        const lineQty = Number(rl.qty);
+        if (!Number.isFinite(lineQty) || lineQty <= 0) continue;
+
+        // Cari baris PO yang cocok: berdasarkan itemId atau nama
+        const lineIdx = poLines.findIndex((l) =>
+          (rl.itemId && String(l.itemId ?? "") === String(rl.itemId)) ||
+          (rl.name && String(l.name ?? "").trim().toLowerCase() === String(rl.name).trim().toLowerCase()),
+        );
+        const targetLine = lineIdx >= 0 ? poLines[lineIdx] : undefined;
+        if (!targetLine) {
+          throw new PoError(422, `Baris item "${rl.name ?? rl.itemId}" tidak ditemukan di PO`, "UNPROCESSABLE");
+        }
+
+        const openLine = Math.max(0, num(targetLine.qty) - num(targetLine.receivedQty));
+        if (lineQty > openLine) {
+          throw new PoError(422, `Melebihi sisa item ${String(targetLine.name ?? "")} (${openLine})`, "OVER_RECEIVE");
+        }
+
+        const lineItemId = String(rl.itemId ?? targetLine.itemId ?? "");
+        let invRow: Row | undefined;
+        if (lineItemId) {
+          const invQuery = await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [lineItemId]);
+          invRow = invQuery[0];
+        }
+        if (!invRow && targetLine.name) {
+          // Cari berdasarkan nama item jika itemId belum terikat
+          const invByName = await q<Row>("SELECT id, branch, data, updated_at FROM inventory", []);
+          invRow = invByName.find((r) => {
+            const d = parse(r);
+            return String(d.name ?? "").trim().toLowerCase() === String(targetLine.name ?? "").trim().toLowerCase();
+          });
+        }
+        if (!invRow) {
+          throw new PoError(422, `Pilih item inventori penerima barang untuk ${String(targetLine.name ?? "")}`, "UNPROCESSABLE");
+        }
+
+        const invItem = parse(invRow);
+        const resolvedItemId = invRow.id;
+        const oldStock = Math.max(0, num(invItem.stock));
+        const unitPrice = num(targetLine.price) > 0 ? num(targetLine.price) : (num(po.amount) / Math.max(1, num(po.qty)));
+        const oldAvg = num(invItem.avgCost) > 0 ? num(invItem.avgCost) : num(invItem.cost);
+        const nextInvItem: Data = { ...invItem, stock: oldStock + lineQty };
+        if (unitPrice > 0) nextInvItem.avgCost = Math.round(((oldStock * oldAvg + lineQty * unitPrice) / (oldStock + lineQty)) * 100) / 100;
+
+        const invRes = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
+          JSON.stringify(nextInvItem), now, invRow.id, invRow.updated_at, invRow.data,
+        ]);
+        if (invRes.changes !== 1) throw new PoError(409, "Stok berubah oleh pengguna lain — coba lagi", "STALE");
+
+        const mId = `M-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+        lastMovementId = mId;
+        await exec("INSERT INTO movements (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+          mId, DEFAULT_BRANCH, JSON.stringify({
+            item: String(invItem.name ?? targetLine.name ?? resolvedItemId),
+            itemId: resolvedItemId, type: "Penerimaan", qty: lineQty, unit: String(invItem.unit ?? targetLine.unit ?? "pcs"),
+            by: id, date: now.slice(0, 10), tone: "in", ref: { poId: id }, note: `Diterima oleh ${actor}`,
+          }), now,
+        ]);
+
+        targetLine.itemId = resolvedItemId;
+        targetLine.receivedQty = num(targetLine.receivedQty) + lineQty;
+
+        // Penuhi permintaan proyek jika ada
+        const prIds = prIdsOf(po);
+        if (prIds.length > 0) {
+          const mrs = (await q<Row>("SELECT id, branch, data, updated_at FROM materialRequests", []))
+            .map((r) => ({ id: r.id, d: parse(r) }))
+            .filter((m) => prIds.includes(String(m.d.requisitionId ?? "")) && String(m.d.itemId ?? "") === resolvedItemId && num(m.d.shortage) > 0
+              && ["", "Disetujui"].includes(String(m.d.approvalStatus ?? "")))
+            .sort((a, b) => String(a.d.date ?? "").localeCompare(String(b.d.date ?? "")));
+          for (const m of mrs) {
+            const stockNow = Math.max(0, num(parse((await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [resolvedItemId]))[0]).stock));
+            if (stockNow === 0) break;
+            fulfilled.push(await fulfillMaterialRequest(m.id, actor));
+          }
+        }
+      }
+
+      const totalReceived = poLines.reduce((s, l) => s + num(l.receivedQty), 0);
+      const totalOrdered = poLines.reduce((s, l) => s + num(l.qty), 0);
+      const allCompleted = totalOrdered > 0 && poLines.every((l) => num(l.receivedQty) >= num(l.qty));
+
+      const nextPo: Data = {
+        ...po,
+        lines: poLines,
+        receivedQty: totalReceived,
+        ...(input.noFaktur !== undefined ? { noFaktur: input.noFaktur } : {}),
+        ...(input.tglFaktur !== undefined ? { tglFaktur: input.tglFaktur } : {}),
+        ...(input.dendaRp !== undefined ? { dendaRp: input.dendaRp } : {}),
+      };
+      nextPo.status = allCompleted ? "Diterima" : "Diterima Sebagian";
+      await savePo(row, nextPo, now);
+
+      return { po: { id, ...nextPo }, movementId: lastMovementId, fulfilled };
+    }
+
+    // Alur single-item tradisional
     if (multiItem(po)) throw new PoError(422, MULTI_MSG, "MULTI_ITEM");
     const open = openQty(po);
     if (qty > open) throw new PoError(422, `Melebihi sisa PO (${open})`, "OVER_RECEIVE");
@@ -113,7 +236,6 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     const inv = await q<Row>("SELECT id, branch, data, updated_at FROM inventory WHERE id = ?", [itemId]);
     if (!inv[0]) throw new PoError(422, "Pilih item inventori penerima barang", "UNPROCESSABLE");
     const item = parse(inv[0]);
-    const now = new Date().toISOString();
 
     // Harga rata-rata bergerak, sama dengan logika penerimaan di frontend.
     const oldStock = Math.max(0, num(item.stock));
@@ -146,9 +268,7 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     nextPo.status = statusAfter(nextPo, st === "Dalam Pengiriman" ? "Dikirim" : st);
     await savePo(row, nextPo, now);
 
-    /* Permintaan proyek yang menunggu PR milik PO ini (termasuk PO hasil
-       pengalihan, yang menyalin PR sumbernya) dipenuhi urut tanggal. */
-    const fulfilled: FulfillResult[] = [];
+    /* Permintaan proyek yang menunggu PR milik PO ini dipenuhi urut tanggal. */
     const prIds = prIdsOf(nextPo);
     if (prIds.length > 0) {
       const mrs = (await q<Row>("SELECT id, branch, data, updated_at FROM materialRequests", []))
