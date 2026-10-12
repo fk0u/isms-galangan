@@ -1,9 +1,9 @@
 import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Factory, ShoppingCart, ClipboardList, Check, X, Printer, Send, Star, Wallet, Umbrella, Pencil, Trash2, FileText, Paperclip, Upload, Download, ExternalLink, Loader2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut, ChartTooltip, Modal, Field, FormGrid, ConfirmModal, toast, EmptyState, SortTh, toggleSort, sortRows, usePager,
-  NumInput, MoneyInput, AsyncButton, RowAction,
+  NumInput, MoneyInput, AsyncButton, RowAction, SecureImg,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useBusy, SearchBox, rowMatches } from "../../components/ui";
@@ -14,6 +14,8 @@ import { PROCUREMENT_COLLECTIONS } from "../../data/moduleCollections";
 import { findUsages } from "../../utils/usages";
 import { remoteRepository } from "../../services/repositories";
 import { ApiError, getJwt, isBackendConfigured } from "../../services/http";
+import { uploadFile } from "../../services/upload";
+import { openFileUrl, downloadFileUrl, fileNameOf, fileKindOf } from "../../services/files";
 import { fmtRupiah, fmtJumlah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { sameName } from "../../utils/names";
@@ -371,7 +373,10 @@ export default function Procurement() {
 
   /* ---- PO Kecil ---- */
   const [showSmall, setShowSmall] = useState(false);
-  const [smallForm, setSmallForm] = useState({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", override: false, overrideReason: "" });
+  const [smallForm, setSmallForm] = useState({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", notaUrl: "", override: false, overrideReason: "" });
+  const [smallProofUploading, setSmallProofUploading] = useState(false);
+  const [smallProofError, setSmallProofError] = useState<string | null>(null);
+  const [smallProofFailedFile, setSmallProofFailedFile] = useState<File | null>(null);
   const [kasAwal, setKasAwal] = useState("");
 
   /* ---- RFQ ---- */
@@ -437,9 +442,12 @@ export default function Procurement() {
      di awal. Ubah HANYA tersedia sebelum PO Dikirim, karena setelah
      pengiriman fisik daftar barisnya jadi acuan penerima barang. */
   const [editPo, setEditPo] = useState<StoreItem | null>(null);
-  const [poEditForm, setPoEditForm] = useState<{ item: string; qty: string; unit: string; workshop: string; requester: string; project: string; itemId: string }>({
-    item: "", qty: "1", unit: "pcs", workshop: "", requester: "", project: "", itemId: "",
+  const [poEditForm, setPoEditForm] = useState<{ item: string; qty: string; unit: string; workshop: string; requester: string; project: string; itemId: string; nota?: string; notaUrl?: string }>({
+    item: "", qty: "1", unit: "pcs", workshop: "", requester: "", project: "", itemId: "", nota: "", notaUrl: "",
   });
+  const [editProofUploading, setEditProofUploading] = useState(false);
+  const [editProofError, setEditProofError] = useState<string | null>(null);
+  const [editProofFailedFile, setEditProofFailedFile] = useState<File | null>(null);
   const [editPr, setEditPr] = useState<StoreItem | null>(null);
   const [prEditForm, setPrEditForm] = useState<{ item: string; by: string; amount: string; need: string }>({
     item: "", by: "", amount: "", need: "",
@@ -728,6 +736,46 @@ export default function Procurement() {
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
+  /* ============ BUKTI TRANSAKSI PO KECIL ============ */
+  const uploadProofFile = async (
+    file: File,
+    onSuccess: (url: string) => void,
+    setUploading: (b: boolean) => void,
+    setError: (s: string | null) => void,
+    setFailedFile: (f: File | null) => void,
+  ) => {
+    const ext = "." + (file.name.split(".").pop() ?? "").toLowerCase();
+    const allowed = [".png", ".jpg", ".jpeg", ".pdf"];
+    if (!allowed.includes(ext)) {
+      const msg = S.errTipeBukti;
+      setError(msg);
+      toast(msg, "info");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      const msg = S.errUkuranBukti;
+      setError(msg);
+      toast(msg, "info");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    setFailedFile(null);
+    try {
+      const url = await uploadFile(file);
+      onSuccess(url);
+      toast(S.buktiTerlampir, "success");
+    } catch (err) {
+      const m = err instanceof Error ? err.message : String(err);
+      const msg = S.errGagalUnggah.replace("{m}", m);
+      setError(msg);
+      setFailedFile(file);
+      toast(msg, "info");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   /* ============ PO KECIL ============ */
   const saveSmall = async () => {
     try {
@@ -753,13 +801,18 @@ export default function Procurement() {
       req: "-", amount, qty, unit: smallForm.unit.trim(), receivedQty: 0, returnedQty: 0, status: "Diajukan",
       date: todayISO(), eta: smallForm.eta || "", project: smallForm.project || "-",
       vessel: smallForm.vessel.trim(), nota: smallForm.nota.trim(),
+      notaUrl: smallForm.notaUrl?.trim() || "",
+      buktiUrl: smallForm.notaUrl?.trim() || "",
       docNo: sbPoNumber(nextPoSeq()),
       lines: [{ name: smallForm.item.trim(), qty, unit: smallForm.unit.trim(), price, spec: smallForm.spec.trim(), need: smallForm.need.trim() }],
       revisi: "", amendments: [], overrideReason: smallOver ? smallForm.overrideReason.trim() : "",
     }, { action: "membuat PO Kecil", module: "Procurement" });
     toast(S.tSmallCreated);
     setShowSmall(false);
-    setSmallForm({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", override: false, overrideReason: "" });
+    setSmallForm({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", notaUrl: "", override: false, overrideReason: "" });
+    setSmallProofUploading(false);
+    setSmallProofError(null);
+    setSmallProofFailedFile(null);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1262,7 +1315,12 @@ export default function Procurement() {
       requester: String(po.requester ?? ""),
       project: String(po.project ?? ""),
       itemId: String(po.itemId ?? ""),
+      nota: String(po.nota ?? ""),
+      notaUrl: String(po.notaUrl ?? po.buktiUrl ?? ""),
     });
+    setEditProofUploading(false);
+    setEditProofError(null);
+    setEditProofFailedFile(null);
   };
 
   const savePoEdit = async () => {
@@ -1306,6 +1364,11 @@ export default function Procurement() {
         requester: poEditForm.requester.trim(),
         project: poEditForm.project,
         amount: amountBaru,
+        ...(editPo.poType === "Kecil" ? {
+          nota: (poEditForm.nota ?? "").trim(),
+          notaUrl: (poEditForm.notaUrl ?? "").trim(),
+          buktiUrl: (poEditForm.notaUrl ?? "").trim(),
+        } : {}),
         ...(levelBerubah
           ? { status: "Draft", approvals: [], received: 0, receivedAt: "" }
           : {}),
@@ -1711,6 +1774,22 @@ const sparkVendors = useMemo(() => {
                                   (keputusan client: tampilan disamakan, fungsi
                                   dan modal tetap terpisah). */}
                               {po.workshop && <p className="text-xs text-steel-400 truncate" title={String(po.workshop)}>{S.workshop}: {String(po.workshop)}</p>}
+                              {(po.nota || po.notaUrl || po.buktiUrl) && (
+                                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                                  {po.nota && <span className="font-mono text-steel-500">Nota: {String(po.nota)}</span>}
+                                  {(po.notaUrl || po.buktiUrl) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => void openFileUrl(String(po.notaUrl || po.buktiUrl))}
+                                      className="inline-flex items-center gap-1 text-[11px] text-navy-700 hover:underline"
+                                      title={S.bukaBukti}
+                                    >
+                                      <Paperclip className="h-3 w-3" />
+                                      <span>{S.buktiTerlampir}</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               {poLines(po).some((l) => l.spec || l.need) && (
                                 <p className="text-xs text-steel-400 truncate" title={poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" — ")).join("; ")}>
                                   {poLines(po).map((l) => [l.spec, l.need].filter(Boolean).join(" — ")).filter(Boolean).join("; ")}
@@ -2111,6 +2190,109 @@ const sparkVendors = useMemo(() => {
               </select>
             </Field>
           </div>
+          {editPo?.poType === "Kecil" && (
+            <div className="space-y-3 rounded-xl border border-steel-200 bg-surface p-3">
+              <Field label={S.nota}>
+                <input
+                  className="input"
+                  value={poEditForm.nota ?? ""}
+                  onChange={(e) => setPoEditForm({ ...poEditForm, nota: e.target.value })}
+                  placeholder={S.phNota}
+                />
+              </Field>
+              <Field label={S.lampiranBukti}>
+                <div className="space-y-2">
+                  {poEditForm.notaUrl ? (
+                    <div className="flex items-center justify-between rounded-lg border border-steel-200 bg-white p-2.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Paperclip className="h-4 w-4 shrink-0 text-navy-700" />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium text-navy-900" title={fileNameOf(poEditForm.notaUrl)}>
+                            {fileNameOf(poEditForm.notaUrl)}
+                          </p>
+                          <p className="text-[11px] text-emerald-600">{S.buktiTerlampir}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          className="btn-secondary py-1 px-2 text-xs"
+                          onClick={() => void openFileUrl(poEditForm.notaUrl!)}
+                        >
+                          {S.bukaBukti}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary py-1 px-2 text-xs text-rose-600 hover:text-rose-700"
+                          onClick={() => setPoEditForm({ ...poEditForm, notaUrl: "" })}
+                          title={S.hapusBukti}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className={`inline-flex items-center gap-2 rounded-lg border border-steel-300 bg-white px-3 py-2 text-xs font-medium text-steel-700 shadow-sm hover:bg-steel-50 cursor-pointer ${editProofUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.pdf"
+                          className="hidden"
+                          disabled={editProofUploading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (file) {
+                              void uploadProofFile(
+                                file,
+                                (url) => setPoEditForm((prev) => ({ ...prev, notaUrl: url })),
+                                setEditProofUploading,
+                                setEditProofError,
+                                setEditProofFailedFile,
+                              );
+                            }
+                          }}
+                        />
+                        {editProofUploading ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-navy-700" />
+                            <span>{S.statusMengunggah}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-3.5 w-3.5 text-steel-500" />
+                            <span>{S.unggahBukti}</span>
+                          </>
+                        )}
+                      </label>
+                      <span className="ml-2 text-xs text-steel-400">(.png, .jpg, .pdf max 10MB)</span>
+                    </div>
+                  )}
+
+                  {editProofError && (
+                    <div className="flex items-center justify-between rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                      <span className="truncate mr-2">{editProofError}</span>
+                      {editProofFailedFile && (
+                        <button
+                          type="button"
+                          className="shrink-0 font-semibold underline hover:text-rose-900"
+                          onClick={() => void uploadProofFile(
+                            editProofFailedFile,
+                            (url) => setPoEditForm((prev) => ({ ...prev, notaUrl: url })),
+                            setEditProofUploading,
+                            setEditProofError,
+                            setEditProofFailedFile,
+                          )}
+                        >
+                          {S.cobaUlang}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Field>
+            </div>
+          )}
           <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">
             {locale === "en"
               ? "Vendor, unit price and order lines are not editable here: once the PO is submitted the vendor and prices become a commitment. Use Amandemen for line changes."
@@ -2179,6 +2361,48 @@ const sparkVendors = useMemo(() => {
                 {poDetail.requester && <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.peminta}</dt><dd className="text-right font-medium text-navy-900">{String(poDetail.requester)}</dd></div>}
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.proyek}</dt><dd className="text-right font-medium text-navy-900">{String(poDetail.project ?? "-")}{poDetail.vessel ? ` · ${String(poDetail.vessel)}` : ""}</dd></div>
               </dl>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.notaBukti}</p>
+              <dl className="dl-div text-sm">
+                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.nota}</dt><dd className="text-right font-medium text-navy-900">{String(poDetail.nota || "-")}</dd></div>
+                <div className="flex justify-between items-center gap-4">
+                  <dt className="shrink-0 text-steel-500">{S.lampiranBukti}</dt>
+                  <dd className="text-right font-medium text-navy-900">
+                    {(poDetail.notaUrl || poDetail.buktiUrl) ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs inline-flex items-center gap-1"
+                          onClick={() => void openFileUrl(String(poDetail.notaUrl || poDetail.buktiUrl))}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {S.bukaBukti}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs inline-flex items-center gap-1"
+                          onClick={() => void downloadFileUrl(String(poDetail.notaUrl || poDetail.buktiUrl), `bukti-${poDetail.id}`)}
+                        >
+                          <Download className="h-3 w-3" />
+                          {S.unduhBukti}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-steel-400 text-xs">{S.tanpaBukti}</span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              {(poDetail.notaUrl || poDetail.buktiUrl) && fileKindOf(String(poDetail.notaUrl || poDetail.buktiUrl)) === "image" && (
+                <div className="mt-2 overflow-hidden rounded-lg border border-steel-200">
+                  <SecureImg
+                    src={String(poDetail.notaUrl || poDetail.buktiUrl)}
+                    alt={`Bukti ${poDetail.id}`}
+                    className="max-h-48 w-full object-contain bg-steel-50 p-1"
+                  />
+                </div>
+              )}
             </div>
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-steel-500">PR</p>
@@ -2364,6 +2588,97 @@ const sparkVendors = useMemo(() => {
             <Field label={S.estHarga}><MoneyInput className="input" value={smallForm.price} onChange={(v) => setSmallForm({ ...smallForm, price: v })} /></Field>
             <Field label={S.nota}><input className="input" value={smallForm.nota} onChange={(e) => setSmallForm({ ...smallForm, nota: e.target.value })} placeholder={S.phNota} /></Field>
           </FormGrid>
+          <Field label={S.lampiranBukti}>
+            <div className="space-y-2">
+              {smallForm.notaUrl ? (
+                <div className="flex items-center justify-between rounded-lg border border-steel-200 bg-steel-50 p-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="h-4 w-4 shrink-0 text-navy-700" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-medium text-navy-900" title={fileNameOf(smallForm.notaUrl)}>
+                        {fileNameOf(smallForm.notaUrl)}
+                      </p>
+                      <p className="text-[11px] text-emerald-600">{S.buktiTerlampir}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      className="btn-secondary py-1 px-2 text-xs"
+                      onClick={() => void openFileUrl(smallForm.notaUrl)}
+                    >
+                      {S.bukaBukti}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary py-1 px-2 text-xs text-rose-600 hover:text-rose-700"
+                      onClick={() => setSmallForm({ ...smallForm, notaUrl: "" })}
+                      title={S.hapusBukti}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className={`inline-flex items-center gap-2 rounded-lg border border-steel-300 bg-white px-3 py-2 text-xs font-medium text-steel-700 shadow-sm hover:bg-steel-50 cursor-pointer ${smallProofUploading ? "opacity-50 pointer-events-none" : ""}`}>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.pdf"
+                      className="hidden"
+                      disabled={smallProofUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) {
+                          void uploadProofFile(
+                            file,
+                            (url) => setSmallForm((prev) => ({ ...prev, notaUrl: url })),
+                            setSmallProofUploading,
+                            setSmallProofError,
+                            setSmallProofFailedFile,
+                          );
+                        }
+                      }}
+                    />
+                    {smallProofUploading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-navy-700" />
+                        <span>{S.statusMengunggah}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5 text-steel-500" />
+                        <span>{S.unggahBukti}</span>
+                      </>
+                    )}
+                  </label>
+                  <span className="ml-2 text-xs text-steel-400">(.png, .jpg, .pdf max 10MB)</span>
+                </div>
+              )}
+
+              {smallProofError && (
+                <div className="flex items-center justify-between rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                  <span className="truncate mr-2">{smallProofError}</span>
+                  {smallProofFailedFile && (
+                    <button
+                      type="button"
+                      className="shrink-0 font-semibold underline hover:text-rose-900"
+                      onClick={() => void uploadProofFile(
+                        smallProofFailedFile,
+                        (url) => setSmallForm((prev) => ({ ...prev, notaUrl: url })),
+                        setSmallProofUploading,
+                        setSmallProofError,
+                        setSmallProofFailedFile,
+                      )}
+                    >
+                      {S.cobaUlang}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </Field>
           <FormGrid>
             <Field label={S.etaWajib}><input type="date" className="input" value={smallForm.eta} onChange={(e) => setSmallForm({ ...smallForm, eta: e.target.value })} /></Field>
             <Field label={S.proyekBudget}>
