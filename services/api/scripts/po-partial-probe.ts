@@ -244,6 +244,74 @@ async function main(): Promise<void> {
     const branchDeniedReturn = await post(scopedDirector, `/api/purchaseOrders/${awayPoId}/return`, { qty: 1, itemId: awayReturnItemId, note: "Lintas cabang" });
     const awayStock = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [awayReturnItemId]))[0]?.data ?? "{}") as { stock: number }).stock);
     assert("retur lintas cabang ditolak tanpa mengubah stok → 404", branchDeniedReturn.statusCode === 404 && awayStock === 2, branchDeniedReturn.body);
+
+    // 4. PO Kecil dengan lampiran nota/bukti transaksi (#107)
+    const smallProofUrl = `/files/2026-10/nota-probe-${Date.now().toString(36)}.pdf`;
+    const smallPoRes = await post(dir, "/api/purchaseOrders", {
+      branch: "Samarinda",
+      data: {
+        poType: "Kecil",
+        item: "Probe Oli Mesin 20L",
+        workshop: "Workshop Samarinda",
+        requester: "Rudi H.",
+        vendor: "Workshop Internal",
+        req: "-",
+        amount: 450000,
+        qty: 1,
+        unit: "pail",
+        receivedQty: 0,
+        returnedQty: 0,
+        status: "Diajukan",
+        date: "2026-10-12",
+        eta: "2026-10-14",
+        project: "-",
+        vessel: "",
+        nota: "NT-PRB-2026",
+        notaUrl: smallProofUrl,
+        buktiUrl: smallProofUrl,
+        lines: [{ name: "Probe Oli Mesin 20L", qty: 1, unit: "pail", price: 450000, spec: "SAE 40", need: "Genset B" }],
+      },
+    });
+    assert("buat PO Kecil dengan nota & lampiran bukti → 201", smallPoRes.statusCode === 201, smallPoRes.body);
+    const smallPoId = (smallPoRes.json().data as { id: string }).id;
+    poIds.push(smallPoId);
+    const smallPoData = await poOf(smallPoId);
+    assert(
+      "PO Kecil menyimpan nomor nota dan notaUrl/buktiUrl dengan utuh",
+      smallPoData.nota === "NT-PRB-2026" && smallPoData.notaUrl === smallProofUrl && smallPoData.buktiUrl === smallProofUrl,
+      JSON.stringify(smallPoData),
+    );
+
+    // Buka file lampiran tanpa token ditolak 401
+    const unauthProof = await app.inject({ method: "GET", url: smallProofUrl });
+    assert("buka lampiran bukti tanpa login → 401", unauthProof.statusCode === 401, unauthProof.body);
+
+    // Pengguna berwenang (dengan JWT) lolos autentikasi (404 karena berkas disk uji coba)
+    const authProof = await app.inject({ method: "GET", url: smallProofUrl, headers: auth(dir) });
+    assert("peran berwenang membuka lampiran bukti → lolos auth (404 berkas simulasi)", authProof.statusCode === 404, authProof.body);
+
+    // Perbarui PO Kecil (update nota / bukti)
+    const updatedProofUrl = `/files/2026-10/nota-probe-rev-${Date.now().toString(36)}.pdf`;
+    const patchSmall = await app.inject({
+      method: "PATCH",
+      url: `/api/purchaseOrders/${smallPoId}`,
+      headers: auth(dir),
+      payload: {
+        data: {
+          ...smallPoData,
+          nota: "NT-PRB-2026-REV",
+          notaUrl: updatedProofUrl,
+          buktiUrl: updatedProofUrl,
+        },
+      },
+    });
+    assert("ubah PO Kecil memperbarui nota dan buktiUrl → 200", patchSmall.statusCode === 200, patchSmall.body);
+    const updatedSmallPo = await poOf(smallPoId);
+    assert(
+      "perubahan nota & lampiran bukti tersimpan setelah dimuat ulang",
+      updatedSmallPo.nota === "NT-PRB-2026-REV" && updatedSmallPo.notaUrl === updatedProofUrl,
+      JSON.stringify(updatedSmallPo),
+    );
   } finally {
     for (const id of poIds) await exec("DELETE FROM purchaseOrders WHERE id = ?", [id]);
     for (const id of poIds) await exec("DELETE FROM audit_log WHERE row_id = ?", [id]);
