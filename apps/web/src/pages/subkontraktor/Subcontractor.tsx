@@ -1697,7 +1697,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
             if (ms.length === 0) {
               return (
                 <>
-                  <Field label={locale === "en" ? "Actual progress (numeric 0-100)" : "Progres aktual (numerik 0-100)"} hint={locale === "en" ? `No WO milestones — numeric feeds termin cap (${fmtRupiah(Number(sub?.contract || 0) * Number(progPct || 0) / 100)}) & WO status` : `Tanpa milestone WO — angka ini mengisi cap termin (${fmtRupiah(Number(sub?.contract || 0) * Number(progPct || 0) / 100)}) & status WO`}>
+                  <Field label={locale === "en" ? "Actual progress (numeric 0-100)" : "Progres aktual (numerik 0-100)"} hint={locale === "en" ? `No WO milestones: numeric feeds termin cap (${fmtRupiah(Number(sub?.contract || 0) * Number(progPct || 0) / 100)}) & WO status` : `Tanpa milestone WO: angka ini mengisi cap termin (${fmtRupiah(Number(sub?.contract || 0) * Number(progPct || 0) / 100)}) & status WO`}>
                     <NumInput min={0} max={100} className="input" value={progPct} onChange={(e) => setProgPct(e.target.value)} placeholder="0-100" />
                   </Field>
                   <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">

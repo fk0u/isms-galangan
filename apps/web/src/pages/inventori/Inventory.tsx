@@ -2059,7 +2059,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       ].filter(Boolean).join(", ");
                       return (
                         <option key={name} value={name}>
-                          {parts === "" ? `${name} (${total})` : `${name} — ${parts}`}
+                          {parts === "" ? `${name} (${total})` : `${name} (${parts})`}
                         </option>
                       );
                     })}
@@ -2135,7 +2135,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           {["Semua", ...warehouses].map((w) => <option key={w} value={w}>{w === "Semua" ? "Semua gudang" : w}</option>)}
                         </select>
                       </Field>
-                      <Field label={locale === "en" ? "ABC class (Semua kelas)" : "Kelas ABC (Semua kelas) — A: 70% nilai, B: 20%, C: 10%"}>
+                      <Field label={locale === "en" ? "ABC class (All classes)" : "Kelas ABC (Semua kelas: A 70% nilai, B 20%, C 10%)"}>
                         <select className="input w-full" value={draft.abc} onChange={(e) => setDraft({ ...draft, abc: e.target.value })} aria-label={S.abcAria}>
                           {["Semua", "A", "B", "C"].map((a) => <option key={a} value={a}>{a === "Semua" ? "Semua kelas" : `Kelas ${a}`}</option>)}
                         </select>

@@ -190,7 +190,7 @@ export function BoqDetailModal({
       open={open}
       onClose={onClose}
       wide
-      title={`Bill of Quantity (BoQ) — ${number} Rev ${revision}`}
+      title={`Bill of Quantity (BoQ): ${number} Rev ${revision}`}
       subtitle={`${projectId} · ${vesselName} · ${clientName || (isEn ? "Client" : "Klien")}`}
     >
       <div className="space-y-5 text-sm">

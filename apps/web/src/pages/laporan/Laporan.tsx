@@ -29,7 +29,7 @@ const dashIf = (has: boolean, text: string): string => (has ? text : "—");
 function EmptyModul({ modul, to, label }: { modul: string; to: string; label: string }) {
   return (
     <p className="text-xs text-steel-400">
-      Belum ada data di modul {modul} — isi dulu di{" "}
+      Belum ada data di modul {modul}, silakan isi dulu di{" "}
       <Link to={to} className="font-semibold text-ocean-600 hover:underline">{label}</Link>
     </p>
   );

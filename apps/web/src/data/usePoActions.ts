@@ -23,7 +23,7 @@ export function poIsMultiItem(po: StoreItem): boolean {
   const names = new Set(lines.map((l) => String(l.name ?? "").trim().toLowerCase()).filter((n) => n !== ""));
   return names.size > 1 || (Array.isArray(po.prIds) ? po.prIds.length : 0) > 1;
 }
-const MULTI_MSG = "PO berisi beberapa barang (konsolidasi) — terima/alihkan per barang belum didukung";
+const MULTI_MSG = "PO berisi beberapa barang (konsolidasi): terima/alihkan per barang belum didukung";
 /** Qty yang dinyatakan vendor tidak sanggup dan belum dialihkan. */
 export function poPendingReassign(po: StoreItem): number {
   return Math.max(0, num(po.cancelledQty) - num(po.reassignedQty));

@@ -117,7 +117,7 @@ export default function Login() {
             Seluruh galangan, dalam satu sistem<span className="text-ocean-500">.</span>
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-steel-500">
-            Proyek, drydock, inventori, QC, keuangan, dan siklus hidup kapal — terhubung dan
+            Proyek, drydock, inventori, QC, keuangan, dan siklus hidup kapal terhubung serta
             terpantau real-time.
           </p>
         </motion.div>

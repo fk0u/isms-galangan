@@ -44,7 +44,7 @@ async function savePo(row: Row, data: Data, now: string): Promise<void> {
   const res = await exec("UPDATE purchaseOrders SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
     JSON.stringify(data), now, row.id, row.updated_at, row.data,
   ]);
-  if (res.changes !== 1) throw new PoError(409, "PO berubah oleh pengguna lain — muat ulang", "STALE");
+  if (res.changes !== 1) throw new PoError(409, "PO berubah oleh pengguna lain, silakan muat ulang", "STALE");
 }
 
 /** Sisa yang masih ditunggu dari vendor PO ini. PO lama tanpa qty → tak terbatas. */
@@ -61,7 +61,7 @@ function multiItem(po: Data): boolean {
   const prs = Array.isArray(po.prIds) ? (po.prIds as unknown[]).length : 0;
   return names.size > 1 || prs > 1;
 }
-const MULTI_MSG = "PO berisi beberapa barang (konsolidasi) — terima/alihkan per barang belum didukung; gunakan PO per barang";
+const MULTI_MSG = "PO berisi beberapa barang (konsolidasi): terima/alihkan per barang belum didukung; gunakan PO per barang";
 
 /* Status setelah perubahan kuantitas. Semua qty sudah tuntas (diterima atau
    dibatalkan) → Diterima / Dibatalkan Sebagian; selain itu masih berjalan. */
@@ -117,7 +117,7 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     const row = await loadPo(id);
     const po = parse(row);
     const st = String(po.status ?? "");
-    if (!RECEIVABLE.has(st)) throw new PoError(409, `PO berstatus ${st} — belum/tidak bisa diterima`, "INVALID_TRANSITION");
+    if (!RECEIVABLE.has(st)) throw new PoError(409, `PO berstatus ${st}: belum/tidak bisa diterima`, "INVALID_TRANSITION");
 
     const now = new Date().toISOString();
     const fulfilled: FulfillResult[] = [];

@@ -80,7 +80,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "Gambaran seluruh galangan dalam satu layar.",
       steps: [
         { title: "Dashboard eksekutif", hint: "Tunjukkan KPI proyek, pendapatan, dan stok kritis.", to: "/dashboard" },
-        { title: "Perhatian khusus per kategori", hint: "Pilih kategori di bagian 'Perlu perhatian' — tidak semua ditampilkan sekaligus.", to: "/dashboard" },
+        { title: "Perhatian khusus per kategori", hint: "Pilih kategori di bagian 'Perlu perhatian'; tidak semua ditampilkan sekaligus.", to: "/dashboard" },
         { title: "Monitoring proyek", hint: "Proyek terlambat ditandai merah; klik proyek lalu 'Kembali' kembali ke sini.", to: "/proyek/monitoring" },
       ],
     },
@@ -103,7 +103,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
         { title: "Purchase Request otomatis", hint: "Kekurangan stok muncul sebagai PR berstatus Diajukan, tertaut ke permintaannya.", to: "/procurement?tab=PR" },
         { title: "Penuhi dari stok", hint: "Bila stok tersedia, 'Penuhi dari stok' mengeluarkan sisanya; saat PO diterima, permintaan terpenuhi otomatis.", to: "/procurement?tab=Permintaan" },
         { title: "Pergerakan stok", hint: "Barang keluar tercatat dengan referensi proyek & WBS.", to: "/inventori?tab=Pergerakan" },
-        { title: "Update progres WBS dengan material", hint: "Material WBS memakai alur yang sama — stok tidak pernah minus.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
+        { title: "Update progres WBS dengan material", hint: "Material WBS memakai alur yang sama; stok tidak pernah minus.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
     },
     {
@@ -161,7 +161,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
       summary: "The whole shipyard on one screen.",
       steps: [
         { title: "Executive dashboard", hint: "Show project KPIs, revenue, and critical stock.", to: "/dashboard" },
-        { title: "Attention by category", hint: "Pick a category under 'Needs attention' — not everything at once.", to: "/dashboard" },
+        { title: "Attention by category", hint: "Pick a category under 'Needs attention'; not everything at once.", to: "/dashboard" },
         { title: "Project monitoring", hint: "Late projects are red; open one and 'Back' returns here.", to: "/proyek/monitoring" },
       ],
     },
@@ -184,7 +184,7 @@ const SCENARIOS: Record<Locale, DemoScenario[]> = {
         { title: "Automatic Purchase Request", hint: "The shortage appears as a Submitted PR linked to its request.", to: "/procurement?tab=PR" },
         { title: "Fulfill from stock", hint: "With stock available, 'Fulfill from stock' issues the rest; receiving the PO fulfills requests automatically.", to: "/procurement?tab=Permintaan" },
         { title: "Stock movements", hint: "Issued items are logged with project & WBS reference.", to: "/inventori?tab=Pergerakan" },
-        { title: "WBS progress with material", hint: "WBS material uses the same flow — stock never goes negative.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
+        { title: "WBS progress with material", hint: "WBS material uses the same flow; stock never goes negative.", to: "/proyek/RP-2026-003?tab=WBS%20%26%20Anggaran" },
       ],
     },
     {

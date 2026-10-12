@@ -73,7 +73,7 @@ export async function issueInventory(id: string, input: IssueInput, actor: strin
     const res = await exec("UPDATE inventory SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ? AND data = ?", [
       JSON.stringify({ ...item, stock: nextStock, openBase: nextOpen }), now, row.id, row.updated_at, row.data,
     ]);
-    if (res.changes !== 1) throw new IssueError(409, "Stok berubah oleh pengguna lain — coba lagi", "STALE");
+    if (res.changes !== 1) throw new IssueError(409, "Stok berubah oleh pengguna lain, silakan coba lagi", "STALE");
     const movementId = `M-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
     await exec("INSERT INTO movements (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
       movementId, DEFAULT_BRANCH, JSON.stringify({

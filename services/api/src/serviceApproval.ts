@@ -78,7 +78,7 @@ export async function serviceGuardError(table: string, before: Data | null, afte
   if (table === "materialRequests") {
     // Riwayat pemenuhan barang tidak boleh diubah/dihapus lewat CRUD generik.
     return after ? "Permintaan barang hanya dibuat/diubah lewat endpoint material request"
-      : before ? "Permintaan barang tidak bisa dihapus — riwayat pemenuhan harus utuh" : null;
+      : before ? "Permintaan barang tidak bisa dihapus: riwayat pemenuhan harus utuh" : null;
   }
   if (table !== "services" || !after) return null;
 
@@ -95,14 +95,14 @@ export async function serviceGuardError(table: string, before: Data | null, afte
   }
   const st = String(after.status ?? "");
   if ((st === "In Progress" || st === "Done") && approvalOf(after) !== "Disetujui") {
-    return "Service belum disetujui procurement — belum boleh dikerjakan";
+    return "Service belum disetujui procurement: belum boleh dikerjakan";
   }
   const boqRef = String(after.boqRef ?? "").trim();
   const costTouched = !before || before.cost !== after.cost || before.boqRef !== after.boqRef;
   if (boqRef && costTouched) {
     const price = await boqPrice(boqRef);
     if (price !== null && Math.round(Number(after.cost ?? 0)) !== Math.round(price) && String(after.costReason ?? "").trim() === "") {
-      return "Biaya berbeda dari harga item BoQ — isi alasan perubahan biaya";
+      return "Biaya berbeda dari harga item BoQ: isi alasan perubahan biaya";
     }
   }
   return null;
@@ -138,7 +138,7 @@ export async function setServiceApproval(
     const res = await exec("UPDATE services SET data = ?, updated_at = ? WHERE id = ? AND updated_at = ?", [
       JSON.stringify(updated), now, id, row.updated_at,
     ]);
-    if (res.changes !== 1) throw new ServiceError(409, "Service berubah oleh pengguna lain — muat ulang", "STALE");
+    if (res.changes !== 1) throw new ServiceError(409, "Service berubah oleh pengguna lain, silakan muat ulang", "STALE");
     // Audit di transaksi yang sama: gagal tulis audit = keputusan dibatalkan.
     await audit({ id, ...updated });
     return { id, ...updated };

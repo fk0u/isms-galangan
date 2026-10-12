@@ -504,7 +504,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select></Field>
           </FormGrid>
-          <Field label={locale === "en" ? "Supporting document URL" : "URL dokumen pendukung"} hint={locale === "en" ? "Optional — RAB / drawing / quotation" : "Opsional — RAB / gambar / penawaran"}>
+          <Field label={locale === "en" ? "Supporting document URL" : "URL dokumen pendukung"} hint={locale === "en" ? "Optional: RAB / drawing / quotation" : "Opsional: RAB / gambar / penawaran"}>
             <div className="flex flex-wrap items-center gap-2">
               <input className="input flex-1 font-mono" value={form.fileUrl} onChange={(e) => setForm({ ...form, fileUrl: e.target.value })} placeholder="https://…" />
               <FileUploadButton label={locale === "en" ? "Upload" : "Unggah"} onUploaded={(url) => setForm((f) => ({ ...f, fileUrl: url }))} />
@@ -544,7 +544,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
         </div>
       </Modal>
 
-      <Modal open={logFor !== null} onClose={() => setLogFor(null)} title={`Log — ${logFor?.name ?? ""}`} subtitle={logFor?.id}>
+      <Modal open={logFor !== null} onClose={() => setLogFor(null)} title={`Log: ${logFor?.name ?? ""}`} subtitle={logFor?.id}>
         <div className="space-y-2">
           {logFor && logOf(logFor.id).map((l, i) => (
             <div key={i} className="rounded-xl border border-steel-100 p-2.5 text-sm">
