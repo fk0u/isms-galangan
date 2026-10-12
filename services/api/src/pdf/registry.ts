@@ -1141,7 +1141,7 @@ const analitik: Recipe<AnalyticModel> = {
   entity: { field: "projects", prefix: "PRJ" },
   requiresEntity: false,
   async prepare(_id, ctx) {
-    const cols = await loadReportCols(ctx, REPORT_COLS);
+    const cols = await loadReportCols(ctx, [...REPORT_COLS, "quotations", "contracts"]);
     const months = monthAxis(filterNum(ctx, "months", 12));
     const series = monthlyFinance(cols, months);
     const kpi = portfolioKpi(cols, series);
@@ -1150,9 +1150,71 @@ const analitik: Recipe<AnalyticModel> = {
       const key = str(p, "status");
       statuses.set(key, (statuses.get(key) ?? 0) + 1);
     }
+
+    const defaultTargets: Record<string, { revenue: number; projects: number }> = {
+      Samarinda: { revenue: 120_000_000_000, projects: 8 },
+      Balikpapan: { revenue: 80_000_000_000, projects: 5 },
+    };
+    const branchKey = ctx.branch && ctx.branch !== "SEMUA" ? ctx.branch : "SEMUA";
+    const fallbackTarget = defaultTargets[branchKey] ?? {
+      revenue: 200_000_000_000,
+      projects: 13,
+    };
+    const targetRev = filterNum(ctx, "targetRevenue", fallbackTarget.revenue);
+    const targetProj = filterNum(ctx, "targetProjects", fallbackTarget.projects);
+
+    const allProjects = cols.projects ?? [];
+    const activeProjectsList = allProjects
+      .filter((p) => str(p, "status") !== "Selesai")
+      .map((p) => ({
+        id: str(p, "id"),
+        vessel: str(p, "vessel"),
+        client: str(p, "client"),
+        type: str(p, "type", "category") || "Repair",
+        budget: num(p, "budget"),
+        progress: num(p, "progress"),
+        status: str(p, "status") || "Sedang Berjalan",
+      }));
+
+    const wonContracts = (cols.contracts ?? []).filter((c) => str(c, "status") !== "Batal");
+    const wonContractValue = wonContracts.reduce((s, c) => s + num(c, "value"), 0);
+
+    const activeQuotations = (cols.quotations ?? []).filter((q) => str(q, "stage") !== "Menang" && str(q, "stage") !== "Kalah");
+    const pipelineActiveValue = activeQuotations.reduce((s, q) => s + num(q, "value"), 0);
+
+    const stockValue = (cols.inventory ?? []).reduce((s, i) => s + num(i, "stock") * num(i, "cost"), 0);
+    const lowStockCount = (cols.inventory ?? []).filter((i) => num(i, "stock") <= num(i, "minStock")).length;
+
+    const seaTrialProj = allProjects.find((p) => str(p, "status") !== "Selesai" && str(p, "scope").toLowerCase().includes("sea trial"));
+    const seaTrialVessel = seaTrialProj ? str(seaTrialProj, "vessel") : "-";
+
+    const unpaidInvoices = (cols.invoices ?? []).filter((i) => str(i, "status") !== "Lunas" && str(i, "status") !== "Draft");
+    const arOutstandingValue = unpaidInvoices.reduce((s, i) => s + (num(i, "amount") || invoiceValue(i)), 0);
+
+    const activeContractsValue = activeProjectsList.reduce((s, p) => s + p.budget, 0);
+
     return {
       scope: filterText(ctx, "scope") === "Dashboard" ? "Dashboard" : "Analytics",
       periodLabel: L(ctx.locale, `${monthLabel(months[0] ?? "")} - ${monthLabel(months[months.length - 1] ?? "")}`, `${monthLabel(months[0] ?? "")} - ${monthLabel(months[months.length - 1] ?? "")}`),
+      branch: branchKey,
+      targets: {
+        revenue: targetRev,
+        projects: targetProj,
+      },
+      executiveSummary: {
+        activeContractsValue,
+        activeEmployees: kpi.activeEmployees,
+        stockValue,
+        lowStockCount,
+        seaTrialVessel,
+        pipelineActiveValue,
+        openNcrCount: kpi.openNcr,
+        criticalNcrCount: kpi.criticalNcr,
+        arOutstandingValue,
+        wonContractValue,
+        wonContractCount: wonContracts.length,
+      },
+      activeProjectsList,
       series,
       kpi,
       growth: { revenue: growthPct(series, "revenue"), margin: growthPct(series, "margin") },
@@ -1163,7 +1225,7 @@ const analitik: Recipe<AnalyticModel> = {
       risk: {
         dockConflicts: dockConflicts(cols),
         lowStock: lowStockItems(cols),
-        atRiskProjects: (cols.projects ?? [])
+        atRiskProjects: allProjects
           .filter((p) => str(p, "status") === "Terlambat" || num(p, "actual") > num(p, "budget"))
           .map((p) => ({ id: str(p, "id"), vessel: str(p, "vessel"), status: str(p, "status") })),
         openNcr: kpi.openNcr,

@@ -431,26 +431,36 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   const seaTrialVessel =
     projects.find((p) => p.status !== "Selesai" && scopeNames(p.scope).includes("Sea Trial"))?.vessel ?? "-";
 
-  /* Ringkasan portofolio dicetak oleh server dari baris DB-nya sendiri.
-   Versi lama menangkap DOM (`exportPDF` + html2canvas), jadi angka di PDF bisa
-   berbeda dari pembukuan dan grafiknya jadi gambar. `monthCount` diteruskan
-   sebagai filter; server yang menghitung. */
-const exportSummary = async () => {
-  if (!pdfServerReady()) {
-    toast(S.tPortfolioPdfExported, "info");
-    return;
-  }
-  const done = await pdfDoc.request(
-    { kind: "analitik", locale, branch, filters: { scope: "Dashboard", months: monthCount } },
-    `Ringkasan-Portofolio-${todayISO()}`,
-    false,
-  );
-  if (done) toast(S.tPortfolioPdfExported);
-};
-
   const tgt = targets[branch] ?? { revenue: 0, projects: 0 };
   const aktualRev = branchProjects.reduce((s, p) => s + Number(p.budget || 0), 0);
   const aktualProj = branchProjects.filter((p) => p.status !== "Selesai").length;
+
+  /* Ringkasan portofolio dicetak oleh server dari baris DB-nya sendiri.
+   Versi lama menangkap DOM (`exportPDF` + html2canvas), jadi angka di PDF bisa
+   berbeda dari pembukuan dan grafiknya jadi gambar. `monthCount` dan target
+   diteruskan sebagai filter; server yang menghitung. */
+  const exportSummary = async () => {
+    if (!pdfServerReady()) {
+      toast(S.tPortfolioPdfExported, "info");
+      return;
+    }
+    const done = await pdfDoc.request(
+      {
+        kind: "analitik",
+        locale,
+        branch,
+        filters: {
+          scope: "Dashboard",
+          months: monthCount,
+          targetRevenue: tgt.revenue,
+          targetProjects: tgt.projects,
+        },
+      },
+      `Ringkasan-Portofolio-${branch}-${todayISO()}`,
+      false,
+    );
+    if (done) toast(S.tPortfolioPdfExported);
+  };
 
   const saveTarget = () => {
     if (!allowedTarget) { toast(S.tOnlyDirectorManager, "info"); return; }

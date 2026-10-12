@@ -164,6 +164,8 @@ export interface Collections {
   services?: Row[];
   spareparts?: Row[];
   activities?: Row[];
+  quotations?: Row[];
+  contracts?: Row[];
 }
 
 /** Deret pendapatan/biaya/margin per bulan. */
