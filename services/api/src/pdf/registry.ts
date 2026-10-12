@@ -435,10 +435,10 @@ const spkRecipe: Recipe<SpkInput> = {
     if (!wo) throw new Error(`Work Order ${id} tidak ditemukan`);
     /* #94: WO menyimpan NAMA subkon, jadi pencarian lewat id saja selalu gagal
        dan NPWP/alamat tercetak kosong. Dicari lewat id dulu, lalu nama persis;
-       bila dua profil bernama sama, tidak ada yang dipakai - lebih baik kosong
+       hanya di cabang dokumen; bila dua profil bernama sama, tidak ada yang dipakai - lebih baik kosong
        daripada mencetak data pihak lain. */
     const subKey = str(wo, "sub");
-    const byName = (await loadMany({ field: "subcontractors", prefix: "SUB" }))
+    const byName = (await loadMany({ field: "subcontractors", prefix: "SUB" }, { branch: ctx.branch }))
       .filter((s) => str(s, "name").trim().toLowerCase() === subKey.trim().toLowerCase());
     const sub = (await loadEntity({ field: "subcontractors", prefix: "SUB" }, subKey)) ?? (byName.length === 1 ? byName[0] as Record<string, unknown> : null);
     const proj = await loadEntity({ field: "projects", prefix: "PRJ" }, str(wo, "project"));
