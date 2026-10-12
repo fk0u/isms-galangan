@@ -256,12 +256,33 @@ export default function Drydock() {
     ...drydocks.map((d) => String(d.name ?? "").trim()).filter(Boolean),
   ])].sort((a, b) => a.localeCompare(b)).map((area) => ({ value: area, label: area }));
 
+  /* #91: menghapus semua batas butuh konfirmasi; server menolak bila dock masih punya booking. */
+  const [confirmClearLimit, setConfirmClearLimit] = useState(false);
+  const hasLimit = areaModal !== null && (Number(areaModal.maxLoa) > 0 || Number(areaModal.maxBeam) > 0 || Number(areaModal.maxDraft) > 0);
+  const clearLimits = async () => {
+    setConfirmClearLimit(false);
+    if (!areaModal) return;
+    try {
+      await update("drydocks", areaModal.id, { maxLoa: 0, maxBeam: 0, maxDraft: 0 });
+      log("menghapus batas dimensi dock", String(areaModal.name), "Drydock");
+      toast(S.tLimitCleared.replace("{a}", String(areaModal.name)));
+      setAreaModal(null);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : S.saveFail, "info");
+    }
+  };
+
   const saveArea = async () => {
     if (!areaModal) return;
+    const dims = [limitDraft.maxLoa, limitDraft.maxBeam, limitDraft.maxDraft].map((v) => (v === "" ? 0 : Number(v)));
+    if (dims.some((n) => !Number.isFinite(n) || n < 0)) { toast(S.tLimitInvalid, "info"); return; }
+    // Mengosongkan batas yang sudah ada harus lewat tombol hapus yang berkonfirmasi.
+    const lama = [areaModal.maxLoa, areaModal.maxBeam, areaModal.maxDraft].map((v) => Number(v) || 0);
+    if (lama.some((v, i) => v > 0 && !((dims[i] ?? 0) > 0))) { toast(S.tLimitUseClear, "info"); return; }
     try {
       await update("drydocks", areaModal.id, {
         area: areaDraft.trim(),
-        maxLoa: Number(limitDraft.maxLoa) || 0, maxBeam: Number(limitDraft.maxBeam) || 0, maxDraft: Number(limitDraft.maxDraft) || 0,
+        maxLoa: dims[0], maxBeam: dims[1], maxDraft: dims[2],
       });
       log("menetapkan area dock", `${areaModal.name} · ${areaDraft.trim() || "-"}`, "Drydock");
       toast(S.tAreaSaved.replace("{a}", areaModal.name));
@@ -1327,7 +1348,10 @@ export default function Drydock() {
           <Field label={S.limitDraft}><NumInput min={0} className="input" value={limitDraft.maxDraft} onChange={(e) => setLimitDraft({ ...limitDraft, maxDraft: e.target.value })} /></Field>
         </FormGrid>
         <p className="mt-1 text-xs text-steel-400">{S.limitHint}</p>
+        {hasLimit && <button type="button" className="btn-secondary mt-3 text-xs text-rose-600" onClick={() => setConfirmClearLimit(true)}>{S.btnClearLimit}</button>}
       </Modal>
+      <ConfirmModal open={confirmClearLimit} danger title={S.btnClearLimit} confirmLabel={S.btnClearLimit} desc={S.clearLimitDesc.replace("{a}", String(areaModal?.name ?? ""))}
+        onCancel={() => setConfirmClearLimit(false)} onConfirm={clearLimits} />
 
       <ConfirmModal open={bastOffer !== null} title={`Buat BAST draft untuk slot ${bastOffer?.id ?? ""}?`}
         desc={bastOffer ? `Undock ${String(bastOffer.vessel)} tuntas. Buat BAST draft "Docking ${String(bastOffer.vessel)} (${String(bastOffer.id)})" senilai ${fmtRupiah(tagihanOf(bastOffer))} (dock + konsumsi)?` : ""}

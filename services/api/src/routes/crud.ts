@@ -14,7 +14,7 @@ import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { projectManagerError, stampRole, transferError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
-import { dockFitError } from "../dockFit.js";
+import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
 import { cacheGeneration, cacheGet, cachePut } from "../listCache.js";
 import { checklistHook } from "../scoring.js";
@@ -550,6 +550,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     const loanCreate = await loanOverlapError(table, null, rowData);
     if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
+    const limitCreate = await dockLimitError(table, null, null, rowData);
+    if (limitCreate) return reply.status(limitCreate.status).send(fail(limitCreate.message, "UNPROCESSABLE"));
     const fitCreate = await dockFitError(table, rowData, req.user?.role);
     if (fitCreate) return reply.status(409).send(fail(fitCreate, "CONFLICT"));
     // F3-K-02: validasi template & skor respons dihitung server.
@@ -670,6 +672,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const rulePatch = (whChanged ? transferError(table, merged as Record<string, unknown>) : null)
       ?? await projectManagerError(table, oldData, merged as Record<string, unknown>);
     if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));
+    const limitPatch = await dockLimitError(table, id, oldData, merged as Record<string, unknown>);
+    if (limitPatch) return reply.status(limitPatch.status).send(fail(limitPatch.message, limitPatch.status === 409 ? "CONFLICT" : "UNPROCESSABLE"));
     const loanPatch = await loanOverlapError(table, id, merged);
     if (loanPatch) return reply.status(409).send(fail(loanPatch, "CONFLICT"));
     // Hanya saat dock/proyek berganti: slot lama yang sudah terlanjur tidak dikunci.
