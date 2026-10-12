@@ -33,7 +33,6 @@ import {
   ConfirmModal,
   EmptyState,
   ProgressBar,
-  Accordion,
   SortTh,
   toggleSort,
   sortRows,
@@ -76,6 +75,7 @@ import {
   LAPORAN_EXCEL,
   LATEST_SNAPSHOT,
 } from "../../data/financeExcel";
+import { CoaTab } from "./tabs/CoaTab";
 
 /* Filter historikal Hari/Bulan/Tahun untuk Kas & Bank, Buku Besar, Neraca, Laba Rugi.
    Satu struktur state per tab: { mode, hari (YYYY-MM-DD), bulan (YYYY-MM), tahun (YYYY) }.
@@ -938,17 +938,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [showCoa, setShowCoa] = useState(false);
   const [coaForm, setCoaForm] = useState({ kode: "", nama: "", dk: "D", nrlr: "NR" });
   const [coaTarget, setCoaTarget] = useState<StoreItem | null>(null);
-  const [coaQ, setCoaQ] = useState("");
-  const [coaTipe, setCoaTipe] = useState("Semua");
-  const coaTipeOptions = ["Semua", "Aset", "Liabilitas", "Ekuitas", "Pendapatan", "Beban", "Header"];
-  const coaFiltered = coaRows.filter((c) => {
-    const tipe = coaList.find((x) => x.kode === String(c.kode))?.tipe ?? "";
-    const matchT = coaTipe === "Semua" || tipe === coaTipe;
-    const matchQ = rowMatches(c, coaQ, ["kode", "nama", "dk", "nrlr", "id"]);
-    return matchT && matchQ;
-  });
   /* Sort per tabel - satu state per tabel agar tidak bentrok antar tab. */
-  const [akunSort, setAkunSort] = useState<SortState>({ key: null, dir: "asc" });
   const [arSort, setArSort] = useState<SortState>({ key: null, dir: "asc" });
   const [apSort, setApSort] = useState<SortState>({ key: null, dir: "asc" });
   const [kasSort, setKasSort] = useState<SortState>({ key: null, dir: "asc" });
@@ -1113,16 +1103,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
 
   /* Deep-link Dashboard (?tab=Piutang (AR)&highlight=INV-..): pindah tab + flash. */
   useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds);
-  const coaTipeOf = (c: StoreItem): string => coaList.find((x) => x.kode === String(c.kode))?.tipe ?? "-";
-  const TIPE_ORDER = ["Aset", "Liabilitas", "Ekuitas", "Pendapatan", "Beban", "Header"];
-  const coaGroups = useMemo(() => {
-    const sorted = sortRows(coaFiltered, akunSort, (c, k) =>
-      k === "kode" ? String(c.kode) : k === "nama" ? String(c.nama) : k === "tipe" ? coaTipeOf(c) : k === "dk" ? String(c.dk) : String(c.nrlr));
-    const groups = TIPE_ORDER.map((t) => ({ tipe: t, rows: sorted.filter((c) => coaTipeOf(c) === t) })).filter((g) => g.rows.length > 0);
-    const other = sorted.filter((c) => !TIPE_ORDER.includes(coaTipeOf(c)));
-    if (other.length > 0) groups.push({ tipe: "Lainnya", rows: other });
-    return groups;
-  }, [coaFiltered, akunSort, coaList]);
 
   // Jurnal (sheet JU): tambah jurnal manual berimbang, multi-baris per voucher.
   const [showJu, setShowJu] = useState(false);
@@ -2872,67 +2852,25 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         <Tabs tabs={["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak"]} active={tab} onChange={setTab} />
         <div className="p-4">
           {tab === "Akun" && (
-            <div className="space-y-4">
-              <CardHeader
-                title={S.akunTitle}
-                subtitle={S.akunSub}
-                action={<button className="btn-primary text-xs" onClick={() => { setCoaTarget(null); setCoaForm({ kode: "", nama: "", dk: "D", nrlr: "NR" }); setShowCoa(true); }}>{S.addAkun}</button>}
-              />
-              <div className="flex flex-wrap items-center gap-2">
-                <SearchBox
-                  value={coaQ}
-                  onChange={setCoaQ}
-                  placeholder={S.searchAkunPh}
-                  ariaLabel={S.searchAkunAria}
-                  className="w-56"
-                />
-                <select className="input w-auto py-1.5 text-sm" value={coaTipe} onChange={(e) => setCoaTipe(e.target.value)} aria-label={S.filterTipeAria}>
-                  {coaTipeOptions.map((t) => <option key={t} value={t}>{t === "Semua" ? S.allTypes : t}</option>)}
-                </select>
-                <span className="ml-auto text-xs text-steel-400">{S.countAkun.replace("{n}", String(coaFiltered.length))}</span>
-              </div>
-              <div className="space-y-3">
-                {coaGroups.map((g) => (
-                  <Accordion key={g.tipe} title={g.tipe} subtitle={g.tipe === "Header" ? S.headerLockNote : S.countAkun.replace("{n}", String(g.rows.length))} count={g.rows.length} defaultOpen={coaGroups.length === 1 || g.tipe === "Aset"}>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-surface sticky top-0 z-10">
-                          <tr>
-                            <SortTh label={S.colNoAkun} sortKey="kode" sort={akunSort} onSort={(k) => setAkunSort((s) => toggleSort(s, k))} />
-                            <SortTh label={S.colNamaAkun} sortKey="nama" sort={akunSort} onSort={(k) => setAkunSort((s) => toggleSort(s, k))} />
-                            <SortTh label="D/K" sortKey="dk" sort={akunSort} onSort={(k) => setAkunSort((s) => toggleSort(s, k))} />
-                            <SortTh label="NR/LR" sortKey="nrlr" sort={akunSort} onSort={(k) => setAkunSort((s) => toggleSort(s, k))} />
-                            <th className="th">{S.actionTh}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-steel-100">
-                          {g.rows.map((c) => {
-                            const header = String(c.dk) === "-";
-                            return (
-                              <tr key={String(c.id)} className={header ? "bg-navy-50 font-semibold" : "hover:bg-surface"}>
-                                <td className="td font-mono text-xs font-semibold text-navy-900">{String(c.kode)}</td>
-                                <td className="td text-xs text-steel-600">{String(c.nama)} {header && <span className="ml-1 rounded-full bg-navy-700 px-1.5 py-0.5 text-[10px] font-bold text-white">Header</span>}</td>
-                                <td className="td text-xs text-steel-500">{String(c.dk)}</td>
-                                <td className="td text-xs text-steel-500">{String(c.nrlr)}</td>
-                                <td className="td">
-                                  <div className="flex gap-1.5">
-                                    <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(c.kode)}`} onClick={() => { setCoaTarget(c); setCoaForm({ kode: String(c.kode), nama: String(c.nama), dk: String(c.dk) === "-" ? "D" : String(c.dk), nrlr: String(c.nrlr) === "-" ? "NR" : String(c.nrlr) }); setShowCoa(true); }} />
-                                    {!header && (
-                                      <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(c.kode)}`} onClick={() => setDelCoa(c)} />
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </Accordion>
-                ))}
-                {coaGroups.length === 0 && <p className="py-6 text-center text-sm text-steel-400">{S.noAkunMatch}</p>}
-              </div>
-            </div>
+            <CoaTab
+              coaRows={coaRows}
+              onAdd={() => {
+                setCoaTarget(null);
+                setCoaForm({ kode: "", nama: "", dk: "D", nrlr: "NR" });
+                setShowCoa(true);
+              }}
+              onEdit={(c) => {
+                setCoaTarget(c);
+                setCoaForm({
+                  kode: String(c.kode),
+                  nama: String(c.nama),
+                  dk: String(c.dk) === "-" ? "D" : String(c.dk),
+                  nrlr: String(c.nrlr) === "-" ? "NR" : String(c.nrlr),
+                });
+                setShowCoa(true);
+              }}
+              onDelete={(c) => setDelCoa(c)}
+            />
           )}
 
           {tab === "Piutang (AR)" && (
