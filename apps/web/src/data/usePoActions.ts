@@ -39,7 +39,8 @@ function statusAfter(po: StoreItem, current: string): string {
 const prIdsOf = (po: StoreItem): string[] =>
   [...new Set([String(po.req ?? ""), ...(Array.isArray(po.prIds) ? (po.prIds as unknown[]).map(String) : [])].filter((x) => x !== "" && x !== "-"))];
 
-export interface ReceiveArgs { qty: number; itemId: string; noFaktur?: string; tglFaktur?: string; dendaRp?: number; actor?: string }
+export interface ReceiveLineArgs { itemId?: string; name?: string; qty: number }
+export interface ReceiveArgs { qty?: number; itemId?: string; noFaktur?: string; tglFaktur?: string; dendaRp?: number; actor?: string; lines?: ReceiveLineArgs[] }
 export interface ReceiveOutcome { status: string; fulfilled: { id: string; given?: number }[] }
 export interface ReturnArgs { qty: number; itemId: string; note: string; actor?: string }
 
@@ -51,28 +52,115 @@ export function usePoActions() {
     if (remote()) {
       const res = await apiFetch<{ po: StoreItem; fulfilled: { id: string; given: number }[] }>(
         `/api/purchaseOrders/${encodeURIComponent(String(po.id))}/receive`,
-        { method: "POST", body: JSON.stringify({ qty: a.qty, itemId: a.itemId, noFaktur: a.noFaktur, tglFaktur: a.tglFaktur, dendaRp: a.dendaRp }) },
+        { method: "POST", body: JSON.stringify({ qty: a.qty, itemId: a.itemId, noFaktur: a.noFaktur, tglFaktur: a.tglFaktur, dendaRp: a.dendaRp, lines: a.lines }) },
       );
       await resyncCollections([...SYNC]);
       return { status: String(res.po.status ?? ""), fulfilled: res.fulfilled };
     }
+    const hasLines = Array.isArray(a.lines) && a.lines.length > 0;
+    if (hasLines) {
+      const recvLines = a.lines as ReceiveLineArgs[];
+      const poLines = (Array.isArray(po.lines) ? (po.lines as Record<string, unknown>[]) : []).map((l) => ({ ...l }));
+      const fulfilled: { id: string; given: number }[] = [];
+      const inventoryList = [...(data.inventory ?? [])];
+
+      for (const rl of recvLines) {
+        const lineQty = Number(rl.qty);
+        if (!Number.isFinite(lineQty) || lineQty <= 0) continue;
+
+        const lineIdx = poLines.findIndex((l) =>
+          (rl.itemId && String(l.itemId ?? "") === String(rl.itemId)) ||
+          (rl.name && String(l.name ?? "").trim().toLowerCase() === String(rl.name).trim().toLowerCase()),
+        );
+        const targetLine = lineIdx >= 0 ? poLines[lineIdx] : undefined;
+        if (!targetLine) throw new Error(`Baris item "${rl.name ?? rl.itemId}" tidak ditemukan di PO`);
+
+        const openLine = Math.max(0, num(targetLine.qty) - num(targetLine.receivedQty));
+        if (lineQty > openLine) throw new Error(`Melebihi sisa item ${String(targetLine.name ?? "")} (${openLine})`);
+
+        const lineItemId = String(rl.itemId ?? targetLine.itemId ?? "");
+        let item = inventoryList.find((i) => String(i.id) === lineItemId);
+        if (!item && targetLine.name) {
+          item = inventoryList.find((i) => String(i.name ?? "").trim().toLowerCase() === String(targetLine.name ?? "").trim().toLowerCase());
+        }
+        if (!item) throw new Error(`Pilih item inventori penerima barang untuk ${String(targetLine.name ?? "")}`);
+
+        const resolvedItemId = String(item.id);
+        const unitPrice = num(targetLine.price) > 0 ? num(targetLine.price) : (num(po.amount) / Math.max(1, num(po.qty)));
+        const oldStock = Math.max(0, num(item.stock));
+        const oldAvg = num(item.avgCost) > 0 ? num(item.avgCost) : num(item.cost);
+        let stock = oldStock + lineQty;
+
+        await add("movements", {
+          item: String(item.name ?? targetLine.name), itemId: resolvedItemId, type: "Penerimaan", qty: lineQty, unit: String(item.unit ?? targetLine.unit ?? "pcs"),
+          by: String(po.id), date: todayISO(), tone: "in", ref: { poId: po.id },
+        }, { action: "menerima barang", target: `${String(item.name)} × ${lineQty} (${String(po.id)})`, module: "Procurement" });
+
+        targetLine.itemId = resolvedItemId;
+        targetLine.receivedQty = num(targetLine.receivedQty) + lineQty;
+
+        const prIds = prIdsOf(po);
+        const mrs = (data.materialRequests ?? [])
+          .filter((m) => prIds.includes(String(m.requisitionId ?? "")) && String(m.itemId) === resolvedItemId && num(m.shortage) > 0)
+          .sort((x, y) => String(x.date ?? "").localeCompare(String(y.date ?? "")));
+        for (const m of mrs) {
+          if (stock <= 0) break;
+          const give = Math.min(stock, num(m.shortage));
+          stock -= give;
+          const mv = await add("movements", {
+            item: String(m.item ?? item.name), itemId: resolvedItemId, type: "Pengeluaran", qty: give, unit: String(m.unit ?? item.unit ?? "pcs"),
+            by: a.actor || "Gudang", date: todayISO(), tone: "out", ref: { projectId: m.projectId, materialRequestId: m.id }, note: `Pemenuhan ${String(m.id)}`,
+          }, { action: "memenuhi permintaan barang", module: "Inventori" });
+          const issued = num(m.issued) + give;
+          const shortage = num(m.shortage) - give;
+          const mvIds = Array.isArray(m.movementIds) ? (m.movementIds as string[]) : [];
+          await update("materialRequests", String(m.id), { issued, shortage, status: mrStatus(issued, shortage, true), movementIds: [...mvIds, String(mv.id)] });
+          fulfilled.push({ id: String(m.id), given: give });
+        }
+
+        const invPatch: Record<string, unknown> = { stock };
+        if (unitPrice > 0) invPatch.avgCost = Math.round(((oldStock * oldAvg + lineQty * unitPrice) / (oldStock + lineQty)) * 100) / 100;
+        await update("inventory", resolvedItemId, invPatch);
+      }
+
+      const totalReceived = poLines.reduce((s, l) => s + num(l.receivedQty), 0);
+      const totalOrdered = poLines.reduce((s, l) => s + num(l.qty), 0);
+      const allCompleted = totalOrdered > 0 && poLines.every((l) => num(l.receivedQty) >= num(l.qty));
+      const st = allCompleted ? "Diterima" : "Diterima Sebagian";
+
+      const nextPo: StoreItem = {
+        ...po,
+        lines: poLines,
+        receivedQty: totalReceived,
+        ...(a.noFaktur !== undefined ? { noFaktur: a.noFaktur } : {}),
+        ...(a.tglFaktur !== undefined ? { tglFaktur: a.tglFaktur } : {}),
+        ...(a.dendaRp !== undefined ? { dendaRp: a.dendaRp } : {}),
+      };
+      const { id: _poId, ...poPatch } = nextPo;
+      void _poId;
+      await update("purchaseOrders", String(po.id), { ...poPatch, status: st });
+      return { status: st, fulfilled };
+    }
+
     if (poIsMultiItem(po)) throw new Error(MULTI_MSG);
     const item = (data.inventory ?? []).find((i) => String(i.id) === a.itemId);
     if (!item) throw new Error("Pilih item inventori penerima barang");
-    if (a.qty > poOpenQty(po)) throw new Error(`Melebihi sisa PO (${poOpenQty(po)})`);
+    const singleQty = Number(a.qty || 0);
+    if (singleQty <= 0) throw new Error("Kuantitas terima harus lebih dari 0");
+    if (singleQty > poOpenQty(po)) throw new Error(`Melebihi sisa PO (${poOpenQty(po)})`);
     if (num(po.receivedQty) > 0 && String(po.itemId ?? "") !== "" && String(po.itemId) !== a.itemId) {
       throw new Error(`Barang PO sudah ditetapkan (${String(po.itemId)}) sejak penerimaan pertama`);
     }
     const unitPrice = num(po.qty) > 0 ? num(po.amount) / num(po.qty) : 0;
     const oldStock = Math.max(0, num(item.stock));
     const oldAvg = num(item.avgCost) > 0 ? num(item.avgCost) : num(item.cost);
-    let stock = oldStock + a.qty;
+    let stock = oldStock + singleQty;
     await add("movements", {
-      item: String(item.name), itemId: String(item.id), type: "Penerimaan", qty: a.qty, unit: String(item.unit ?? "pcs"),
+      item: String(item.name), itemId: String(item.id), type: "Penerimaan", qty: singleQty, unit: String(item.unit ?? "pcs"),
       by: String(po.id), date: todayISO(), tone: "in", ref: { poId: po.id },
-    }, { action: "menerima barang", target: `${String(item.name)} × ${a.qty} (${String(po.id)})`, module: "Procurement" });
+    }, { action: "menerima barang", target: `${String(item.name)} × ${singleQty} (${String(po.id)})`, module: "Procurement" });
     const nextPo: StoreItem = {
-      ...po, itemId: String(item.id), item: String(item.name), receivedQty: num(po.receivedQty) + a.qty,
+      ...po, itemId: String(item.id), item: String(item.name), receivedQty: num(po.receivedQty) + singleQty,
       ...(a.noFaktur !== undefined ? { noFaktur: a.noFaktur } : {}),
       ...(a.tglFaktur !== undefined ? { tglFaktur: a.tglFaktur } : {}),
       ...(a.dendaRp !== undefined ? { dendaRp: a.dendaRp } : {}),
@@ -113,7 +201,7 @@ export function usePoActions() {
       fulfilled.push({ id: String(m.id), given: give });
     }
     const invPatch: Record<string, unknown> = { stock };
-    if (unitPrice > 0) invPatch.avgCost = Math.round(((oldStock * oldAvg + a.qty * unitPrice) / (oldStock + a.qty)) * 100) / 100;
+    if (unitPrice > 0) invPatch.avgCost = Math.round(((oldStock * oldAvg + singleQty * unitPrice) / (oldStock + singleQty)) * 100) / 100;
     await update("inventory", String(item.id), invPatch);
     return { status: st, fulfilled };
   }, [data.inventory, data.materialRequests, data.spareparts, add, update, resyncCollections]);

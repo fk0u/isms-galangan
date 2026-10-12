@@ -29,11 +29,19 @@ async function main(): Promise<void> {
   const itemId = `STK-POP${tag}`;
   const returnItemId = `STK-RET${tag}`;
   const awayReturnItemId = `STK-RETX${tag}`;
+  const multiItem1Id = `STK-MI1${tag}`;
+  const multiItem2Id = `STK-MI2${tag}`;
   const scopedDirectorId = `probe-return-dir-${tag}`;
   const scopedDirectorEmployeeId = `probe-return-emp-${tag}`;
   const scopedDirectorUsername = `${scopedDirectorId}@galangan.com`;
   await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
     itemId, "Samarinda", JSON.stringify({ name: "Probe Valve", unit: "pcs", stock: 0, cost: 100000 }), new Date().toISOString(),
+  ]);
+  await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    multiItem1Id, "Samarinda", JSON.stringify({ name: "Probe Multi Item 1", unit: "pcs", stock: 0, cost: 50000 }), new Date().toISOString(),
+  ]);
+  await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
+    multiItem2Id, "Samarinda", JSON.stringify({ name: "Probe Multi Item 2", unit: "meter", stock: 0, cost: 100000 }), new Date().toISOString(),
   ]);
   await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [
     returnItemId, "Samarinda", JSON.stringify({ name: "Probe Return Valve", unit: "pcs", stock: 5, cost: 100000 }), new Date().toISOString(),
@@ -113,7 +121,7 @@ async function main(): Promise<void> {
     assert("vendor B kirim 4 → PO Diterima", r4.statusCode === 200 && (await poOf(poBId)).status === "Diterima", r4.body);
     assert("permintaan selesai (10 dari 10)", mrDone.status === "Selesai" && mrDone.issued === 10 && mrDone.shortage === 0, JSON.stringify(mrDone));
 
-    // PO konsolidasi (beberapa barang) ditolak; PO lama tanpa qty tetap bisa diterima penuh.
+    // PO konsolidasi tanpa perincian baris ditolak; PO lama tanpa qty tetap bisa diterima penuh.
     const multi = await post(dir, "/api/purchaseOrders", { data: {
       poType: "Besar", item: "Campuran", itemId, vendor: "PT Vendor A Probe", qty: 5, amount: 500000, status: "Dikirim", date: "2026-10-10",
       lines: [{ name: "Probe Valve", qty: 3, unit: "pcs", price: 100000 }, { name: "Probe Gasket", qty: 2, unit: "pcs", price: 100000 }],
@@ -121,7 +129,77 @@ async function main(): Promise<void> {
     const multiId = (multi.json().data as { id: string }).id;
     poIds.push(multiId);
     const multiRecv = await post(dir, `/api/purchaseOrders/${multiId}/receive`, { qty: 1 });
-    assert("PO multi-barang → 422 (tidak mencampur stok)", multiRecv.statusCode === 422, multiRecv.body);
+    assert("PO multi-barang tanpa baris → 422 (tidak mencampur stok)", multiRecv.statusCode === 422, multiRecv.body);
+
+    // ================= Issue #106: Uji alur proyek vs stok gudang, multi-item, penerimaan per baris, dan pencegahan penerimaan ganda =================
+    // 1. Alur proyek vs stok gudang
+    const poProjRes = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", tujuan: "kapal", project: project.id, vessel: "TB. PROBE 01", vendor: "PT Vendor A Probe",
+      qty: 1, amount: 100000, status: "Draft", date: "2026-10-10", lines: [{ name: "Item Proyek", qty: 1, unit: "pcs", price: 100000 }],
+    } });
+    const poProjId = (poProjRes.json().data as { id: string }).id;
+    poIds.push(poProjId);
+    const poProjData = await poOf(poProjId);
+    assert("PO tujuan kapal menyimpan project & vessel", poProjData.tujuan === "kapal" && poProjData.project === project.id && poProjData.vessel === "TB. PROBE 01", JSON.stringify(poProjData));
+
+    const poStockRes = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", tujuan: "stok", warehouse: "Gudang Utama", project: "-", vessel: "", vendor: "PT Vendor A Probe",
+      qty: 1, amount: 100000, status: "Draft", date: "2026-10-10", lines: [{ name: "Item Stok", qty: 1, unit: "pcs", price: 100000 }],
+    } });
+    const poStockId = (poStockRes.json().data as { id: string }).id;
+    poIds.push(poStockId);
+    const poStockData = await poOf(poStockId);
+    assert("PO tujuan stok gudang menyimpan warehouse dan project '-'", poStockData.tujuan === "stok" && poStockData.warehouse === "Gudang Utama" && poStockData.project === "-", JSON.stringify(poStockData));
+
+    // 2. PO multi-item & penerimaan per baris
+    const poMultiBarisRes = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", vendor: "PT Vendor Multi Probe", qty: 15, amount: 1000000, status: "Dikirim", date: "2026-10-10",
+      lines: [
+        { name: "Probe Multi Item 1", itemId: multiItem1Id, qty: 10, unit: "pcs", price: 50000, receivedQty: 0 },
+        { name: "Probe Multi Item 2", itemId: multiItem2Id, qty: 5, unit: "meter", price: 100000, receivedQty: 0 },
+      ],
+    } });
+    const poMultiBarisId = (poMultiBarisRes.json().data as { id: string }).id;
+    poIds.push(poMultiBarisId);
+
+    // Penerimaan baris melebihi sisa baris ditolak 422
+    const overLineRecv = await post(dir, `/api/purchaseOrders/${poMultiBarisId}/receive`, {
+      lines: [{ itemId: multiItem1Id, qty: 11 }],
+    });
+    assert("terima baris melebihi sisa item → 422", overLineRecv.statusCode === 422, overLineRecv.body);
+
+    // Penerimaan sebagian per baris (item 1 terima 6, item 2 terima 5)
+    const rPartMulti = await post(dir, `/api/purchaseOrders/${poMultiBarisId}/receive`, {
+      lines: [
+        { itemId: multiItem1Id, qty: 6 },
+        { itemId: multiItem2Id, qty: 5 },
+      ],
+      noFaktur: "010.000-26.00000088",
+      tglFaktur: "2026-10-10",
+    });
+    const poAfterPart = await poOf(poMultiBarisId);
+    const stock1AfterPart = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [multiItem1Id]))[0]?.data ?? "{}") as { stock: number }).stock);
+    const stock2AfterPart = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [multiItem2Id]))[0]?.data ?? "{}") as { stock: number }).stock);
+    assert("penerimaan per baris sebagian → PO Diterima Sebagian, stok masing-masing naik (0→6, 0→5)",
+      rPartMulti.statusCode === 200 && poAfterPart.status === "Diterima Sebagian" && poAfterPart.receivedQty === 11 && stock1AfterPart === 6 && stock2AfterPart === 5,
+      rPartMulti.body);
+
+    // Penerimaan sisa baris (item 1 terima 4)
+    const rFullMulti = await post(dir, `/api/purchaseOrders/${poMultiBarisId}/receive`, {
+      lines: [{ itemId: multiItem1Id, qty: 4 }],
+    });
+    const poAfterFull = await poOf(poMultiBarisId);
+    const stock1AfterFull = Number((JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [multiItem1Id]))[0]?.data ?? "{}") as { stock: number }).stock);
+    assert("penerimaan sisa baris → PO Diterima, stok item 1 naik (6→10)",
+      rFullMulti.statusCode === 200 && poAfterFull.status === "Diterima" && poAfterFull.receivedQty === 15 && stock1AfterFull === 10,
+      rFullMulti.body);
+
+    // 3. Pencegahan penerimaan ganda (PO yang sudah "Diterima" ditolak 409)
+    const dupRecv = await post(dir, `/api/purchaseOrders/${poMultiBarisId}/receive`, {
+      lines: [{ itemId: multiItem1Id, qty: 1 }],
+    });
+    assert("pencegahan penerimaan ganda: PO sudah Diterima ditolak → 409", dupRecv.statusCode === 409, dupRecv.body);
+
     const legacy = await post(dir, "/api/purchaseOrders", { data: { item: "Probe Valve", itemId, vendor: "PT Vendor A Probe", amount: 300000, status: "Dikirim", date: "2026-10-10" } });
     const legacyId = (legacy.json().data as { id: string }).id;
     poIds.push(legacyId);
@@ -172,6 +250,8 @@ async function main(): Promise<void> {
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%${itemId}%`]);
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%${returnItemId}%`]);
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%${awayReturnItemId}%`]);
+    await exec("DELETE FROM movements WHERE data LIKE ?", [`%${multiItem1Id}%`]);
+    await exec("DELETE FROM movements WHERE data LIKE ?", [`%${multiItem2Id}%`]);
     await exec("DELETE FROM materialRequests WHERE data LIKE ?", [`%${itemId}%`]);
     await exec("DELETE FROM requisitions WHERE data LIKE ?", [`%${itemId}%`]);
     if (mrId) await exec("DELETE FROM audit_log WHERE row_id = ?", [mrId]);
@@ -179,6 +259,8 @@ async function main(): Promise<void> {
     await exec("DELETE FROM inventory WHERE id = ?", [itemId]);
     await exec("DELETE FROM inventory WHERE id = ?", [returnItemId]);
     await exec("DELETE FROM inventory WHERE id = ?", [awayReturnItemId]);
+    await exec("DELETE FROM inventory WHERE id = ?", [multiItem1Id]);
+    await exec("DELETE FROM inventory WHERE id = ?", [multiItem2Id]);
     await exec("DELETE FROM employees WHERE id = ?", [scopedDirectorEmployeeId]);
     await exec("DELETE FROM users WHERE id = ?", [scopedDirectorId]);
   }

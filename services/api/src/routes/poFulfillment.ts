@@ -10,11 +10,18 @@ import { MaterialError } from "../materialRequests.js";
 import { PoError, reassignPo, receivePo, returnPo, vendorCannotFulfill } from "../poFulfillment.js";
 
 const ReceiveSchema = z.object({
-  qty: z.number().finite().positive().max(1_000_000),
+  qty: z.number().finite().positive().max(1_000_000).optional(),
   itemId: z.string().max(128).optional(),
   noFaktur: z.string().max(100).optional(),
   tglFaktur: z.string().max(32).optional(),
   dendaRp: z.number().finite().min(0).optional(),
+  lines: z.array(z.object({
+    itemId: z.string().max(128).optional(),
+    name: z.string().max(200).optional(),
+    qty: z.number().finite().min(0).max(1_000_000),
+  })).optional(),
+}).refine((data) => (data.qty !== undefined && data.qty > 0) || (Array.isArray(data.lines) && data.lines.some((l) => l.qty > 0)), {
+  message: "Kuantitas terima harus lebih dari 0",
 });
 const ReturnSchema = z.object({
   qty: z.number().finite().positive().max(1_000_000),
