@@ -221,6 +221,21 @@ export default function Drydock() {
   const [slotAreaDraft, setSlotAreaDraft] = useState("");
   const [showMaint, setShowMaint] = useState(false);
   const [maintForm, setMaintForm] = useState({ dockId: "DD-1", startDate: "", endDate: "", reason: "" });
+  const [showAddDock, setShowAddDock] = useState(false);
+  const [addDockError, setAddDockError] = useState<string | null>(null);
+  const emptyDockForm = {
+    name: "",
+    kind: "graving" as "graving" | "floating" | "slipway" | "berth",
+    maxLoa: "",
+    maxBeam: "",
+    maxDraft: "",
+    capacity: "",
+    area: "",
+    pic: "",
+    status: "Tersedia",
+  };
+  const [dockForm, setDockForm] = useState(emptyDockForm);
+  const [deletingDock, setDeletingDock] = useState<StoreItem | null>(null);
 
   /* No. DS SB max+1: scan dsRef DS-type saja, parse leading (\d+)/. */
   const nextDsSeq = (): number =>
@@ -764,6 +779,72 @@ export default function Drydock() {
     }
   };
 
+  const saveNewDock = async () => {
+    if (!dockForm.name.trim()) {
+      setAddDockError(S.tDockNameRequired);
+      return;
+    }
+    const maxLoa = Number(dockForm.maxLoa);
+    const maxBeam = Number(dockForm.maxBeam);
+    const maxDraft = Number(dockForm.maxDraft);
+    if (
+      (dockForm.maxLoa && (!Number.isFinite(maxLoa) || maxLoa < 0)) ||
+      (dockForm.maxBeam && (!Number.isFinite(maxBeam) || maxBeam < 0)) ||
+      (dockForm.maxDraft && (!Number.isFinite(maxDraft) || maxDraft < 0))
+    ) {
+      setAddDockError(S.tLimitInvalid);
+      return;
+    }
+
+    const capDesc = dockForm.capacity.trim() || [
+      dockForm.maxLoa ? `Max ${dockForm.maxLoa}m LOA` : "",
+      dockForm.maxBeam ? `${dockForm.maxBeam}m Lebar` : "",
+      dockForm.maxDraft ? `${dockForm.maxDraft}m Sarat` : "",
+    ].filter(Boolean).join(" · ") || "-";
+
+    try {
+      const created = await add("drydocks", {
+        name: dockForm.name.trim(),
+        kind: dockForm.kind,
+        capacity: capDesc,
+        lengthM: maxLoa || 0,
+        widthM: maxBeam || 0,
+        depthM: maxDraft || 0,
+        maxLoa: maxLoa || 0,
+        maxBeam: maxBeam || 0,
+        maxDraft: maxDraft || 0,
+        area: dockForm.area.trim() || "Galangan Utama",
+        pic: dockForm.pic.trim() || "Belum ditentukan",
+        status: dockForm.status || "Tersedia",
+      }, { action: "menambah fasilitas dock", target: dockForm.name.trim(), module: "Drydock" });
+
+      toast(S.tDockAdded.replace("{a}", String(created.name ?? dockForm.name.trim())));
+      setShowAddDock(false);
+      setDockForm(emptyDockForm);
+      setAddDockError(null);
+    } catch (e) {
+      setAddDockError(e instanceof Error ? e.message : S.tDeleteFail);
+    }
+  };
+
+  const confirmDeleteDock = async () => {
+    if (!deletingDock) return;
+    const hasSlots = dockSlots.some((s) => s.dockId === deletingDock.id);
+    if (hasSlots) {
+      toast(S.tDockDeleteBlocked.replace("{a}", String(deletingDock.name ?? deletingDock.id)), "info");
+      setDeletingDock(null);
+      return;
+    }
+    try {
+      await remove("drydocks", deletingDock.id);
+      log("menghapus fasilitas dock", `${deletingDock.id} · ${deletingDock.name}`, "Drydock");
+      toast(S.tDockDeleted.replace("{a}", String(deletingDock.name ?? deletingDock.id)), "info");
+      setDeletingDock(null);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : S.tDeleteFail, "info");
+    }
+  };
+
   return (
     <div>
       <PageHeader
@@ -772,6 +853,7 @@ export default function Drydock() {
         icon={<Ship className="h-5 w-5" />}
         actions={
           <div className="flex gap-2">
+            <button className="btn-secondary" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}><Plus className="h-4 w-4" /> {S.btnAddDock}</button>
             <button className="btn-secondary" onClick={() => setShowMaint(true)}><Wrench className="h-4 w-4" /> {S.btnMaintBlock}</button>
             <button className="btn-primary-gradient" onClick={openBooking}><Plus className="h-4 w-4" /> {S.btnBookSlot}</button>
           </div>
@@ -829,84 +911,6 @@ export default function Drydock() {
 
       <div className="mt-5 grid grid-cols-1 gap-5">
         <Card>
-          <CardHeader title={S.cardSlots} subtitle={S.cardSlotsSub} action={
-            <div className="flex flex-wrap items-center gap-1.5">
-              <select className="input text-xs" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} aria-label={S.filterAreaAria}>
-                <option value="Semua">{S.mapAreaPrefix.replace("{a}", S.mapAll)} ({S.mapActiveCount.replace("{n}", String(dockSlots.filter((s) => isActiveSlot(s)).length))})</option>
-                {areaOptions.map((a) => <option key={a} value={a}>{a} ({S.mapActiveCount.replace("{n}", String(activeByArea.get(a) ?? 0))})</option>)}
-              </select>
-              <select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
-                <option value="Semua">{S.mapPositionPrefix.replace("{a}", S.mapAll)}</option>
-                <option value="Masuk">↓ {S.posMasuk} ({S.mapStatusScheduled})</option>
-                <option value="Berjalan">● {S.mapStatusRunning}</option>
-                <option value="Keluar">↑ {S.posKeluar} ({S.mapStatusComplete})</option>
-              </select>
-              <select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
-                {STATUS_FILTERS.map((s) => <option key={s} value={s}>{mappingStatusLabel(s)}</option>)}
-              </select>
-              <label className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface px-2 py-1 text-xs text-steel-600">
-                <input type="checkbox" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
-                {S.mapActiveOnly}
-              </label>
-              {(areaFilter !== "Semua" || posFilter !== "Semua" || statusFilter !== "Semua" || showActiveOnly) && (
-                <button className="btn-secondary px-2 py-1 text-xs" onClick={() => { setAreaFilter("Semua"); setPosFilter("Semua"); setStatusFilter("Semua"); setShowActiveOnly(false); }}>
-                  {S.mapReset}
-                </button>
-              )}
-            </div>
-          } />
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 bg-surface">
-                <tr><SortTh label={S.colFacility} sortKey="facility" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.areaLabel} sortKey="area" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colProject} sortKey="vessel" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colDuration} sortKey="days" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPriority} sortKey="priority" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.colAction}</th></tr>
-              </thead>
-              <tbody className="divide-y divide-steel-100">
-                {pager.slice(sortedSlots).map((s) => {
-                  const st = slotStatus(s, data.projects, todayWita);
-                  const isCrit = conflict.some((c) => c.id === s.id) && overlapsKritis(s);
-                  return (
-                    <tr key={s.id} id={notifRowId(String(s.id))} className={`${isCrit ? "bg-rose-50" : "hover:bg-surface"} ${rowHighlightClass({ id: String(s.id), flash, notified: notified.has(String(s.id)), base: isCrit ? "" : "hover:bg-surface" })}`}>
-                      <td className="td text-steel-600">{drydocks.find((d) => d.id === s.dockId)?.name}</td>
-                      <td className="td text-steel-600" title={slotAreaOf(s) || S.noArea}>{String(s.area ?? "").trim() || <span className="text-steel-400">—</span>}</td>
-                      <td className="td">
-                        <p className="font-medium text-navy-900">{s.vessel}</p>
-                        <p className="text-xs font-mono text-steel-500">{s.project}</p>
-                        {s.dsRef ? <p className="text-xs font-mono text-steel-400">DS {s.dsRef}</p> : null}
-                        {s.startDate ? <p className="text-xs text-steel-400">{S.startedOn.replace("{a}", fmtTanggal(s.startDate))}</p> : null}
-                      </td>
-                      <td className="td text-steel-600">{formatSlotDateRange(s)} ({S.durationDays.replace("{n}", String(slotDays(s, todayWita)))})</td>
-                      <td className="td">
-                        {s.project === "MAINT"
-                          ? <Badge tone="gray">{S.maintBadge}</Badge>
-                          : <Badge tone={s.priority === "Kritis" ? "red" : s.priority === "Tinggi" ? "amber" : "gray"}>{s.priority ?? "Normal"}</Badge>}
-                      </td>
-                      <td className="td"><StatusBadge status={st} label={mappingStatusLabel(st)} /></td>
-                      <td className="td text-xs text-steel-600">{createdAtOf(s) !== null ? fmtTanggal(createdAtOf(s)) : <span className="text-steel-400">-</span>}</td>
-                      <td className="td text-xs text-steel-600">{lastTouchedAt(s) !== null ? fmtTanggal(lastTouchedAt(s)) : <span className="text-steel-400">-</span>}</td>
-                      <td className="td">
-                        <div className="flex gap-1.5">
-                          <RowAction icon={Eye} tone="neutral" label={S.detailBtn} ariaLabel={`${S.detailBtn} ${String(s.id)}`} onClick={() => openSlot(s)} />
-                          <RowAction
-                            icon={ArrowLeftRight}
-                            tone="neutral"
-                            label={conflict.some((c) => c.id === s.id) ? S.moveTitleConflict : S.moveTitlePlain}
-                            ariaLabel={S.moveAria.replace("{a}", String(s.id))}
-                            onClick={() => openMove(s)}
-                          />
-                          <RowAction icon={Trash2} tone="danger" label={S.delSlotTitle.replace("{a}", String(s.id))} onClick={() => setDeleting(s)} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredSlots.length === 0 && <tr><td colSpan={9} className="td text-center text-steel-400">{S.emptySlots}</td></tr>}
-              </tbody>
-            </table>
-            {pager.bar}
-          </div>
-        </Card>
-
-      <Card className="mt-5">
         <CardHeader
           title={S.mappingTitle}
           subtitle={`${S.mappingSub} · ${S.posMasuk} (${S.mapStatusScheduled}) → ${S.mapStatusRunning} → ${S.posKeluar} (${S.mapStatusComplete})`}
@@ -1107,11 +1111,9 @@ export default function Drydock() {
         </div>
       </Card>
 
-      </div>
-
       {/* Waiting list (DRY-03): proyek aktif yang belum punya slot dock,
           urut tanggal pengajuan, dengan perkiraan dock cocok yang kosong. */}
-      <Card className="mt-5">
+      <Card>
         <CardHeader
           title={S.waitTitle.replace("{n}", String(waiting.length))}
           subtitle={S.waitSub}
@@ -1142,6 +1144,173 @@ export default function Drydock() {
           )}
         </div>
       </Card>
+
+      {/* Slot Docking Aktif */}
+      <Card>
+        <CardHeader title={S.cardSlots} subtitle={S.cardSlotsSub} action={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select className="input text-xs" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} aria-label={S.filterAreaAria}>
+              <option value="Semua">{S.mapAreaPrefix.replace("{a}", S.mapAll)} ({S.mapActiveCount.replace("{n}", String(dockSlots.filter((s) => isActiveSlot(s)).length))})</option>
+              {areaOptions.map((a) => <option key={a} value={a}>{a} ({S.mapActiveCount.replace("{n}", String(activeByArea.get(a) ?? 0))})</option>)}
+            </select>
+            <select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
+              <option value="Semua">{S.mapPositionPrefix.replace("{a}", S.mapAll)}</option>
+              <option value="Masuk">↓ {S.posMasuk} ({S.mapStatusScheduled})</option>
+              <option value="Berjalan">● {S.mapStatusRunning}</option>
+              <option value="Keluar">↑ {S.posKeluar} ({S.mapStatusComplete})</option>
+            </select>
+            <select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
+              {STATUS_FILTERS.map((s) => <option key={s} value={s}>{mappingStatusLabel(s)}</option>)}
+            </select>
+            <label className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface px-2 py-1 text-xs text-steel-600">
+              <input type="checkbox" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
+              {S.mapActiveOnly}
+            </label>
+            {(areaFilter !== "Semua" || posFilter !== "Semua" || statusFilter !== "Semua" || showActiveOnly) && (
+              <button className="btn-secondary px-2 py-1 text-xs" onClick={() => { setAreaFilter("Semua"); setPosFilter("Semua"); setStatusFilter("Semua"); setShowActiveOnly(false); }}>
+                {S.mapReset}
+              </button>
+            )}
+          </div>
+        } />
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="sticky top-0 z-10 bg-surface">
+              <tr><SortTh label={S.colFacility} sortKey="facility" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.areaLabel} sortKey="area" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colProject} sortKey="vessel" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colDuration} sortKey="days" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPriority} sortKey="priority" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.colAction}</th></tr>
+            </thead>
+            <tbody className="divide-y divide-steel-100">
+              {pager.slice(sortedSlots).map((s) => {
+                const st = slotStatus(s, data.projects, todayWita);
+                const isCrit = conflict.some((c) => c.id === s.id) && overlapsKritis(s);
+                return (
+                  <tr key={s.id} id={notifRowId(String(s.id))} className={`${isCrit ? "bg-rose-50" : "hover:bg-surface"} ${rowHighlightClass({ id: String(s.id), flash, notified: notified.has(String(s.id)), base: isCrit ? "" : "hover:bg-surface" })}`}>
+                    <td className="td text-steel-600">{drydocks.find((d) => d.id === s.dockId)?.name}</td>
+                    <td className="td text-steel-600" title={slotAreaOf(s) || S.noArea}>{String(s.area ?? "").trim() || <span className="text-steel-400">-</span>}</td>
+                    <td className="td">
+                      <p className="font-medium text-navy-900">{s.vessel}</p>
+                      <p className="text-xs font-mono text-steel-500">{s.project}</p>
+                      {s.dsRef ? <p className="text-xs font-mono text-steel-400">DS {s.dsRef}</p> : null}
+                      {s.startDate ? <p className="text-xs text-steel-400">{S.startedOn.replace("{a}", fmtTanggal(s.startDate))}</p> : null}
+                    </td>
+                    <td className="td text-steel-600">{formatSlotDateRange(s)} ({S.durationDays.replace("{n}", String(slotDays(s, todayWita)))})</td>
+                    <td className="td">
+                      {s.project === "MAINT"
+                        ? <Badge tone="gray">{S.maintBadge}</Badge>
+                        : <Badge tone={s.priority === "Kritis" ? "red" : s.priority === "Tinggi" ? "amber" : "gray"}>{s.priority ?? "Normal"}</Badge>}
+                    </td>
+                    <td className="td"><StatusBadge status={st} label={mappingStatusLabel(st)} /></td>
+                    <td className="td text-xs text-steel-600">{createdAtOf(s) !== null ? fmtTanggal(createdAtOf(s)) : <span className="text-steel-400">-</span>}</td>
+                    <td className="td text-xs text-steel-600">{lastTouchedAt(s) !== null ? fmtTanggal(lastTouchedAt(s)) : <span className="text-steel-400">-</span>}</td>
+                    <td className="td">
+                      <div className="flex gap-1.5">
+                        <RowAction icon={Eye} tone="neutral" label={S.detailBtn} ariaLabel={`${S.detailBtn} ${String(s.id)}`} onClick={() => openSlot(s)} />
+                        <RowAction
+                          icon={ArrowLeftRight}
+                          tone="neutral"
+                          label={conflict.some((c) => c.id === s.id) ? S.moveTitleConflict : S.moveTitlePlain}
+                          ariaLabel={S.moveAria.replace("{a}", String(s.id))}
+                          onClick={() => openMove(s)}
+                        />
+                        <RowAction icon={Trash2} tone="danger" label={S.delSlotTitle.replace("{a}", String(s.id))} onClick={() => setDeleting(s)} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredSlots.length === 0 && <tr><td colSpan={9} className="td text-center text-steel-400">{S.emptySlots}</td></tr>}
+            </tbody>
+          </table>
+          {pager.bar}
+        </div>
+      </Card>
+
+      {/* Tabel List Fasilitas Dock (di paling bawah) dengan form spesifikasi tambah dock */}
+      <Card>
+        <CardHeader
+          title={S.cardDocks}
+          subtitle={S.cardDocksSub}
+          action={
+            <button className="btn-primary-gradient text-xs" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}>
+              <Plus className="h-3.5 w-3.5" /> {S.btnAddDock}
+            </button>
+          }
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-surface">
+              <tr>
+                <th className="th">{S.colId}</th>
+                <th className="th">{S.lblDockName}</th>
+                <th className="th">{S.lblDockKind}</th>
+                <th className="th">{S.limitTitle}</th>
+                <th className="th">{S.lblDockCapDesc}</th>
+                <th className="th">{S.areaLabel}</th>
+                <th className="th">{S.lblPic}</th>
+                <th className="th">{S.colStatus}</th>
+                <th className="th text-right">{S.colAction}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-steel-100">
+              {drydocks.map((d) => {
+                const kindLabel = d.kind === "slipway" ? S.kindSlipway : d.kind === "berth" ? S.kindBerth : d.kind === "floating" ? S.kindFloating : S.kindGraving;
+                const hasDim = Number(d.maxLoa) > 0 || Number(d.maxBeam) > 0 || Number(d.maxDraft) > 0;
+                const dimText = hasDim
+                  ? `${d.maxLoa ? `LOA ${d.maxLoa}m` : "-"} · ${d.maxBeam ? `Lebar ${d.maxBeam}m` : "-"} · ${d.maxDraft ? `Sarat ${d.maxDraft}m` : "-"}`
+                  : "-";
+                const activeSlotsCount = dockSlots.filter((s) => s.dockId === d.id && isActiveSlot(s)).length;
+                return (
+                  <tr key={d.id} className="hover:bg-surface">
+                    <td className="td font-mono text-xs font-semibold text-navy-800">{d.id}</td>
+                    <td className="td font-medium text-navy-900">{d.name}</td>
+                    <td className="td text-steel-600"><Badge tone="slate">{kindLabel}</Badge></td>
+                    <td className="td text-xs text-steel-600">{dimText}</td>
+                    <td className="td text-xs text-steel-500">{d.capacity || "-"}</td>
+                    <td className="td text-steel-600"><Badge tone="teal">{String(d.area ?? "").trim() || S.noArea}</Badge></td>
+                    <td className="td text-xs text-steel-600">
+                      <span className="inline-flex items-center gap-1"><User className="h-3 w-3 text-steel-400" /> {d.pic || S.picFallback}</span>
+                    </td>
+                    <td className="td">
+                      <Badge tone={d.status === "Terpakai" ? "blue" : d.status === "Maintenance" ? "amber" : "green"}>
+                        {d.status ?? "Tersedia"} {activeSlotsCount > 0 ? `(${activeSlotsCount} slot)` : ""}
+                      </Badge>
+                    </td>
+                    <td className="td text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          className="btn-secondary px-2 py-1 text-xs"
+                          onClick={() => {
+                            setAreaModal(d);
+                            setAreaDraft(String(d.area ?? ""));
+                            setLimitDraft({ maxLoa: String(d.maxLoa || ""), maxBeam: String(d.maxBeam || ""), maxDraft: String(d.maxDraft || "") });
+                          }}
+                        >
+                          {S.btnDockSetting}
+                        </button>
+                        <button
+                          className="btn-secondary px-2 py-1 text-xs"
+                          onClick={() => {
+                            setPicModal(d);
+                            setPicDraft(String(d.pic ?? ""));
+                          }}
+                        >
+                          {S.btnPic}
+                        </button>
+                        <RowAction
+                          icon={Trash2}
+                          tone="danger"
+                          label={`Hapus ${d.name}`}
+                          onClick={() => setDeletingDock(d)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      </div>
 
       {/* Modal detail slot */}
       <Modal open={sel !== null} onClose={() => setSelected(null)} title={S.slotTitle.replace("{a}", sel?.id ?? "")} subtitle={sel ? `${sel.vessel} · ${sel.project}` : ""}>
@@ -1366,6 +1535,137 @@ export default function Drydock() {
         confirmLabel={deleting && findUsages(data, "dockSlots", String(deleting.id)).length > 0 ? "Diblokir - masih dipakai" : S.confirmDelete} danger onCancel={() => setDeleting(null)}
         confirmDisabled={deleting ? findUsages(data, "dockSlots", String(deleting.id)).length > 0 : false}
         onConfirm={confirmDelete} />
+
+      {/* Modal Form Spesifikasi Tambah Dock */}
+      <Modal
+        open={showAddDock}
+        onClose={() => { setShowAddDock(false); setAddDockError(null); }}
+        title={S.modalAddDockTitle}
+        subtitle={S.modalAddDockSub}
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => { setShowAddDock(false); setAddDockError(null); }}>
+              {S.cancelBtn}
+            </button>
+            <AsyncButton className="btn-primary" onAction={saveNewDock}>
+              {S.saveShort}
+            </AsyncButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          {addDockError && (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{addDockError}</p>
+          )}
+          <FormGrid>
+            <Field label={`${S.lblDockName} *`}>
+              <input
+                className="input"
+                value={dockForm.name}
+                onChange={(e) => setDockForm({ ...dockForm, name: e.target.value })}
+                placeholder="cth: Drydock 3 / Slipway 2"
+                required
+              />
+            </Field>
+            <Field label={S.lblDockKind}>
+              <select
+                className="input"
+                value={dockForm.kind}
+                onChange={(e) => setDockForm({ ...dockForm, kind: e.target.value as any })}
+              >
+                <option value="graving">{S.kindGraving}</option>
+                <option value="floating">{S.kindFloating}</option>
+                <option value="slipway">{S.kindSlipway}</option>
+                <option value="berth">{S.kindBerth}</option>
+              </select>
+            </Field>
+          </FormGrid>
+
+          <p className="mb-1 mt-2 text-xs font-semibold text-navy-900">{S.limitTitle}</p>
+          <FormGrid>
+            <Field label={S.limitLoa}>
+              <NumInput
+                min={0}
+                className="input"
+                value={dockForm.maxLoa}
+                onChange={(e) => setDockForm({ ...dockForm, maxLoa: e.target.value })}
+                placeholder="cth: 120"
+              />
+            </Field>
+            <Field label={S.limitBeam}>
+              <NumInput
+                min={0}
+                className="input"
+                value={dockForm.maxBeam}
+                onChange={(e) => setDockForm({ ...dockForm, maxBeam: e.target.value })}
+                placeholder="cth: 18"
+              />
+            </Field>
+            <Field label={S.limitDraft}>
+              <NumInput
+                min={0}
+                className="input"
+                value={dockForm.maxDraft}
+                onChange={(e) => setDockForm({ ...dockForm, maxDraft: e.target.value })}
+                placeholder="cth: 6"
+              />
+            </Field>
+          </FormGrid>
+
+          <FormGrid>
+            <Field label={S.lblDockCapDesc} hint={S.phDockCapDesc}>
+              <input
+                className="input"
+                value={dockForm.capacity}
+                onChange={(e) => setDockForm({ ...dockForm, capacity: e.target.value })}
+                placeholder={S.phDockCapDesc}
+              />
+            </Field>
+            <Field label={S.areaLabel}>
+              <input
+                className="input"
+                value={dockForm.area}
+                onChange={(e) => setDockForm({ ...dockForm, area: e.target.value })}
+                placeholder={S.areaPh}
+              />
+            </Field>
+          </FormGrid>
+
+          <FormGrid>
+            <Field label={S.lblPic} hint={S.hintPic}>
+              <SharedSearchSelect
+                value={dockForm.pic}
+                onChange={(pic) => setDockForm({ ...dockForm, pic })}
+                options={picOptions.map(({ value, label, hint }) => ({ value, label, subLabel: hint }))}
+                placeholder={S.phPic}
+                ariaLabel={S.lblPic}
+                emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."}
+                allowCustom
+              />
+            </Field>
+            <Field label={S.colStatus}>
+              <select
+                className="input"
+                value={dockForm.status}
+                onChange={(e) => setDockForm({ ...dockForm, status: e.target.value })}
+              >
+                <option value="Tersedia">Tersedia</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </Field>
+          </FormGrid>
+        </div>
+      </Modal>
+
+      <ConfirmModal
+        open={deletingDock !== null}
+        title={S.delDockTitle.replace("{a}", String(deletingDock?.name ?? deletingDock?.id ?? ""))}
+        desc={S.delDockDesc.replace("{a}", String(deletingDock?.name ?? deletingDock?.id ?? ""))}
+        confirmLabel={S.confirmDelete}
+        danger
+        onCancel={() => setDeletingDock(null)}
+        onConfirm={confirmDeleteDock}
+      />
     </div>
   );
 }
