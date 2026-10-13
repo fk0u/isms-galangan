@@ -4,6 +4,7 @@
 // dulu dan biarkan input URL manual sebagai fallback.
 
 import { getJwt, isBackendConfigured, BASE } from "./http";
+import { toAbsoluteUrl } from "./files";
 
 export class UploadNotConfigured extends Error {
   constructor() {
@@ -76,10 +77,12 @@ export async function uploadFile(file: File): Promise<string> {
 export async function ocrImageUrl(url: string): Promise<string> {
   if (!isBackendConfigured() || !BASE) throw new UploadNotConfigured();
   const jwt = getJwt();
-  const abs = url.startsWith("http") ? url : `${BASE}${url.split("?")[0]}`;
+  // Sama seperti tampilan gambar: berkas unggahan selalu diambil dari backend yang sedang dipakai.
+  const abs = toAbsoluteUrl(url.startsWith("http") ? url : url.split("?")[0]);
   let blob: Blob;
   try {
-    const res = await fetchTimeout(abs, { headers: jwt ? { Authorization: `Bearer ${jwt}` } : {} });
+    // Token hanya dikirim ke backend sendiri, tidak ke host lain.
+    const res = await fetchTimeout(abs, { headers: jwt && abs.startsWith(BASE) ? { Authorization: `Bearer ${jwt}` } : {} });
     if (!res.ok) throw new Error(`Gagal mengunduh lampiran (HTTP ${res.status}).`);
     blob = await res.blob();
   } catch (e) {

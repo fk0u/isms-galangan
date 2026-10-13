@@ -18,13 +18,25 @@ function stripQuery(url: string): string {
 }
 
 /** Normalisasi URL lama relatif (/files/...) → absolut terhadap BASE backend.
- *  URL absolut / blob: / data: dikembalikan apa adanya. */
-export function toAbsoluteUrl(url: unknown): string {
+ *  blob: / data: dan URL absolut pihak lain dikembalikan apa adanya.
+ *
+ *  URL unggahan tersimpan lengkap dengan host tempat ia diunggah. Aplikasi ini
+ *  dilayani dari lebih dari satu alamat (domain lama dan baru) untuk server yang
+ *  sama, jadi berkas yang diunggah lewat satu alamat tampil "File tak dapat
+ *  dimuat" di alamat lain: host-nya tidak dikenali sebagai backend sehingga
+ *  diminta tanpa token. Karena itu URL absolut ber-path /files/ selalu
+ *  diarahkan ke backend yang sedang dipakai. */
+export function toAbsoluteUrl(url: unknown, base: string = BASE): string {
   const u = String(url ?? "").trim();
   if (!u) return "";
-  if (/^(https?:|blob:|data:)/i.test(u)) return u;
-  if (!BASE) return u;
-  return `${BASE}${u.startsWith("/") ? u : `/${u}`}`;
+  if (/^(blob:|data:)/i.test(u)) return u;
+  if (/^https?:/i.test(u)) {
+    if (!base) return u;
+    const path = /^https?:\/\/[^/]+(\/files\/.*)$/i.exec(u)?.[1];
+    return path ? `${base}${path}` : u;
+  }
+  if (!base) return u;
+  return `${base}${u.startsWith("/") ? u : `/${u}`}`;
 }
 
 /** Ekstensi file huruf kecil tanpa titik; "" bila URL tak berekstensi. */
