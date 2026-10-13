@@ -4,7 +4,7 @@
 // dulu dan biarkan input URL manual sebagai fallback.
 
 import { getJwt, isBackendConfigured, BASE } from "./http";
-import { toAbsoluteUrl } from "./files";
+import { isBackendUrl, toAbsoluteUrl } from "./files";
 
 export class UploadNotConfigured extends Error {
   constructor() {
@@ -82,7 +82,7 @@ export async function ocrImageUrl(url: string): Promise<string> {
   let blob: Blob;
   try {
     // Token hanya dikirim ke backend sendiri, tidak ke host lain.
-    const res = await fetchTimeout(abs, { headers: jwt && abs.startsWith(BASE) ? { Authorization: `Bearer ${jwt}` } : {} });
+    const res = await fetchTimeout(abs, { headers: jwt && isBackendUrl(abs) ? { Authorization: `Bearer ${jwt}` } : {} });
     if (!res.ok) throw new Error(`Gagal mengunduh lampiran (HTTP ${res.status}).`);
     blob = await res.blob();
   } catch (e) {

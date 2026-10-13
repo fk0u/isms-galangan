@@ -1771,8 +1771,8 @@ export function TimeInput({
 /* ============ F I L E U P L O A D   B U T T O N ============ */
 
 import { uploadFile } from "../services/upload";
-import { BASE, getJwt } from "../services/http";
-import { toAbsoluteUrl } from "../services/files";
+import { getJwt } from "../services/http";
+import { isBackendUrl, toAbsoluteUrl } from "../services/files";
 
 /** Normalisasi URL lama relatif (/files/...) → absolut terhadap BASE backend.
  *  URL absolut / blob: / object-URL dikembalikan apa adanya. */
@@ -1832,7 +1832,7 @@ export function SecureImg({
     // URL absolut same-origin / backend ber-JWT → ambil via fetch blob (ber-cache).
     let cancelled = false;
     // Aset publik dimuat langsung oleh <img> — token tidak dikirim, tanpa fetch ganda.
-    const needsJwt = !isPublicAsset && (!/^https?:/i.test(raw) || (BASE && raw.startsWith(BASE)));
+    const needsJwt = !isPublicAsset && (!/^https?:/i.test(raw) || isBackendUrl(raw));
     if (!needsJwt) return;
     void loadSecureBlob(raw)
       .then((url) => { if (!cancelled) setObj(url); })
@@ -1854,7 +1854,7 @@ export function SecureImg({
     );
   }
   const shown = obj ?? (/^(blob:|data:|https?:)/i.test(raw) ? raw : raw);
-  if (!obj && (BASE && raw.startsWith(BASE))) {
+  if (!obj && isBackendUrl(raw)) {
     return (
       <span className={`inline-flex items-center justify-center rounded-xl bg-steel-100 text-steel-400 ${className}`} aria-label={`Memuat ${alt}`}>
         <Loader2 className="h-5 w-5 animate-spin" />
