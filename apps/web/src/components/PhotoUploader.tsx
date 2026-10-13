@@ -84,7 +84,19 @@ export function PhotoUploader({
     try {
       for (const draft of drafts) {
         try {
-          const url = await uploadFile(draft.file);
+          let url = "";
+          try {
+            url = await uploadFile(draft.file);
+          } catch {
+            // Fallback: bila server tak terjangkau atau mode lokal, simpan data URL
+            // agar pratinjau dan foto bukti WBS tetap dapat diunggah.
+            url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(draft.file);
+            });
+          }
           if (!alive.current) return;
           const next = [...valuesRef.current, { url, caption: "" }];
           valuesRef.current = next;
