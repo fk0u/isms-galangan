@@ -64,6 +64,7 @@ export default function ProjectAddModal({
   const [form, setForm] = useState(emptyForm);
   const [scopeRows, setScopeRows] = useState([{ service: "", lokasi: "", deskripsi: "" }]);
   const [showClientModal, setShowClientModal] = useState(false);
+  const [createdGuide, setCreatedGuide] = useState<{ id: string; vessel: string } | null>(null);
 
   const setF = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const vesselExists = vessels.some((v) => String(v.name ?? "").toLowerCase() === form.vessel.trim().toLowerCase());
@@ -201,7 +202,10 @@ export default function ProjectAddModal({
       } else {
         toast(S.prjToastCreated.replace("{a}", created.id));
       }
-      close();
+      setCreatedGuide({ id: String(created.id), vessel: form.vessel.trim() });
+      setForm(emptyForm);
+      setScopeRows([{ service: "", lokasi: "", deskripsi: "" }]);
+      onClose();
     } catch {
       toast(S.prjToastSaveFail.replace("{a}", code), "info");
     }
@@ -367,6 +371,73 @@ export default function ProjectAddModal({
         onClose={() => setShowClientModal(false)}
         onSaved={(name) => setF("client", name)}
       />
+
+      {/* Modal Panduan Step-by-Step Pengisian Proyek Baru */}
+      <Modal
+        open={createdGuide !== null}
+        onClose={() => setCreatedGuide(null)}
+        title={S.prjGuideTitle}
+        subtitle={`${createdGuide?.id ?? ""} · ${createdGuide?.vessel ?? ""}`}
+        wide
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setCreatedGuide(null)}>{S.cancelBtn}</button>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                const targetId = createdGuide?.id;
+                setCreatedGuide(null);
+                if (targetId && typeof window !== "undefined") {
+                  window.location.href = `/proyek/${targetId}`;
+                }
+              }}
+            >
+              {S.prjGuideOpenProject} →
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-steel-600">{S.prjGuideSub}</p>
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 rounded-xl border border-steel-200 bg-white p-3.5 shadow-2xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-xs font-bold text-navy-800">1</span>
+              <div>
+                <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideStep1}</h4>
+                <p className="mt-0.5 text-xs text-steel-600">{S.prjGuideStep1Desc}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-steel-200 bg-white p-3.5 shadow-2xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-xs font-bold text-navy-800">2</span>
+              <div>
+                <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideStep2}</h4>
+                <p className="mt-0.5 text-xs text-steel-600">{S.prjGuideStep2Desc}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-steel-200 bg-white p-3.5 shadow-2xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-xs font-bold text-navy-800">3</span>
+              <div>
+                <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideStep3}</h4>
+                <p className="mt-0.5 text-xs text-steel-600">{S.prjGuideStep3Desc}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-steel-200 bg-white p-3.5 shadow-2xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-xs font-bold text-navy-800">4</span>
+              <div>
+                <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideStep4}</h4>
+                <p className="mt-0.5 text-xs text-steel-600">{S.prjGuideStep4Desc}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-steel-200 bg-white p-3.5 shadow-2xs">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-navy-100 text-xs font-bold text-navy-800">5</span>
+              <div>
+                <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideStep5}</h4>
+                <p className="mt-0.5 text-xs text-steel-600">{S.prjGuideStep5Desc}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

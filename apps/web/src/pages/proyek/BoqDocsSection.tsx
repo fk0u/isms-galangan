@@ -69,15 +69,18 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
 
   const docs = useMemo(
     () => ((data.boqDocs ?? []) as unknown as DocRow[])
-      .filter((d) => d.projectId === projectId)
+      .filter((d) => String(d.projectId ?? "") === String(projectId))
       .sort((a, b) => a.number.localeCompare(b.number) || b.revision - a.revision),
     [data.boqDocs, projectId],
   );
-  const items = (data.boq ?? []) as BoQItem[];
-  const itemsOf = (docId: string) => items.filter((b) => b.boqDocId === docId);
+  const items = useMemo(
+    () => ((data.boq ?? []) as BoQItem[]).filter((b) => String(b.projectId ?? "") === String(projectId)),
+    [data.boq, projectId],
+  );
+  const itemsOf = (docId: string) => items.filter((b) => String(b.boqDocId ?? "") === String(docId));
   const totalOf = (docId: string) => itemsOf(docId).reduce((s, b) => s + (Number(b.totalPrice) || 0), 0);
   const visible = showOld ? docs : docs.filter((d) => d.status !== "Digantikan");
-  const legacyCount = items.filter((b) => b.projectId === projectId && !b.boqDocId).length;
+  const legacyCount = items.filter((b) => !b.boqDocId).length;
   const statusLabel = (s: DocStatus): string => ({
     Draft: S.bqdStDraft, Diajukan: S.bqdStDiajukan, Disetujui: S.bqdStDisetujui,
     Ditolak: S.bqdStDitolak, Digantikan: S.bqdStDigantikan,
@@ -96,7 +99,7 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
     const actorName = user?.name ?? "Commercial Estimator";
     try {
       const created = await add("boqDocs", {
-        projectId, number, revision: 0, status: "Draft", issuedAt: todayISO(), note: "", total: 0,
+        projectId: String(projectId), number, revision: 0, status: "Draft", issuedAt: todayISO(), note: "", total: 0,
         assigner: actorName, createdBy: actorName,
       }, { action: "membuat surat BoQ", target: number, module: "BoQ" });
       const pr = data.projects.find((p) => p.id === projectId);

@@ -1016,6 +1016,7 @@ export function EntityPicker({
   allowCustom = false,
   required = false,
   invalid = false,
+  onOpenChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -1028,11 +1029,19 @@ export function EntityPicker({
   allowCustom?: boolean;
   required?: boolean;
   invalid?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useT();
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (val: boolean | ((prev: boolean) => boolean)) => {
+    setOpenState((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      if (next !== prev) onOpenChange?.(next);
+      return next;
+    });
+  };
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
 

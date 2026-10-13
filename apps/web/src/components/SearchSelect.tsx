@@ -25,6 +25,7 @@ export function SearchSelect({
   allowCustom,
   required,
   invalid,
+  onOpenChange,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -37,6 +38,7 @@ export function SearchSelect({
   allowCustom?: boolean;
   required?: boolean;
   invalid?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const pickerOptions = useMemo(
     () => mapSearchSelectOptions(options),
@@ -56,6 +58,7 @@ export function SearchSelect({
       allowCustom={allowCustom}
       required={required}
       invalid={invalid}
+      onOpenChange={onOpenChange}
     />
   );
 }

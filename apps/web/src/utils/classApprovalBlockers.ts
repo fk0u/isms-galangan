@@ -117,8 +117,22 @@ export function getStageTransitionBlockers(
         targetDocId: classDoc ? String(classDoc.id ?? "") : undefined,
       });
 
-      // 2. Evaluasi 10 Subclass Perencanaan & Gambar Teknik
-      for (const item of PLANNING_SUBCLASSES) {
+      // 2. Evaluasi Dokumen Persyaratan Perencanaan (Kustom per proyek atau default 10 Subclass)
+      const rawCustom = Array.isArray(project.customRequirements) ? project.customRequirements : null;
+      const effectiveList: PlanningSubclass[] = (rawCustom && rawCustom.length > 0)
+        ? rawCustom.map((c: Record<string, unknown>) => {
+            const rawName = String(c.name ?? "");
+            const escaped = rawName.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+            return {
+              id: String(c.id ?? rawName),
+              name: rawName,
+              nameEn: String(c.nameEn ?? rawName),
+              kw: new RegExp(escaped, "i"),
+            };
+          })
+        : PLANNING_SUBCLASSES;
+
+      for (const item of effectiveList) {
         if (item.id === "SAFETY" && classApproved) continue;
 
         const docMatched = projectDocs.find((d) => item.kw.test(String(d.title ?? "")) && String(d.status ?? "") === "Disetujui");
