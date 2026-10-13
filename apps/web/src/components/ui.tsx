@@ -16,12 +16,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   X,
-  CheckCircle2,
-  Info,
   Loader2,
   Search,
   Upload as UploadIcon,
 } from "lucide-react";
+import { toast } from "./Toast";
+
 import {
   ResponsiveContainer,
   Tooltip,
@@ -2010,54 +2010,9 @@ export function useDebouncedValue<T>(value: T, delay = 200): T {
   return v;
 }
 
-export function toast(message: string, tone: "success" | "info" = "success") {
-  window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message, tone } }));
-}
+export { toast, Toaster } from "./Toast";
+export type { ToastTone, ToastOptions, ToastItem, ToastAction } from "./Toast";
 
-interface ToastItem {
-  id: number;
-  message: string;
-  tone: "success" | "info";
-}
+export { Alert, AlertModal } from "./Alert";
+export type { AlertProps, AlertModalProps, AlertVariant } from "./Alert";
 
-let toastSeq = 0;
-
-export function Toaster() {
-  const [items, setItems] = useState<ToastItem[]>([]);
-
-  useEffect(() => {
-    const onToast = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { message: string; tone: "success" | "info" };
-      const id = ++toastSeq;
-      setItems((prev) => [...prev.slice(-2), { id, message: detail.message, tone: detail.tone }]);
-      window.setTimeout(() => {
-        setItems((prev) => prev.filter((t) => t.id !== id));
-      }, 3000);
-    };
-    window.addEventListener("isms:toast", onToast);
-    return () => window.removeEventListener("isms:toast", onToast);
-  }, []);
-
-  return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-80 flex-col gap-2">
-      <AnimatePresence>
-        {items.map((t) => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 40 }}
-            className="pointer-events-auto flex items-start gap-2.5 rounded-xl border border-steel-200 bg-white px-4 py-3 shadow-lift"
-          >
-            {t.tone === "success" ? (
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-            ) : (
-              <Info className="mt-0.5 h-5 w-5 shrink-0 text-ocean-500" />
-            )}
-            <p className="text-sm font-medium text-navy-900">{t.message}</p>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}

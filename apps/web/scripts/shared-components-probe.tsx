@@ -10,6 +10,9 @@ import { ChangeHistory } from "../src/components/ChangeHistory";
 import { StatusChips } from "../src/components/StatusChips";
 import { norm24 } from "../src/utils/time24";
 
+import { Alert } from "../src/components/Alert";
+import { Toaster } from "../src/components/Toast";
+
 declare const process: { exit(code: number): never };
 
 const html = renderToString(
@@ -51,11 +54,18 @@ const html = renderToString(
           ariaLabel="Filter status"
         />
       </section>
+      <section data-component="Alert">
+        <Alert variant="warning" title="Peringatan Dokumen" description="Masa berlaku sertifikat kapal hampir habis" />
+      </section>
+      <section data-component="Toaster">
+        <Toaster />
+      </section>
     </main>
   </LanguageProvider>,
 );
 
-const expected = ["SearchSelect", "DateInput", "TimeInput24", "PhotoUploader", "ChangeHistory", "StatusChips"];
+const expected = ["SearchSelect", "DateInput", "TimeInput24", "PhotoUploader", "ChangeHistory", "StatusChips", "Alert", "Toaster"];
+
 const missing = expected.filter((name) => !html.includes(`data-component="${name}"`));
 if (missing.length > 0) {
   console.error(`FAIL  komponen tidak ter-render: ${missing.join(", ")}`);
