@@ -1487,7 +1487,10 @@ export default function Procurement() {
             })()}
           </>
         )}
-        {st === "Disetujui" && (
+        {st === "Disetujui" && po.poType === "Kecil" && (
+          <button className="btn-primary text-xs" onClick={() => openRecv(po)}>{S.btnTerima} - {locale === "en" ? "stock in" : "stok masuk"}</button>
+        )}
+        {st === "Disetujui" && po.poType !== "Kecil" && (
           <button className="btn-primary text-xs" onClick={() => doPoStatus(po, "Dikirim")}><Send className="h-3.5 w-3.5" /> {S.btnKirim} - {locale === "en" ? "next" : "lanjut"}</button>
         )}
         {(st === "Dikirim" || st === "Diterima Sebagian") && poOpenQty(po) > 0 && (
@@ -2457,7 +2460,20 @@ const sparkVendors = useMemo(() => {
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={S.ariaTujuan}>
             {(["kapal", "stok"] as const).map((t) => (
               <label key={t} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${bigForm.tujuan === t ? "border-navy-700 bg-navy-50 text-navy-900" : "border-steel-200 text-steel-600"}`}>
-                <input type="radio" name="tujuan-po" checked={bigForm.tujuan === t} onChange={() => setBigForm({ ...bigForm, tujuan: t })} />
+                <input
+                  type="radio"
+                  name="tujuan-po"
+                  checked={bigForm.tujuan === t}
+                  onChange={() =>
+                    setBigForm((prev) => ({
+                      ...prev,
+                      tujuan: t,
+                      ...(t === "stok"
+                        ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") }
+                        : { warehouse: "" }),
+                    }))
+                  }
+                />
                 {t === "kapal" ? S.tujuanKapal : S.tujuanStok}
               </label>
             ))}
@@ -2610,11 +2626,18 @@ const sparkVendors = useMemo(() => {
               </select>
             </Field>
           </FormGrid>
-          <FormGrid>
-            <Field label={S.estHarga}><MoneyInput className="input" value={smallForm.price} onChange={(v) => setSmallForm({ ...smallForm, price: v })} /></Field>
-            <Field label={S.nota}><input className="input" value={smallForm.nota} onChange={(e) => setSmallForm({ ...smallForm, nota: e.target.value })} placeholder={S.phNota} /></Field>
-          </FormGrid>
-          <Field label={S.lampiranBukti}>
+          <Field label={S.estHarga}><MoneyInput className="input" value={smallForm.price} onChange={(v) => setSmallForm({ ...smallForm, price: v })} /></Field>
+
+          {/* No. Nota & Bukti Transaksi */}
+          <div className="rounded-xl border border-steel-200 bg-steel-50/60 p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700">{S.notaBukti}</h4>
+              <span className="text-[11px] text-steel-500">{locale === "en" ? "Receipt number & proof file" : "Nomor nota & berkas bukti transaksi"}</span>
+            </div>
+            <Field label={S.nota} hint={locale === "en" ? "Receipt or invoice reference number" : "Nomor nota atau referensi struk pembelian"}>
+              <input className="input bg-white" value={smallForm.nota} onChange={(e) => setSmallForm({ ...smallForm, nota: e.target.value })} placeholder={S.phNota} />
+            </Field>
+            <Field label={S.lampiranBukti} hint={locale === "en" ? "Upload receipt/invoice document or photo" : "Unggah berkas kuitansi atau struk (.png, .jpg, .pdf max 10MB)"}>
             <div className="space-y-2">
               {smallForm.notaUrl ? (
                 <div className="flex items-center justify-between rounded-lg border border-steel-200 bg-steel-50 p-2.5">
@@ -2705,6 +2728,7 @@ const sparkVendors = useMemo(() => {
               )}
             </div>
           </Field>
+          </div>
           <FormGrid>
             <Field label={S.etaWajib}><input type="date" className="input" value={smallForm.eta} onChange={(e) => setSmallForm({ ...smallForm, eta: e.target.value })} /></Field>
             <Field label={S.proyekBudget}>
