@@ -194,7 +194,27 @@ export default function Subcontractor() {
   const [termEditForm, setTermEditForm] = useState({ milestone: "", amount: "" });
   const [confirmFinish, setConfirmFinish] = useState<{ id: string; v: number; note: string; ms: string[]; milestones?: unknown[] } | null>(null);
   const [showTerm, setShowTerm] = useState(false);
-  const [termForm, setTermForm] = useState({ sub: "", wo: "", milestone: "", amount: "", pphPct: "0.5", retPct: "5" });
+  const [termForm, setTermForm] = useState<{
+    sub: string;
+    wo: string;
+    milestone: string;
+    amount: string;
+    pphPct: string;
+    retPct: string;
+    schemeType: TerminSchemeType;
+    pct: string;
+    dpStage: "DP 1" | "DP 2" | "Pelunasan";
+  }>({
+    sub: "",
+    wo: "",
+    milestone: "",
+    amount: "",
+    pphPct: "0.5",
+    retPct: "5",
+    schemeType: "Persentase",
+    pct: "30",
+    dpStage: "DP 1",
+  });
   const [termPay, setTermPay] = useState<StoreItem | null>(null);
   const [proof, setProof] = useState({ date: todayISO(), method: "Transfer", ref: "" });
   /* Bukti transfer sebagai berkas (foto Struk / PDF mutasi bank). Sebelumnya
@@ -285,16 +305,121 @@ export default function Subcontractor() {
   const termWoOptions = workOrders.filter((w) => termForm.sub && sameName(w.sub, termForm.sub));
   const termWo = workOrders.find((w) => w.id === termForm.wo) ?? null;
   const termSub = subcontractors.find((s) => s.name === termForm.sub) ?? null;
-  const termCap = termSub && termWo ? Number(termSub.contract || 0) * effProgress(termWo) / 100 : 0;
+  const termWoContract = termWo ? (Number(termWo.value ?? 0) || Number(termSub?.contract ?? 0)) : 0;
   const termUsed = termForm.wo
     ? payments.filter((t) => t.woId === termForm.wo && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0)
     : 0;
+  const termRemaining = Math.max(0, termWoContract - termUsed);
   const termTsHours = termForm.wo
     ? timesheets.filter((t) => t.woId === termForm.wo).reduce((s, t) => s + Number(t.hours || 0), 0)
     : 0;
   const termTsRef = termWo && Number(termWo.rate || 0) > 0 && termTsHours > 0
     ? termTsHours * Number(termWo.rate || 0)
     : 0;
+
+  const applyTermScheme = (
+    scheme: TerminSchemeType,
+    pctStr = termForm.pct,
+    dpStg = termForm.dpStage,
+    currentWo = termWo,
+    currentSub = termSub,
+  ) => {
+    const val = currentWo ? (Number(currentWo.value ?? 0) || Number(currentSub?.contract ?? 0)) : 0;
+    const used = currentWo
+      ? payments.filter((t) => t.woId === currentWo.id && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0)
+      : 0;
+    const remaining = Math.max(0, val - used);
+
+    let nextAmount = termForm.amount;
+    let nextMilestone = termForm.milestone;
+
+    if (scheme === "Kontan") {
+      nextAmount = remaining > 0 ? fmtRupiah(remaining) : (val > 0 ? fmtRupiah(val) : "");
+      nextMilestone = locale === "en" ? "Full payment (Cash)" : "Pembayaran penuh (Kontan)";
+    } else if (scheme === "DP") {
+      if (dpStg === "Pelunasan") {
+        nextAmount = remaining > 0 ? fmtRupiah(remaining) : "";
+        nextMilestone = locale === "en" ? "Settlement" : "Pelunasan";
+      } else {
+        const p = Number(pctStr) || 30;
+        const amt = val > 0 ? Math.round((val * p) / 100) : 0;
+        nextAmount = amt > 0 ? fmtRupiah(amt) : "";
+        nextMilestone = `${dpStg} (${p}%)`;
+      }
+    } else if (scheme === "Persentase") {
+      const p = Number(pctStr) || 30;
+      const amt = val > 0 ? Math.round((val * p) / 100) : 0;
+      nextAmount = amt > 0 ? fmtRupiah(amt) : "";
+      nextMilestone = locale === "en" ? `Term ${p}%` : `Termin ${p}%`;
+    }
+
+    setTermForm((prev) => ({
+      ...prev,
+      schemeType: scheme,
+      pct: pctStr,
+      dpStage: dpStg,
+      amount: nextAmount,
+      milestone: nextMilestone,
+    }));
+  };
+
+  const handleSelectTermWo = (woId: string) => {
+    const selectedWo = workOrders.find((w) => w.id === woId);
+    let nextScheme: TerminSchemeType = "Persentase";
+    let nextPct = "30";
+    let nextDpStage: "DP 1" | "DP 2" | "Pelunasan" = "DP 1";
+
+    if (selectedWo?.paymentScheme) {
+      const psType = String((selectedWo.paymentScheme as { type?: string }).type ?? "");
+      if (psType === "Kontan" || psType === "DP" || psType === "Persentase") {
+        nextScheme = psType as TerminSchemeType;
+      }
+    }
+
+    const val = selectedWo ? (Number(selectedWo.value ?? 0) || Number(termSub?.contract ?? 0)) : 0;
+    const used = selectedWo
+      ? payments.filter((t) => t.woId === selectedWo.id && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0)
+      : 0;
+    const remaining = Math.max(0, val - used);
+
+    let nextAmount = "";
+    let nextMilestone = "";
+
+    if (nextScheme === "Kontan") {
+      nextAmount = remaining > 0 ? fmtRupiah(remaining) : (val > 0 ? fmtRupiah(val) : "");
+      nextMilestone = locale === "en" ? "Full payment (Cash)" : "Pembayaran penuh (Kontan)";
+    } else if (nextScheme === "DP") {
+      const hasDp1 = payments.some((t) => t.woId === woId && String(t.milestone ?? "").includes("DP 1") && t.status !== "Ditolak");
+      if (hasDp1) {
+        nextDpStage = "DP 2";
+        nextPct = "30";
+      }
+      const p = Number(nextPct) || 30;
+      const amt = val > 0 ? Math.round((val * p) / 100) : 0;
+      nextAmount = amt > 0 ? fmtRupiah(amt) : "";
+      nextMilestone = `${nextDpStage} (${p}%)`;
+    } else {
+      const p = 30;
+      const amt = val > 0 ? Math.round((val * p) / 100) : 0;
+      nextAmount = amt > 0 ? fmtRupiah(amt) : "";
+      nextMilestone = locale === "en" ? `Term ${p}%` : `Termin ${p}%`;
+    }
+
+    setTermForm((prev) => ({
+      ...prev,
+      wo: woId,
+      schemeType: nextScheme,
+      pct: nextPct,
+      dpStage: nextDpStage,
+      amount: nextAmount,
+      milestone: nextMilestone,
+    }));
+  };
+
+  const termGross = parseRupiah(termForm.amount) || 0;
+  const termPphCut = Math.round((termGross * (Number(termForm.pphPct) || 0)) / 100);
+  const termRetCut = Math.round((termGross * (Number(termForm.retPct) || 0)) / 100);
+  const termNetoEst = Math.max(0, termGross - termPphCut - termRetCut);
   /* Opsi milestone untuk form termin: milestone SOW subkontraktor DIGABUNG
      dengan milestone WO yang dipilih (item 11). Digabung, bukan diganti:
      termin yang sudah terbit merujuk milestone SOW, dan kalau diganti daftar
@@ -302,11 +427,6 @@ export default function Subcontractor() {
      Judul yang sama digabung jadi satu opsi supaya cap-nya tidak terhitung
      dua kali untuk tahap yang sama. */
   const termMsList = terminMilestoneOptions(termSub, termWo);
-  const termMs = termMsList.find((m) => m.title === termForm.milestone) ?? null;
-  const termMsCap = termMs && termSub ? Number(termSub.contract || 0) * Number(termMs.pct || 0) / 100 : 0;
-  const termMsUsed = termMs
-    ? payments.filter((t) => sameName(t.sub, termForm.sub) && t.milestone === termMs.title && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0)
-    : 0;
 
   const hoursByWo = (woId: string): number =>
     timesheets.filter((t) => t.woId === woId).reduce((s, t) => s + Number(t.hours || 0), 0);
@@ -575,40 +695,62 @@ const known = ms.map((m) => m.title);
 
   const saveTerm = async () => {
     try {
-    if (!termForm.sub) { toast(S.tSubRequired, "info"); return; }
-    const wo = workOrders.find((w) => w.id === termForm.wo && sameName(w.sub, termForm.sub));
-    if (!wo) { toast(S.tWoBelongsSub, "info"); return; }
-    const amount = parseRupiah(termForm.amount);
-    if (!amount || amount <= 0) { toast(S.tTermPositive, "info"); return; }
-    const pphPct = Number(termForm.pphPct);
-    const retPct = Number(termForm.retPct);
-    if (Number.isNaN(pphPct) || pphPct < 0 || pphPct > 100 || Number.isNaN(retPct) || retPct < 0 || retPct > 100) {
-      toast(S.tTaxRange, "info");
-      return;
-    }
-    const sub = subcontractors.find((s) => s.name === termForm.sub);
-    const cap = sub ? Number(sub.contract || 0) * effProgress(wo) / 100 : 0;
-    const used = payments.filter((t) => t.woId === wo.id && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0);
-    if (used + amount > cap) {
-      toast(S.tTermOverCap.replace("{a}", fmtRupiah(cap)).replace("{b}", fmtRupiah(Number(sub?.contract || 0))).replace("{c}", String(effProgress(wo))).replace("{d}", fmtRupiah(used)), "info");
-      return;
-    }
-    const msList = sub ? milestonesOf(sub) : [];
-    const ms = msList.find((m) => m.title === termForm.milestone);
-    if (!ms) { toast(S.tTermNeedMs, "info"); return; }
-    const msCap = Number(sub?.contract || 0) * Number(ms.pct || 0) / 100;
-    const msUsed = payments.filter((t) => sameName(t.sub, termForm.sub) && t.milestone === ms.title && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0);
-    if (msUsed + amount > msCap) {
-      toast(S.tTermOverMs.replace("{a}", ms.title).replace("{b}", fmtRupiah(msCap)).replace("{c}", String(ms.pct)).replace("{d}", fmtRupiah(msUsed)), "info");
-      return;
-    }
-    const created = await add("termins", {
-      sub: termForm.sub, woId: wo.id, milestone: ms.title, progress: `${wo.id} (${wo.progress}%)`, amount,
-      pphPct, retPct, status: "Draf", date: todayISO(), branch: branchOfProject(String(wo.project ?? "")),
-    }, { action: "mengajukan termin", module: "Subkontraktor" });
-    toast(S.tTermFiled.replace("{n}", created.id));
-    setShowTerm(false);
-    setTermForm({ sub: "", wo: "", milestone: "", amount: "", pphPct: "0.5", retPct: "5" });
+      if (!termForm.sub) { toast(S.tSubRequired, "info"); return; }
+      const wo = workOrders.find((w) => w.id === termForm.wo && sameName(w.sub, termForm.sub));
+      if (!wo) { toast(S.tWoBelongsSub, "info"); return; }
+      const amount = parseRupiah(termForm.amount);
+      if (!amount || amount <= 0) { toast(S.tTermPositive, "info"); return; }
+      const pphPct = Number(termForm.pphPct);
+      const retPct = Number(termForm.retPct);
+      if (Number.isNaN(pphPct) || pphPct < 0 || pphPct > 100 || Number.isNaN(retPct) || retPct < 0 || retPct > 100) {
+        toast(S.tTaxRange, "info");
+        return;
+      }
+      const sub = subcontractors.find((s) => s.name === termForm.sub);
+      const woVal = Number(wo.value ?? 0) || Number(sub?.contract ?? 0);
+      const used = payments.filter((t) => t.woId === wo.id && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0);
+
+      // Batasan total nilai kontrak WO
+      if (woVal > 0 && used + amount > woVal) {
+        toast(T.termOverContract.replace("{a}", fmtRupiah(Math.max(0, woVal - used))), "info");
+        return;
+      }
+
+      // Validasi progres:
+      // Uang Muka (DP) & Pembayaran Kontan di depan TIDAK diblokir progres 0%.
+      const isDp = termForm.schemeType === "DP" || termForm.milestone.startsWith("DP");
+      const isFull = termForm.schemeType === "Kontan";
+      if (!isDp && !isFull && effProgress(wo) > 0) {
+        const cap = woVal > 0 ? (woVal * effProgress(wo) / 100) : (sub ? Number(sub.contract || 0) * effProgress(wo) / 100 : 0);
+        if (cap > 0 && used + amount > cap) {
+          toast(S.tTermOverCap.replace("{a}", fmtRupiah(cap)).replace("{b}", fmtRupiah(woVal || Number(sub?.contract || 0))).replace("{c}", String(effProgress(wo))).replace("{d}", fmtRupiah(used)), "info");
+          return;
+        }
+      }
+
+      const milestoneTitle = termForm.milestone.trim() || (isDp ? `${termForm.dpStage} (${termForm.pct}%)` : isFull ? "Pembayaran penuh" : `Tahap ${termForm.pct}%`);
+      if (!milestoneTitle) { toast(S.tTermNeedMs, "info"); return; }
+
+      // Jika ada milestone terdaftar di SOW/WO yang cocok, periksa pagunya
+      const msList = sub ? milestonesOf(sub) : [];
+      const ms = msList.find((m) => m.title === milestoneTitle);
+      if (ms) {
+        const msCap = (woVal || Number(sub?.contract || 0)) * Number(ms.pct || 0) / 100;
+        const msUsed = payments.filter((t) => sameName(t.sub, termForm.sub) && t.milestone === ms.title && t.status !== "Ditolak").reduce((s, t) => s + Number(t.amount || 0), 0);
+        if (msUsed + amount > msCap) {
+          toast(S.tTermOverMs.replace("{a}", ms.title).replace("{b}", fmtRupiah(msCap)).replace("{c}", String(ms.pct)).replace("{d}", fmtRupiah(msUsed)), "info");
+          return;
+        }
+      }
+
+      const created = await add("termins", {
+        sub: termForm.sub, woId: wo.id, project: wo.project, milestone: milestoneTitle, progress: `${wo.id} (${effProgress(wo)}%)`, amount,
+        pphPct, retPct, status: "Draf", date: todayISO(), branch: branchOfProject(String(wo.project ?? "")),
+        fromScheme: termForm.schemeType,
+      }, { action: "mengajukan termin", module: "Subkontraktor" });
+      toast(S.tTermFiled.replace("{n}", created.id));
+      setShowTerm(false);
+      setTermForm({ sub: "", wo: "", milestone: "", amount: "", pphPct: "0.5", retPct: "5", schemeType: "Persentase", pct: "30", dpStage: "DP 1" });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1884,48 +2026,242 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       {/* Modal termin */}
       <Modal open={showTerm} onClose={() => setShowTerm(false)} title={S.termTitle} subtitle={S.termSub2}
         footer={<><button className="btn-secondary" onClick={() => setShowTerm(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveTerm}>{S.proposeBtn}</button></>}>
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           <FormGrid>
             <Field label={S.tabSub}>
-              <select className="input" value={termForm.sub} onChange={(e) => setTermForm({ ...termForm, sub: e.target.value, wo: "", milestone: "" })}>
+              <select className="input" value={termForm.sub} onChange={(e) => setTermForm({ ...termForm, sub: e.target.value, wo: "", milestone: "", amount: "" })}>
                 <option value="">{S.pickOpt}</option>
                 {subcontractors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </Field>
             <Field label={S.woLabel}>
-              <select className="input" value={termForm.wo} onChange={(e) => setTermForm({ ...termForm, wo: e.target.value })} disabled={!termForm.sub}>
+              <select className="input" value={termForm.wo} onChange={(e) => handleSelectTermWo(e.target.value)} disabled={!termForm.sub}>
                 <option value="">{termForm.sub ? S.pickWoOpt : S.pickSubFirst}</option>
                 {termWoOptions.map((w) => <option key={w.id} value={w.id}>{w.id} ({effProgress(w)}%)</option>)}
               </select>
             </Field>
-            <Field label={S.msSowBtn} hint={S.msHint}>
-              <select className="input" value={termForm.milestone} onChange={(e) => setTermForm({ ...termForm, milestone: e.target.value })} disabled={!termForm.sub}>
-                <option value="">{termForm.sub ? (termMsList.length ? S.pickMsOpt : S.noMsOpt) : S.pickSubFirst}</option>
-                {termMsList.map((m) => <option key={m.title} value={m.title}>{m.title} ({m.pct}% · due {fmtTanggal(m.due)})</option>)}
-              </select>
+          </FormGrid>
+
+          {termSub && termWo && (
+            <div className="rounded-xl border border-steel-200 bg-surface p-3 space-y-2">
+              <p className="text-[11px] font-semibold text-steel-500 uppercase tracking-wider">{T.woSummaryTitle}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="rounded-lg bg-white p-2 border border-steel-100">
+                  <span className="text-steel-400 block text-[10px]">{T.woContractVal}</span>
+                  <span className="font-semibold text-navy-900">{fmtRupiah(termWoContract)}</span>
+                </div>
+                <div className="rounded-lg bg-white p-2 border border-steel-100">
+                  <span className="text-steel-400 block text-[10px]">{T.woUsedVal}</span>
+                  <span className="font-semibold text-steel-600">{fmtRupiah(termUsed)}</span>
+                </div>
+                <div className="rounded-lg bg-white p-2 border border-steel-100">
+                  <span className="text-steel-400 block text-[10px]">{T.woRemainingVal}</span>
+                  <span className="font-semibold text-amber-600">{fmtRupiah(termRemaining)}</span>
+                </div>
+                <div className="rounded-lg bg-white p-2 border border-steel-100">
+                  <span className="text-steel-400 block text-[10px]">{T.woProgVal}</span>
+                  <span className="font-semibold text-emerald-600">{effProgress(termWo)}%</span>
+                </div>
+              </div>
+              {termTsRef > 0 && (
+                <p className="text-[11px] text-steel-500">
+                  {S.tsRefInfo.replace("{a}", String(termTsHours)).replace("{b}", fmtRupiah(Number(termWo.rate))).replace("{c}", fmtRupiah(termTsRef))}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Skema Pembayaran / Termin */}
+          <div className="space-y-2 rounded-xl border border-steel-200 bg-white p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-navy-900">{T.termSchemeTitle}</p>
+                <p className="text-[11px] text-steel-500">{T.termSchemeHelp}</p>
+              </div>
+            </div>
+
+            {/* Tab Skema: Persentase / DP / Kontan */}
+            <div className="grid grid-cols-3 gap-1 rounded-lg bg-surface p-1">
+              {(["Persentase", "DP", "Kontan"] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={`py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    termForm.schemeType === st
+                      ? "bg-white text-navy-900 shadow-sm font-semibold"
+                      : "text-steel-600 hover:text-navy-900"
+                  }`}
+                  onClick={() => applyTermScheme(st)}
+                >
+                  {st === "Persentase" ? T.schemePct.split(" (")[0] : st === "DP" ? "DP / Termin" : T.schemeKontan.split(" (")[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Kontrol dinamis berdasarkan skema terpilih */}
+            {termForm.schemeType === "Persentase" && (
+              <div className="space-y-2 pt-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-steel-400 mr-1">{T.quickPct}:</span>
+                  {["10", "20", "25", "30", "40", "50", "100"].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`px-2 py-0.5 text-xs rounded border transition-colors ${
+                        termForm.pct === p
+                          ? "bg-navy-900 text-white border-navy-900"
+                          : "border-steel-200 bg-white text-steel-700 hover:bg-surface"
+                      }`}
+                      onClick={() => applyTermScheme("Persentase", p)}
+                    >
+                      {p}%
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-steel-600 whitespace-nowrap">{T.customPct}:</label>
+                  <div className="w-24">
+                    <NumInput
+                      min={1}
+                      max={100}
+                      className="input text-xs"
+                      value={termForm.pct}
+                      onChange={(e) => applyTermScheme("Persentase", e.target.value)}
+                    />
+                  </div>
+                  <span className="text-xs text-steel-400">%</span>
+                </div>
+              </div>
+            )}
+
+            {termForm.schemeType === "DP" && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-steel-400 mr-1">{T.dpStageLabel}:</span>
+                  {(["DP 1", "DP 2", "Pelunasan"] as const).map((stage) => (
+                    <button
+                      key={stage}
+                      type="button"
+                      className={`px-2.5 py-1 text-xs rounded border font-medium transition-colors ${
+                        termForm.dpStage === stage
+                          ? "bg-navy-900 text-white border-navy-900"
+                          : "border-steel-200 bg-white text-steel-700 hover:bg-surface"
+                      }`}
+                      onClick={() => applyTermScheme("DP", termForm.pct, stage)}
+                    >
+                      {stage}
+                    </button>
+                  ))}
+                </div>
+                {termForm.dpStage !== "Pelunasan" ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-steel-400 mr-1">{T.quickPct}:</span>
+                    {["20", "30", "40", "50"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`px-2 py-0.5 text-xs rounded border transition-colors ${
+                          termForm.pct === p
+                            ? "bg-navy-900 text-white border-navy-900"
+                            : "border-steel-200 bg-white text-steel-700 hover:bg-surface"
+                        }`}
+                        onClick={() => applyTermScheme("DP", p, termForm.dpStage)}
+                      >
+                        {p}%
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1 ml-2">
+                      <NumInput
+                        min={1}
+                        max={100}
+                        className="input text-xs w-20"
+                        value={termForm.pct}
+                        onChange={(e) => applyTermScheme("DP", e.target.value, termForm.dpStage)}
+                      />
+                      <span className="text-xs text-steel-400">%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 border border-amber-200">
+                    {locale === "en" ? `Settlement clears the remaining contract balance (${fmtRupiah(termRemaining)}).` : `Pelunasan akan mengajukan sisa penuh nilai kontrak (${fmtRupiah(termRemaining)}).`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {termForm.schemeType === "Kontan" && (
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 rounded-lg p-2 border border-emerald-200">
+                {locale === "en" ? `Cash payment requests 100% full settlement (${fmtRupiah(termRemaining > 0 ? termRemaining : termWoContract)}).` : `Pembayaran kontan melunasi 100% nilai kontrak sekaligus (${fmtRupiah(termRemaining > 0 ? termRemaining : termWoContract)}).`}
+              </p>
+            )}
+          </div>
+
+          <FormGrid>
+            <Field label={S.msSowBtn} hint={termMsList.length ? S.msHint : undefined}>
+              <div className="space-y-1">
+                <input
+                  className="input font-medium"
+                  value={termForm.milestone}
+                  onChange={(e) => setTermForm({ ...termForm, milestone: e.target.value })}
+                  placeholder={locale === "en" ? "Stage / Milestone title" : "Judul tahap / milestone termin"}
+                />
+                {termMsList.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1 text-[11px] text-steel-500">
+                    <span className="text-steel-400">{locale === "en" ? "SOW Milestones:" : "Milestone SOW:"}</span>
+                    {termMsList.map((m) => (
+                      <button
+                        key={m.title}
+                        type="button"
+                        className="underline hover:text-navy-900"
+                        onClick={() => setTermForm({ ...termForm, milestone: m.title })}
+                      >
+                        {m.title} ({m.pct}%)
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Field>
+            <Field label={S.termAmountLabel}>
+              <MoneyInput className="input font-semibold" value={termForm.amount} onChange={(v) => setTermForm({ ...termForm, amount: v })} />
             </Field>
           </FormGrid>
-          {termSub && termWo && (
-            <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
-              {S.termCapInfo.replace("{a}", fmtRupiah(termCap)).replace("{b}", fmtRupiah(Number(termSub.contract || 0))).replace("{c}", String(termWo.progress)).replace("{d}", fmtRupiah(termUsed))}
-              {termMs ? S.msCapInfo.replace("{a}", termMs.title).replace("{b}", fmtRupiah(termMsCap)).replace("{c}", fmtRupiah(termMsUsed)) : ""}
-              {termTsRef > 0 ? S.tsRefInfo.replace("{a}", String(termTsHours)).replace("{b}", fmtRupiah(Number(termWo.rate))).replace("{c}", fmtRupiah(termTsRef)) : ""}
-            </p>
-          )}
-          <Field label={S.termAmountLabel}><MoneyInput className="input" value={termForm.amount} onChange={(v) => setTermForm({ ...termForm, amount: v })} /></Field>
+
           <FormGrid>
             <Field label={S.pphLabel}>
               <select className="input" value={termForm.pphPct} onChange={(e) => setTermForm({ ...termForm, pphPct: e.target.value })}>
-                {/* Sumber tarif dari PPH_SUBKON_OPTIONS. Versi lama menulis
-                    0.5 dan 2 langsung di sini, jadi konstantanya mati dan
-                    kalau tarifnya berubah keduanya bisa berbeda. */}
                 {taxRates.map((rate) => (
                   <option key={rate} value={String(rate)}>{rate}%{rate === 0.5 ? " (PPh final)" : ""}</option>
                 ))}
               </select>
             </Field>
-            <Field label={S.retensiLabel}><NumInput min={0} max={100} className="input" value={termForm.retPct} onChange={(e) => setTermForm({ ...termForm, retPct: e.target.value })} /></Field>
+            <Field label={S.retensiLabel}>
+              <NumInput min={0} max={100} className="input" value={termForm.retPct} onChange={(e) => setTermForm({ ...termForm, retPct: e.target.value })} />
+            </Field>
           </FormGrid>
+
+          {/* Card Rincian Estimasi Pembayaran Real-Time */}
+          {termGross > 0 && (
+            <div className="rounded-xl border border-steel-200 bg-surface p-3 space-y-1.5">
+              <p className="text-[11px] font-semibold text-steel-500 uppercase tracking-wider">{T.calcNetTitle}</p>
+              <div className="flex justify-between text-xs text-steel-600">
+                <span>{T.calcGross}</span>
+                <span className="font-medium text-navy-900">{fmtRupiah(termGross)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-steel-600">
+                <span>{T.calcPph} ({termForm.pphPct}%)</span>
+                <span className="text-rose-600 font-medium">- {fmtRupiah(termPphCut)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-steel-600">
+                <span>{T.calcRet} ({termForm.retPct}%)</span>
+                <span className="text-rose-600 font-medium">- {fmtRupiah(termRetCut)}</span>
+              </div>
+              <div className="border-t border-steel-200 pt-1.5 flex justify-between text-xs font-semibold text-emerald-700">
+                <span>{T.calcNet}</span>
+                <span className="text-sm font-bold text-emerald-600">{fmtRupiah(termNetoEst)}</span>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
