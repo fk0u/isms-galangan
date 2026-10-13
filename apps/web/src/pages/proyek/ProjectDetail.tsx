@@ -1086,10 +1086,10 @@ const createWarranty = async (wbsTask?: string) => {
     const hours = Number(wbsUpdateForm.hours) || 0;
     const prog = Math.max(0, Math.min(100, Number(wbsUpdateForm.progress)));
     if (wbsUpdateForm.progress === "" || Number.isNaN(prog)) { toast(S.detToastProgRange, "info"); return; }
-    /* #77: perubahan progres wajib disertai minimal satu foto bukti. Hanya saat
-       tersambung server - mode lokal tidak punya tempat mengunggah berkas. */
+    /* Perubahan progres WBS wajib disertai minimal satu foto bukti */
     const progBefore = Number(wbs.find((w) => w.task === wbsTaskUpdate)?.progress ?? 0);
-    if (isBackendConfigured() && prog !== progBefore && wbsUpdateForm.photos.length === 0) { toast(S.detToastPhotoRequired, "info"); return; }
+    const hasPhoto = wbsUpdateForm.photos.length > 0 || Boolean(wbsUpdateForm.photoUrl);
+    if (prog !== progBefore && !hasPhoto) { toast(S.detToastPhotoRequired, "info"); return; }
     // E2: hull tasks wajib isi station.
     if (/hull/i.test(wbsTaskUpdate) && !wbsUpdateForm.station) { toast(S.detToastStation, "info"); return; }
     const dftNum = wbsUpdateForm.dft === "" ? undefined : Number(wbsUpdateForm.dft);
@@ -1464,7 +1464,7 @@ const createWarranty = async (wbsTask?: string) => {
                         isCustom: true,
                         notes: c.notes,
                       }))
-                    : PLANNING_SUBCLASSES.map((p) => ({ ...p, type: "Drawing", isCustom: false, notes: undefined }));
+                    : [];
 
                   const isItemDone = (item: (typeof effectiveList)[number]) => {
                     if (classApproved && item.id === "SAFETY") return true;
@@ -1482,9 +1482,7 @@ const createWarranty = async (wbsTask?: string) => {
                   const classBlockers = getStageTransitionBlockers("Desain", "Produksi", project, data, locale);
 
                   const deleteReq = async (reqId: string) => {
-                    const current = (rawCustom && rawCustom.length > 0)
-                      ? rawCustom
-                      : PLANNING_SUBCLASSES.map((p) => ({ id: p.id, name: p.name, type: "Drawing" }));
+                    const current = (rawCustom && rawCustom.length > 0) ? rawCustom : [];
                     const next = current.filter((r) => r.id !== reqId);
                     try {
                       await update("projects", pid, { customRequirements: next });
@@ -1505,7 +1503,9 @@ const createWarranty = async (wbsTask?: string) => {
                               : <Badge tone="amber">{S.detClassPending.replace("{a}", "Belum")}</Badge>}
                           </div>
                           <p className="mt-0.5 text-xs text-steel-500">
-                            {doneItems.length}/{effectiveList.length} {locale === "en" ? "planning & class items completed" : "subclass & item perencanaan selesai"} ({progressPct}%)
+                            {effectiveList.length === 0
+                              ? (locale === "en" ? "No requirements defined yet" : "Belum ada persyaratan dokumen ditentukan")
+                              : `${doneItems.length}/${effectiveList.length} ${locale === "en" ? "requirements completed" : "persyaratan selesai"} (${progressPct}%)`}
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1521,7 +1521,7 @@ const createWarranty = async (wbsTask?: string) => {
                             className="btn-secondary text-xs"
                             onClick={() => setShowClassDetails(!showClassDetails)}
                           >
-                            {showClassDetails ? (locale === "en" ? "Hide Details" : "Tutup Rincian") : (locale === "en" ? "View Subclass Breakdown" : "Lihat Rincian Subclass")}
+                            {showClassDetails ? (locale === "en" ? "Hide Details" : "Tutup Rincian") : (locale === "en" ? "View Requirements" : "Lihat Persyaratan")}
                           </button>
                         </div>
                       </div>
@@ -1531,6 +1531,15 @@ const createWarranty = async (wbsTask?: string) => {
                       </div>
 
                       {showClassDetails && (
+                        effectiveList.length === 0 ? (
+                          <div className="mt-4 rounded-xl border border-dashed border-steel-300 p-4 text-center">
+                            <p className="text-xs text-steel-500">
+                              {locale === "en"
+                                ? "No requirements defined yet for this project. Click '+ Add Requirement' above to add documents."
+                                : "Belum ada persyaratan dokumen untuk proyek ini. Klik '+ Tambah Persyaratan' di atas untuk menambahkan dokumen."}
+                            </p>
+                          </div>
+                        ) : (
                         <div className="mt-4 grid grid-cols-1 gap-4 pt-2 border-t border-steel-100 md:grid-cols-2">
                           {/* Item Selesai */}
                           <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
@@ -1548,16 +1557,7 @@ const createWarranty = async (wbsTask?: string) => {
                                       <span className="text-emerald-600 font-bold shrink-0">✔</span>
                                       <span className="font-medium text-navy-900 truncate">{locale === "en" ? it.nameEn : it.name}</span>
                                     </div>
-                                    {it.isCustom && (
-                                      <button
-                                        type="button"
-                                        className="rounded p-1 text-steel-400 hover:bg-rose-50 hover:text-rose-600 shrink-0"
-                                        onClick={() => void deleteReq(it.id)}
-                                        title={locale === "en" ? "Delete requirement" : "Hapus persyaratan"}
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
+
                                   </li>
                                 ))
                               )}
@@ -1630,6 +1630,7 @@ const createWarranty = async (wbsTask?: string) => {
                             </ul>
                           </div>
                         </div>
+                        )
                       )}
                     </div>
                   );
