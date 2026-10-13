@@ -96,8 +96,8 @@ export default function Login() {
         <div className="flex items-center gap-3">
           <img src="/logo-sb.png" alt="Logo perusahaan" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
           <div>
-            <p className="text-sm font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
-            <p className="text-xs text-steel-500">PT Syukur Bersaudara</p>
+            <p className="text-sm font-semibold tracking-[-0.01em] text-navy-900">ISMS PT Syukur Bersaudara</p>
+            <p className="text-xs text-steel-500">Galangan & Industri Kapal</p>
           </div>
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-steel-600 ring-1 ring-inset ring-steel-200">
             <ShipWheel className="h-3.5 w-3.5" /> v2026.1
@@ -137,7 +137,7 @@ export default function Login() {
             ))}
           </dl>
           <div className="mt-6 flex items-center justify-between text-xs text-steel-400">
-            <p>© 2026 ISMS Galangan</p>
+            <p>© 2026 PT Syukur Bersaudara</p>
             <p className="flex items-center gap-3">
               <span>ISO 9001</span>
               <span className="h-3 w-px bg-steel-300" />
@@ -160,7 +160,7 @@ export default function Login() {
           <div className="mb-6 flex items-center gap-3 lg:hidden">
             <img src="/logo-sb.png" alt="Logo perusahaan" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
             <div>
-              <p className="font-semibold tracking-[-0.01em] text-navy-900">ISMS Galangan</p>
+              <p className="font-semibold tracking-[-0.01em] text-navy-900">ISMS PT Syukur Bersaudara</p>
               <p className="text-xs text-steel-500">{t.auth.tagline}</p>
             </div>
           </div>

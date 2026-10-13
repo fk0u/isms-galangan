@@ -101,7 +101,7 @@ export class Document {
     this.pdf.setProperties({
       title: this.opts.title ?? "Dokumen ISMS",
       subject: this.opts.subject ?? "",
-      creator: "ISMS Galangan",
+      creator: "ISMS PT Syukur Bersaudara",
     });
   }
 

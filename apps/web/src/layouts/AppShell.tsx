@@ -451,8 +451,8 @@ export default function AppShell() {
         <img src="/logo-sb.png" alt="Logo perusahaan" width={32} height={32} className="h-8 w-8 shrink-0 object-contain" />
         {!mini && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">ISMS Galangan</p>
-            <p className="truncate text-[11px] text-steel-500">PT Syukur Bersaudara</p>
+            <p className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">ISMS PT Syukur Bersaudara</p>
+            <p className="truncate text-[11px] text-steel-500">Galangan & Industri Kapal</p>
           </div>
         )}
       </div>
