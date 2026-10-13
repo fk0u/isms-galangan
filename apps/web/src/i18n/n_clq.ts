@@ -75,6 +75,11 @@ export const n_clq = {
     statusFailed: "Di bawah ambang batas (< {t}%)",
     incompleteWarn: "{n} butir berbobot belum dijawab",
     allAnswered: "Semua butir telah dijawab",
+    executorType: "Jenis Pelaksana",
+    executorSubkon: "Subkontraktor",
+    executorWorker: "Pekerja (Internal)",
+    executorPick: "Pilih pelaksana...",
+    colExecutor: "Pelaksana",
   },
   en: {
     viewWorkers: "Worker HSE",
@@ -151,5 +156,10 @@ export const n_clq = {
     statusFailed: "Below threshold (< {t}%)",
     incompleteWarn: "{n} weighted items remain unanswered",
     allAnswered: "All items answered",
+    executorType: "Executor Type",
+    executorSubkon: "Subcontractor",
+    executorWorker: "Worker (Internal)",
+    executorPick: "Select executor...",
+    colExecutor: "Executor",
   },
 };

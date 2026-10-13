@@ -12,6 +12,7 @@ import { n_clq } from "../../i18n/n_clq";
 import { scoreChecklist, type ScItem, type ScTemplate } from "../../utils/scoring";
 import { getSetting } from "../../utils/settings";
 import { fmtTanggal, todayISO } from "../../utils/format";
+import { sameName } from "../../utils/names";
 
 type ItemType = "ya_tidak" | "skala_1_5" | "pilihan" | "teks";
 interface EditItem { id: string; text: string; type: ItemType; weight: string; options: string }
@@ -35,7 +36,9 @@ export default function ChecklistTab() {
   const [view, setView] = useState<"projects" | "workers" | "templates">("projects");
   const [pid, setPid] = useState<string | null>(null);
   const [openHist, setOpenHist] = useState<string | null>(null);
-  const [inspect, setInspect] = useState<{ pid: string; task: string; empId?: string } | null>(null);
+  const [inspect, setInspect] = useState<{ pid: string; task: string; empId?: string; assignee?: string } | null>(null);
+  const [execType, setExecType] = useState<"subkon" | "pekerja">("subkon");
+  const [execName, setExecName] = useState("");
   const [tplId, setTplId] = useState("");
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<{ score: number; id: string; task: string; tpl: string; pid: string } | null>(null);
@@ -66,11 +69,28 @@ export default function ChecklistTab() {
     return templates.filter((t) => (inspect?.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC"));
   }, [templates, inspect]);
 
-  const startInspection = (target: { pid: string; task: string; empId?: string }) => {
+  const startInspection = (target: { pid: string; task: string; empId?: string; assignee?: string }) => {
     const matchTpls = templates.filter((t) => (target.empId ? t.scope === "HSE" && t.target === "pekerja" : String(t.scope ?? "QC") === "QC"));
     setInspect(target);
     setAnswers({});
     setTplId(matchTpls.length === 1 ? String(matchTpls[0].id) : "");
+    if (target.empId) {
+      setExecType("pekerja");
+      setExecName(target.task);
+    } else {
+      const empMatch = (data.employees ?? []).find((e) => sameName(e.name, target.assignee || ""));
+      const subMatch = (data.subcontractors ?? []).find((s) => sameName(s.name, target.assignee || ""));
+      if (empMatch) {
+        setExecType("pekerja");
+        setExecName(String(empMatch.name));
+      } else if (subMatch) {
+        setExecType("subkon");
+        setExecName(String(subMatch.name));
+      } else {
+        setExecType("subkon");
+        setExecName(target.assignee || "");
+      }
+    }
   };
 
   const saveInspection = async () => {
@@ -79,10 +99,19 @@ export default function ChecklistTab() {
     if (!preview || preview.answered === 0) { toast(T.needAnswers, "info"); return; }
     try {
       const created = await add("checklistResponses", {
-        templateId: String(tpl.id), templateName: String(tpl.name), scope: String(tpl.scope ?? "QC"),
-        projectId: inspect.pid, wbsTask: inspect.empId ? "" : inspect.task, answers, score: preview.score,
+        templateId: String(tpl.id),
+        templateName: String(tpl.name),
+        scope: String(tpl.scope ?? "QC"),
+        projectId: inspect.pid,
+        wbsTask: inspect.empId ? "" : inspect.task,
+        answers,
+        score: preview.score,
+        executorType: inspect.empId ? "pekerja" : execType,
+        executorName: inspect.empId ? inspect.task : execName,
+        ...(execType === "subkon" && execName ? { subcontractor: execName } : {}),
         ...(inspect.empId ? { employeeId: inspect.empId, employeeName: inspect.task } : {}),
-        inspector: user?.name ?? "-", at: new Date().toISOString(),
+        inspector: user?.name ?? "-",
+        at: new Date().toISOString(),
       }, { action: "inspeksi kuesioner", target: `${inspect.pid} · ${inspect.task}`, module: "QC" });
       const score = Number(created.score ?? preview.score);
       toast(T.saved.replace("{s}", String(score)));
@@ -195,13 +224,18 @@ export default function ChecklistTab() {
                   return [
                     <tr key={key}>
                       <td className="td text-sm text-navy-900">{key}</td>
-                      <td className="td text-sm text-steel-600">{w.assignee?.name ?? "-"}{w.assignee?.woId ? <span className="ml-1 font-mono text-[11px] text-steel-400">{w.assignee.woId}</span> : null}</td>
+                      <td className="td text-sm text-steel-600">
+                        <p>{w.assignee?.name ?? "-"}{w.assignee?.woId ? <span className="ml-1 font-mono text-[11px] text-steel-400">{w.assignee.woId}</span> : null}</p>
+                        {rs[0]?.executorName && (
+                          <p className="text-[11px] font-medium text-steel-500">Inspeksi: {String(rs[0].executorName)}</p>
+                        )}
+                      </td>
                       <td className="td"><div className="flex items-center gap-2"><ProgressBar value={Number(w.progress ?? 0)} className="w-20" /><span className="text-xs">{Number(w.progress ?? 0)}%</span></div></td>
                       <td className="td">
                         {rs[0] ? <Badge tone={scoreTone(Number(rs[0].score), threshold)}>{String(rs[0].score)}</Badge> : <span className="text-xs text-steel-400">{T.noHistory}</span>}
                         {rs.length > 0 && <button type="button" className="ml-2 text-xs text-ocean-600 hover:underline" onClick={() => setOpenHist(openHist === key ? null : key)}>{T.history.replace("{n}", String(rs.length))}</button>}
                       </td>
-                      <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => startInspection({ pid, task: key })}>{T.start}</button>}</td>
+                      <td className="td">{canInspect && <button type="button" className="btn-primary text-xs" onClick={() => startInspection({ pid, task: key, assignee: w.assignee?.name })}>{T.start}</button>}</td>
                     </tr>,
                     openHist === key ? (
                       <tr key={`${key}-h`}>
@@ -314,7 +348,7 @@ export default function ChecklistTab() {
               <span className="font-semibold uppercase tracking-wider text-steel-500">{T.contextCard}</span>
               <span className="rounded bg-ocean-50 px-2 py-0.5 font-medium text-ocean-700">{T.passThreshold}: {threshold}%</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
               <div>
                 <p className="text-[11px] text-steel-500">{inspect?.empId ? T.targetWorker : T.projAndVessel}</p>
                 <p className="font-medium text-navy-900">{inspect?.empId ? inspect.task : `${String(currProject?.vessel ?? "-")} (${inspect?.pid})`}</p>
@@ -322,6 +356,10 @@ export default function ChecklistTab() {
               <div>
                 <p className="text-[11px] text-steel-500">{inspect?.empId ? T.colWorker : T.wbsItem}</p>
                 <p className="font-medium text-navy-900">{inspect?.task}</p>
+              </div>
+              <div>
+                <p className="text-[11px] text-steel-500">{T.colExecutor}</p>
+                <p className="font-medium text-navy-900">{execName || "-"}</p>
               </div>
               <div>
                 <p className="text-[11px] text-steel-500">{T.inspector}</p>
@@ -333,6 +371,54 @@ export default function ChecklistTab() {
               </div>
             </div>
           </div>
+
+          {/* Penentuan Subkon / Pekerja Pelaksana (Inspeksi Pekerjaan WBS) */}
+          {!inspect?.empId && (
+            <div className="rounded-xl border border-steel-200 bg-white p-3.5">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-navy-900">{T.colExecutor}</span>
+                <span className="text-[11px] text-steel-500">{T.colAssignee}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <Field label={T.executorType}>
+                  <select
+                    className="input text-xs"
+                    value={execType}
+                    onChange={(e) => {
+                      const t = e.target.value as "subkon" | "pekerja";
+                      setExecType(t);
+                      setExecName("");
+                    }}
+                  >
+                    <option value="subkon">{T.executorSubkon}</option>
+                    <option value="pekerja">{T.executorWorker}</option>
+                  </select>
+                </Field>
+                <Field label={execType === "subkon" ? T.executorSubkon : T.executorWorker}>
+                  <select
+                    className="input text-xs"
+                    value={execName}
+                    onChange={(e) => setExecName(e.target.value)}
+                  >
+                    <option value="">{T.executorPick}</option>
+                    {execType === "subkon"
+                      ? (data.subcontractors ?? []).map((s) => (
+                          <option key={String(s.id)} value={String(s.name)}>
+                            {String(s.name)}
+                          </option>
+                        ))
+                      : (data.employees ?? [])
+                          .filter((e) => String(e.status ?? "Aktif") === "Aktif")
+                          .map((e) => (
+                            <option key={String(e.id)} value={String(e.name)}>
+                              {String(e.name)} ({String(e.role ?? e.dept ?? "")})
+                            </option>
+                          ))}
+                  </select>
+                </Field>
+              </div>
+            </div>
+          )}
 
           {/* Pemilihan Template */}
           <Field label={T.template}>
