@@ -17,14 +17,34 @@ function stripQuery(url: string): string {
   return url.split("?")[0].split("#")[0];
 }
 
+/** true bila URL berada di backend sendiri. Bukan sekadar awalan teks:
+ *  "https://api.example.evil" tidak boleh lolos sebagai "https://api.example". */
+export function isBackendUrl(url: string, base: string = BASE): boolean {
+  return base !== "" && (url === base || url.startsWith(`${base}/`));
+}
+
 /** Normalisasi URL lama relatif (/files/...) → absolut terhadap BASE backend.
- *  URL absolut / blob: / data: dikembalikan apa adanya. */
-export function toAbsoluteUrl(url: unknown): string {
+ *  blob: / data: dan URL absolut pihak lain dikembalikan apa adanya.
+ *
+ *  URL unggahan tersimpan lengkap dengan host tempat ia diunggah. Aplikasi ini
+ *  dilayani dari lebih dari satu alamat (domain lama dan baru) untuk server yang
+ *  sama, jadi berkas yang diunggah lewat satu alamat tampil "File tak dapat
+ *  dimuat" di alamat lain: host-nya tidak dikenali sebagai backend sehingga
+ *  diminta tanpa token. Karena itu URL absolut yang berbentuk unggahan
+ *  aplikasi ini (/files/<tahun-bulan>/<32 heksadesimal>.<ekstensi>, nama yang
+ *  dibuat server) diarahkan ke backend yang sedang dipakai. Lampiran luar yang
+ *  kebetulan ber-path /files/ tidak cocok dengan pola itu dan tidak disentuh. */
+export function toAbsoluteUrl(url: unknown, base: string = BASE): string {
   const u = String(url ?? "").trim();
   if (!u) return "";
-  if (/^(https?:|blob:|data:)/i.test(u)) return u;
-  if (!BASE) return u;
-  return `${BASE}${u.startsWith("/") ? u : `/${u}`}`;
+  if (/^(blob:|data:)/i.test(u)) return u;
+  if (/^https?:/i.test(u)) {
+    if (!base) return u;
+    const path = /^https?:\/\/[^/]+(\/files\/\d{4}-\d{2}\/[0-9a-f]{32}\.[a-z0-9]+(?:\?.*)?)$/i.exec(u)?.[1];
+    return path ? `${base}${path}` : u;
+  }
+  if (!base) return u;
+  return `${base}${u.startsWith("/") ? u : `/${u}`}`;
 }
 
 /** Ekstensi file huruf kecil tanpa titik; "" bila URL tak berekstensi. */
