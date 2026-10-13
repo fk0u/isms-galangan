@@ -2970,9 +2970,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   <HistFilterBar value={invHist} onChange={setInvHist} idPrefix="ar" />
                   <span className="text-xs text-steel-400">{S.arCountFilt.replace("{n}", String(sortedAr.length))}</span>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-surface sticky top-0 z-10">
+                <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
                       <tr>
                         <SortTh label={S.colInvoice} sortKey="id" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
                         <SortTh label={S.colKodePembantu} sortKey="kode" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
@@ -3053,6 +3053,22 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         );
                     })}
                   </tbody>
+                  {sortedAr.length > 0 && (
+                    <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                      <tr>
+                        <td className="td font-bold" colSpan={3}>
+                          {S.colTotal} ({sortedAr.length} {locale === "en" ? "items" : "item"})
+                        </td>
+                        <td className="td text-steel-700">
+                          {fmtRupiah(sortedAr.reduce((s, r) => s + num(r.openAwal), 0))}
+                        </td>
+                        <td className="td font-bold text-navy-900">
+                          {fmtRupiah(sortedAr.reduce((s, r) => s + num(r.amount), 0))}
+                        </td>
+                        <td className="td" colSpan={5}></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
                 {sortedAr.length === 0 && <EmptyState title={S.emptyInvTitle} subtitle={S.emptyInvSub} />}
@@ -3144,9 +3160,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <SearchBox value={apQ} onChange={setApQ} placeholder={S.cardSearchPh} ariaLabel={locale === "en" ? "Search payables" : "Cari utang"} className="max-w-xs" />
                 <span className="text-xs text-steel-400">{S.apCountFilt.replace("{n}", String(sortedAp.length))}</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-surface sticky top-0 z-10">
+              <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
                     <tr>
                       <SortTh label={S.colVendor} sortKey="v" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colKodePembantu} sortKey="kode" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
@@ -3208,9 +3224,34 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </tr>
                     ))}
                   </tbody>
+                  {sortedAp.length > 0 && (
+                    <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                      <tr>
+                        <td className="td font-bold" colSpan={4}>
+                          {S.colTotal} ({sortedAp.length} {locale === "en" ? "items" : "item"})
+                        </td>
+                        <td className="td text-steel-700">
+                          {fmtRupiah(sortedAp.reduce((s, a) => s + num(a.openAwal), 0))}
+                        </td>
+                        <td className="td font-bold text-navy-900">
+                          {fmtRupiah(sortedAp.reduce((s, a) => s + num(a.amt), 0))}
+                        </td>
+                        <td className="td text-steel-700">
+                          {fmtRupiah(sortedAp.reduce((s, a) => s + num(a.pay1), 0))}
+                        </td>
+                        <td className="td text-steel-700">
+                          {fmtRupiah(sortedAp.reduce((s, a) => s + num(a.pay2), 0))}
+                        </td>
+                        <td className="td font-bold text-navy-900">
+                          {fmtRupiah(sortedAp.reduce((s, a) => s + Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)), 0))}
+                        </td>
+                        <td className="td" colSpan={4}></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
-                {apPager.bar}
               </div>
+              {apPager.bar}
               <Card>
                 <CardHeader title={S.cashflowTitle} subtitle={S.cashflowSub} />
                 {flowMonthly.length === 0 ? (
@@ -3253,66 +3294,119 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.kasLiveBadge.replace("{n}", String(kasLiveRows.reduce((s, r) => s + r.count, 0))).replace("{d}", kasAsOf).replace("{s}", kasSnap ? S.kasSnapSuffix : S.kasLiveSuffix)}
               </p>
-              {kasSnap && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-surface sticky top-0 z-10">
-                    <tr>
-                      <SortTh label={S.colKode} sortKey="kode" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colRekening} sortKey="nama" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colSaldoAwal} sortKey="awal" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colMasuk} sortKey="masuk" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colKeluar} sortKey="keluar" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colBerjalan} sortKey="berjalan" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colSaldoAkhir} sortKey="akhir" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-steel-100">
-                    {sortRows(kasRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, kasQ, ["kode", "nama"])), kasSort, (r, k) =>
-                      k === "nama" ? String(r.nama) : k === "awal" ? Number(r.awal) : k === "masuk" ? kasFlow(r.kode).masuk :
-                      k === "keluar" ? kasFlow(r.kode).keluar : k === "berjalan" ? (kasSaldo[r.kode] ?? r.awal) :
-                      k === "akhir" ? Number(r.akhir) : String(r.kode)).map((r) => {
-                      const { masuk, keluar } = kasFlow(r.kode);
-                      return (
-                      <tr key={r.kode} className="hover:bg-surface">
-                        <td className="td font-mono text-xs font-semibold text-navy-900">{r.kode}</td>
-                        <td className="td text-xs text-steel-600">{r.nama}</td>
-                        <td className="td text-xs">{fmtRupiah(r.awal)}</td>
-                        <td className="td text-xs text-emerald-600">{masuk ? fmtRupiah(masuk) : "-"}</td>
-                        <td className="td text-xs text-rose-600">{keluar ? fmtRupiah(keluar) : "-"}</td>
-                        <td className="td text-xs font-semibold">{fmtRupiah((kasSaldo[r.kode] ?? r.awal))}</td>
-                        <td className="td text-xs text-steel-500">{fmtRupiah(r.akhir)}</td>
+              {kasSnap && (() => {
+                const filteredKas = sortRows(kasRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, kasQ, ["kode", "nama"])), kasSort, (r, k) =>
+                  k === "nama" ? String(r.nama) : k === "awal" ? Number(r.awal) : k === "masuk" ? kasFlow(r.kode).masuk :
+                  k === "keluar" ? kasFlow(r.kode).keluar : k === "berjalan" ? (kasSaldo[r.kode] ?? r.awal) :
+                  k === "akhir" ? Number(r.akhir) : String(r.kode));
+                return (
+                <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
+                      <tr>
+                        <SortTh label={S.colKode} sortKey="kode" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colRekening} sortKey="nama" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colSaldoAwal} sortKey="awal" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colMasuk} sortKey="masuk" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colKeluar} sortKey="keluar" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colBerjalan} sortKey="berjalan" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
+                        <SortTh label={S.colSaldoAkhir} sortKey="akhir" sort={kasSort} onSort={(k) => setKasSort((s) => toggleSort(s, k))} />
                       </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              )}
-              <Card className="p-4">
-                <CardHeader title={S.kasRecapTitle.replace("{d}", kasAsOf.slice(0, 7))} subtitle={S.kasRecapSub} />
-                <div className="overflow-x-auto px-1 pb-3">
-                  <table className="w-full">
-                    <thead className="bg-surface sticky top-0 z-10">
-                      <tr><th className="th">{S.colKode}</th><th className="th">{S.colRekening}</th><th className="th">{S.colMasuk}</th><th className="th">{S.colKeluar}</th><th className="th">{S.kasNetCol}</th><th className="th">{S.kasJCol}</th></tr>
                     </thead>
                     <tbody className="divide-y divide-steel-100">
-                      {kasLiveRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, kasQ, ["kode", "nama"])).map((r) => (
+                      {filteredKas.map((r) => {
+                        const { masuk, keluar } = kasFlow(r.kode);
+                        return (
                         <tr key={r.kode} className="hover:bg-surface">
                           <td className="td font-mono text-xs font-semibold text-navy-900">{r.kode}</td>
                           <td className="td text-xs text-steel-600">{r.nama}</td>
-                          <td className="td text-xs text-emerald-600">{r.masuk ? fmtRupiah(r.masuk) : "-"}</td>
-                          <td className="td text-xs text-rose-600">{r.keluar ? fmtRupiah(r.keluar) : "-"}</td>
-                          <td className="td text-xs font-semibold">{fmtRupiah(r.masuk - r.keluar)}</td>
-                          <td className="td text-xs text-steel-500">{r.count}</td>
+                          <td className="td text-xs">{fmtRupiah(r.awal)}</td>
+                          <td className="td text-xs text-emerald-600">{masuk ? fmtRupiah(masuk) : "-"}</td>
+                          <td className="td text-xs text-rose-600">{keluar ? fmtRupiah(keluar) : "-"}</td>
+                          <td className="td text-xs font-semibold">{fmtRupiah((kasSaldo[r.kode] ?? r.awal))}</td>
+                          <td className="td text-xs text-steel-500">{fmtRupiah(r.akhir)}</td>
                         </tr>
-                      ))}
-                      {kasLiveRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, kasQ, ["kode", "nama"])).length === 0 && (
-                        <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.kasEmptyLive}</td></tr>
-                      )}
+                        );
+                      })}
                     </tbody>
+                    {filteredKas.length > 0 && (
+                      <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                        <tr>
+                          <td className="td font-bold" colSpan={2}>
+                            {S.colTotal} ({filteredKas.length} {locale === "en" ? "accounts" : "rekening"})
+                          </td>
+                          <td className="td font-semibold text-steel-700">
+                            {fmtRupiah(filteredKas.reduce((s, r) => s + Number(r.awal || 0), 0))}
+                          </td>
+                          <td className="td font-semibold text-emerald-700">
+                            {fmtRupiah(filteredKas.reduce((s, r) => s + kasFlow(r.kode).masuk, 0))}
+                          </td>
+                          <td className="td font-semibold text-rose-700">
+                            {fmtRupiah(filteredKas.reduce((s, r) => s + kasFlow(r.kode).keluar, 0))}
+                          </td>
+                          <td className="td font-bold text-navy-900">
+                            {fmtRupiah(filteredKas.reduce((s, r) => s + (kasSaldo[r.kode] ?? r.awal), 0))}
+                          </td>
+                          <td className="td font-semibold text-steel-600">
+                            {fmtRupiah(filteredKas.reduce((s, r) => s + Number(r.akhir || 0), 0))}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
+                );
+              })()}
+              <Card className="p-4">
+                <CardHeader title={S.kasRecapTitle.replace("{d}", kasAsOf.slice(0, 7))} subtitle={S.kasRecapSub} />
+                {(() => {
+                  const filteredLive = kasLiveRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, kasQ, ["kode", "nama"]));
+                  return (
+                  <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
+                        <tr><th className="th">{S.colKode}</th><th className="th">{S.colRekening}</th><th className="th">{S.colMasuk}</th><th className="th">{S.colKeluar}</th><th className="th">{S.kasNetCol}</th><th className="th">{S.kasJCol}</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {filteredLive.map((r) => (
+                          <tr key={r.kode} className="hover:bg-surface">
+                            <td className="td font-mono text-xs font-semibold text-navy-900">{r.kode}</td>
+                            <td className="td text-xs text-steel-600">{r.nama}</td>
+                            <td className="td text-xs text-emerald-600">{r.masuk ? fmtRupiah(r.masuk) : "-"}</td>
+                            <td className="td text-xs text-rose-600">{r.keluar ? fmtRupiah(r.keluar) : "-"}</td>
+                            <td className="td text-xs font-semibold">{fmtRupiah(r.masuk - r.keluar)}</td>
+                            <td className="td text-xs text-steel-500">{r.count}</td>
+                          </tr>
+                        ))}
+                        {filteredLive.length === 0 && (
+                          <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.kasEmptyLive}</td></tr>
+                        )}
+                      </tbody>
+                      {filteredLive.length > 0 && (
+                        <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                          <tr>
+                            <td className="td font-bold" colSpan={2}>
+                              {S.colTotal} ({filteredLive.length} {locale === "en" ? "items" : "item"})
+                            </td>
+                            <td className="td font-semibold text-emerald-700">
+                              {fmtRupiah(filteredLive.reduce((s, r) => s + r.masuk, 0))}
+                            </td>
+                            <td className="td font-semibold text-rose-700">
+                              {fmtRupiah(filteredLive.reduce((s, r) => s + r.keluar, 0))}
+                            </td>
+                            <td className="td font-bold text-navy-900">
+                              {fmtRupiah(filteredLive.reduce((s, r) => s + (r.masuk - r.keluar), 0))}
+                            </td>
+                            <td className="td font-semibold text-steel-600">
+                              {filteredLive.reduce((s, r) => s + r.count, 0)}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                  );
+                })()}
               </Card>
               <Card className="p-4">
                 <CardHeader title={S.adjTitle} subtitle={S.adjSub} />
@@ -3406,9 +3500,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               ) : (
                 <div>
                   <SearchBox value={jadwalQ} onChange={setJadwalQ} className="mb-2 max-w-xs" placeholder={locale === "en" ? "Search payment schedule..." : "Cari jadwal bayar..."} ariaLabel={locale === "en" ? "Search payment schedule" : "Cari jadwal bayar"} />
-                  <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-surface sticky top-0 z-10">
+                  <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
                       <tr>
                         <th className="th"><input type="checkbox" aria-label={S.selectAll} checked={schedSel.length === schedItems.length} onChange={() => setSchedSel((prev) => (prev.length === schedItems.length ? [] : schedItems.map((r) => r.key)))} /></th>
                         <SortTh label={S.colJenis} sortKey="kind" sort={jadwalSort} onSort={(k) => setJadwalSort((s) => toggleSort(s, k))} />
@@ -3432,6 +3526,19 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         </tr>
                       ))}
                     </tbody>
+                    {sortedSched.length > 0 && (
+                      <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                        <tr>
+                          <td className="td font-bold" colSpan={6}>
+                            {S.colTotal} ({sortedSched.length} {locale === "en" ? "items" : "item"})
+                            {schedSel.length > 0 && ` · ${schedSel.length} ${locale === "en" ? "selected" : "dipilih"}`}
+                          </td>
+                          <td className="td font-bold text-navy-900">
+                            {fmtRupiah(sortedSched.reduce((s, r) => s + num(r.amount), 0))}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
                     </table>
                   </div>
                   {schedPager.bar}
@@ -3505,9 +3612,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <HistFilterBar value={invHist} onChange={setInvHist} idPrefix="inv" />
                 <span className="text-xs text-steel-400">{S.invDueNote}</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-surface sticky top-0 z-10">
+              <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
                     <tr>
                       <SortTh label={S.colInvoice} sortKey="id" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colTipe} sortKey="tipe" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
@@ -3593,9 +3700,26 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       );
                     })}
                   </tbody>
+                  {sortedInv.length > 0 && (
+                    <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                      <tr>
+                        <td className="td font-bold" colSpan={3}>
+                          {S.colTotal} ({sortedInv.length} invoice)
+                        </td>
+                        <td className="td text-steel-700">
+                          {fmtRupiah(sortedInv.reduce((s, inv) => s + num(inv.retentionAmt), 0))}
+                        </td>
+                        <td className="td"></td>
+                        <td className="td font-bold text-navy-900">
+                          {fmtRupiah(sortedInv.reduce((s, inv) => s + invNeto(inv), 0))}
+                        </td>
+                        <td className="td" colSpan={4}></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
-                {invPager.bar}
               </div>
+              {invPager.bar}
             </div>
           )}
 
@@ -4367,9 +4491,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <SearchBox value={juListQ} onChange={setJuListQ} className="max-w-xs" placeholder={locale === "en" ? "Search journal..." : "Cari jurnal..."} ariaLabel={locale === "en" ? "Search journals" : "Cari jurnal"} />
                 <span className="text-xs text-steel-400">{S.juCountFilt.replace("{n}", String(sortedJu.length))}</span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-surface sticky top-0 z-10">
+              <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
                     <tr>
                       <SortTh label={S.colTanggal} sortKey="date" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colKodePembantu} sortKey="kode" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
@@ -4421,9 +4545,22 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       <tr><td className="td text-xs text-steel-400" colSpan={12}>{S.emptyJuManual}</td></tr>
                     )}
                   </tbody>
+                  {sortedJu.length > 0 && (
+                    <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
+                      <tr>
+                        <td className="td font-bold" colSpan={6}>
+                          {S.colTotal} ({sortedJu.length} {locale === "en" ? "journals" : "jurnal"})
+                        </td>
+                        <td className="td font-bold text-navy-900">
+                          {fmtRupiah(sortedJu.reduce((s, j) => s + num(j.amount), 0))}
+                        </td>
+                        <td className="td" colSpan={4}></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
-                {juPager.bar}
               </div>
+              {juPager.bar}
               <CardHeader title={S.juSumTitle} subtitle={S.juSumSub} />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Card className="p-4">
