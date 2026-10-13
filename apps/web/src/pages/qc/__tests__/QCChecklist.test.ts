@@ -1,26 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { scoreChecklist, normalizedValue, type ScTemplate } from "../../../utils/scoring";
 
-describe("QC & Safety Single Branch Default and Questionnaire Logic (#96)", () => {
-  describe("Default Cabang Samarinda Resolution", () => {
+describe("QC & Safety Branch Resolution and Questionnaire Logic", () => {
+  describe("Branch Resolution without Hardcoded Samarinda", () => {
     const resolveBranch = (activeBranch?: string, userBranch?: string) => {
-      const defaultBranch = (activeBranch && activeBranch !== "SEMUA") ? activeBranch : (userBranch || "Samarinda");
+      const defaultBranch = (activeBranch && activeBranch !== "SEMUA") ? activeBranch : (userBranch || "");
       return defaultBranch;
     };
 
-    it("resolves to Samarinda by default when branch is 'SEMUA' or unset", () => {
-      expect(resolveBranch(undefined, undefined)).toBe("Samarinda");
-      expect(resolveBranch("SEMUA", undefined)).toBe("Samarinda");
-      expect(resolveBranch("", "")).toBe("Samarinda");
+    it("resolves to empty string when branch is 'SEMUA' or unset without user branch", () => {
+      expect(resolveBranch(undefined, undefined)).toBe("");
+      expect(resolveBranch("SEMUA", undefined)).toBe("");
+      expect(resolveBranch("", "")).toBe("");
     });
 
     it("resolves to user branch if specific user session branch is provided", () => {
       expect(resolveBranch("SEMUA", "Banjarmasin")).toBe("Banjarmasin");
-      expect(resolveBranch(undefined, "Samarinda")).toBe("Samarinda");
+      expect(resolveBranch(undefined, "Surabaya")).toBe("Surabaya");
     });
 
     it("resolves to active global branch if selected specifically", () => {
-      expect(resolveBranch("Samarinda", "Banjarmasin")).toBe("Samarinda");
+      expect(resolveBranch("Jakarta", "Banjarmasin")).toBe("Jakarta");
       expect(resolveBranch("Balikpapan", "Samarinda")).toBe("Balikpapan");
     });
   });

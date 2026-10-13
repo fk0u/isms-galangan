@@ -126,8 +126,8 @@ export default function QCSafety() {
   const toolboxTalks = inBranch(data.toolbox);
   // JSA tersimpan sebagai koleksi toolbox bertipe "JSA" (bukan state lokal).
   const jsaList = toolboxTalks.filter((t) => String(t.type ?? "") === "JSA");
-  // Cabang default untuk prototype satu cabang (default Samarinda dari sesi/konfigurasi yang sah).
-  const defaultBranch = (branch && branch !== "SEMUA") ? branch : (user?.branch || "Samarinda");
+  // Cabang default: ikuti sesi aktif, fallback profil pengguna (tanpa default hardcode Samarinda).
+  const defaultBranch = (branch && branch !== "SEMUA") ? branch : (user?.branch || "");
   const globalBranch = defaultBranch;
   const branchOf = (v?: string): string => v || defaultBranch;
   const qualityStaff = data.employees.filter((e) => e.dept === "Quality");
