@@ -633,6 +633,30 @@ export default function Inventory() {
   const [pickQty, setPickQty] = useState<Record<string, string>>({});
   const [pickFail, setPickFail] = useState<string[]>([]);
 
+  // BOM Inbound (Penerimaan Barang) & Outbound (Pengeluaran Barang)
+  const [bomInTab, setBomInTab] = useState<"procurement" | "additional">("procurement");
+  const [bomOutTab, setBomOutTab] = useState<"request" | "additional">("request");
+  const [selectedInIds, setSelectedInIds] = useState<string[]>([]);
+  const [selectedOutIds, setSelectedOutIds] = useState<string[]>([]);
+  const [inQtyInputs, setInQtyInputs] = useState<Record<string, string>>({});
+  const [inWhInputs, setInWhInputs] = useState<Record<string, string>>({});
+  const [outQtyInputs, setOutQtyInputs] = useState<Record<string, string>>({});
+  const [outWhInputs, setOutWhInputs] = useState<Record<string, string>>({});
+
+  // Additional In Form
+  const [addInItem, setAddInItem] = useState("");
+  const [addInQty, setAddInQty] = useState("");
+  const [addInUnit, setAddInUnit] = useState("pcs");
+  const [addInWh, setAddInWh] = useState("");
+  const [addInSource, setAddInSource] = useState("");
+
+  // Additional Out Form
+  const [addOutItem, setAddOutItem] = useState("");
+  const [addOutQty, setAddOutQty] = useState("");
+  const [addOutUnit, setAddOutUnit] = useState("pcs");
+  const [addOutWh, setAddOutWh] = useState("");
+  const [addOutPurpose, setAddOutPurpose] = useState("");
+
   const dq = useDebouncedValue(q);
   const abc = useMemo(() => abcMap(inventory), [inventory]);
 
@@ -951,6 +975,331 @@ if (k === "mattype") return matTypeOf(i);
     uom2: editing.uom2,
     konversi: editing.konversi,
   } : null;
+
+  const poInboundItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      poId: string;
+      docNo: string;
+      project: string;
+      vendor: string;
+      item: string;
+      itemId?: string;
+      unit: string;
+      orderQty: number;
+      receivedQty: number;
+      remainingQty: number;
+      status: string;
+      targetWh: string;
+    }> = [];
+
+    (data.purchaseOrders ?? []).forEach((po) => {
+      const pId = String(po.project ?? po.projectId ?? "");
+      if (bomProject !== "Semua proyek" && pId !== bomProject && !String(po.vessel ?? "").includes(bomProject)) {
+        return;
+      }
+      const vendorName = String(po.vendor ?? "-");
+      const defaultWh = String(po.targetWarehouse ?? (data.warehouses?.[0]?.name ?? "Gudang Utama"));
+
+      if (Array.isArray(po.lines) && po.lines.length > 0) {
+        po.lines.forEach((l: Record<string, unknown>, idx: number) => {
+          const orderQ = Number(l.qty ?? 0);
+          const recvQ = Number(l.receivedQty ?? (po.status === "Diterima" ? orderQ : 0));
+          const remQ = Math.max(0, orderQ - recvQ);
+          list.push({
+            id: `${po.id}-${idx}`,
+            poId: String(po.id),
+            docNo: String(po.docNo ?? po.id),
+            project: pId || String(po.vessel ?? "-"),
+            vendor: vendorName,
+            item: String(l.name ?? l.item ?? "-"),
+            unit: String(l.unit ?? "pcs"),
+            orderQty: orderQ,
+            receivedQty: recvQ,
+            remainingQty: remQ,
+            status: String(po.status ?? "Menunggu"),
+            targetWh: defaultWh,
+          });
+        });
+      } else {
+        const orderQ = Number(po.qty ?? 1);
+        const recvQ = Number(po.receivedQty ?? (po.status === "Diterima" ? orderQ : 0));
+        const remQ = Math.max(0, orderQ - recvQ);
+        list.push({
+          id: `${po.id}-0`,
+          poId: String(po.id),
+          docNo: String(po.docNo ?? po.id),
+          project: pId || String(po.vessel ?? "-"),
+          vendor: vendorName,
+          item: String(po.item ?? "-"),
+          itemId: po.itemId ? String(po.itemId) : undefined,
+          unit: String(po.unit ?? "pcs"),
+          orderQty: orderQ,
+          receivedQty: recvQ,
+          remainingQty: remQ,
+          status: String(po.status ?? "Menunggu"),
+          targetWh: defaultWh,
+        });
+      }
+    });
+
+    return list;
+  }, [data.purchaseOrders, data.warehouses, bomProject]);
+
+  const mrOutboundItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      mrId: string;
+      project: string;
+      wbsTask: string;
+      item: string;
+      itemId?: string;
+      unit: string;
+      requestedQty: number;
+      issuedQty: number;
+      remainingQty: number;
+      status: string;
+      stockAvail: number;
+      sourceWh: string;
+    }> = [];
+
+    (data.materialRequests ?? []).forEach((mr) => {
+      const pId = String(mr.projectId ?? "");
+      if (bomProject !== "Semua proyek" && pId !== bomProject) {
+        return;
+      }
+      const reqQ = Number(mr.requested ?? 0);
+      const issQ = Number(mr.issued ?? 0);
+      const remQ = Math.max(0, reqQ - issQ);
+      const matchedInv = (data.inventory ?? []).find((i) => i.id === mr.itemId || i.name.toLowerCase() === String(mr.item).toLowerCase());
+      const stock = Number(matchedInv?.stock ?? 0);
+      const defaultWh = matchedInv?.warehouse ? String(matchedInv.warehouse) : String(data.warehouses?.[0]?.name ?? "Gudang Utama");
+
+      list.push({
+        id: String(mr.id),
+        mrId: String(mr.id),
+        project: pId || "-",
+        wbsTask: String(mr.wbsTask ?? mr.purpose ?? "-"),
+        item: String(mr.item ?? "-"),
+        itemId: mr.itemId ? String(mr.itemId) : matchedInv?.id,
+        unit: String(mr.unit ?? matchedInv?.unit ?? "pcs"),
+        requestedQty: reqQ,
+        issuedQty: issQ,
+        remainingQty: remQ,
+        status: String(mr.status ?? "Menunggu"),
+        stockAvail: stock,
+        sourceWh: defaultWh,
+      });
+    });
+
+    return list;
+  }, [data.materialRequests, data.inventory, data.warehouses, bomProject]);
+
+  const additionalInItems = useMemo(() => {
+    return (data.movements ?? []).filter((m) => m.type === "Penerimaan" && String(m.by ?? "").startsWith("Additional:"));
+  }, [data.movements]);
+
+  const additionalOutItems = useMemo(() => {
+    return (data.movements ?? []).filter((m) => m.type === "Pengeluaran" && String(m.by ?? "").startsWith("Additional:"));
+  }, [data.movements]);
+
+  const handleVerifyInbound = async (itemsToProcess: typeof poInboundItems) => {
+    if (itemsToProcess.length === 0) return;
+    let countSuccess = 0;
+    for (const it of itemsToProcess) {
+      const qtyToReceive = Number(inQtyInputs[it.id] ?? it.remainingQty);
+      if (qtyToReceive <= 0) continue;
+      const targetWh = inWhInputs[it.id] || it.targetWh;
+
+      const matched = (data.inventory ?? []).find(
+        (i) => (it.itemId && i.id === it.itemId) || i.name.toLowerCase() === it.item.toLowerCase()
+      );
+      if (matched) {
+        await update("inventory", matched.id, {
+          stock: Number(matched.stock) + qtyToReceive,
+          updatedAt: todayISO(),
+        });
+      }
+
+      await add("movements", {
+        item: it.item,
+        itemId: matched?.id || it.itemId || "",
+        type: "Penerimaan",
+        qty: qtyToReceive,
+        by: `Procurement PO: ${it.docNo} · ${it.project}`,
+        batch: `BOM-IN-${todayISO().replace(/-/g, "")}`,
+        date: todayISO(),
+        tone: "in",
+        fromWh: "",
+        toWh: targetWh,
+        po: it.docNo,
+        supplier: it.vendor,
+      });
+
+      const poObj = (data.purchaseOrders ?? []).find((p) => String(p.id) === it.poId);
+      if (poObj) {
+        const nextRecv = Number(poObj.receivedQty ?? 0) + qtyToReceive;
+        const totalOrd = Number(poObj.qty ?? it.orderQty);
+        await update("purchaseOrders", poObj.id, {
+          receivedQty: nextRecv,
+          status: nextRecv >= totalOrd ? "Diterima" : "Diterima Sebagian",
+          updatedAt: todayISO(),
+        });
+      }
+      countSuccess++;
+    }
+
+    if (countSuccess > 0) {
+      toast(S.bomToastInSuccess.replace("{n}", String(countSuccess)), "success");
+      setSelectedInIds((prev) => prev.filter((id) => !itemsToProcess.some((x) => x.id === id)));
+    }
+  };
+
+  const handleVerifyOutbound = async (itemsToProcess: typeof mrOutboundItems) => {
+    if (itemsToProcess.length === 0) return;
+    let countSuccess = 0;
+    for (const it of itemsToProcess) {
+      const qtyToIssue = Number(outQtyInputs[it.id] ?? it.remainingQty);
+      if (qtyToIssue <= 0) continue;
+      const sourceWh = outWhInputs[it.id] || it.sourceWh;
+
+      const matched = (data.inventory ?? []).find(
+        (i) => (it.itemId && i.id === it.itemId) || i.name.toLowerCase() === it.item.toLowerCase()
+      );
+      const currStock = Number(matched?.stock ?? 0);
+      if (currStock < qtyToIssue) {
+        toast(S.bomToastStockShortage.replace("{a}", it.item).replace("{b}", `${currStock} ${it.unit}`), "info");
+        continue;
+      }
+
+      if (matched) {
+        const nextStock = currStock - qtyToIssue;
+        await update("inventory", matched.id, {
+          stock: nextStock,
+          updatedAt: todayISO(),
+        });
+        if (nextStock < Number(matched.minStock || 0)) {
+          toast(S.warnBelowMin.replace("{a}", matched.name).replace("{b}", `${fmtJumlah(Number(matched.minStock || 0))} ${matched.unit}`), "info");
+        }
+      }
+
+      await add("movements", {
+        item: it.item,
+        itemId: matched?.id || it.itemId || "",
+        type: "Pengeluaran",
+        qty: qtyToIssue,
+        by: `Permintaan MR: ${it.mrId} · ${it.project} (${it.wbsTask})`,
+        batch: `BOM-OUT-${todayISO().replace(/-/g, "")}`,
+        date: todayISO(),
+        tone: "out",
+        fromWh: sourceWh,
+        toWh: `Proyek ${it.project}`,
+      });
+
+      const mrObj = (data.materialRequests ?? []).find((m) => String(m.id) === it.mrId);
+      if (mrObj) {
+        const nextIssued = Number(mrObj.issued ?? 0) + qtyToIssue;
+        const totalReq = Number(mrObj.requested ?? it.requestedQty);
+        await update("materialRequests", mrObj.id, {
+          issued: nextIssued,
+          status: nextIssued >= totalReq ? "Dipenuhi dari stok" : "Dipenuhi Sebagian",
+          updatedAt: todayISO(),
+        });
+      }
+      countSuccess++;
+    }
+
+    if (countSuccess > 0) {
+      toast(S.bomToastOutSuccess.replace("{n}", String(countSuccess)), "success");
+      setSelectedOutIds((prev) => prev.filter((id) => !itemsToProcess.some((x) => x.id === id)));
+    }
+  };
+
+  const handleAddInboundSubmit = async () => {
+    if (!addInItem.trim()) {
+      toast(locale === "en" ? "Select or enter material name" : "Pilih atau ketik nama material", "info");
+      return;
+    }
+    const q = Number(addInQty);
+    if (!q || q <= 0) {
+      toast(S.qtyGtZero, "info");
+      return;
+    }
+    const wh = addInWh || String(data.warehouses?.[0]?.name ?? "Gudang Utama");
+    const matched = (data.inventory ?? []).find((i) => i.name.toLowerCase() === addInItem.trim().toLowerCase());
+    if (matched) {
+      await update("inventory", matched.id, {
+        stock: Number(matched.stock) + q,
+        updatedAt: todayISO(),
+      });
+    }
+
+    await add("movements", {
+      item: matched?.name || addInItem.trim(),
+      itemId: matched?.id || "",
+      type: "Penerimaan",
+      qty: q,
+      by: `Additional: ${addInSource.trim() || "Penerimaan di luar procurement"}`,
+      batch: `ADD-IN-${todayISO().replace(/-/g, "")}`,
+      date: todayISO(),
+      tone: "in",
+      fromWh: "",
+      toWh: wh,
+      supplier: addInSource.trim() || "-",
+    });
+
+    toast(S.bomToastAddInSuccess, "success");
+    setAddInItem("");
+    setAddInQty("");
+    setAddInSource("");
+  };
+
+  const handleAddOutboundSubmit = async () => {
+    if (!addOutItem.trim()) {
+      toast(locale === "en" ? "Select material" : "Pilih material", "info");
+      return;
+    }
+    const q = Number(addOutQty);
+    if (!q || q <= 0) {
+      toast(S.qtyGtZero, "info");
+      return;
+    }
+    const matched = (data.inventory ?? []).find((i) => i.id === addOutItem || i.name.toLowerCase() === addOutItem.trim().toLowerCase());
+    if (matched) {
+      const currStock = Number(matched.stock ?? 0);
+      if (currStock < q) {
+        toast(S.bomToastStockShortage.replace("{a}", matched.name).replace("{b}", `${currStock} ${matched.unit}`), "info");
+        return;
+      }
+      const nextStock = currStock - q;
+      await update("inventory", matched.id, {
+        stock: nextStock,
+        updatedAt: todayISO(),
+      });
+      if (nextStock < Number(matched.minStock || 0)) {
+        toast(S.warnBelowMin.replace("{a}", matched.name).replace("{b}", `${fmtJumlah(Number(matched.minStock || 0))} ${matched.unit}`), "info");
+      }
+    }
+    const wh = addOutWh || matched?.warehouse || String(data.warehouses?.[0]?.name ?? "Gudang Utama");
+
+    await add("movements", {
+      item: matched?.name || addOutItem.trim(),
+      itemId: matched?.id || "",
+      type: "Pengeluaran",
+      qty: q,
+      by: `Additional: ${addOutPurpose.trim() || "Pengeluaran di luar permintaan"}`,
+      batch: `ADD-OUT-${todayISO().replace(/-/g, "")}`,
+      date: todayISO(),
+      tone: "out",
+      fromWh: wh,
+      toWh: "Pengeluaran Langsung",
+    });
+
+    toast(S.bomToastAddOutSuccess, "success");
+    setAddOutItem("");
+    setAddOutQty("");
+    setAddOutPurpose("");
+  };
 
   const setF = (key: keyof MaterialFormValues, value: string | boolean) => {
     if (key === "category" && typeof value === "string") {
@@ -2539,6 +2888,649 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 </div>
                 </div>
                 {forecastBase.length === 0 && <EmptyState title={S.emptyNoProjT} subtitle={S.emptyNoProjS} />}
+              </Card>
+
+              {/* PENERIMAAN BARANG (INBOUND BOM) */}
+              <Card className="p-5 lg:col-span-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-navy-900">
+                      {S.bomInboundTitle}
+                    </h3>
+                    <p className="text-xs text-steel-500">
+                      {S.bomInboundSub}
+                    </p>
+                  </div>
+                  <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
+                    <button
+                      type="button"
+                      className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                        bomInTab === "procurement"
+                          ? "bg-navy-900 text-white shadow-sm"
+                          : "text-steel-600 hover:text-navy-900"
+                      }`}
+                      onClick={() => setBomInTab("procurement")}
+                    >
+                      {S.bomInTabProcurement} ({poInboundItems.filter((x) => x.remainingQty > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                        bomInTab === "additional"
+                          ? "bg-navy-900 text-white shadow-sm"
+                          : "text-steel-600 hover:text-navy-900"
+                      }`}
+                      onClick={() => setBomInTab("additional")}
+                    >
+                      {S.bomInTabAdditional}
+                    </button>
+                  </div>
+                </div>
+
+                {bomInTab === "procurement" ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="rounded border-steel-300"
+                          id="check-all-in"
+                          checked={
+                            selectedInIds.length > 0 &&
+                            selectedInIds.length === poInboundItems.filter((x) => x.remainingQty > 0).length
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedInIds(poInboundItems.filter((x) => x.remainingQty > 0).map((x) => x.id));
+                            } else {
+                              setSelectedInIds([]);
+                            }
+                          }}
+                        />
+                        <label htmlFor="check-all-in" className="text-xs font-medium text-steel-700 cursor-pointer">
+                          {S.bomChecklistSelectAll}
+                        </label>
+                      </div>
+                      {selectedInIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn-primary text-xs py-1.5 px-3"
+                          onClick={() => {
+                            const toProc = poInboundItems.filter((x) => selectedInIds.includes(x.id));
+                            handleVerifyInbound(toProc);
+                          }}
+                        >
+                          <ArrowDownToLine className="h-3.5 w-3.5" />
+                          {S.bomBtnVerifySelected.replace("{n}", String(selectedInIds.length))}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="overflow-x-auto max-h-96">
+                      <table className="w-full text-left">
+                        <thead className="bg-surface sticky top-0 z-10">
+                          <tr>
+                            <th className="th w-10"></th>
+                            <th className="th">{S.bomThDocProj}</th>
+                            <th className="th">{S.bomThMaterial}</th>
+                            <th className="th">{S.bomThQtyOrder}</th>
+                            <th className="th">{S.bomThQtyRecv}</th>
+                            <th className="th">{S.bomThQtyRemaining}</th>
+                            <th className="th w-28">{S.bomThQtyInput}</th>
+                            <th className="th w-40">{S.bomThTargetWh}</th>
+                            <th className="th">{S.thStatus}</th>
+                            <th className="th text-right">{S.thAksi}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-steel-100">
+                          {poInboundItems.map((item) => {
+                            const isPending = item.remainingQty > 0;
+                            const isSelected = selectedInIds.includes(item.id);
+                            return (
+                              <tr key={item.id} className={isSelected ? "bg-amber-50/40" : "hover:bg-surface"}>
+                                <td className="td">
+                                  {isPending ? (
+                                    <input
+                                      type="checkbox"
+                                      className="rounded border-steel-300"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedInIds((prev) => [...prev, item.id]);
+                                        } else {
+                                          setSelectedInIds((prev) => prev.filter((id) => id !== item.id));
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-emerald-500 font-bold text-xs">✓</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  <div className="font-semibold text-navy-900 text-xs">{item.docNo}</div>
+                                  <div className="text-[11px] text-steel-500">{item.project}</div>
+                                </td>
+                                <td className="td">
+                                  <div className="font-medium text-steel-800 text-xs">{item.item}</div>
+                                  <div className="text-[11px] text-steel-400">{item.vendor}</div>
+                                </td>
+                                <td className="td text-xs text-steel-600 font-medium">
+                                  {fmtJumlah(item.orderQty)} {item.unit}
+                                </td>
+                                <td className="td text-xs text-emerald-600 font-medium">
+                                  {fmtJumlah(item.receivedQty)} {item.unit}
+                                </td>
+                                <td className="td text-xs font-bold text-amber-700">
+                                  {fmtJumlah(item.remainingQty)} {item.unit}
+                                </td>
+                                <td className="td">
+                                  {isPending ? (
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      max={item.remainingQty}
+                                      className="input py-1 px-2 text-xs w-24"
+                                      placeholder={String(item.remainingQty)}
+                                      value={inQtyInputs[item.id] ?? item.remainingQty}
+                                      onChange={(e) =>
+                                        setInQtyInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                                      }
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-steel-400">-</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  {isPending ? (
+                                    <select
+                                      className="input py-1 px-2 text-xs w-36"
+                                      value={inWhInputs[item.id] ?? item.targetWh}
+                                      onChange={(e) =>
+                                        setInWhInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                                      }
+                                    >
+                                      {(data.warehouses ?? []).map((w) => (
+                                        <option key={w.id} value={w.name}>
+                                          {w.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className="text-xs text-steel-500">{item.targetWh}</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  <Badge tone={item.status === "Diterima" ? "green" : item.status === "Diterima Sebagian" ? "blue" : "amber"}>
+                                    {item.status}
+                                  </Badge>
+                                </td>
+                                <td className="td text-right">
+                                  {isPending && (
+                                    <button
+                                      type="button"
+                                      className="btn-secondary py-1 px-2 text-xs"
+                                      onClick={() => handleVerifyInbound([item])}
+                                    >
+                                      <ArrowDownToLine className="h-3 w-3" />
+                                      {S.bomBtnReceiveRow}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {poInboundItems.length === 0 && (
+                      <EmptyState title={locale === "en" ? "No PO items" : "Belum ada item PO"} subtitle={locale === "en" ? "No procurement purchase order found for this project." : "Tidak ditemukan purchase order procurement untuk filter proyek ini."} />
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div className="rounded-xl border border-steel-200 bg-surface/50 p-4 lg:col-span-1">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 mb-3">
+                        {S.bomInAddTitle}
+                      </h4>
+                      <p className="text-xs text-steel-500 mb-4">{S.bomInAddDesc}</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblMaterialName}</label>
+                          <input
+                            type="text"
+                            className="input text-xs w-full mt-1"
+                            placeholder="Contoh: Plat Baja 10mm / Pipa Galvanis"
+                            value={addInItem}
+                            onChange={(e) => setAddInItem(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-steel-700">{S.bomLblQty}</label>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              className="input text-xs w-full mt-1"
+                              placeholder="0"
+                              value={addInQty}
+                              onChange={(e) => setAddInQty(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-steel-700">{S.bomLblUnit}</label>
+                            <input
+                              type="text"
+                              className="input text-xs w-full mt-1"
+                              placeholder="pcs / kg / lembar"
+                              value={addInUnit}
+                              onChange={(e) => setAddInUnit(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblTargetWh}</label>
+                          <select
+                            className="input text-xs w-full mt-1"
+                            value={addInWh}
+                            onChange={(e) => setAddInWh(e.target.value)}
+                          >
+                            {(data.warehouses ?? []).map((w) => (
+                              <option key={w.id} value={w.name}>
+                                {w.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblSource}</label>
+                          <input
+                            type="text"
+                            className="input text-xs w-full mt-1"
+                            placeholder="Hibah / Sisa Proyek Lain / Retur"
+                            value={addInSource}
+                            onChange={(e) => setAddInSource(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-primary w-full justify-center text-xs py-2 mt-2"
+                          onClick={handleAddInboundSubmit}
+                        >
+                          <ArrowDownToLine className="h-3.5 w-3.5" />
+                          {S.bomBtnRecordIn}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 mb-3">
+                        {S.bomHistAddInTitle}
+                      </h4>
+                      <div className="overflow-x-auto max-h-80">
+                        <table className="w-full text-left">
+                          <thead className="bg-surface sticky top-0 z-10">
+                            <tr>
+                              <th className="th">{locale === "en" ? "Date" : "Tanggal"}</th>
+                              <th className="th">{S.bomThMaterial}</th>
+                              <th className="th">{S.thQty}</th>
+                              <th className="th">{S.bomThTargetWh}</th>
+                              <th className="th">{S.bomThSource}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-steel-100">
+                            {additionalInItems.map((m) => (
+                              <tr key={m.id} className="hover:bg-surface">
+                                <td className="td text-xs text-steel-500">{fmtTanggal(m.date)}</td>
+                                <td className="td text-xs font-semibold text-navy-900">{m.item}</td>
+                                <td className="td text-xs font-bold text-emerald-600">+{fmtJumlah(Number(m.qty))}</td>
+                                <td className="td text-xs text-steel-600">{m.toWh || "-"}</td>
+                                <td className="td text-xs text-steel-500">{String(m.by ?? "").replace("Additional: ", "")}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {additionalInItems.length === 0 && (
+                        <p className="py-6 text-center text-xs text-steel-400">
+                          {locale === "en" ? "No additional inbound records yet." : "Belum ada riwayat penerimaan tambahan."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* PENGELUARAN BARANG (OUTBOUND BOM) */}
+              <Card className="p-5 lg:col-span-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-navy-900">
+                      {S.bomOutboundTitle}
+                    </h3>
+                    <p className="text-xs text-steel-500">
+                      {S.bomOutboundSub}
+                    </p>
+                  </div>
+                  <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
+                    <button
+                      type="button"
+                      className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                        bomOutTab === "request"
+                          ? "bg-navy-900 text-white shadow-sm"
+                          : "text-steel-600 hover:text-navy-900"
+                      }`}
+                      onClick={() => setBomOutTab("request")}
+                    >
+                      {S.bomOutTabRequest} ({mrOutboundItems.filter((x) => x.remainingQty > 0).length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                        bomOutTab === "additional"
+                          ? "bg-navy-900 text-white shadow-sm"
+                          : "text-steel-600 hover:text-navy-900"
+                      }`}
+                      onClick={() => setBomOutTab("additional")}
+                    >
+                      {S.bomOutTabAdditional}
+                    </button>
+                  </div>
+                </div>
+
+                {bomOutTab === "request" ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-steel-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="rounded border-steel-300"
+                          id="check-all-out"
+                          checked={
+                            selectedOutIds.length > 0 &&
+                            selectedOutIds.length === mrOutboundItems.filter((x) => x.remainingQty > 0).length
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedOutIds(mrOutboundItems.filter((x) => x.remainingQty > 0).map((x) => x.id));
+                            } else {
+                              setSelectedOutIds([]);
+                            }
+                          }}
+                        />
+                        <label htmlFor="check-all-out" className="text-xs font-medium text-steel-700 cursor-pointer">
+                          {S.bomChecklistSelectAll}
+                        </label>
+                      </div>
+                      {selectedOutIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn-primary text-xs py-1.5 px-3 bg-rose-600 hover:bg-rose-700"
+                          onClick={() => {
+                            const toProc = mrOutboundItems.filter((x) => selectedOutIds.includes(x.id));
+                            handleVerifyOutbound(toProc);
+                          }}
+                        >
+                          <ArrowUpFromLine className="h-3.5 w-3.5" />
+                          {S.bomBtnIssueSelected.replace("{n}", String(selectedOutIds.length))}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="overflow-x-auto max-h-96">
+                      <table className="w-full text-left">
+                        <thead className="bg-surface sticky top-0 z-10">
+                          <tr>
+                            <th className="th w-10"></th>
+                            <th className="th">{S.bomThMrProj}</th>
+                            <th className="th">{S.bomThMaterial}</th>
+                            <th className="th">{S.bomThQtyReq}</th>
+                            <th className="th">{S.bomThQtyIssued}</th>
+                            <th className="th">{S.bomThQtyRemaining}</th>
+                            <th className="th">{S.bomThStockAvail}</th>
+                            <th className="th w-28">{S.bomThQtyInput}</th>
+                            <th className="th w-40">{S.bomThSourceWh}</th>
+                            <th className="th">{S.thStatus}</th>
+                            <th className="th text-right">{S.thAksi}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-steel-100">
+                          {mrOutboundItems.map((item) => {
+                            const isPending = item.remainingQty > 0;
+                            const isSelected = selectedOutIds.includes(item.id);
+                            const hasStock = item.stockAvail >= (Number(outQtyInputs[item.id] ?? item.remainingQty) || 1);
+                            return (
+                              <tr key={item.id} className={isSelected ? "bg-amber-50/40" : "hover:bg-surface"}>
+                                <td className="td">
+                                  {isPending ? (
+                                    <input
+                                      type="checkbox"
+                                      className="rounded border-steel-300"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedOutIds((prev) => [...prev, item.id]);
+                                        } else {
+                                          setSelectedOutIds((prev) => prev.filter((id) => id !== item.id));
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-emerald-500 font-bold text-xs">✓</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  <div className="font-semibold text-navy-900 text-xs">{item.mrId}</div>
+                                  <div className="text-[11px] text-steel-500">{item.project} · {item.wbsTask}</div>
+                                </td>
+                                <td className="td">
+                                  <div className="font-medium text-steel-800 text-xs">{item.item}</div>
+                                </td>
+                                <td className="td text-xs text-steel-600 font-medium">
+                                  {fmtJumlah(item.requestedQty)} {item.unit}
+                                </td>
+                                <td className="td text-xs text-indigo-600 font-medium">
+                                  {fmtJumlah(item.issuedQty)} {item.unit}
+                                </td>
+                                <td className="td text-xs font-bold text-rose-600">
+                                  {fmtJumlah(item.remainingQty)} {item.unit}
+                                </td>
+                                <td className="td text-xs">
+                                  <span className={`font-semibold ${item.stockAvail < item.remainingQty ? "text-rose-600" : "text-emerald-600"}`}>
+                                    {fmtJumlah(item.stockAvail)} {item.unit}
+                                  </span>
+                                </td>
+                                <td className="td">
+                                  {isPending ? (
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      min="0"
+                                      max={item.remainingQty}
+                                      className="input py-1 px-2 text-xs w-24"
+                                      placeholder={String(item.remainingQty)}
+                                      value={outQtyInputs[item.id] ?? item.remainingQty}
+                                      onChange={(e) =>
+                                        setOutQtyInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                                      }
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-steel-400">-</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  {isPending ? (
+                                    <select
+                                      className="input py-1 px-2 text-xs w-36"
+                                      value={outWhInputs[item.id] ?? item.sourceWh}
+                                      onChange={(e) =>
+                                        setOutWhInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                                      }
+                                    >
+                                      {(data.warehouses ?? []).map((w) => (
+                                        <option key={w.id} value={w.name}>
+                                          {w.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className="text-xs text-steel-500">{item.sourceWh}</span>
+                                  )}
+                                </td>
+                                <td className="td">
+                                  <Badge tone={item.status.includes("Dipenuhi") ? "green" : "amber"}>
+                                    {item.status}
+                                  </Badge>
+                                </td>
+                                <td className="td text-right">
+                                  {isPending && (
+                                    <button
+                                      type="button"
+                                      className="btn-secondary py-1 px-2 text-xs"
+                                      disabled={!hasStock}
+                                      title={!hasStock ? "Stok di gudang tidak mencukupi" : ""}
+                                      onClick={() => handleVerifyOutbound([item])}
+                                    >
+                                      <ArrowUpFromLine className="h-3 w-3" />
+                                      {S.bomBtnIssueRow}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {mrOutboundItems.length === 0 && (
+                      <EmptyState title={locale === "en" ? "No Material Requests" : "Belum ada Material Request"} subtitle={locale === "en" ? "No material request found for this project." : "Tidak ditemukan permintaan material proyek untuk filter ini."} />
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div className="rounded-xl border border-steel-200 bg-surface/50 p-4 lg:col-span-1">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 mb-3">
+                        {S.bomOutAddTitle}
+                      </h4>
+                      <p className="text-xs text-steel-500 mb-4">{S.bomOutAddDesc}</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblMaterialSelect}</label>
+                          <select
+                            className="input text-xs w-full mt-1"
+                            value={addOutItem}
+                            onChange={(e) => {
+                              setAddOutItem(e.target.value);
+                              const found = (data.inventory ?? []).find((i) => i.id === e.target.value);
+                              if (found) {
+                                setAddOutUnit(found.unit || "pcs");
+                                setAddOutWh(found.warehouse || "");
+                              }
+                            }}
+                          >
+                            <option value="">{locale === "en" ? "-- Select Material --" : "-- Pilih Material --"}</option>
+                            {(data.inventory ?? []).map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name} (Stok: {fmtJumlah(Number(i.stock))} {i.unit})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-medium text-steel-700">{S.bomLblQty}</label>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              className="input text-xs w-full mt-1"
+                              placeholder="0"
+                              value={addOutQty}
+                              onChange={(e) => setAddOutQty(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-steel-700">{S.bomLblUnit}</label>
+                            <input
+                              type="text"
+                              className="input text-xs w-full mt-1"
+                              disabled
+                              value={addOutUnit}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblSourceWh}</label>
+                          <select
+                            className="input text-xs w-full mt-1"
+                            value={addOutWh}
+                            onChange={(e) => setAddOutWh(e.target.value)}
+                          >
+                            {(data.warehouses ?? []).map((w) => (
+                              <option key={w.id} value={w.name}>
+                                {w.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-steel-700">{S.bomLblPurpose}</label>
+                          <input
+                            type="text"
+                            className="input text-xs w-full mt-1"
+                            placeholder="Pemeliharaan Dock / Bengkel / Operasional"
+                            value={addOutPurpose}
+                            onChange={(e) => setAddOutPurpose(e.target.value)}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-primary w-full justify-center text-xs py-2 mt-2 bg-rose-600 hover:bg-rose-700"
+                          onClick={handleAddOutboundSubmit}
+                        >
+                          <ArrowUpFromLine className="h-3.5 w-3.5" />
+                          {S.bomBtnRecordOut}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-navy-800 mb-3">
+                        {S.bomHistAddOutTitle}
+                      </h4>
+                      <div className="overflow-x-auto max-h-80">
+                        <table className="w-full text-left">
+                          <thead className="bg-surface sticky top-0 z-10">
+                            <tr>
+                              <th className="th">{locale === "en" ? "Date" : "Tanggal"}</th>
+                              <th className="th">{S.bomThMaterial}</th>
+                              <th className="th">{S.thQty}</th>
+                              <th className="th">{S.bomThSourceWh}</th>
+                              <th className="th">{S.bomThPurpose}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-steel-100">
+                            {additionalOutItems.map((m) => (
+                              <tr key={m.id} className="hover:bg-surface">
+                                <td className="td text-xs text-steel-500">{fmtTanggal(m.date)}</td>
+                                <td className="td text-xs font-semibold text-navy-900">{m.item}</td>
+                                <td className="td text-xs font-bold text-rose-600">-{fmtJumlah(Number(m.qty))}</td>
+                                <td className="td text-xs text-steel-600">{m.fromWh || "-"}</td>
+                                <td className="td text-xs text-steel-500">{String(m.by ?? "").replace("Additional: ", "")}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {additionalOutItems.length === 0 && (
+                        <p className="py-6 text-center text-xs text-steel-400">
+                          {locale === "en" ? "No additional outbound records yet." : "Belum ada riwayat pengeluaran tambahan."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </Card>
             </div>
             </div>
