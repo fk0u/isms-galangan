@@ -111,7 +111,7 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
   const S = n_prj[locale];
   const { data, update, add, remove, log } = useStore();
   const { user } = useAuth();
-  const items = ((data.boq ?? []) as BoQExt[]).filter((b) => b.projectId === projectId && (!docId || b.boqDocId === docId));
+  const items = ((data.boq ?? []) as BoQExt[]).filter((b) => String(b.projectId ?? "") === String(projectId) && (!docId || String(b.boqDocId ?? "") === String(docId)));
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", quantity: "", unit: "pcs", unitPrice: "", category: "Mechanical", status: "Draft" as BoQItem["status"], fileUrl: "" });
   const [q, setQ] = useState("");
@@ -173,10 +173,10 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
   const saveBoq = async () => {
     if (!form.name.trim()) { toast(S.boqToastName, "info"); return; }
     if (!form.quantity || Number(form.quantity) <= 0) { toast(S.boqToastQty, "info"); return; }
-if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice, "info"); return; }
-  const total = Number(form.quantity) * parseRupiah(form.unitPrice);
+    if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice, "info"); return; }
+    const total = Number(form.quantity) * parseRupiah(form.unitPrice);
     await add("boq", {
-      projectId,
+      projectId: String(projectId),
       name: form.name.trim(),
       description: form.description.trim(),
       quantity: Number(form.quantity),
@@ -186,7 +186,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
       category: form.category,
       status: "Draft",
       requestedBy: "Anda",
-      ...(docId ? { boqDocId: docId } : {}),
+      ...(docId ? { boqDocId: String(docId) } : {}),
       ...(form.fileUrl.trim() ? { fileUrl: form.fileUrl.trim() } : {}),
     }, { action: "menambahkan BoQ item", module: "BoQ" });
     toast(S.boqToastAdded);
@@ -263,7 +263,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
     const item = list[Number(presetIdx)];
     if (!item) { toast(S.boqToastPreset, "info"); return; }
     await add("boq", {
-      projectId,
+      projectId: String(projectId),
       name: item.name,
       description: `Impor preset ${presetCat}`,
       quantity: 1,
@@ -273,7 +273,7 @@ if (!form.unitPrice || parseRupiah(form.unitPrice) <= 0) { toast(S.boqToastPrice
       category: presetCat,
       status: "Draft",
       requestedBy: "Anda",
-      ...(docId ? { boqDocId: docId } : {}),
+      ...(docId ? { boqDocId: String(docId) } : {}),
     }, { action: "mengimpor BoQ preset", module: "BoQ" });
     toast(S.boqToastPresetAdd.replace("{a}", item.name));
   };

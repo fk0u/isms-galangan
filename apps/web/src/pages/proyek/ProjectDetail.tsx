@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -219,11 +219,15 @@ export default function ProjectDetail() {
   const [showWorktree, setShowWorktree] = useState(false);
   const [stageToDelete, setStageToDelete] = useState<string | null>(null);
   const [showClassDetails, setShowClassDetails] = useState(false);
+  const [showAddReq, setShowAddReq] = useState(false);
+  const [reqForm, setReqForm] = useState({ name: "", type: "Drawing", notes: "" });
   const [showTeam, setShowTeam] = useState(false);
   const [teamPick, setTeamPick] = useState("");
+  const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
   const [wbsTaskUpdate, setWbsTaskUpdate] = useState<string | null>(null);
   const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", materialQty: "1", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
   const [wbsAssignTask, setWbsAssignTask] = useState<string | null>(null);
+  const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
   const [assignForm, setAssignForm] = useState({ type: "internal" as "internal" | "external", employeeId: "", subconId: "" });
   const [wbsHistoryTask, setWbsHistoryTask] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
@@ -1224,16 +1228,22 @@ const createWarranty = async (wbsTask?: string) => {
     if (weight <= 0) { toast(S.detToastWeight, "info"); return; }
     const pred = wbsForm.predecessor || "";
     if (pred && !wbs.some((w) => w.task === pred)) { toast(S.detToastPredUnknown, "info"); return; }
+    const currentTotal = wbs.reduce((s, w) => s + Number(w.weight || 0), 0);
+    const remaining = Math.max(0, 100 - currentTotal);
+    if (weight > remaining) {
+      toast(locale === "en"
+        ? `Weight exceeds remaining allocation. Current allocated: ${currentTotal}%, remaining: ${remaining}%`
+        : `Bobot melebihi sisa alokasi. Total saat ini: ${currentTotal}%, sisa alokasi: ${remaining}%`, "info");
+      return;
+    }
     const next = [...wbs, { task: wbsForm.task.trim(), start: wbsForm.start || "-", end: wbsForm.end || "-", progress: Number(wbsForm.progress) || 0, weight, ...(pred ? { predecessor: pred } : {}) }];
-    const totalW = next.reduce((s, w) => s + Number(w.weight || 0), 0);
-    if (totalW !== 100) { toast(S.detToastWeightTotal.replace("{n}", String(totalW)), "info"); return; }
     try {
       await saveWbsWithConflictRetry(next);
       await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) });
       log("menambah tahapan WBS", `${pid} · ${wbsForm.task.trim()}`, "Proyek");
       toast(S.detToastStageAdd);
       setShowWbs(false);
-      setWbsForm({ task: "", start: "", end: "", weight: "10", progress: "0", predecessor: "" });
+      setWbsForm({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -1388,7 +1398,36 @@ const createWarranty = async (wbsTask?: string) => {
         <Tabs tabs={["Ringkasan", "WBS & Anggaran", "BoQ", "Dokumen & Laporan", "Equipment", "Perubahan & Risiko", "Subkon", "Terkait", ...(getSetting(data, "SHOW_3D_PROJECT", 0) === 1 ? ["3D Viewer"] : []), "Service", "Sparepart", "Tim"]} active={tab} onChange={setTab} labels={{ Ringkasan: S.tabRingkasan, "WBS & Anggaran": S.tabWbs, BoQ: S.tabBoq, "Dokumen & Laporan": S.tabDocs, Equipment: S.detEqTab, "Perubahan & Risiko": S.tabChange, Subkon: S.tabSubkon, Terkait: S.tabRelated, "3D Viewer": S.tabViewer, Service: S.tabService, Sparepart: S.tabSparepart, Tim: S.tabTeam }} />
         <div className="p-5">
           {tab === "Ringkasan" && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6">
+              {/* Banner Panduan Step-by-Step Awal Proyek */}
+              {(wbs.length === 0 || teamIds.length <= 1) && (
+                <div className="rounded-2xl border border-ocean-200 bg-ocean-50/60 p-4 shadow-2xs">
+                  <div className="flex items-center gap-2">
+                    <Compass className="h-4 w-4 text-ocean-700" />
+                    <h4 className="text-sm font-semibold text-navy-900">{S.prjGuideTitle}</h4>
+                  </div>
+                  <p className="mt-1 text-xs text-steel-600">{S.prjGuideSub}</p>
+                  <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                    <button type="button" onClick={() => setTab("Tim")} className="rounded-xl border border-steel-200 bg-white p-3 text-left transition hover:border-ocean-400 hover:shadow-xs">
+                      <span className="text-[11px] font-bold text-ocean-700">{S.prjGuideStep1}</span>
+                      <p className="mt-1 text-xs text-steel-600 line-clamp-2">{S.prjGuideStep1Desc}</p>
+                    </button>
+                    <button type="button" onClick={() => setTab("BoQ")} className="rounded-xl border border-steel-200 bg-white p-3 text-left transition hover:border-ocean-400 hover:shadow-xs">
+                      <span className="text-[11px] font-bold text-ocean-700">{S.prjGuideStep2}</span>
+                      <p className="mt-1 text-xs text-steel-600 line-clamp-2">{S.prjGuideStep2Desc}</p>
+                    </button>
+                    <button type="button" onClick={() => setTab("WBS & Anggaran")} className="rounded-xl border border-steel-200 bg-white p-3 text-left transition hover:border-ocean-400 hover:shadow-xs">
+                      <span className="text-[11px] font-bold text-ocean-700">{S.prjGuideStep3}</span>
+                      <p className="mt-1 text-xs text-steel-600 line-clamp-2">{S.prjGuideStep3Desc}</p>
+                    </button>
+                    <button type="button" onClick={() => setTab("Dokumen & Laporan")} className="rounded-xl border border-steel-200 bg-white p-3 text-left transition hover:border-ocean-400 hover:shadow-xs">
+                      <span className="text-[11px] font-bold text-ocean-700">{S.prjGuideStep4}</span>
+                      <p className="mt-1 text-xs text-steel-600 line-clamp-2">{S.prjGuideStep4Desc}</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.detScopeTitle}</h3>
@@ -1412,7 +1451,22 @@ const createWarranty = async (wbsTask?: string) => {
                 {/* Ringkasan & Breakdown Subclass Perencanaan / Class Approval */}
                 {(() => {
                   const projectDocs = data.documents.filter((d) => d.project === pid);
-                  const isItemDone = (item: typeof PLANNING_SUBCLASSES[number]) => {
+                  const rawCustom = Array.isArray(project.customRequirements)
+                    ? (project.customRequirements as Array<{ id: string; name: string; type?: string; notes?: string }>)
+                    : null;
+                  const effectiveList = (rawCustom && rawCustom.length > 0)
+                    ? rawCustom.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                        nameEn: c.name,
+                        type: c.type || "Drawing",
+                        kw: new RegExp(c.name.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "i"),
+                        isCustom: true,
+                        notes: c.notes,
+                      }))
+                    : PLANNING_SUBCLASSES.map((p) => ({ ...p, type: "Drawing", isCustom: false, notes: undefined }));
+
+                  const isItemDone = (item: (typeof effectiveList)[number]) => {
                     if (classApproved && item.id === "SAFETY") return true;
                     const docMatched = projectDocs.some((d) => item.kw.test(String(d.title ?? "")) && d.status === "Disetujui");
                     if (docMatched) return true;
@@ -1422,10 +1476,23 @@ const createWarranty = async (wbsTask?: string) => {
                     return stageMatched;
                   };
 
-                  const doneItems = PLANNING_SUBCLASSES.filter(isItemDone);
-                  const pendingItems = PLANNING_SUBCLASSES.filter((item) => !isItemDone(item));
-                  const progressPct = Math.round((doneItems.length / PLANNING_SUBCLASSES.length) * 100);
+                  const doneItems = effectiveList.filter(isItemDone);
+                  const pendingItems = effectiveList.filter((item) => !isItemDone(item));
+                  const progressPct = effectiveList.length > 0 ? Math.round((doneItems.length / effectiveList.length) * 100) : 0;
                   const classBlockers = getStageTransitionBlockers("Desain", "Produksi", project, data, locale);
+
+                  const deleteReq = async (reqId: string) => {
+                    const current = (rawCustom && rawCustom.length > 0)
+                      ? rawCustom
+                      : PLANNING_SUBCLASSES.map((p) => ({ id: p.id, name: p.name, type: "Drawing" }));
+                    const next = current.filter((r) => r.id !== reqId);
+                    try {
+                      await update("projects", pid, { customRequirements: next });
+                      toast(S.detReqDocDeleted, "info");
+                    } catch (e) {
+                      toast(e instanceof Error ? e.message : S.saveFail, "info");
+                    }
+                  };
 
                   return (
                     <div className="mt-6 rounded-2xl border border-steel-200 bg-surface/50 p-4 shadow-sm">
@@ -1438,16 +1505,25 @@ const createWarranty = async (wbsTask?: string) => {
                               : <Badge tone="amber">{S.detClassPending.replace("{a}", "Belum")}</Badge>}
                           </div>
                           <p className="mt-0.5 text-xs text-steel-500">
-                            {doneItems.length}/{PLANNING_SUBCLASSES.length} {locale === "en" ? "planning & class items completed" : "subclass & item perencanaan selesai"} ({progressPct}%)
+                            {doneItems.length}/{effectiveList.length} {locale === "en" ? "planning & class items completed" : "subclass & item perencanaan selesai"} ({progressPct}%)
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          className="btn-secondary text-xs"
-                          onClick={() => setShowClassDetails(!showClassDetails)}
-                        >
-                          {showClassDetails ? (locale === "en" ? "Hide Details" : "Tutup Rincian") : (locale === "en" ? "View Subclass Breakdown" : "Lihat Rincian Subclass")}
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            className="btn-secondary text-xs"
+                            onClick={() => setShowAddReq(true)}
+                          >
+                            <Plus className="h-3.5 w-3.5" /> {S.detReqDocAddBtn}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary text-xs"
+                            onClick={() => setShowClassDetails(!showClassDetails)}
+                          >
+                            {showClassDetails ? (locale === "en" ? "Hide Details" : "Tutup Rincian") : (locale === "en" ? "View Subclass Breakdown" : "Lihat Rincian Subclass")}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="mt-3">
@@ -1467,9 +1543,21 @@ const createWarranty = async (wbsTask?: string) => {
                                 <li className="italic text-steel-400 py-1">{locale === "en" ? "No completed items yet" : "Belum ada item selesai"}</li>
                               ) : (
                                 doneItems.map((it) => (
-                                  <li key={it.id} className="flex items-start gap-1.5">
-                                    <span className="text-emerald-600 font-bold shrink-0">✔</span>
-                                    <span className="font-medium text-navy-900">{locale === "en" ? it.nameEn : it.name}</span>
+                                  <li key={it.id} className="flex items-center justify-between gap-1.5">
+                                    <div className="flex items-start gap-1.5 min-w-0">
+                                      <span className="text-emerald-600 font-bold shrink-0">✔</span>
+                                      <span className="font-medium text-navy-900 truncate">{locale === "en" ? it.nameEn : it.name}</span>
+                                    </div>
+                                    {it.isCustom && (
+                                      <button
+                                        type="button"
+                                        className="rounded p-1 text-steel-400 hover:bg-rose-50 hover:text-rose-600 shrink-0"
+                                        onClick={() => void deleteReq(it.id)}
+                                        title={locale === "en" ? "Delete requirement" : "Hapus persyaratan"}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    )}
                                   </li>
                                 ))
                               )}
@@ -1488,6 +1576,7 @@ const createWarranty = async (wbsTask?: string) => {
                               ) : (
                                 pendingItems.map((it) => {
                                   const blk = classBlockers.find((b) => b.id === `SUBCLASS_${it.id}`);
+                                  const pendingDoc = projectDocs.find((d) => it.kw.test(String(d.title ?? "")));
                                   return (
                                     <li key={it.id} className="flex flex-wrap items-center justify-between gap-1.5 rounded-lg border border-amber-100 bg-white/80 p-2 shadow-2xs">
                                       <div className="min-w-0 flex-1">
@@ -1495,23 +1584,45 @@ const createWarranty = async (wbsTask?: string) => {
                                           <span className="text-amber-500 font-bold shrink-0">•</span>
                                           <span className="font-medium text-navy-900">{locale === "en" ? it.nameEn : it.name}</span>
                                         </div>
-                                        {blk && (
+                                        {blk ? (
                                           <p className="mt-0.5 ml-3 text-[11px] text-steel-500">{blk.statusReason}</p>
+                                        ) : (
+                                          <p className="mt-0.5 ml-3 text-[11px] text-steel-500">{it.notes || (locale === "en" ? "Document required" : "Dokumen wajib dilengkapi")}</p>
                                         )}
                                       </div>
-                                      <button
-                                        type="button"
-                                        className="btn-secondary text-[11px] py-1 px-2 shrink-0"
-                                        onClick={() => {
-                                          setTab(blk?.tab || "Dokumen");
-                                          if (blk?.targetDocId) {
-                                            const doc = data.documents.find((d) => d.id === blk.targetDocId);
-                                            if (doc) setDocDetail(doc);
-                                          }
-                                        }}
-                                      >
-                                        {S.detBlockerAction} →
-                                      </button>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {it.isCustom && (
+                                          <button
+                                            type="button"
+                                            className="rounded p-1 text-steel-400 hover:bg-rose-50 hover:text-rose-600"
+                                            onClick={() => void deleteReq(it.id)}
+                                            title={locale === "en" ? "Delete requirement" : "Hapus persyaratan"}
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          className="btn-secondary text-[11px] py-1 px-2 shrink-0 font-medium"
+                                          onClick={() => {
+                                            if (pendingDoc || blk?.targetDocId) {
+                                              const docTarget = pendingDoc || data.documents.find((d) => d.id === blk?.targetDocId);
+                                              setTab("Dokumen & Laporan");
+                                              if (docTarget) setDocDetail(docTarget);
+                                            } else if (blk?.tab === "WBS") {
+                                              setTab("WBS & Anggaran");
+                                            } else {
+                                              // Direct button: langsung buka form tambah dokumen dengan nama & tipe terisi!
+                                              setDocTitle(locale === "en" ? it.nameEn : it.name);
+                                              setDocType(it.type || "Drawing");
+                                              setDocFile("");
+                                              setShowDoc(true);
+                                            }
+                                          }}
+                                        >
+                                          {pendingDoc || blk?.targetDocId ? S.detReqDirectOpen : blk?.tab === "WBS" ? S.detReqDirectWbs : S.detReqDirectUpload} →
+                                        </button>
+                                      </div>
                                     </li>
                                   );
                                 })
@@ -1609,6 +1720,7 @@ const createWarranty = async (wbsTask?: string) => {
                   <div className="flex justify-between"><dt className="text-steel-500">{S.detNcrOpen}</dt><dd className="font-medium">{ncrs.filter((n) => n.status !== "Tertutup").length}</dd></div>
                 </dl>
               </Card>
+            </div>
             </div>
           )}
 
@@ -3094,7 +3206,7 @@ const createWarranty = async (wbsTask?: string) => {
           </>
         }
       >
-        <div className="min-h-[24rem] space-y-4">
+        <div className={`space-y-4 transition-all duration-200 ${assignDropdownOpen ? "min-h-[19rem]" : "min-h-0"}`}>
           <Field label={S.detAssignType}>
             <div className="flex gap-4">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-700">
@@ -3133,6 +3245,7 @@ const createWarranty = async (wbsTask?: string) => {
                 ariaLabel={S.detAssignEmployeeLabel}
                 placeholder={S.detPickEmployee}
                 emptyText={locale === "en" ? "No employees found" : "Karyawan tidak ditemukan"}
+                onOpenChange={setAssignDropdownOpen}
               />
             </Field>
           ) : (
@@ -3148,6 +3261,7 @@ const createWarranty = async (wbsTask?: string) => {
                 ariaLabel={S.detAssignSubconLabel}
                 placeholder={S.detAssignSubconLabel}
                 emptyText={locale === "en" ? "No subcontractors found" : "Subkontraktor tidak ditemukan"}
+                onOpenChange={setAssignDropdownOpen}
               />
             </Field>
           )}
@@ -3285,8 +3399,8 @@ const createWarranty = async (wbsTask?: string) => {
             toast(e instanceof Error ? e.message : S.saveFail, "info");
           }
         }}>{S.addBtn}</button></>}>
-        {/* #89: beri tinggi cukup supaya daftar pilihan yang terbuka tidak terpotong. */}
-        <div className="min-h-[22rem]">
+        {/* Modal height menyesuaikan: saat option aktif min-h-[19rem], saat dropdown mati min-h-0 (compact) */}
+        <div className={`transition-all duration-200 ${teamDropdownOpen ? "min-h-[19rem]" : "min-h-0"}`}>
         <Field label={S.detEmployee}>
           <SearchSelect
             value={teamPick}
@@ -3294,6 +3408,7 @@ const createWarranty = async (wbsTask?: string) => {
             options={data.employees.filter((e) => !teamIds.includes(e.id)).map((e) => ({ value: String(e.id), label: String(e.name), subLabel: `${String(e.role ?? "")} · ${String(e.dept ?? "")}` }))}
             placeholder={S.detPickEmployee}
             ariaLabel={S.detEmployee}
+            onOpenChange={setTeamDropdownOpen}
           />
         </Field>
         </div>
@@ -3461,6 +3576,70 @@ const createWarranty = async (wbsTask?: string) => {
       <ConfirmModal open={showDelBaseline} title={S.detDelBaseTitle} desc={S.detDelBaseDesc}
         confirmLabel={S.detConfirmDelete} danger onCancel={() => setShowDelBaseline(false)}
         onConfirm={async () => { try { await update("projects", pid, { wbsBaseline: undefined }); log("menghapus baseline WBS", pid, "Proyek"); toast(S.detToastBaseDel, "info"); setShowDelBaseline(false); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } }} />
+
+      {/* Modal Tambah Persyaratan Dokumen Proyek */}
+      <Modal
+        open={showAddReq}
+        onClose={() => setShowAddReq(false)}
+        title={S.detReqDocModalTitle}
+        footer={
+          <>
+            <button className="btn-secondary" onClick={() => setShowAddReq(false)}>{S.cancelBtn}</button>
+            <button
+              className="btn-primary"
+              onClick={async () => {
+                if (!reqForm.name.trim()) {
+                  toast(locale === "en" ? "Enter requirement name" : "Masukkan nama persyaratan", "info");
+                  return;
+                }
+                const current = Array.isArray(project.customRequirements) && project.customRequirements.length > 0
+                  ? (project.customRequirements as Array<{ id: string; name: string; type?: string; notes?: string }>)
+                  : PLANNING_SUBCLASSES.map((p) => ({ id: p.id, name: p.name, type: "Drawing" }));
+                const newId = `REQ-${Date.now().toString(36).toUpperCase()}`;
+                const next = [...current, { id: newId, name: reqForm.name.trim(), type: reqForm.type, notes: reqForm.notes.trim() }];
+                try {
+                  await update("projects", pid, { customRequirements: next });
+                  toast(S.detReqDocAdded, "success");
+                  setShowAddReq(false);
+                  setReqForm({ name: "", type: "Drawing", notes: "" });
+                } catch (e) {
+                  toast(e instanceof Error ? e.message : S.saveFail, "info");
+                }
+              }}
+            >
+              {S.addBtn}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Field label={S.detReqDocName}>
+            <input
+              className="input"
+              value={reqForm.name}
+              onChange={(e) => setReqForm({ ...reqForm, name: e.target.value })}
+              placeholder={locale === "en" ? "e.g. Fire Control Plan" : "misal: Fire Control Plan"}
+            />
+          </Field>
+          <Field label={S.detReqDocType}>
+            <select
+              className="input"
+              value={reqForm.type}
+              onChange={(e) => setReqForm({ ...reqForm, type: e.target.value })}
+            >
+              {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label={S.detReqDocNotes}>
+            <input
+              className="input"
+              value={reqForm.notes}
+              onChange={(e) => setReqForm({ ...reqForm, notes: e.target.value })}
+              placeholder={locale === "en" ? "Notes / details..." : "Catatan atau rincian persyaratan..."}
+            />
+          </Field>
+        </div>
+      </Modal>
     </div>
   );
 }

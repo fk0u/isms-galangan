@@ -278,33 +278,29 @@ export default function Projects() {
           ariaLabel={S.searchProjectAria}
           className="min-w-52 flex-1 sm:max-w-xs"
         />
-<button type="button" className="btn-secondary" aria-expanded={showFilter} onClick={() => setShowFilter((v) => !v)}>
+        <button type="button" className="btn-secondary" aria-expanded={showFilter} onClick={() => setShowFilter((v) => !v)}>
           <Filter className="h-4 w-4" /> {S.prjFilterBtn}{activeFilters > 0 ? ` (${activeFilters})` : ""}
         </button>
+        <AnimatePresence initial={false}>
+          {showFilter && (
+            <motion.div
+              initial={{ opacity: 0, x: reducedMotion ? 0 : -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: reducedMotion ? 0 : -10 }}
+              transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+              className="flex flex-wrap items-center gap-2"
+            >
+              <StatusChips value={statusFilter} onChange={setStatusFilter} ariaLabel={S.statusLabel}
+                options={statusOptions.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllStatus : v }))} />
+              <button type="button" className="btn-secondary text-xs" aria-expanded={showMoreFilter} onClick={() => setShowMoreFilter((v) => !v)}>
+                {S.prjFilterMore}{moreFilters > 0 ? ` (${moreFilters})` : ""}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {activeFilters > 0 && <button type="button" className="text-xs font-medium text-ocean-600 hover:underline" onClick={resetFilters}>{S.prjFilterReset}</button>}
         <span className="ml-auto text-xs text-steel-400">{S.prjCount.replace("{n}", String(list.length))}</span>
       </div>
-      {/* #81: klik Filter → status muncul lebih dulu, bergeser masuk dari kiri;
-          tombol "Lainnya" di ujung kanan membuka filter lain dengan geser ke bawah.
-          Semua chip langsung berlaku tanpa tombol Terapkan. */}
-      <AnimatePresence initial={false}>
-        {showFilter && (
-          <motion.div
-            initial={{ opacity: 0, x: reducedMotion ? 0 : -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: reducedMotion ? 0 : -16 }}
-            transition={{ duration: reducedMotion ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="mb-3 flex flex-wrap items-center gap-2"
-          >
-            <span className="text-xs font-medium text-steel-500">{S.statusLabel}</span>
-            <StatusChips value={statusFilter} onChange={setStatusFilter} ariaLabel={S.statusLabel}
-              options={statusOptions.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllStatus : v }))} />
-            <button type="button" className="btn-secondary ml-auto text-xs" aria-expanded={showMoreFilter} onClick={() => setShowMoreFilter((v) => !v)}>
-              {S.prjFilterMore}{moreFilters > 0 ? ` (${moreFilters})` : ""}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <AnimatePresence initial={false}>
         {showFilter && showMoreFilter && (
           <motion.div
