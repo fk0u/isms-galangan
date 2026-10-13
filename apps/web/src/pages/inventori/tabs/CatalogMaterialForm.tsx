@@ -159,6 +159,9 @@ export default function CatalogMaterialForm({
               <Field label={S.costLbl}>
                 <MoneyInput className="input" value={form.cost} onChange={(value) => onFieldChange("cost", value)} />
               </Field>
+              <Field label={S.minLbl}>
+                <NumInput min={0} className="input" value={form.minStock} onChange={(event) => onFieldChange("minStock", event.target.value)} />
+              </Field>
               <Field label={S.volLbl} hint={S.hintVol}>
                 <NumInput min={0} className="input" value={form.volume} onChange={(event) => onFieldChange("volume", event.target.value)} />
               </Field>
@@ -259,14 +262,6 @@ export default function CatalogMaterialForm({
               </p>
             )}
           </div>
-        )}
-
-        {step === 2 && (
-          <FormGrid>
-            <Field label={S.minLbl}>
-              <NumInput min={0} className="input" value={form.minStock} onChange={(event) => onFieldChange("minStock", event.target.value)} />
-            </Field>
-          </FormGrid>
         )}
       </div>
     </Modal>
