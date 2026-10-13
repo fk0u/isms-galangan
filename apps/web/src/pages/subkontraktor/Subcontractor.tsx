@@ -1167,7 +1167,15 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                             );
                           })()}
                     </td>
-                    <td className="td text-sm font-semibold tabular-nums text-navy-900">{value > 0 ? fmtRupiah(value) : "-"}{!w.value && value > 0 ? <span className="block text-[11px] font-normal text-steel-400">kontrak subkon</span> : null}</td>
+                    <td className="td text-sm font-semibold tabular-nums text-navy-900">
+                      {value > 0 ? fmtRupiah(value) : "-"}
+                      {!w.value && value > 0 ? <span className="block text-[11px] font-normal text-steel-400">kontrak subkon</span> : null}
+                      {w.paymentScheme && (
+                        <span className="mt-1 inline-block rounded bg-steel-100 px-1.5 py-0.5 text-[10px] font-medium text-steel-700">
+                          {String((w.paymentScheme as { type?: string }).type ?? "") === "DP" ? "DP 1/2" : String((w.paymentScheme as { type?: string }).type ?? "")}
+                        </span>
+                      )}
+                    </td>
                     <td className="td">
                       <div className="flex items-center gap-2">
                         <ProgressBar value={effProgress(w)} className="w-20" tone={w.status === "Selesai" ? "green" : "navy"} />
@@ -1594,14 +1602,114 @@ const printSpk = async (w: StoreItem): Promise<void> => {
             <Field label={S.targetDoneLabel}><input type="date" className="input" value={woForm.targetDate} onChange={(e) => setWoForm({ ...woForm, targetDate: e.target.value })} /></Field>
             <Field label={S.penaltyLabel} hint={S.penaltyHint}><NumInput min={0} max={5} step={0.1} className="input" value={woForm.penaltyPct} onChange={(e) => setWoForm({ ...woForm, penaltyPct: e.target.value })} /></Field>
           </FormGrid>
-          {/* F3-I-05: skema pembayaran → termin otomatis */}
+          {/* F3-I-05: skema pembayaran -> termin otomatis (Persentase, DP 1/2, Kontan) */}
           <Field label={T.schemeLabel}>
-            <select className="input" value={woForm.schemeType} onChange={(e) => setWoForm({ ...woForm, schemeType: e.target.value as TerminSchemeType, parts: [{ label: e.target.value === "DP" ? "DP 1" : "Tahap 1", pct: "", amount: "" }] })}>
+            <select
+              className="input"
+              value={woForm.schemeType}
+              onChange={(e) => {
+                const type = e.target.value as TerminSchemeType;
+                setWoForm({
+                  ...woForm,
+                  schemeType: type,
+                  parts: type === "DP"
+                    ? [{ label: "DP 1", pct: "50", amount: "" }]
+                    : type === "Persentase"
+                      ? [{ label: "Tahap 1", pct: "50", amount: "" }, { label: "Tahap 2", pct: "50", amount: "" }]
+                      : [],
+                });
+              }}
+            >
               <option value="Kontan">{T.schemeKontan}</option>
               <option value="Persentase">{T.schemePct}</option>
               <option value="DP">{T.schemeDp}</option>
             </select>
           </Field>
+          {woForm.schemeType === "DP" && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-medium text-steel-500">Preset:</span>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [{ label: "DP 1", pct: "50", amount: "" }],
+                })}
+              >
+                {T.presetDp50}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [
+                    { label: "DP 1", pct: "30", amount: "" },
+                    { label: "DP 2", pct: "30", amount: "" },
+                  ],
+                })}
+              >
+                {T.presetDp3030}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [{ label: "DP 1", pct: "20", amount: "" }],
+                })}
+              >
+                {T.presetDp20}
+              </button>
+            </div>
+          )}
+          {woForm.schemeType === "Persentase" && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] font-medium text-steel-500">Preset:</span>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [
+                    { label: "Tahap 1", pct: "30", amount: "" },
+                    { label: "Tahap 2", pct: "40", amount: "" },
+                    { label: "Tahap 3", pct: "30", amount: "" },
+                  ],
+                })}
+              >
+                {T.presetPct3}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [
+                    { label: "Tahap 1", pct: "25", amount: "" },
+                    { label: "Tahap 2", pct: "25", amount: "" },
+                    { label: "Tahap 3", pct: "25", amount: "" },
+                    { label: "Tahap 4", pct: "25", amount: "" },
+                  ],
+                })}
+              >
+                {T.presetPct4}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-steel-200 bg-steel-50 px-2 py-0.5 text-[11px] font-medium text-steel-700 hover:bg-steel-100"
+                onClick={() => setWoForm({
+                  ...woForm,
+                  parts: [
+                    { label: "Tahap 1", pct: "50", amount: "" },
+                    { label: "Tahap 2", pct: "50", amount: "" },
+                  ],
+                })}
+              >
+                {T.presetPct2}
+              </button>
+            </div>
+          )}
           {woForm.schemeType !== "Kontan" && (
             <div className="space-y-2">
               {woForm.parts.map((part, i) => (
