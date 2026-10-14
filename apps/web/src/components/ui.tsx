@@ -729,6 +729,7 @@ export function Modal({
   footer,
   wide = false,
   extraWide = false,
+  fullWidth = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -738,6 +739,8 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
   extraWide?: boolean;
+  /** Tabel lebar (checklist BOM): hampir selebar layar. */
+  fullWidth?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -796,7 +799,7 @@ export function Modal({
             aria-label={title}
             tabIndex={-1}
             className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-steel-200 bg-white shadow-lift sm:rounded-2xl ${
-              extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
+              fullWidth ? "sm:max-w-[min(96vw,90rem)]" : extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             /* Masuk dari scale 0.96 (tidak pernah dari 0), ease-out kuat;
                keluar lebih cepat dari masuk. Modal tetap berpusat. */

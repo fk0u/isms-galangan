@@ -2974,7 +2974,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 }} />
 
               {/* PENERIMAAN BARANG (INBOUND BOM): dibuka dari tombol "Terima Barang Masuk". */}
-              <Modal open={showBomIn} onClose={() => setShowBomIn(false)} title={S.bomInboundTitle} subtitle={S.bomInboundSub} extraWide>
+              <Modal open={showBomIn} onClose={() => setShowBomIn(false)} title={S.bomInboundTitle} subtitle={S.bomInboundSub} fullWidth>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
                     <button
@@ -3041,7 +3041,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       )}
                     </div>
 
-                    <div className="overflow-x-auto max-h-96">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-left">
                         <thead className="bg-surface sticky top-0 z-10">
                           <tr>
@@ -3279,7 +3279,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               </Modal>
 
               {/* PENGELUARAN BARANG (OUTBOUND BOM): dibuka dari tombol "Keluarkan Barang Keluar". */}
-              <Modal open={showBomOut} onClose={() => setShowBomOut(false)} title={S.bomOutboundTitle} subtitle={S.bomOutboundSub} extraWide>
+              <Modal open={showBomOut} onClose={() => setShowBomOut(false)} title={S.bomOutboundTitle} subtitle={S.bomOutboundSub} fullWidth>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
                     <button
@@ -3346,7 +3346,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       )}
                     </div>
 
-                    <div className="overflow-x-auto max-h-96">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-left">
                         <thead className="bg-surface sticky top-0 z-10">
                           <tr>
