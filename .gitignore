@@ -41,3 +41,6 @@ deploy/.env
 *.env
 .claude/
 .ruas/
+
+# Symlink node_modules (mis. dari git worktree) tidak boleh ikut ter-commit.
+node_modules
