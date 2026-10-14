@@ -33,7 +33,7 @@ async function run() {
   // 1. Uji formatting 1000000 -> "1.000.000" dan fmtRupiah
   const formatted1M = formatMoneyDisplay("1000000");
   assert("Format 1000000 menghasilkan '1.000.000'", formatted1M === "1.000.000", `got: ${formatted1M}`);
-  assert("fmtRupiah(1000000) menghasilkan 'Rp 1.000.000'", fmtRupiah(1000000) === "Rp 1.000.000");
+  assert("fmtRupiah(1000000) menghasilkan 'Rp 1.000.000'", fmtRupiah(1000000).replace(/\u00a0/g, " ") === "Rp 1.000.000");
 
   const formattedLarge = formatMoneyDisplay("15750000000");
   assert("Format 15750000000 menghasilkan '15.750.000.000'", formattedLarge === "15.750.000.000", `got: ${formattedLarge}`);

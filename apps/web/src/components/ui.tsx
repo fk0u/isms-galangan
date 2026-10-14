@@ -1,3 +1,4 @@
+import { fmtRupiahShort } from "../utils/format";
 import type { ReactNode, InputHTMLAttributes, ButtonHTMLAttributes, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, Component, type ErrorInfo } from "react";
 import { useT } from "../i18n/LanguageContext";
@@ -133,19 +134,25 @@ export function GlowCard({
 
 /* ============ B A D G E / P I L L ============ */
 
-/* Nada badge: lembut, satu warna per makna.
-   hijau = selesai/OK, kuning = menunggu/peringatan, merah = bahaya,
-   abu gelap = berjalan, abu terang = netral. */
+/* Nada badge: satu warna per makna, dan tiap makna harus berbeda jelas
+   (permintaan 14 Okt: "color cue diperjelas, jangan nyaru").
+   hijau = selesai/OK, kuning = menunggu/perlu tindakan, merah = bahaya/
+   terlambat/ditolak, biru = sedang berjalan/proses, ungu = kategori/jenis,
+   abu = netral/draf/nonaktif. Sebelumnya biru/navy/ungu/cyan semua jatuh ke
+   abu yang nyaris sama dengan "netral", sehingga "berjalan" tak terbedakan. */
 const toneMap: Record<string, string> = {
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
-  teal: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
-  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  red: "bg-ocean-50 text-ocean-700 ring-ocean-600/15",
-  blue: "bg-steel-100 text-navy-800 ring-navy-900/10",
-  navy: "bg-steel-100 text-navy-800 ring-navy-900/10",
-  violet: "bg-steel-100 text-navy-800 ring-navy-900/10",
-  cyan: "bg-steel-100 text-navy-800 ring-navy-900/10",
-  gray: "bg-steel-50 text-steel-600 ring-steel-500/15",
+  green: "bg-emerald-50 text-emerald-800 ring-emerald-600/25",
+  teal: "bg-emerald-50 text-emerald-800 ring-emerald-600/25",
+  amber: "bg-amber-50 text-amber-800 ring-amber-600/30",
+  orange: "bg-amber-50 text-amber-800 ring-amber-600/30",
+  red: "bg-red-50 text-red-700 ring-red-600/25",
+  ocean: "bg-red-50 text-red-700 ring-red-600/25",
+  blue: "bg-blue-50 text-blue-800 ring-blue-600/25",
+  navy: "bg-blue-50 text-blue-800 ring-blue-600/25",
+  cyan: "bg-blue-50 text-blue-800 ring-blue-600/25",
+  violet: "bg-violet-50 text-violet-800 ring-violet-600/25",
+  gray: "bg-steel-100 text-steel-700 ring-steel-500/20",
+  slate: "bg-steel-100 text-steel-700 ring-steel-500/20",
 };
 
 /* Titik warna di depan label: status terbaca dari bentuk + teks, bukan warna saja. */
@@ -153,12 +160,15 @@ const toneDot: Record<string, string> = {
   green: "bg-emerald-500",
   teal: "bg-emerald-500",
   amber: "bg-amber-500",
-  red: "bg-ocean-500",
-  blue: "bg-navy-700",
-  navy: "bg-navy-700",
-  violet: "bg-navy-700",
-  cyan: "bg-navy-700",
+  orange: "bg-amber-500",
+  red: "bg-red-600",
+  ocean: "bg-red-600",
+  blue: "bg-blue-600",
+  navy: "bg-blue-600",
+  cyan: "bg-blue-600",
+  violet: "bg-violet-600",
   gray: "bg-steel-400",
+  slate: "bg-steel-400",
 };
 
 export function Badge({
@@ -280,6 +290,16 @@ const kpiTone: Record<string, string> = {
   red: "bg-gradient-to-br from-rose-600 to-rose-800",
 };
 
+/* Nominal besar di kartu tidak boleh pecah dua baris ("Rp" di atas, angka di
+   bawah). Rp >= 1 juta disingkat (Rb/Jt/M/T, gaya Indonesia); angka lengkap
+   tetap ada di tooltip (title) kartu. Nilai non-Rupiah dikembalikan apa adanya. */
+function compactMoney(value: string): string {
+  const m = /^Rp[\s\u00a0]?(-?[\d.]+)$/.exec(value.trim());
+  if (!m) return value;
+  const n = Number(m[1].replace(/\./g, ""));
+  return Number.isFinite(n) && Math.abs(n) >= 1_000_000 ? fmtRupiahShort(n) : value;
+}
+
 export function KpiCard({
   label,
   value,
@@ -311,7 +331,7 @@ export function KpiCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-medium text-white/85" title={label}>{label}</p>
-            <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] break-words tabular-nums" title={value}>{value}</p>
+            <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] break-words tabular-nums" title={value}>{compactMoney(value)}</p>
             {(delta ?? hint) && <p className="mt-2.5 truncate text-xs font-medium text-white/85">{delta ?? hint}</p>}
           </div>
           {icon && <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">{icon}</div>}
@@ -324,7 +344,7 @@ export function KpiCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-medium text-steel-500" title={label}>{label}</p>
-          <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy-900 break-words tabular-nums" title={value}>{value}</p>
+          <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy-900 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
           {delta ? (
             <p
               className={`mt-2.5 flex items-center gap-1 text-xs font-medium ${
