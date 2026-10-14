@@ -403,8 +403,16 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
     if (ids.length === 0) return;
     /* Baris yang disorot hanya ada di tampilan tabel; di tampilan pohon (bawaan)
        tabelnya `hidden` sehingga klik notifikasi tampak tidak berbuat apa-apa
-       (catatan CTO 15 Okt). Pindah ke tabel tanpa menimpa preferensi tersimpan. */
-    if (viewMode === "tree") setViewModeRaw("table");
+       (catatan CTO 15 Okt). Pindah ke tabel tanpa menimpa preferensi tersimpan,
+       lalu lompat setelah tabel tampil - scroll ke elemen tersembunyi diabaikan. */
+    if (viewMode === "tree") {
+      setViewModeRaw("table");
+      window.setTimeout(() => jumpToDocs(ids), 120);
+      return;
+    }
+    jumpToDocs(ids);
+  };
+  const jumpToDocs = (ids: string[]): void => {
     const idx = sortedDocs.findIndex((d) => ids.includes(String(d.id)));
     if (idx >= 0) { flashPick(flash, ids, idx, docPager.go, docPager.size); return; }
     const doc = data.documents.find((d) => ids.includes(String(d.id)));
