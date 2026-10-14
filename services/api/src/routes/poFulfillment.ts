@@ -12,6 +12,10 @@ import { PoError, reassignPo, receivePo, returnPo, vendorCannotFulfill } from ".
 const ReceiveSchema = z.object({
   qty: z.number().finite().positive().max(1_000_000).optional(),
   itemId: z.string().max(128).optional(),
+  // Lokasi simpan ditetapkan saat barang diterima (catatan 12 Okt).
+  warehouse: z.string().trim().max(128).optional(),
+  rack: z.string().trim().max(64).optional(),
+  bin: z.string().trim().max(64).optional(),
   noFaktur: z.string().max(100).optional(),
   tglFaktur: z.string().max(32).optional(),
   dendaRp: z.number().finite().min(0).optional(),
@@ -19,6 +23,9 @@ const ReceiveSchema = z.object({
     itemId: z.string().max(128).optional(),
     name: z.string().max(200).optional(),
     qty: z.number().finite().min(0).max(1_000_000),
+    warehouse: z.string().trim().max(128).optional(),
+    rack: z.string().trim().max(64).optional(),
+    bin: z.string().trim().max(64).optional(),
   })).optional(),
 }).refine((data) => (data.qty !== undefined && data.qty > 0) || (Array.isArray(data.lines) && data.lines.some((l) => l.qty > 0)), {
   message: "Kuantitas terima harus lebih dari 0",

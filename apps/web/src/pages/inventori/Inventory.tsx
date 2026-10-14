@@ -62,6 +62,8 @@ import {
   type WarehouseStock,
 } from "../../utils/warehouse";
 import { useModuleSync } from "../../data/useModuleSync";
+import { usePoActions } from "../../data/usePoActions";
+import { useApproveMaterialRequest, useFulfillMaterialRequest } from "../../data/useMaterialRequest";
 import type { CollectionKey } from "../../data/store";
 import { isBackendConfigured } from "../../services/http";
 import { uploadFile } from "../../services/upload";
@@ -382,6 +384,9 @@ export default function Inventory() {
   const { locale } = useT();
   const S = n_inv[locale];
   const { data, add, update, remove, log, branch, resyncCollections } = useStore();
+  const poActions = usePoActions();
+  const approveMaterial = useApproveMaterialRequest();
+  const fulfillMaterial = useFulfillMaterialRequest();
   /* Batch modul per tab: Inventory butuh 8 koleksi. Tanpa ini halaman ini
      memanggil resync() penuh (50+ koleksi) tiap dibuka lewat tombol refresh
      PageHeader, padahal isinya hanya butuh sebagian. */
@@ -640,8 +645,6 @@ export default function Inventory() {
   const [selectedOutIds, setSelectedOutIds] = useState<string[]>([]);
   const [inQtyInputs, setInQtyInputs] = useState<Record<string, string>>({});
   const [inWhInputs, setInWhInputs] = useState<Record<string, string>>({});
-  const [outQtyInputs, setOutQtyInputs] = useState<Record<string, string>>({});
-  const [outWhInputs, setOutWhInputs] = useState<Record<string, string>>({});
 
   // Additional In Form
   const [addInItem, setAddInItem] = useState("");
@@ -981,6 +984,8 @@ if (k === "mattype") return matTypeOf(i);
       id: string;
       poId: string;
       docNo: string;
+      /** Nomor permintaan pengadaan (PR) asal PO ini: BOM → procurement → PO. */
+      prNo: string;
       project: string;
       vendor: string;
       item: string;
@@ -999,6 +1004,7 @@ if (k === "mattype") return matTypeOf(i);
         return;
       }
       const vendorName = String(po.vendor ?? "-");
+      const prNo = [...new Set([String(po.req ?? ""), ...(Array.isArray(po.prIds) ? (po.prIds as unknown[]).map(String) : [])])].filter((x) => x !== "" && x !== "-").join(", ");
       const defaultWh = String(po.targetWarehouse ?? (data.warehouses?.[0]?.name ?? "Gudang Utama"));
 
       if (Array.isArray(po.lines) && po.lines.length > 0) {
@@ -1010,6 +1016,7 @@ if (k === "mattype") return matTypeOf(i);
             id: `${po.id}-${idx}`,
             poId: String(po.id),
             docNo: String(po.docNo ?? po.id),
+            prNo,
             project: pId || String(po.vessel ?? "-"),
             vendor: vendorName,
             item: String(l.name ?? l.item ?? "-"),
@@ -1029,6 +1036,7 @@ if (k === "mattype") return matTypeOf(i);
           id: `${po.id}-0`,
           poId: String(po.id),
           docNo: String(po.docNo ?? po.id),
+          prNo,
           project: pId || String(po.vessel ?? "-"),
           vendor: vendorName,
           item: String(po.item ?? "-"),
@@ -1103,53 +1111,36 @@ if (k === "mattype") return matTypeOf(i);
     return (data.movements ?? []).filter((m) => m.type === "Pengeluaran" && String(m.by ?? "").startsWith("Additional:"));
   }, [data.movements]);
 
+  /* Checklist BOM wajib lewat endpoint server, bukan CRUD langsung:
+     - masuk: POST /api/purchaseOrders/:id/receive (stok + movement + status PO
+       dalam satu transaksi, dan permintaan proyek yang menunggu PR/PO ini ikut
+       terpenuhi);
+     - keluar: endpoint permintaan barang (ADR-0018) - yang belum di-ACC gudang
+       disetujui dulu, yang sudah di-ACC dipenuhi dari stok.
+     Versi sebelumnya memotong stok lalu gagal mengubah permintaan (ditolak
+     server), sehingga stok berkurang tanpa permintaan yang terpenuhi. */
   const handleVerifyInbound = async (itemsToProcess: typeof poInboundItems) => {
     if (itemsToProcess.length === 0) return;
     let countSuccess = 0;
     for (const it of itemsToProcess) {
       const qtyToReceive = Number(inQtyInputs[it.id] ?? it.remainingQty);
-      if (qtyToReceive <= 0) continue;
-      const targetWh = inWhInputs[it.id] || it.targetWh;
-
-      const matched = (data.inventory ?? []).find(
-        (i) => (it.itemId && i.id === it.itemId) || i.name.toLowerCase() === it.item.toLowerCase()
-      );
-      if (matched) {
-        await update("inventory", matched.id, {
-          stock: Number(matched.stock) + qtyToReceive,
-          updatedAt: todayISO(),
-        });
+      if (!(qtyToReceive > 0)) continue;
+      const po = (data.purchaseOrders ?? []).find((p) => String(p.id) === it.poId);
+      if (!po) continue;
+      const warehouse = inWhInputs[it.id] || it.targetWh || undefined;
+      try {
+        if (Array.isArray(po.lines) && po.lines.length > 0) {
+          await poActions.receive(po, { lines: [{ name: it.item, itemId: it.itemId, qty: qtyToReceive, warehouse }] });
+        } else {
+          await poActions.receive(po, { qty: qtyToReceive, itemId: it.itemId ?? (po.itemId ? String(po.itemId) : undefined), warehouse });
+        }
+        countSuccess++;
+      } catch (e) {
+        toast(`${it.docNo} · ${it.item}: ${e instanceof Error ? e.message : S.saveFail}`, "info");
       }
-
-      await add("movements", {
-        item: it.item,
-        itemId: matched?.id || it.itemId || "",
-        type: "Penerimaan",
-        qty: qtyToReceive,
-        by: `Procurement PO: ${it.docNo} · ${it.project}`,
-        batch: `BOM-IN-${todayISO().replace(/-/g, "")}`,
-        date: todayISO(),
-        tone: "in",
-        fromWh: "",
-        toWh: targetWh,
-        po: it.docNo,
-        supplier: it.vendor,
-      });
-
-      const poObj = (data.purchaseOrders ?? []).find((p) => String(p.id) === it.poId);
-      if (poObj) {
-        const nextRecv = Number(poObj.receivedQty ?? 0) + qtyToReceive;
-        const totalOrd = Number(poObj.qty ?? it.orderQty);
-        await update("purchaseOrders", poObj.id, {
-          receivedQty: nextRecv,
-          status: nextRecv >= totalOrd ? "Diterima" : "Diterima Sebagian",
-          updatedAt: todayISO(),
-        });
-      }
-      countSuccess++;
     }
-
     if (countSuccess > 0) {
+      log("menerima barang PO dari checklist BOM", `${countSuccess} item`, "Inventori");
       toast(S.bomToastInSuccess.replace("{n}", String(countSuccess)), "success");
       setSelectedInIds((prev) => prev.filter((id) => !itemsToProcess.some((x) => x.id === id)));
     }
@@ -1159,57 +1150,21 @@ if (k === "mattype") return matTypeOf(i);
     if (itemsToProcess.length === 0) return;
     let countSuccess = 0;
     for (const it of itemsToProcess) {
-      const qtyToIssue = Number(outQtyInputs[it.id] ?? it.remainingQty);
-      if (qtyToIssue <= 0) continue;
-      const sourceWh = outWhInputs[it.id] || it.sourceWh;
-
-      const matched = (data.inventory ?? []).find(
-        (i) => (it.itemId && i.id === it.itemId) || i.name.toLowerCase() === it.item.toLowerCase()
-      );
-      const currStock = Number(matched?.stock ?? 0);
-      if (currStock < qtyToIssue) {
-        toast(S.bomToastStockShortage.replace("{a}", it.item).replace("{b}", `${currStock} ${it.unit}`), "info");
-        continue;
+      const mr = (data.materialRequests ?? []).find((m) => String(m.id) === it.mrId);
+      if (!mr || it.remainingQty <= 0) continue;
+      const approval = String(mr.approvalStatus ?? "");
+      if (approval === "Ditolak") { toast(`${it.mrId}: ${S.bomMrRejected}`, "info"); continue; }
+      if (it.stockAvail <= 0) { toast(S.bomToastStockShortage.replace("{a}", it.item).replace("{b}", `0 ${it.unit}`), "info"); continue; }
+      try {
+        // Jumlah keluar ditentukan server: sisa permintaan, dibatasi stok yang ada.
+        await (approval === "Menunggu ACC" ? approveMaterial(it.mrId) : fulfillMaterial(it.mrId));
+        countSuccess++;
+      } catch (e) {
+        toast(`${it.mrId}: ${e instanceof Error ? e.message : S.saveFail}`, "info");
       }
-
-      if (matched) {
-        const nextStock = currStock - qtyToIssue;
-        await update("inventory", matched.id, {
-          stock: nextStock,
-          updatedAt: todayISO(),
-        });
-        if (nextStock < Number(matched.minStock || 0)) {
-          toast(S.warnBelowMin.replace("{a}", matched.name).replace("{b}", `${fmtJumlah(Number(matched.minStock || 0))} ${matched.unit}`), "info");
-        }
-      }
-
-      await add("movements", {
-        item: it.item,
-        itemId: matched?.id || it.itemId || "",
-        type: "Pengeluaran",
-        qty: qtyToIssue,
-        by: `Permintaan MR: ${it.mrId} · ${it.project} (${it.wbsTask})`,
-        batch: `BOM-OUT-${todayISO().replace(/-/g, "")}`,
-        date: todayISO(),
-        tone: "out",
-        fromWh: sourceWh,
-        toWh: `Proyek ${it.project}`,
-      });
-
-      const mrObj = (data.materialRequests ?? []).find((m) => String(m.id) === it.mrId);
-      if (mrObj) {
-        const nextIssued = Number(mrObj.issued ?? 0) + qtyToIssue;
-        const totalReq = Number(mrObj.requested ?? it.requestedQty);
-        await update("materialRequests", mrObj.id, {
-          issued: nextIssued,
-          status: nextIssued >= totalReq ? "Dipenuhi dari stok" : "Dipenuhi Sebagian",
-          updatedAt: todayISO(),
-        });
-      }
-      countSuccess++;
     }
-
     if (countSuccess > 0) {
+      log("mengeluarkan barang dari checklist BOM", `${countSuccess} permintaan`, "Inventori");
       toast(S.bomToastOutSuccess.replace("{n}", String(countSuccess)), "success");
       setSelectedOutIds((prev) => prev.filter((id) => !itemsToProcess.some((x) => x.id === id)));
     }
@@ -3007,6 +2962,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                   )}
                                 </td>
                                 <td className="td">
+                                  {item.prNo && <div className="text-[11px] font-medium text-ocean-700">{S.bomPrLabel} {item.prNo}</div>}
                                   <div className="font-semibold text-navy-900 text-xs">{item.docNo}</div>
                                   <div className="text-[11px] text-steel-500">{item.project}</div>
                                 </td>
@@ -3289,7 +3245,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                             <th className="th">{S.bomThQtyIssued}</th>
                             <th className="th">{S.bomThQtyRemaining}</th>
                             <th className="th">{S.bomThStockAvail}</th>
-                            <th className="th w-28">{S.bomThQtyInput}</th>
+                            <th className="th w-28">{S.bomThQtyOut}</th>
                             <th className="th w-40">{S.bomThSourceWh}</th>
                             <th className="th">{S.thStatus}</th>
                             <th className="th text-right">{S.thAksi}</th>
@@ -3299,7 +3255,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                           {mrOutboundItems.map((item) => {
                             const isPending = item.remainingQty > 0;
                             const isSelected = selectedOutIds.includes(item.id);
-                            const hasStock = item.stockAvail >= (Number(outQtyInputs[item.id] ?? item.remainingQty) || 1);
+                            const hasStock = item.stockAvail > 0;
                             return (
                               <tr key={item.id} className={isSelected ? "bg-amber-50/40" : "hover:bg-surface"}>
                                 <td className="td">
@@ -3342,41 +3298,15 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                   </span>
                                 </td>
                                 <td className="td">
+                                  {/* Jumlah keluar diputuskan server: sisa permintaan, dibatasi stok. */}
                                   {isPending ? (
-                                    <input
-                                      type="number"
-                                      step="any"
-                                      min="0"
-                                      max={item.remainingQty}
-                                      className="input py-1 px-2 text-xs w-24"
-                                      placeholder={String(item.remainingQty)}
-                                      value={outQtyInputs[item.id] ?? item.remainingQty}
-                                      onChange={(e) =>
-                                        setOutQtyInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
-                                      }
-                                    />
+                                    <span className="text-xs font-semibold text-navy-900">{fmtJumlah(Math.min(item.remainingQty, item.stockAvail))} {item.unit}</span>
                                   ) : (
                                     <span className="text-xs text-steel-400">-</span>
                                   )}
                                 </td>
                                 <td className="td">
-                                  {isPending ? (
-                                    <select
-                                      className="input py-1 px-2 text-xs w-36"
-                                      value={outWhInputs[item.id] ?? item.sourceWh}
-                                      onChange={(e) =>
-                                        setOutWhInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
-                                      }
-                                    >
-                                      {(data.warehouses ?? []).map((w) => (
-                                        <option key={w.id} value={w.name}>
-                                          {w.name}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className="text-xs text-steel-500">{item.sourceWh}</span>
-                                  )}
+                                  <span className="text-xs text-steel-500">{item.sourceWh}</span>
                                 </td>
                                 <td className="td">
                                   <Badge tone={item.status.includes("Dipenuhi") ? "green" : "amber"}>
