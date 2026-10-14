@@ -189,11 +189,16 @@ export function Badge({
      di toneMap. Tanpa fallback, toneMap[tone] bernilai undefined dan
      className jadi "bg-... undefined" - kelas rusak yang tetap lolos ke DOM
      tanpa error apa pun. */
-  const toneClass = toneMap[tone] ?? toneMap.gray;
-  const dot = toneDot[tone] ?? toneDot.gray;
+  /* Badge yang dibiarkan abu-abu tapi teksnya status yang dikenal (mis.
+     "Sudah PO", "RFQ") memakai warna status itu, supaya arti warna sama di
+     seluruh aplikasi walau tiap halaman lupa memetakannya sendiri. */
+  const text = typeof children === "string" ? children.trim() : "";
+  const effTone = tone === "gray" && text && statusTone[text] ? statusTone[text] : tone;
+  const toneClass = toneMap[effTone] ?? toneMap.gray;
+  const dot = toneDot[effTone] ?? toneDot.gray;
   return (
     <span
-      title={title}
+      title={title ?? TONE_MEANING[effTone]}
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${toneClass} ${className}`}
     >
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
@@ -235,7 +240,6 @@ const statusTone: Record<string, keyof typeof toneMap> = {
   Completed: "green",
   "Dalam Pengiriman": "blue",
   Dikirim: "blue",
-  "Diterima Sebagian": "cyan",
   Kualifikasi: "violet",
   Blacklist: "red",
   Batal: "gray",
@@ -248,14 +252,54 @@ const statusTone: Record<string, keyof typeof toneMap> = {
   Maintenance: "amber",
   Terpakai: "blue",
   Tersedia: "green",
-  Terjadwal: "gray",
-  Dijadwalkan: "gray",
   Sedang: "blue",
   Tertunda: "amber",
   Tertutup: "gray",
   "Dalam Perbaikan": "blue",
   Kedaluwarsa: "red",
   Expired: "red",
+  "Sudah PO": "green",
+  RFQ: "amber",
+  Dipenuhi: "green",
+  "Dipenuhi dari stok": "green",
+  "Dipenuhi Sebagian": "amber",
+  "Menunggu PO": "amber",
+  "Menunggu Approval Gudang": "amber",
+  "Ditolak Gudang": "red",
+  "Diterima Sebagian": "blue",
+  Terlewat: "red",
+  Dibatalkan: "red",
+  "Dibatalkan Sebagian": "amber",
+  Digantikan: "gray",
+  Nonaktif: "gray",
+  Cuti: "amber",
+  Izin: "amber",
+  Hadir: "green",
+  Alpa: "red",
+  Kurang: "red",
+  Cukup: "green",
+  "Sudah Sesuai": "green",
+  "Tidak Sesuai": "red",
+  "Perlu Diperbaiki": "amber",
+  Terjadwal: "blue",
+  Dijadwalkan: "blue",
+  Proses: "blue",
+};
+
+/* Arti tiap warna, dipakai sebagai tooltip badge (permintaan 14 Okt: arti warna harus jelas). */
+const TONE_MEANING: Partial<Record<keyof typeof toneMap, string>> = {
+  green: "Hijau: selesai / aman",
+  teal: "Hijau: selesai / aman",
+  amber: "Kuning: menunggu / perlu tindakan",
+  orange: "Kuning: menunggu / perlu tindakan",
+  red: "Merah: bahaya / terlambat / ditolak",
+  ocean: "Merah: bahaya / terlambat / ditolak",
+  blue: "Biru: sedang berjalan",
+  navy: "Biru: sedang berjalan",
+  cyan: "Biru: sedang berjalan",
+  violet: "Ungu: kategori / tahap penjualan",
+  gray: "Abu-abu: netral / draf / nonaktif",
+  slate: "Abu-abu: netral / draf / nonaktif",
 };
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
