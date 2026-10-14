@@ -52,7 +52,7 @@ export function usePoActions() {
     if (remote()) {
       const res = await apiFetch<{ po: StoreItem; fulfilled: { id: string; given: number }[] }>(
         `/api/purchaseOrders/${encodeURIComponent(String(po.id))}/receive`,
-        { method: "POST", body: JSON.stringify({ qty: a.qty, itemId: a.itemId, noFaktur: a.noFaktur, tglFaktur: a.tglFaktur, dendaRp: a.dendaRp, lines: a.lines }) },
+        { method: "POST", body: JSON.stringify({ qty: a.qty, itemId: a.itemId, warehouse: a.warehouse, rack: a.rack, bin: a.bin, noFaktur: a.noFaktur, tglFaktur: a.tglFaktur, dendaRp: a.dendaRp, lines: a.lines }) },
       );
       await resyncCollections([...SYNC]);
       return { status: String(res.po.status ?? ""), fulfilled: res.fulfilled };
