@@ -125,7 +125,7 @@ const levelOf = (items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG
   assert(levelOf(items, "INV-S") === "perhatian", "invoice Belum Dibayar yang belum jatuh tempo -> perhatian");
   assert(items.every((i) => !i.id.includes("INV-D")), "invoice Lunas tidak jadi alert");
   assert(items.find((i) => i.id.includes("INV-L"))?.due === dayOffset(-3), "invoice menyimpan `due` untuk kartu");
-  assert(items.find((i) => i.id.includes("INV-L"))?.impact === "Rp 1.000", "invoice menyimpan nominal sebagai impact", String(items.find((i) => i.id.includes("INV-L"))?.impact));
+  assert(items.find((i) => i.id.includes("INV-L"))?.impact?.replace(/\u00a0/g, " ") === "Rp 1.000", "invoice menyimpan nominal sebagai impact", String(items.find((i) => i.id.includes("INV-L"))?.impact));
 }
 
 {

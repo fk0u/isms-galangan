@@ -42,9 +42,25 @@ export function fmtRentang(a: string | null | undefined, b: string | null | unde
   return `${fmtTanggal(a)} → ${fmtTanggal(b)}`;
 }
 
+/* Spasi tak terputus (U+00A0) antara "Rp" dan angka: di kolom tabel yang
+   sempit "Rp" tidak lagi terpisah ke baris sendiri. */
 export function fmtRupiah(n: number): string {
-  if (!Number.isFinite(n)) return "Rp 0";
-  return "Rp " + Math.round(n).toLocaleString("id-ID");
+  if (!Number.isFinite(n)) return "Rp\u00a00";
+  return "Rp\u00a0" + Math.round(n).toLocaleString("id-ID");
+}
+
+/** Rupiah ringkas untuk kartu/sel sempit: Rb, Jt, M (miliar), T (triliun).
+ *  Pasangkan dengan title berisi fmtRupiah supaya angka persis tetap terbaca. */
+export function fmtRupiahShort(n: number): string {
+  if (!Number.isFinite(n)) return "Rp\u00a00";
+  const abs = Math.abs(n);
+  const units: Array<[number, string]> = [[1e12, "T"], [1e9, "M"], [1e6, "Jt"], [1e3, "Rb"]];
+  for (const [v, u] of units) {
+    if (abs >= v) {
+      return "Rp\u00a0" + (n / v).toLocaleString("id-ID", { maximumFractionDigits: abs >= v * 100 ? 0 : abs >= v * 10 ? 1 : 2 }) + "\u00a0" + u;
+    }
+  }
+  return fmtRupiah(n);
 }
 
 /** Parser pembalik fmtRupiah: "1.000.000" → 1000000. */
@@ -55,8 +71,8 @@ export function parseRupiah(input: string): number {
 }
 
 export function fmtMiliar(n: number): string {
-  if (!Number.isFinite(n)) return "Rp 0 M";
-  return "Rp " + (n / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " M";
+  if (!Number.isFinite(n)) return "Rp\u00a00\u00a0M";
+  return "Rp\u00a0" + (n / 1_000_000_000).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + "\u00a0M";
 }
 
 export function fmtJumlah(n: number): string {

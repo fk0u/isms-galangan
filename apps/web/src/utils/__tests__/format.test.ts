@@ -1,6 +1,6 @@
 // F1-03: test unit logika murni (Vitest). Probe render/PDF tetap di scripts/.
 import { describe, expect, it } from "vitest";
-import { fmtRupiah, parseRupiah } from "../format";
+import { fmtRupiah, fmtRupiahShort, parseRupiah } from "../format";
 import { ptkpCode } from "../ptkp";
 import { parsePunchCsv } from "../../pages/absensi/DeviceImport";
 
@@ -24,4 +24,13 @@ describe("parsePunchCsv", () => {
       { employeeNo: "123", timestamp: "2026-11-02T17:10:00+08:00", type: "out" },
     ]);
   });
+});
+
+describe("fmtRupiahShort", () => {
+  const sp = (x: string) => x.replace(/\u00a0/g, " ");
+  it("miliar", () => expect(sp(fmtRupiahShort(4_814_200_000))).toBe("Rp 4,81 M"));
+  it("juta", () => expect(sp(fmtRupiahShort(162_700_000))).toBe("Rp 163 Jt"));
+  it("triliun", () => expect(sp(fmtRupiahShort(1_250_000_000_000))).toBe("Rp 1,25 T"));
+  it("di bawah ribuan tetap utuh", () => expect(sp(fmtRupiahShort(950))).toBe("Rp 950"));
+  it("Rp dan angka tidak bisa terpisah baris", () => expect(fmtRupiah(1000)).toBe("Rp\u00a01.000"));
 });

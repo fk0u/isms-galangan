@@ -40,6 +40,20 @@ Nama token lama (`navy`, `steel`, `ocean`, `rose`, `teal`, `violet`) tetap sebag
 | Netral | Abu terang | Draft, Batal, Ditutup |
 Status selalu = titik + teks (tidak pernah warna saja).
 
+### Arti warna status (wajib konsisten, 14 Okt)
+| Warna | Arti | Contoh |
+| --- | --- | --- |
+| Hijau | Selesai / aman | Selesai, Lunas, Disetujui, Diterima, Sudah PO, Hadir, Cukup |
+| Kuning | Menunggu / perlu tindakan | Menunggu Approval, Diajukan, RFQ, Tertunda, Dipenuhi Sebagian |
+| Merah | Bahaya / terlambat / ditolak | Terlambat, Kritis, Ditolak, Kedaluwarsa, Kurang, Tidak Sesuai |
+| Biru | Sedang berjalan | Dalam Proses, Dikirim, Terjadwal, Diterima Sebagian |
+| Ungu | Kategori / tahap penjualan | Kualifikasi, Negosiasi |
+| Abu-abu | Netral / draf / nonaktif | Draft, Digantikan, Nonaktif |
+
+`Badge` memakai warna status otomatis dari kamus `statusTone` (components/ui.tsx) bila halaman tidak memberi warna, dan setiap badge punya tooltip arti warnanya. Status baru: tambahkan ke kamus itu, jangan memetakan warna sendiri per halaman.
+Nominal Rupiah: `fmtRupiah` memakai spasi tak terputus ("Rp" tidak pernah terpisah baris); `KpiCard` menyingkat Rp >= 1 juta (Rb/Jt/M/T) dengan angka lengkap di tooltip.
+Tombol ikon tanpa teks wajib punya `aria-label`; tooltip dibuat otomatis dari label itu (utils/iconTooltips.ts).
+
 ## Tipografi
 Inter untuk semuanya; JetBrains Mono hanya untuk ID/kode bila perlu (`font-mono`).
 | Peran | Spesifikasi |
