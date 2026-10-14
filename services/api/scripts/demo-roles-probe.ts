@@ -70,6 +70,21 @@ async function main(): Promise<void> {
         `${okRes?.statusCode} ${noRes?.statusCode}`,
       );
     }
+    // Login demo dari halaman login: butuh saklar ketiga DEMO_LOGIN_PAGE.
+    const login = (role: string) => app.inject({ method: "POST", url: "/api/auth/demo-login", payload: { role }, remoteAddress: "10.77.0.1" });
+    delete process.env.DEMO_LOGIN_PAGE;
+    const offList = (await app.inject({ method: "GET", url: "/api/auth/demo-login" })).json() as { data: { enabled: boolean; roles: unknown[] } };
+    assert("login demo mati bila DEMO_LOGIN_PAGE tidak diset", offList.data.enabled === false && offList.data.roles.length === 0 && (await login("gudang")).statusCode === 404);
+    process.env.DEMO_LOGIN_PAGE = "true";
+    const onList = (await app.inject({ method: "GET", url: "/api/auth/demo-login" })).json() as { data: { enabled: boolean; roles: Array<{ role: string }> } };
+    assert("login demo menyebut peran seed", onList.data.enabled && onList.data.roles.some((r) => r.role === "gudang"));
+    const g = await login("gudang");
+    const gTok = (g.json() as { data?: { token?: string; user?: { role?: string } } }).data;
+    assert("login demo sebagai gudang → token peran gudang", g.statusCode === 200 && gTok?.user?.role === "gudang" && typeof gTok?.token === "string", g.body.slice(0, 160));
+    assert("login demo peran tak dikenal → 404", (await login("bukan-peran")).statusCode === 404);
+    const audit = await q<{ n: number }>("SELECT COUNT(*) AS n FROM audit_log WHERE action = ?", ["auth.demo_login"]);
+    assert("login demo tercatat di audit", (audit[0]?.n ?? 0) > 0);
+    delete process.env.DEMO_LOGIN_PAGE;
   } finally {
     process.env.DEMO_ROLE_SWITCH = prevSwitch;
     process.env.ALLOW_SEED_LOGIN = prevSeed;
