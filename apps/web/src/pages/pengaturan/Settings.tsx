@@ -47,6 +47,7 @@ const CONST_INFO: Record<string, ConstInfo> = {
   WHATIF_GROWTH: { dampak: "Simulasi pertumbuhan pasar di Analytics, menggeser forecast (%).", contoh: "cth: 10 = forecast naik ~10%.", impact: "Market-growth simulation in Analytics, shifts forecast (%).", example: "e.g. 10 = forecast up ~10%." },
   WHATIF_COST: { dampak: "Simulasi kenaikan biaya, menekan margin (%).", contoh: "cth: 5 = margin turun ~1,5 poin.", impact: "Cost simulation, squeezes margin (%).", example: "e.g. 5 = margin down ~1.5 pts." },
   WHATIF_PROG: { dampak: "Simulasi percepatan progres, menggeser forecast (%).", contoh: "cth: -10 s.d. 50.", impact: "Progress simulation, shifts forecast (%).", example: "e.g. -10 to 50." },
+  SHOW_DOCK_BILLING: { dampak: "Tampilkan/sembunyikan tarif dock, konsumsi, invoice slot & docking report di Drydock (0/1).", contoh: "cth: 0 = Drydock hanya pencatatan.", impact: "Show/hide dock tariffs, consumption, slot invoice & docking report in Drydock (0/1).", example: "e.g. 0 = Drydock is record-only." },
   SHOW_3D_PROJECT: { dampak: "Tampilkan/sembunyikan 3D Viewer di modul Proyek (0/1).", contoh: "cth: 1 = tampil.", impact: "Show/hide the 3D viewer in Projects (0/1).", example: "e.g. 1 = show." },
   SHOW_3D_VESSEL: { dampak: "Tampilkan/sembunyikan 3D Viewer di modul Kapal (0/1).", contoh: "cth: 1 = tampil.", impact: "Show/hide the 3D viewer in Vessels (0/1).", example: "e.g. 1 = show." },
 };
@@ -122,7 +123,7 @@ export default function Settings() {
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
-  const isToggleKey = (key: string): boolean => key === "SHOW_3D_PROJECT" || key === "SHOW_3D_VESSEL";
+  const isToggleKey = (key: string): boolean => key === "SHOW_3D_PROJECT" || key === "SHOW_3D_VESSEL" || key === "SHOW_DOCK_BILLING";
 
   /* Nilai konstanta non-numerik (JSON) perlu input teks, bukan NumInput, dan
      tidak boleh diformat sebagai angka - Number("{}") = NaN tampil apa adanya. */

@@ -259,6 +259,7 @@ const seedSettings: StoreItem[] = [
   { id: "SET-WHATIF-C", key: "WHATIF_COST", value: 0, label: "What-if biaya, menekan margin (%)", group: "Analytics" },
   { id: "SET-WHATIF-P", key: "WHATIF_PROG", value: 0, label: "What-if progres, menggeser forecast (%)", group: "Analytics" },
   { id: "SET-3D-PROJ", key: "SHOW_3D_PROJECT", value: 0, label: "Tampilkan 3D Viewer di modul Proyek (0/1)", group: "Modul" },
+  { id: "SET-DOCK-BILL", key: "SHOW_DOCK_BILLING", value: 0, label: "Tampilkan tarif, konsumsi & invoice di Drydock (0/1)", group: "Modul" },
   { id: "SET-3D-VES", key: "SHOW_3D_VESSEL", value: 0, label: "Tampilkan 3D Viewer di modul Kapal (0/1)", group: "Modul" },
 ];
 

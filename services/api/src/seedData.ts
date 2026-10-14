@@ -52,6 +52,7 @@ const SETTINGS: SeedRow[] = [
   S("SET-WHATIF-C","WHATIF_COST",0,"What-if biaya, menekan margin (%)","Analytics"),
   S("SET-WHATIF-P","WHATIF_PROG",0,"What-if progres, menggeser forecast (%)","Analytics"),
   S("SET-3D-PROJ","SHOW_3D_PROJECT",0,"Tampilkan 3D Viewer di modul Proyek (0/1)","Modul"),
+  S("SET-DOCK-BILL","SHOW_DOCK_BILLING",0,"Tampilkan tarif, konsumsi & invoice di Drydock (0/1)","Modul"),
   S("SET-3D-VES","SHOW_3D_VESSEL",0,"Tampilkan 3D Viewer di modul Kapal (0/1)","Modul"),
   /* Tarif mastery yang tadinya hanya fallback hardcode di dalam komponen
      Equipment.tsx dan Drydock.tsx. Wajib identik dengan store.tsx (FE) -
