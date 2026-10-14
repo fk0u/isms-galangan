@@ -1799,7 +1799,7 @@ const createWarranty = async (wbsTask?: string) => {
                               </span>
                             )
                           ) : (
-                            <span className="text-xs text-steel-400">—</span>
+                            <span className="text-xs text-steel-400">-</span>
                           )}
                         </td>
                         <td className="td">
@@ -3207,7 +3207,7 @@ const createWarranty = async (wbsTask?: string) => {
           </>
         }
       >
-        <div className={`space-y-4 transition-all duration-200 ${assignDropdownOpen ? "min-h-[19rem]" : "min-h-0"}`}>
+        <div className={`space-y-4 transition-all duration-200 ${assignDropdownOpen ? "min-h-[25rem]" : "min-h-0"}`}>
           <Field label={S.detAssignType}>
             <div className="flex gap-4">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-steel-700">

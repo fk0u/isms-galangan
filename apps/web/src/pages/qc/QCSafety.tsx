@@ -1661,7 +1661,7 @@ export default function QCSafety() {
             <Field label={S.fTenggat}><input type="date" className="input" value={ncrForm.due} onChange={(e) => setNcrForm({ ...ncrForm, due: e.target.value })} /></Field>
             <Field label="Penerima (owner/client)" hint="Owner yang berhak menekan Terima di detail NCR">
               <select className="input" value={ncrForm.penerima} onChange={(e) => setNcrForm({ ...ncrForm, penerima: e.target.value })}>
-                <option value="">— Belum ditentukan —</option>
+                <option value="">Belum ditentukan</option>
                 {data.clients.map((c) => <option key={String(c.id)} value={String(c.name)}>{String(c.name)}</option>)}
               </select>
             </Field>

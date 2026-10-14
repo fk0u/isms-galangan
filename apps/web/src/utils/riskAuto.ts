@@ -151,17 +151,17 @@ export function generateRisksFromWbs(
     if (endDays !== null && endDays < 0) {
       // Terlambat: end sudah lewat.
       likelihood = "Tinggi";
-      title = `[WBS] ${task} — terlambat ${Math.abs(endDays)} hari`;
+      title = `[WBS] ${task} - terlambat ${Math.abs(endDays)} hari`;
       mitigation = `Percepat ${task} atau negosiasi timeline dengan klien`;
     } else if (endDays !== null && endDays <= milestoneDays) {
       // Mendekati jatuh tempo.
       likelihood = likelihoodFromDays(endDays);
-      title = `[WBS] ${task} — milestone H-${endDays}`;
+      title = `[WBS] ${task} - milestone H-${endDays}`;
       mitigation = `Percepat ${task} atau negosiasi timeline`;
     } else if (startDays !== null && startDays < 0 && progress === 0) {
       // Belum mulai padahal start sudah lewat.
       likelihood = "Sedang";
-      title = `[WBS] ${task} — belum mulai, start sudah lewat`;
+      title = `[WBS] ${task} - belum mulai, start sudah lewat`;
       mitigation = `Mulai ${task} secepatnya atau tinjau jadwal`;
     }
 
@@ -235,13 +235,13 @@ export function generateRisksFromWo(
 
       if (dueDays !== null && dueDays < 0) {
         likelihood = "Tinggi";
-        riskTitle = `[WO ${woId}] ${title} — termin terlambat ${Math.abs(dueDays)} hari`;
+        riskTitle = `[WO ${woId}] ${title} - termin terlambat ${Math.abs(dueDays)} hari`;
         mitigation = scope
           ? `Kejar ${scope} atau negosiasi termin dengan subkontraktor`
           : `Kejar pengerjaan atau negosiasi termin dengan subkontraktor`;
       } else if (dueDays !== null && dueDays <= milestoneDays) {
         likelihood = likelihoodFromDays(dueDays);
-        riskTitle = `[WO ${woId}] ${title} — termin H-${dueDays}`;
+        riskTitle = `[WO ${woId}] ${title} - termin H-${dueDays}`;
         mitigation = scope
           ? `Pastikan ${scope} selesai sebelum termin`
           : `Pastikan pengerjaan selesai sebelum termin`;

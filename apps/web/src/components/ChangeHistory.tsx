@@ -27,19 +27,19 @@ function changesOf(diff: unknown): AuditChange[] {
 
 function displayValue(field: string, value: unknown, redactedLabel: string): string {
   if (/password|token|secret|salary|payroll|npwp|ktp|credential/i.test(field)) return redactedLabel;
-  if (value === null || value === undefined || value === "") return "—";
+  if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
   try {
     return JSON.stringify(value);
   } catch {
-    return "—";
+    return "-";
   }
 }
 
 function formatTime(value: unknown, locale: "id" | "en"): string {
   const raw = String(value ?? "");
   const date = new Date(raw);
-  if (!raw || Number.isNaN(date.getTime())) return raw || "—";
+  if (!raw || Number.isNaN(date.getTime())) return raw || "-";
   return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "id-ID", {
     dateStyle: "short",
     timeStyle: "short",
@@ -133,17 +133,17 @@ export function ChangeHistory({
             {entries.map((item, index) => (
               <li key={item.id ?? index} className="border-t border-steel-100 pt-2 first:border-0 first:pt-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
-                  <span className="font-medium text-navy-900">{item.actor || "—"}</span>
+                  <span className="font-medium text-navy-900">{item.actor || "-"}</span>
                   <time className="text-steel-500">{formatTime(item.date, locale)}</time>
                 </div>
                 {item.action && <p className="mt-0.5 text-xs text-steel-600">{item.action}</p>}
                 {(item.before !== undefined || item.after !== undefined) && (
                   <p className="mt-1 text-xs text-steel-700">
                     <span className="text-steel-500">{labels.before}: </span>
-                    <span className="font-mono">{String(item.before ?? "—")}</span>
+                    <span className="font-mono">{String(item.before ?? "-")}</span>
                     <span aria-hidden="true" className="mx-1 text-steel-400">→</span>
                     <span className="text-steel-500">{labels.after}: </span>
-                    <span className="font-semibold text-navy-800">{String(item.after ?? "—")}</span>
+                    <span className="font-semibold text-navy-800">{String(item.after ?? "-")}</span>
                   </p>
                 )}
                 {item.note && <p className="mt-1 text-xs italic text-steel-600">"{item.note}"</p>}
@@ -181,10 +181,10 @@ export function ChangeHistory({
           {rows.map((row, index) => (
             <li key={String(row.id ?? index)} className="border-t border-steel-100 pt-2 first:border-0 first:pt-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs">
-                <span className="font-medium text-navy-900">{String(row.actor ?? "—")}</span>
+                <span className="font-medium text-navy-900">{String(row.actor ?? "-")}</span>
                 <time className="text-steel-500">{formatTime(row.created_at, locale)}</time>
               </div>
-              <p className="mt-1 text-xs text-steel-600">{String(row.action ?? "—")}</p>
+              <p className="mt-1 text-xs text-steel-600">{String(row.action ?? "-")}</p>
               {changesOf(row.diff).map((change) => (
                 <div key={change.field} className="mt-1 grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 text-xs">
                   <span className="truncate text-steel-500" title={change.field}>{change.field}</span>

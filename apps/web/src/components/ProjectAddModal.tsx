@@ -273,7 +273,7 @@ export default function ProjectAddModal({
             </Field>
             <Field label={S.prjInitStage}>
               <select className="input" value={form.tahap} onChange={(e) => setF("tahap", e.target.value)}>
-                {TAHAP.map((t) => <option key={t}>{t}</option>)}
+                {TAHAP.map((t) => <option key={t} value={t}>{t === "Desain" ? S.prjStagePlanning : t}</option>)}
               </select>
             </Field>
             <Field label={S.prjFieldPrioritas}>

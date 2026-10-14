@@ -166,15 +166,15 @@ const WBS_TEMPLATE: Array<[string, string, string, number, number]> = [
   ["Pengadaan Material","2026-02","2026-05",85,10],
   ["Fabrikasi Baja","2026-03","2026-07",70,12],
   ["Hull Assembly","2026-05","2026-08",45,12],
-  ["Outfitting — Machinery","2026-07","2026-09",20,8],
-  ["Outfitting — Piping","2026-07","2026-09",20,7],
-  ["Outfitting — Electrical","2026-07","2026-09",20,7],
-  ["Outfitting — Nav & Comm","2026-07","2026-09",20,5],
-  ["Outfitting — Accommodation","2026-07","2026-09",20,5],
-  ["Painting — Surface Prep","2026-08","2026-09",5,5],
-  ["Painting — Priming","2026-08","2026-09",5,4],
-  ["Painting — Topcoat","2026-08","2026-09",5,4],
-  ["Painting — Final Inspection","2026-08","2026-09",5,3],
+  ["Outfitting - Machinery","2026-07","2026-09",20,8],
+  ["Outfitting - Piping","2026-07","2026-09",20,7],
+  ["Outfitting - Electrical","2026-07","2026-09",20,7],
+  ["Outfitting - Nav & Comm","2026-07","2026-09",20,5],
+  ["Outfitting - Accommodation","2026-07","2026-09",20,5],
+  ["Painting - Surface Prep","2026-08","2026-09",5,5],
+  ["Painting - Priming","2026-08","2026-09",5,4],
+  ["Painting - Topcoat","2026-08","2026-09",5,4],
+  ["Painting - Final Inspection","2026-08","2026-09",5,3],
   ["Commissioning","2026-09","2026-09",0,6],
   ["Sea Trial & Delivery","2026-09","2026-09",0,4],
 ];
@@ -231,10 +231,10 @@ export const DEMO_WBS_HISTORY: Record<string, Record<string, Array<Record<string
       H("2026-10-03", "Rudi Hartono", 30, 38, "Blok 3 dan 4 terpasang, pengelasan sisi kiri.", "/demo/wbs-hull.svg"),
       H("2026-10-08", "Rudi Hartono", 38, 45, "Fit-up blok 5, NDT las sambungan blok 3 lolos.", "/demo/wbs-hull.svg"),
     ],
-    "Painting — Priming": [
+    "Painting - Priming": [
       H("2026-10-06", "Sari Wulandari", 0, 5, "Blasting Sa 2.5 area lambung bawah garis air dimulai.", "/demo/wbs-paint.svg"),
     ],
-    "Outfitting — Machinery": [
+    "Outfitting - Machinery": [
       H("2026-10-09", "Agus Setiawan", 15, 20, "Overhaul main engine: crankshaft diperiksa, bearing diganti.", "/demo/wbs-engine.svg"),
     ],
   },

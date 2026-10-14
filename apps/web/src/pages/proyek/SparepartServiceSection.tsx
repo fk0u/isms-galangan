@@ -321,7 +321,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       });
       toast(
         res.status === "Dari stok"
-          ? S.spsReqDone.replace("{item}", res.itemName).replace("{n}", String(res.issued))
+          ? S.spsReqDone.replace("{item}", res.itemName).replace("{n}", String(res.requested))
           : res.status === "Sebagian"
             ? S.spsReqPartial.replace("{issued}", String(res.issued)).replace("{short}", String(res.shortage)).replace("{pr}", res.requisitionId ?? "-")
             : S.spsReqPo.replace("{pr}", res.requisitionId ?? "-"),

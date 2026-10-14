@@ -23,7 +23,7 @@ const num = (v: unknown): number => Number(v) || 0;
 const inRange = (d: string, a: string, b: string): boolean => d >= a && d <= b;
 
 /* Gap data tampil jujur "—": JANGAN angka palsu (cth 0%/Rp 0) saat sumber kosong. */
-const dashIf = (has: boolean, text: string): string => (has ? text : "—");
+const dashIf = (has: boolean, text: string): string => (has ? text : "-");
 
 /* Fallback jujur saat modul sumber kosong: sebut modul + link isi data. */
 function EmptyModul({ modul, to, label }: { modul: string; to: string; label: string }) {
