@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
+import { installIconTooltips } from "./utils/iconTooltips";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import type { ReactElement } from "react";
 import "./index.css";
@@ -93,6 +94,8 @@ function Guard({ title, children }: { title: string; children: ReactElement }) {
     </ErrorBoundary>
   );
 }
+
+installIconTooltips();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
