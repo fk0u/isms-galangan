@@ -401,6 +401,10 @@ const ownerOptions = useMemo(() => employeeOptions(data.employees, { withNip: tr
   }, [sortedDocs, groupBy, data.documents, locale]);
   const pickNotifIds = (ids: string[]): void => {
     if (ids.length === 0) return;
+    /* Baris yang disorot hanya ada di tampilan tabel; di tampilan pohon (bawaan)
+       tabelnya `hidden` sehingga klik notifikasi tampak tidak berbuat apa-apa
+       (catatan CTO 15 Okt). Pindah ke tabel tanpa menimpa preferensi tersimpan. */
+    if (viewMode === "tree") setViewModeRaw("table");
     const idx = sortedDocs.findIndex((d) => ids.includes(String(d.id)));
     if (idx >= 0) { flashPick(flash, ids, idx, docPager.go, docPager.size); return; }
     const doc = data.documents.find((d) => ids.includes(String(d.id)));
