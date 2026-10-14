@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UserCog } from "lucide-react";
+import { Anchor, Boxes, ShieldCheck } from "lucide-react";
 import { fetchLoginRoles, loginAsRole, type LoginRole } from "../auth/demoSwitch";
 import { isBackendConfigured } from "../services/http";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -117,24 +117,23 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Panel kiri - bidang merah merek (bukan putih datar, catatan CTO 14 Okt).
-          ocean-600 dengan teks putih = kontras 6,1:1. Pola garis & cahaya radial
-          hanya dekorasi (aria-hidden), tidak bergerak. */}
-      <div className="relative hidden h-dvh w-[46%] flex-col justify-between overflow-hidden bg-ocean-600 p-12 text-white lg:flex">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:44px_44px]" />
-        <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.22),transparent_65%)]" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-48 -left-32 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(circle,rgba(0,0,0,0.25),transparent_65%)]" />
-        <ShipWheel aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 h-[26rem] w-[26rem] text-white/[0.06]" />
+      {/* Panel kiri - merah merek bergradasi (catatan 14 Okt: jangan putih datar,
+          teks jangan hitam). Semua teks putih: judul dikunci text-white karena
+          aturan global h1 memberi warna tinta. Dekorasi aria-hidden & diam. */}
+      <div className="relative hidden h-dvh w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#E61919_0%,#C41212_45%,#7F0B0B_100%)] p-12 text-white lg:flex">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div aria-hidden className="pointer-events-none absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-white/10 blur-3xl" />
+        <ShipWheel aria-hidden className="pointer-events-none absolute -bottom-28 -right-28 h-[28rem] w-[28rem] text-white/[0.07]" />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white shadow-lg shadow-black/10">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow-lg shadow-black/20">
             <img src="/logo-sb.png" alt="Logo perusahaan" width={36} height={36} className="h-9 w-9 object-contain" />
           </span>
           <div>
-            <p className="text-base font-bold tracking-[-0.01em]">ISMS Galangan</p>
+            <p className="text-base font-bold tracking-[-0.01em] text-white">ISMS Galangan</p>
             <p className="text-sm text-white/90">PT Syukur Bersaudara</p>
           </div>
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-inset ring-white/25">
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
             <ShipWheel className="h-3.5 w-3.5" /> v2026.1
           </span>
         </div>
@@ -145,16 +144,30 @@ export default function Login() {
           transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           className="relative max-w-lg"
         >
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[13px] font-medium ring-1 ring-inset ring-white/25">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[13px] font-medium text-white ring-1 ring-inset ring-white/25">
             <Container className="h-4 w-4" /> New build · Repair · Retrofit
           </p>
-          <h1 className="mt-5 text-[44px] font-bold leading-[1.05] tracking-[-0.03em] xl:text-[54px]">
+          <h1 className="mt-5 text-[44px] font-bold leading-[1.05] tracking-[-0.03em] text-white xl:text-[52px]">
             Seluruh galangan, dalam satu sistem.
           </h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-white/90">
+          <p className="mt-4 max-w-md text-base leading-relaxed text-white/90">
             Proyek, drydock, inventori, QC, keuangan, dan siklus hidup kapal terhubung serta
             terpantau real-time.
           </p>
+          <ul className="mt-8 space-y-3">
+            {[
+              { icon: Anchor, text: "Jadwal docking & kapasitas dock" },
+              { icon: Boxes, text: "BOM, pengadaan, dan stok gudang" },
+              { icon: ShieldCheck, text: "Akses sesuai peran, tercatat di audit" },
+            ].map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-[15px] text-white">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-inset ring-white/25">
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </motion.div>
 
         <p className="relative text-xs text-white/90">© 2026 PT Syukur Bersaudara</p>
@@ -235,31 +248,29 @@ export default function Login() {
           </motion.form>
 
           {loginRoles.length > 0 && (
-            <div className="mt-5 rounded-2xl border border-steel-200 bg-white p-5 shadow-[0_20px_40px_-18px_rgba(9,9,11,0.18)]">
-              <p className="flex items-center gap-2 text-[15px] font-semibold text-navy-900">
-                <UserCog className="h-5 w-5 text-ocean-600" /> {t.auth.roleLoginTitle}
-              </p>
-              <p className="mt-1 text-xs text-steel-500">{t.auth.roleLoginHint}</p>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="mt-5">
+              <div className="flex items-center gap-3 text-xs font-medium text-steel-500">
+                <span className="h-px flex-1 bg-steel-200" />
+                {t.auth.roleLoginTitle}
+                <span className="h-px flex-1 bg-steel-200" />
+              </div>
+              {/* Ringkas: tombol pil berisi nama peran saja (catatan 14 Okt). */}
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
                 {loginRoles.map((r) => (
                   <button
                     key={r.role}
                     type="button"
                     onClick={() => void enterAsRole(r.role)}
                     disabled={roleBusy !== null}
-                    className="group flex min-h-12 items-center gap-2.5 rounded-xl border border-steel-200 bg-white px-3 py-2 text-left transition-[background-color,border-color,transform] duration-150 hover:border-ocean-300 hover:bg-ocean-50 active:scale-[0.98] disabled:opacity-60 motion-reduce:transform-none"
+                    title={`${t.auth.roleGo}: ${r.name}`}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-steel-200 bg-white px-3.5 py-1.5 text-[13px] font-medium text-navy-800 transition-[background-color,border-color,color,transform] duration-150 hover:border-ocean-300 hover:bg-ocean-50 hover:text-ocean-700 active:scale-[0.97] disabled:opacity-60 motion-reduce:transform-none"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ocean-600 text-xs font-bold text-white">
-                      {roleBusy === r.role ? <Loader2 className="h-4 w-4 animate-spin" /> : r.name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-navy-900">{r.name}</span>
-                      <span className="block truncate text-xs capitalize text-steel-500">{r.role}</span>
-                    </span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-steel-400 transition-colors group-hover:text-ocean-600" />
+                    {roleBusy === r.role && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {r.name}
                   </button>
                 ))}
               </div>
+              <p className="mt-3 text-center text-xs text-steel-500">{t.auth.roleLoginHint}</p>
             </div>
           )}
 
