@@ -15,7 +15,8 @@ Aturan emas:
 | Peran | Token | Hex | Pemakaian |
 |---|---|---|---|
 | Kanvas | `bg-surface` | `#FAFAFA` | Latar aplikasi & panel sekunder |
-| Kartu / permukaan | `bg-white` | `#FFFFFF` | Kartu, modal, sidebar, top bar |
+| Kartu / permukaan | `bg-white` | `#FFFFFF` | Kartu, modal, top bar |
+| Sidebar | `bg-ocean-600` | `#C41212` | Navigasi utama (teks putih / putih 90%) |
 | Tinta | `ink`, `navy-900` | `#09090B` | Judul, angka utama |
 | Teks badan | `steel-700` | `#27272A` | Isi |
 | Teks sekunder | `steel-500/600` | `#71717A` / `#52525B` | Label, deskripsi |
@@ -96,7 +97,7 @@ Token: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`, `--ease-in-out: cubic-bezie
 | `EmptyState` | Ikon abu + judul medium + deskripsi |
 
 ## Shell
-- **Sidebar** putih, border kanan `steel-200`. Logo kotak merah kecil. Label grup abu samar. Item `rounded-lg`; aktif = latar `steel-100` + teks tinta + **ikon merah**.
+- **Sidebar** merah `ocean-600` (#C41212), bukan `#E61919`: teks putih 6,1:1, teks sekunder putih 90% 5,1:1 (AA). Jangan pakai putih di bawah 90% untuk teks. Logo di kotak putih. Item `rounded-lg`; aktif = latar putih + teks `ocean-700` + ikon `ocean-600`; hover = putih 15%. Badge putih dengan angka merah. Cincin fokus putih.
 - **Top bar** putih 80% + `backdrop-blur`, border bawah tipis; status koneksi = pil hijau "Server" / abu "Lokal".
 - **Login**: panel kiri kanvas abu (logo, judul "Seluruh galangan, dalam satu sistem.", statistik grid halus), form dalam kartu `rounded-2xl` di kanan.
 
