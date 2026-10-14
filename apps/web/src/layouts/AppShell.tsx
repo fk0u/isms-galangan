@@ -446,13 +446,20 @@ export default function AppShell() {
   }, [location.pathname, backendMode, resync]);
 
   const renderSidebar = (mini: boolean) => (
-    <div className="flex h-full flex-col border-r border-steel-200 bg-white text-navy-900">
+    /* Sidebar merah merek (permintaan klien 14 Okt). Latar ocean-600 (#C41212),
+       bukan #E61919: teks putih 6,1:1 dan putih 90% 5,1:1 (lolos AA untuk teks
+       kecil), sedangkan di #E61919 teks redup jatuh di bawah 4,5:1. Elemen yang
+       semula merah (logo, ikon aktif, badge, cincin fokus) dibuat putih supaya
+       tetap terlihat di atas latar merah. */
+    <div className="flex h-full flex-col bg-ocean-600 text-white [&_:focus-visible]:outline-white">
       <div className={`flex h-14 items-center gap-2.5 px-4 ${mini ? "justify-center px-3" : ""}`}>
-        <img src="/logo-sb.png" alt="Logo perusahaan" width={32} height={32} className="h-8 w-8 shrink-0 object-contain" />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
+          <img src="/logo-sb.png" alt="Logo perusahaan" width={28} height={28} className="h-7 w-7 object-contain" />
+        </span>
         {!mini && (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">ISMS PT Syukur Bersaudara</p>
-            <p className="truncate text-[11px] text-steel-500">Galangan & Industri Kapal</p>
+            <p className="truncate text-[11px] text-white/90">Galangan & Industri Kapal</p>
           </div>
         )}
       </div>
@@ -463,7 +470,7 @@ export default function AppShell() {
           <div key={group.label} className="mb-3">
             {!mini ? (
               <button
-                className="mb-0.5 flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] font-medium text-steel-400 transition-colors hover:text-navy-800"
+                className="mb-0.5 flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] font-medium text-white/90 transition-colors hover:text-white"
                 onClick={() => toggleGroup(group.label)}
                 aria-expanded={gOpen}
               >
@@ -471,7 +478,7 @@ export default function AppShell() {
                 <ChevronDown className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-300 ${gOpen ? "" : "-rotate-90"}`} />
               </button>
             ) : (
-              <div className="mx-2 mb-1 border-b border-steel-100" aria-hidden />
+              <div className="mx-2 mb-1 border-b border-white/20" aria-hidden />
             )}
             <div className={`grid transition-all duration-300 ease-in-out ${gOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
               <ul className="space-y-0.5 overflow-hidden">
@@ -495,8 +502,8 @@ export default function AppShell() {
                         item.child && !mini ? "ml-4" : ""
                       } ${
                         isActive || activeProjectOrigin === item.to
-                          ? "bg-steel-100 font-medium text-navy-900 [&>svg]:text-ocean-500"
-                          : "text-steel-600 hover:bg-steel-50 hover:text-navy-900"
+                          ? "bg-white font-medium text-ocean-700 [&>svg]:text-ocean-600"
+                          : "text-white/90 hover:bg-white/15 hover:text-white"
                       }`
                     }
                   >
@@ -504,7 +511,7 @@ export default function AppShell() {
                     {!mini && <span className="truncate" title={item.label}>{item.label}</span>}
                     {!mini && badge > 0 ? (
                       <span
-                        className="ml-auto rounded-full bg-ocean-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white tabular-nums"
+                        className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ocean-700 tabular-nums"
                         title={S.shNewNotif.replace("{n}", String(badge))}
                       >
                         {badge > 99 ? "99+" : badge}
@@ -520,7 +527,7 @@ export default function AppShell() {
           );
         })}
       </nav>
-      <div className="border-t border-steel-100 p-3">
+      <div className="border-t border-white/20 p-3">
         <div className={`flex items-center gap-2.5 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
             {user?.initials ?? "?"}
@@ -528,7 +535,7 @@ export default function AppShell() {
           {!mini && (
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold">{user?.name ?? "-"}</p>
-              <p className="truncate text-[11px] text-steel-500">{user?.role ?? "-"}</p>
+              <p className="truncate text-[11px] text-white/90">{user?.role ?? "-"}</p>
             </div>
           )}
         </div>
