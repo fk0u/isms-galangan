@@ -2386,11 +2386,6 @@ if (k === "mattype") return matTypeOf(i);
           {tab === "Katalog" && (
             <>
               <p className="mb-3 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">{S.fifoInfo}</p>
-              <p className="mb-3 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">
-                {locale === "en"
-                  ? "ABC formula: items ranked by stock value (stock × cost); cumulative ≤70% = A, ≤90% = B, rest = C."
-                  : "Rumus ABC: item diurutkan berdasar nilai stok (stok × harga); kumulatif ≤70% = A, ≤90% = B, sisanya = C."}
-              </p>
               {/* Warning notification tidak lagi berupa banner besar per kategori.
                   Sebelumnya: satu blok amber muncul begitu ADA SATU item menyentuh
                   minStok, sehingga 1 dari 400 item menghasilkan peringatan untuk
