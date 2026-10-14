@@ -183,7 +183,7 @@ export default function Drydock() {
   const slotDateRangeForView = (slot: StoreItem) => slotDateRange(slot, todayWita);
   const formatSlotDateRange = (slot: StoreItem): string => {
     const dates = slotDateRangeForView(slot);
-    return dates ? fmtRentang(dates.startDate, dates.endDate) : "—";
+    return dates ? fmtRentang(dates.startDate, dates.endDate) : "-";
   };
 
   const [showBook, setShowBook] = useState(false);

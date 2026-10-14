@@ -209,7 +209,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "templateName": "Inspeksi coating lambung",
       "scope": "QC",
       "projectId": "RP-2026-003",
-      "wbsTask": "Painting — Priming",
+      "wbsTask": "Painting - Priming",
       "answers": {
         "coat-sa": "ya",
         "coat-profile": 3,
@@ -3167,7 +3167,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "sub": "CV Pengecatan Marine",
       "project": "RP-2026-003",
       "scope": "Coating lambung bawah garis air",
-      "wbsTask": "Painting — Priming",
+      "wbsTask": "Painting - Priming",
       "status": "Dalam Proses",
       "progress": 35,
       "date": "2026-09-28",
@@ -10792,7 +10792,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Scheduled",
       "technician": "Sari Wulandari",
       "cost": 75000000,
-      "wbsTask": "Outfitting — Machinery",
+      "wbsTask": "Outfitting - Machinery",
       "approval": "Diajukan"
     }
   },
@@ -10839,7 +10839,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "status": "Scheduled",
       "technician": "Agus Setiawan",
       "cost": 95000000,
-      "wbsTask": "Outfitting — Piping",
+      "wbsTask": "Outfitting - Piping",
       "approval": "Diajukan"
     }
   },
@@ -11478,7 +11478,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "type": "Pengeluaran",
       "qty": 20,
       "unit": "liter",
-      "by": "Rudi Hartono (WBS: Outfitting — Machinery)",
+      "by": "Rudi Hartono (WBS: Outfitting - Machinery)",
       "date": "2026-10-02",
       "tone": "out",
       "ref": {
@@ -11855,7 +11855,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "item": "Cat Epoxy Primer",
       "unit": "liter",
       "purpose": "wbs",
-      "wbsTask": "Outfitting — Machinery",
+      "wbsTask": "Outfitting - Machinery",
       "requested": 20,
       "issued": 20,
       "shortage": 0,
@@ -11880,7 +11880,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "item": "Anoda Zink",
       "unit": "pcs",
       "purpose": "wbs",
-      "wbsTask": "Outfitting — Machinery",
+      "wbsTask": "Outfitting - Machinery",
       "requested": 20,
       "issued": 0,
       "shortage": 20,

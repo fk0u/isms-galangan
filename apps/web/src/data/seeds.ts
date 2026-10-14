@@ -763,7 +763,7 @@ export const seedAttendanceMonth: StoreItem[] = Array.from({ length: 30 }, (_, i
 export const seedChecklistResponses: StoreItem[] = [
   { id: "CLR-2026-001", templateId: "CLT-QC-LAS", templateName: "Inspeksi pengelasan lambung", scope: "QC", projectId: "RP-2026-003", wbsTask: "Hull Assembly",
     answers: { "prep-wps": "ya", "prep-fit": 4, "prep-clean": "ya", "weld-visual": 4, "weld-ndt": "Lolos", "weld-note": "Blok 3–4 rapi" }, score: 88.6, answered: 5, totalItems: 5, inspector: "Sari Wulandari", at: "2026-10-08T03:10:00.000Z" },
-  { id: "CLR-2026-002", templateId: "CLT-QC-COAT", templateName: "Inspeksi coating lambung", scope: "QC", projectId: "RP-2026-003", wbsTask: "Painting — Priming",
+  { id: "CLR-2026-002", templateId: "CLT-QC-COAT", templateName: "Inspeksi coating lambung", scope: "QC", projectId: "RP-2026-003", wbsTask: "Painting - Priming",
     answers: { "coat-sa": "ya", "coat-profile": 3, "coat-dft": "Di bawah minimum", "coat-cure": "tidak" }, score: 49, answered: 4, totalItems: 4, inspector: "Sari Wulandari", at: "2026-10-07T06:40:00.000Z" },
   { id: "CLR-2026-003", templateId: "CLT-QC-LAS", templateName: "Inspeksi pengelasan lambung", scope: "QC", projectId: "NB-2025-012", wbsTask: "Hull Assembly",
     answers: { "prep-wps": "ya", "prep-fit": 5, "prep-clean": "ya", "weld-visual": 5, "weld-ndt": "Lolos" }, score: 100, answered: 5, totalItems: 5, inspector: "Sari Wulandari", at: "2026-10-05T02:15:00.000Z" },
@@ -772,7 +772,7 @@ export const seedChecklistResponses: StoreItem[] = [
 /* WO subkon dengan skema DP bertahap + termin otomatis + riwayat progres berfoto (F3-I). */
 export const seedWorkOrdersDemo: StoreItem[] = [
   {
-    id: "WO-2026-061", sub: "CV Pengecatan Marine", project: "RP-2026-003", scope: "Coating lambung bawah garis air", wbsTask: "Painting — Priming",
+    id: "WO-2026-061", sub: "CV Pengecatan Marine", project: "RP-2026-003", scope: "Coating lambung bawah garis air", wbsTask: "Painting - Priming",
     status: "Dalam Proses", progress: 35, date: "2026-09-28", targetDate: "2026-11-15", penaltyPct: 0.1, value: 600000000,
     paymentScheme: { type: "DP", parts: [{ label: "DP 1", pct: 30 }, { label: "DP 2", pct: 30 }] }, taxPct: 2, retPct: 5,
     progressLog: [

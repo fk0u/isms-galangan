@@ -323,3 +323,47 @@ docker compose up -d --build
 # 4. Verifikasi status kontainer
 docker compose ps
 ```
+
+---
+
+## 3. Verifikasi ulang 14 Oktober (Claude)
+
+Diverifikasi di aplikasi lokal yang tersambung API sungguhan (data seed bersih) dan lewat kode di `main`. Kolom "Cara" menunjukkan bukti: **klik** = dicoba di aplikasi, **kode** = diperiksa di sumber, **probe** = dijaga probe/test otomatis.
+
+### Ditemukan belum sesuai, diperbaiki di PR ini
+| Butir | Masalah | Perbaikan |
+|---|---|---|
+| Tahap "Desain" → "Perencanaan" | Dropdown *Tahap awal* di form Proyek Baru masih "Desain" | label "Perencanaan"/"Planning" (nilai data tetap) |
+| Sparepart lewat permintaan barang | Alur sudah benar, tetapi pesan sukses menulis "× 0" | menampilkan jumlah yang diminta |
+| Tinggi modal penugasan WBS | Modal tidak membesar; daftar karyawan/subkon menumpuk di atas tombol | tinggi minimum saat daftar terbuka dinaikkan |
+| Hapus semua em dash | Masih tampil: "— Tanpa PO —", "— Belum ditentukan —", sel kosong "—", judul risiko otomatis, nama tahapan WBS di seed | diganti "-"; probe em-dash kini juga memeriksa data seed |
+| Checklist BOM (14 Okt) | Barang keluar memotong stok tanpa memenuhi permintaan; barang masuk tidak lewat endpoint PO | PR #150 |
+| BOM per proyek + additional (14 Okt) | BOM masih satu daftar generik; form additional menulis stok di browser | PR #152 (ADR-0020) |
+
+### Sesuai
+| Modul | Butir | Cara |
+|---|---|---|
+| Dashboard | Aktivitas terkini tidak terpotong; ekspor PDF dilengkapi | kode (#118, #132) |
+| Proyek | Filter status berderet di kanan tombol Filter + "Lainnya", filter lain di bawah | klik |
+| Proyek | Picker PM hanya Project Manager (server juga menolak) | klik + probe |
+| Proyek | Urutan progres WBS, subtotal BoQ, BoQ diajukan tampil di Dokumen, kondisi trial 3 opsi | klik (trial) + kode |
+| Proyek | WBS tanpa template, worktree default tersembunyi ("Tampilkan Worktree"), info total & sisa bobot (bobot tidak wajib 100%) | klik + kode |
+| Proyek | Class approval: requirement per proyek (kosong di awal, hapus hanya item pending), tombol menuju masalah | kode (#125, #146) |
+| Proyek | Modal sparepart (catatan kanan kategori, garansi kanan teknisi); sparepart masuk permintaan "Menunggu ACC", stok tidak berubah | klik |
+| Proyek | Modal tim membesar saat daftar dibuka | klik |
+| Proyek | Foto wajib saat progres WBS berubah (server juga menolak) | probe |
+| Proyek | BoQ terikat ke proyeknya (daftar & surat BoQ difilter `projectId`) | kode |
+| Proyek | Panduan langkah setelah proyek baru | kode (#124) |
+| Monitoring | "Perhatian Khusus" merah; peran updater dicap server; feed tabel di bawah kartu tahapan + Detail | klik + probe |
+| Drydock | Tambah/hapus batas dimensi dock; tabel daftar dock paling bawah + tambah dock | klik + probe |
+| Inventori | Material Baru 3 langkah tanpa stok/gudang, stok minimum di Identitas, Eceran Ya/Tidak; pergerakan descending; tujuan transfer tanpa gudang asal (server juga menolak) | klik + probe |
+| Inventori | Checklist BOM masuk (procurement/additional) & keluar (permintaan/additional) | klik (PR #150, #152) |
+| Subkon | SPK berisi NPWP/alamat/nilai yang benar; posisi daftar tetap; simpan menunggu upload; skema termin | probe + kode (#145) |
+| QC | Tidak ada isian cabang; inspeksi per proyek dengan kuesioner & skor | kode (#138) |
+| SDM | Urutan kontrak, cabang default, status Aktif, "No. kontrak", tipe karyawan, PDF sertifikat, QR cuti, cuti mandiri tanpa PIN + pratinjau NIK + dokumen, riwayat & nomor kontrak di surat | klik + probe |
+| Keuangan | Tab akun hierarkis; daftar tabel terstruktur | kode (#102, #108, #142) |
+| Procurement | PO besar "Stok Gudang saja" → pilihan gudang; baris item; terima per item; PO kecil unggah bukti; nama item Minta Barang terhubung katalog + tombol tambah material membuka form di Inventori | kode (#141, #113) |
+| CRM / Payroll | Deskripsi kepuasan klien tersembunyi bawaan; persentase BPJS ditampilkan | kode |
+| Lintas modul | Posisi daftar tetap setelah edit; notifikasi dokumen perlu approval | probe + kode |
+
+Belum diuji klik di server produksi dengan login.

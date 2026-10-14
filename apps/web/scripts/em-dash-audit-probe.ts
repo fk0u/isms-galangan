@@ -1,8 +1,6 @@
 /* em-dash-audit-probe.ts — Verifikasi kepatuhan Issue #103:
  * 1. Seluruh string copywriting pada berkas i18n (src/i18n/n_*.ts) bebas dari em dash (—).
- * 2. Memastikan intentional exclusions (pengecualian yang disengaja) terjaga:
- *    - Domain teknis WBS ("Outfitting — Machinery", "Painting — Priming") pada seeds/store.
- *    - Empty cell placeholder visual ("—").
+ * 2. Data seed juga bebas em dash (catatan CTO 11 Okt).
  */
 import { services } from "../src/data/index";
 import { seedChecklistResponses } from "../src/data/seeds";
@@ -56,18 +54,12 @@ if (emDashFoundCount > 0) {
 }
 console.log(`[em-dash-audit] PASS: 0 em dash ditemukan di seluruh copywriting i18n.`);
 
-// Verifikasi intentional exclusions domain teknis WBS
-const hasOutfittingMachinery = (services || []).some((s) => String(s.wbsTask) === "Outfitting — Machinery");
-if (!hasOutfittingMachinery) {
-  console.error("FAIL: Intentional exclusion 'Outfitting — Machinery' pada services hilang!");
+// Catatan CTO 11 Okt "hapus semua em dash, perbarui copywriting seedernya":
+// data seed (termasuk nama tahapan WBS) juga harus bebas em dash.
+const seedText = JSON.stringify({ services, seedChecklistResponses });
+if (seedText.includes("—")) {
+  console.error("FAIL: data seed masih memuat em dash");
   process.exit(1);
 }
-
-const hasPaintingPriming = (seedChecklistResponses || []).some((c) => String(c.wbsTask) === "Painting — Priming");
-if (!hasPaintingPriming) {
-  console.error("FAIL: Intentional exclusion 'Painting — Priming' pada seedChecklistResponses hilang!");
-  process.exit(1);
-}
-
-console.log("[em-dash-audit] PASS: Intentional exclusion WBS domain terverifikasi utuh.");
-console.log("[em-dash-audit] Sukses: seluruh copy UI bersih dari em dash dan data domain WBS tetap terjaga.");
+console.log("[em-dash-audit] PASS: data seed bebas em dash.");
+console.log("[em-dash-audit] Sukses: copy UI dan data seed bersih dari em dash.");

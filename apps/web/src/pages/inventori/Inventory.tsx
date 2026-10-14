@@ -4264,7 +4264,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
           {moveKind === "in" && (
             <Field label="PO terkait (opsional)" hint="Pilih PO terbuka agar penerimaan terhubung ke PO. Kosong = dicatat tanpa PO.">
               <select className="input" value={movePo} onChange={(e) => setMovePo(e.target.value)}>
-                <option value="">— Tanpa PO —</option>
+                <option value="">Tanpa PO</option>
                 {(data.purchaseOrders ?? [])
                   .filter((p) => ["Diajukan", "Disetujui", "Dikirim"].includes(String(p.status)))
                   .map((p) => <option key={String(p.id)} value={String(p.id)}>{String(p.id)} · {String(p.item ?? "-")} · {String(p.vendor ?? "-")}</option>)}
