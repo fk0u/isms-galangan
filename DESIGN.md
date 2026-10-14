@@ -97,7 +97,7 @@ Token: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`, `--ease-in-out: cubic-bezie
 | `EmptyState` | Ikon abu + judul medium + deskripsi |
 
 ## Shell
-- **Sidebar** merah `ocean-600` (#C41212), bukan `#E61919`: teks putih 6,1:1, teks sekunder putih 90% 5,1:1 (AA). Jangan pakai putih di bawah 90% untuk teks. Logo di kotak putih. Item `rounded-lg`; aktif = latar putih + teks `ocean-700` + ikon `ocean-600`; hover = putih 15%. Badge putih dengan angka merah. Cincin fokus putih.
+- **Sidebar** merah `ocean-600` (#C41212), lebar 280px, bukan `#E61919`: teks putih 6,1:1, teks sekunder putih 90% 5,1:1 (AA). Jangan pakai putih di bawah 90% untuk teks. Dibuat ramah pengguna senior: teks menu 15px, baris minimal 44px, ikon 20px, label grup 12px kapital tebal. Menu aktif ditandai tiga cara (latar putih + teks `ocean-700` tebal + garis putih di kiri), tidak hanya warna. Logo di kotak putih; badge putih angka merah 12px; cincin fokus putih; animasi grup mati saat "kurangi gerakan".
 - **Top bar** putih 80% + `backdrop-blur`, border bawah tipis; status koneksi = pil hijau "Server" / abu "Lokal".
 - **Login**: panel kiri kanvas abu (logo, judul "Seluruh galangan, dalam satu sistem.", statistik grid halus), form dalam kartu `rounded-2xl` di kanan.
 

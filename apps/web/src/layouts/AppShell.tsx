@@ -450,38 +450,42 @@ export default function AppShell() {
        bukan #E61919: teks putih 6,1:1 dan putih 90% 5,1:1 (lolos AA untuk teks
        kecil), sedangkan di #E61919 teks redup jatuh di bawah 4,5:1. Elemen yang
        semula merah (logo, ikon aktif, badge, cincin fokus) dibuat putih supaya
-       tetap terlihat di atas latar merah. */
+       tetap terlihat di atas latar merah.
+       Ramah pengguna senior (permintaan 14 Okt): teks menu 15px, baris setinggi
+       ~44px (target sentuh), ikon 20px, menu aktif ditandai tiga cara sekaligus
+       (latar putih, huruf tebal, garis kiri) supaya tidak bergantung pada warna,
+       dan animasi buka-tutup grup mati bila pengguna memilih kurangi gerakan. */
     <div className="flex h-full flex-col bg-ocean-600 text-white [&_:focus-visible]:outline-white">
-      <div className={`flex h-14 items-center gap-2.5 px-4 ${mini ? "justify-center px-3" : ""}`}>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
-          <img src="/logo-sb.png" alt="Logo perusahaan" width={28} height={28} className="h-7 w-7 object-contain" />
+      <div className={`flex h-16 items-center gap-3 border-b border-white/20 px-4 ${mini ? "justify-center px-3" : ""}`}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white">
+          <img src="/logo-sb.png" alt="Logo perusahaan" width={30} height={30} className="h-[30px] w-[30px] object-contain" />
         </span>
         {!mini && (
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight tracking-[-0.01em]">ISMS PT Syukur Bersaudara</p>
-            <p className="truncate text-[11px] text-white/90">Galangan & Industri Kapal</p>
+            <p className="text-[15px] font-bold leading-tight tracking-[-0.01em]">ISMS Galangan</p>
+            <p className="truncate text-xs text-white/90">PT Syukur Bersaudara</p>
           </div>
         )}
       </div>
-      <nav className="flex-1 overflow-y-auto px-3 py-2">
+      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Menu utama">
         {visibleNavGroups.map((group) => {
           const gOpen = mini ? true : isGroupOpen(group.label);
           return (
-          <div key={group.label} className="mb-3">
+          <div key={group.label} className="mb-4">
             {!mini ? (
               <button
-                className="mb-0.5 flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[11px] font-medium text-white/90 transition-colors hover:text-white"
+                className="mb-1 flex min-h-9 w-full items-center gap-1 rounded-md px-3 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-white/90 transition-colors hover:bg-white/10 hover:text-white"
                 onClick={() => toggleGroup(group.label)}
                 aria-expanded={gOpen}
               >
                 <span className="truncate">{group.label}</span>
-                <ChevronDown className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-300 ${gOpen ? "" : "-rotate-90"}`} />
+                <ChevronDown className={`ml-auto h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${gOpen ? "" : "-rotate-90"}`} />
               </button>
             ) : (
               <div className="mx-2 mb-1 border-b border-white/20" aria-hidden />
             )}
-            <div className={`grid transition-all duration-300 ease-in-out ${gOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-              <ul className="space-y-0.5 overflow-hidden">
+            <div className={`grid transition-all duration-200 ease-out motion-reduce:transition-none ${gOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+              <ul className="space-y-1 overflow-hidden">
               {group.items.map((item) => {
                 // Badge sidebar tampil-sekali; link tetap bawa ?alert= agar
                 // banner modul langsung terbuka.
@@ -498,20 +502,20 @@ export default function AppShell() {
                       window.scrollTo({ top: 0 });
                     }}
                     className={({ isActive }) =>
-                      `group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] transition-colors duration-150 ${mini ? "justify-center" : ""} ${
+                      `group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] leading-snug transition-colors duration-150 active:scale-[0.98] motion-reduce:transform-none ${mini ? "justify-center" : ""} ${
                         item.child && !mini ? "ml-4" : ""
                       } ${
                         isActive || activeProjectOrigin === item.to
-                          ? "bg-white font-medium text-ocean-700 [&>svg]:text-ocean-600"
-                          : "text-white/90 hover:bg-white/15 hover:text-white"
+                          ? "bg-white font-semibold text-ocean-700 shadow-sm [&>svg]:text-ocean-600 before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-white"
+                          : "font-medium text-white/90 hover:bg-white/15 hover:text-white"
                       }`
                     }
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
+                    <item.icon className="h-5 w-5 shrink-0" />
                     {!mini && <span className="truncate" title={item.label}>{item.label}</span>}
                     {!mini && badge > 0 ? (
                       <span
-                        className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ocean-700 tabular-nums"
+                        className="ml-auto min-w-6 rounded-full bg-white px-2 py-1 text-center text-xs font-bold leading-none text-ocean-700 tabular-nums"
                         title={S.shNewNotif.replace("{n}", String(badge))}
                       >
                         {badge > 99 ? "99+" : badge}
@@ -529,13 +533,13 @@ export default function AppShell() {
       </nav>
       <div className="border-t border-white/20 p-3">
         <div className={`flex items-center gap-2.5 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-ocean-700">
             {user?.initials ?? "?"}
           </div>
           {!mini && (
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold">{user?.name ?? "-"}</p>
-              <p className="truncate text-[11px] text-white/90">{user?.role ?? "-"}</p>
+              <p className="truncate text-sm font-semibold">{user?.name ?? "-"}</p>
+              <p className="truncate text-xs capitalize text-white/90">{user?.role ?? "-"}</p>
             </div>
           )}
         </div>
@@ -549,14 +553,14 @@ export default function AppShell() {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72">{renderSidebar(false)}</div>
+          <div className="absolute inset-y-0 left-0 w-[19rem] max-w-[85vw]">{renderSidebar(false)}</div>
         </div>
       )}
 
       {/* Desktop sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden transition-all duration-300 lg:block ${minSide ? "w-20" : "w-64"}`}>{renderSidebar(minSide)}</aside>
+      <aside className={`fixed inset-y-0 left-0 z-30 hidden transition-all duration-300 lg:block ${minSide ? "w-20" : "w-[17.5rem]"}`}>{renderSidebar(minSide)}</aside>
 
-      <div className={`transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-64"}`}>
+      <div className={`transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-[17.5rem]"}`}>
 
         {/* Topbar */}
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-steel-200 bg-white/80 px-4 backdrop-blur-xl lg:px-6">
