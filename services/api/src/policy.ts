@@ -81,7 +81,7 @@ const ALL_ENVELOPE_COLLECTIONS = [
   "equipment", "bookings", "subcontractors", "workOrders", "termins",
   "employees", "invoices", "payables", "ncr", "incidents", "inspections",
   "purchaseOrders", "requisitions", "vendors", "quotations", "clients",
-  "documents", "surveys", "activities", "services", "spareparts", "boq", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
+  "documents", "surveys", "activities", "services", "spareparts", "boq", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
@@ -174,6 +174,7 @@ function makeHrMatrix(): Record<string, Action[]> {
 
 function makeProcurementMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {
+    bomItems: [...RW],
     requisitions: [...RWD],
     materialRequests: [...R_ONLY],
     services: [...R_ONLY],
@@ -195,6 +196,7 @@ function makeProcurementMatrix(): Record<string, Action[]> {
 
 function makeGudangMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {
+    bomItems: [...RWD],
     inventory: [...RWD],
     movements: [...RWD],
     materialRequests: [...R_ONLY],
@@ -212,6 +214,7 @@ function makeGudangMatrix(): Record<string, Action[]> {
 
 function makeProyekMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {
+    bomItems: [...RWD],
     projects: [...RWD],
     vessels: [...RWD],
     workOrders: [...RWD],
@@ -246,6 +249,7 @@ function makeProyekMatrix(): Record<string, Action[]> {
 
 function makeMekanikMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {
+    bomItems: [...R_ONLY],
     equipment: [...RWD],
     calibrations: [...RWD],
     maintenances: [...RWD],

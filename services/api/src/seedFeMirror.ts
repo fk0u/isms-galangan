@@ -1,5 +1,5 @@
 // GENERATED — jangan edit manual. Dibuat oleh `npm run seed:mirror`
-// dari apps/web/src/data/seeds.ts + data/index.ts (730 baris).
+// dari apps/web/src/data/seeds.ts + data/index.ts (744 baris).
 export interface MirrorRow {
   table: string;
   id: string;
@@ -5125,6 +5125,57 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "updated": "2026-08-15",
       "owner": "Santi",
       "sbRef": "001/TT-SMD/SMD/VIII/2026"
+    }
+  },
+  {
+    "table": "documents",
+    "id": "DOC-BQD-RP-2026-003-R1",
+    "branch": "",
+    "data": {
+      "title": "BoQ BQ/RP-2026-003/001 Rev 1",
+      "type": "BoQ",
+      "subType": "Revisi BoQ",
+      "project": "RP-2026-003",
+      "vessel": "TB Karya Bahari 12",
+      "version": "Rev 1",
+      "status": "Disetujui",
+      "updated": "2026-08-15",
+      "owner": "Direktur Demo",
+      "boqDocId": "BQD-RP-2026-003-R1"
+    }
+  },
+  {
+    "table": "documents",
+    "id": "DOC-BQD-NB-2025-012-R0",
+    "branch": "",
+    "data": {
+      "title": "BoQ BQ/NB-2025-012/001 Rev 0",
+      "type": "BoQ",
+      "subType": "BoQ Proyek",
+      "project": "NB-2025-012",
+      "vessel": "TB Samudra Jaya 07",
+      "version": "Rev 0",
+      "status": "Disetujui",
+      "updated": "2025-11-01",
+      "owner": "Direktur Demo",
+      "boqDocId": "BQD-NB-2025-012-R0"
+    }
+  },
+  {
+    "table": "documents",
+    "id": "DOC-BQD-RP-2026-005-R0",
+    "branch": "",
+    "data": {
+      "title": "BoQ BQ/RP-2026-005/001 Rev 0",
+      "type": "BoQ",
+      "subType": "BoQ Proyek",
+      "project": "RP-2026-005",
+      "vessel": "TB Pelita 01",
+      "version": "Rev 0",
+      "status": "Disetujui",
+      "updated": "2026-07-15",
+      "owner": "Direktur Demo",
+      "boqDocId": "BQD-RP-2026-005-R0"
     }
   },
   {
@@ -11734,7 +11785,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedAt": "2026-07-20",
       "supersededBy": "BQD-RP-2026-003-R1",
       "note": "Surat awal sebelum revisi 1.",
-      "total": 732000000
+      "total": 732000000,
+      "assigner": "Commercial Estimator",
+      "createdBy": "Commercial Estimator"
     }
   },
   {
@@ -11751,7 +11804,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedBy": "Direktur Demo",
       "approvedAt": "2026-08-15",
       "note": "Revisi 1 menyesuaikan harga coating.",
-      "total": 738000000
+      "total": 738000000,
+      "assigner": "Commercial Estimator",
+      "createdBy": "Commercial Estimator"
     }
   },
   {
@@ -11767,7 +11822,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedBy": "Direktur Demo",
       "approvedAt": "2025-11-01",
       "note": "Surat BoQ demo Rev 0.",
-      "total": 1390000000
+      "total": 1390000000,
+      "assigner": "Commercial Estimator",
+      "createdBy": "Commercial Estimator"
     }
   },
   {
@@ -11783,7 +11840,9 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "approvedBy": "Direktur Demo",
       "approvedAt": "2026-07-15",
       "note": "Surat BoQ demo Rev 0.",
-      "total": 320000000
+      "total": 320000000,
+      "assigner": "Commercial Estimator",
+      "createdBy": "Commercial Estimator"
     }
   },
   {
@@ -11857,6 +11916,138 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "requisitionId": null,
       "sparepartId": null,
       "note": ""
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-01",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-001",
+      "item": "Pelat Baja AH36 12mm",
+      "unit": "kg",
+      "need": 82000
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-02",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-002",
+      "item": "Mesin Bantu (Aux Engine)",
+      "unit": "unit",
+      "need": 2
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-03",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-003",
+      "item": "Cat Epoxy Primer",
+      "unit": "liter",
+      "need": 1200
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-04",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-004",
+      "item": "Pipa Schedule 40 6 inch",
+      "unit": "batang",
+      "need": 240
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-05",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-006",
+      "item": "Kabel Listrik Marine 4x50",
+      "unit": "meter",
+      "need": 3500
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-06",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-005",
+      "item": "Anoda Zink",
+      "unit": "pcs",
+      "need": 86
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-NB12-07",
+    "branch": "",
+    "data": {
+      "projectId": "NB-2025-012",
+      "itemId": "INV-007",
+      "item": "Baut Marine M20",
+      "unit": "pcs",
+      "need": 400
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-RP03-01",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-003",
+      "item": "Cat Epoxy Primer",
+      "unit": "liter",
+      "need": 120
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-RP03-02",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-003",
+      "itemId": "INV-005",
+      "item": "Anoda Zink",
+      "unit": "pcs",
+      "need": 40
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-RP05-01",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-005",
+      "itemId": "INV-021",
+      "item": "Cat Antifouling (drum 200 L)",
+      "unit": "drum",
+      "need": 6
+    }
+  },
+  {
+    "table": "bomItems",
+    "id": "BOM-RP05-02",
+    "branch": "",
+    "data": {
+      "projectId": "RP-2026-005",
+      "itemId": "INV-005",
+      "item": "Anoda Zink",
+      "unit": "pcs",
+      "need": 24
     }
   },
   {

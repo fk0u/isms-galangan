@@ -26,6 +26,7 @@ import { registerServiceApprovalRoutes } from "./routes/serviceApproval.js";
 import { registerPoFulfillmentRoutes } from "./routes/poFulfillment.js";
 import { registerDemoSwitchRoutes } from "./routes/demoSwitch.js";
 import { registerInventoryIssueRoutes } from "./routes/inventoryIssue.js";
+import { registerInventoryAdditionalRoutes } from "./routes/inventoryAdditional.js";
 import { registerPublicLeaveRoutes } from "./routes/publicLeave.js";
 import { registerAttendanceIngestRoutes } from "./routes/attendanceIngest.js";
 import { registerReadModelRoutes } from "./routes/readModels.js";
@@ -396,6 +397,7 @@ export function buildApp(): FastifyInstance {
   registerPoFulfillmentRoutes(app);
   registerDemoSwitchRoutes(app);
   registerInventoryIssueRoutes(app);
+  registerInventoryAdditionalRoutes(app);
   registerChangeOrderRoutes(app);
   registerEventRoutes(app);
   registerPublicLeaveRoutes(app);

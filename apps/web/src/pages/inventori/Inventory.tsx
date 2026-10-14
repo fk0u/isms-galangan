@@ -65,7 +65,7 @@ import { useModuleSync } from "../../data/useModuleSync";
 import { usePoActions } from "../../data/usePoActions";
 import { useApproveMaterialRequest, useFulfillMaterialRequest } from "../../data/useMaterialRequest";
 import type { CollectionKey } from "../../data/store";
-import { isBackendConfigured } from "../../services/http";
+import { apiFetch, isBackendConfigured } from "../../services/http";
 import { uploadFile } from "../../services/upload";
 import { fmtJumlah, fmtRupiah, fmtMiliar, fmtPersen, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -126,16 +126,6 @@ const ROMAWII = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "X
 function doNumber(seq: number, date = new Date()): string {
   return `${String(seq).padStart(2, "0")}/DO-SB/SMD/${ROMAWII[date.getMonth()]}/${date.getFullYear()}`;
 }
-
-/* Kebutuhan BOM TB Samudra Jaya 07 - dicocokkan ke data inventori aktual. */
-const BOM_NEEDS = [
-  { key: "Pelat Baja", need: 82000, unit: "kg" },
-  { key: "Mesin Bantu", need: 2, unit: "unit" },
-  { key: "Cat Epoxy", need: 1200, unit: "liter" },
-  { key: "Pipa Schedule", need: 240, unit: "batang" },
-  { key: "Kabel", need: 3500, unit: "meter" },
-  { key: "Anoda", need: 86, unit: "pcs" },
-];
 
 function moveLabel(type: string): string {
   if (type === "Penerimaan") return "Barang Masuk";
@@ -421,6 +411,9 @@ export default function Inventory() {
   const pdfDoc = usePdfDoc();
   const { user } = useAuth();
   const canWrite = hasPermission(user?.permissions, "inventory", "w");
+  const canBom = hasPermission(user?.permissions, "bomItems", "w");
+  const [bomForm, setBomForm] = useState<{ id: string | null; projectId: string; itemId: string; need: string; note: string } | null>(null);
+  const [bomDel, setBomDel] = useState<{ id: string; label: string } | null>(null);
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
   const [tab, setTab] = useState(() => tabParams.get("tab") || "Katalog");
@@ -878,11 +871,38 @@ if (k === "mattype") return matTypeOf(i);
     [data.warehouses, inventory],
   );
 
-  const bomRows = BOM_NEEDS.map((b) => {
-    const item = inventory.find((i) => i.name.toLowerCase().includes(b.key.toLowerCase()));
-    const stock = item ? Number(item.stock) : 0;
-    return { ...b, item, stock, ok: stock >= b.need };
-  });
+  /* BOM per proyek (ADR-0020): BOM → procurement (PR → PO) → penerimaan →
+     pengeluaran ke proyek. Per baris dihitung dari data nyata:
+     - dikeluarkan = barang yang sudah keluar ke proyek lewat permintaan barang;
+     - dalam pengadaan = PR proyek yang belum jadi PO + sisa PO proyek yang belum diterima;
+     - kurang = kebutuhan - dikeluarkan - stok gudang - dalam pengadaan. */
+  const bomRowsAll = useMemo(() => (data.bomItems ?? []).map((b) => {
+    const projectId = String(b.projectId ?? "");
+    const itemId = String(b.itemId ?? "");
+    const item = inventory.find((i) => i.id === itemId);
+    const need = Number(b.need) || 0;
+    const issued = (data.materialRequests ?? [])
+      .filter((m) => String(m.projectId ?? "") === projectId && String(m.itemId ?? "") === itemId)
+      .reduce((s, m) => s + (Number(m.issued) || 0), 0);
+    const prOpen = (data.requisitions ?? [])
+      .filter((r) => String(r.projectId ?? "") === projectId && String(r.itemId ?? "") === itemId && !["Sudah PO", "Ditolak", "Dibatalkan"].includes(String(r.status ?? "")))
+      .reduce((s, r) => s + (Number(r.qty) || 0), 0);
+    const poOpen = (data.purchaseOrders ?? [])
+      .filter((po) => String(po.project ?? po.projectId ?? "") === projectId && String(po.itemId ?? "") === itemId && !["Dibatalkan", "Ditolak"].includes(String(po.status ?? "")))
+      .reduce((s, po) => s + Math.max(0, (Number(po.qty) || 0) - (Number(po.receivedQty) || 0) - (Number(po.cancelledQty) || 0)), 0);
+    const stock = item ? Number(item.stock) || 0 : 0;
+    const remaining = Math.max(0, need - issued);
+    const net = Math.max(0, remaining - stock - prOpen - poOpen);
+    const status: "done" | "stock" | "proc" | "short" = remaining === 0 ? "done" : net === 0 && stock >= remaining ? "stock" : net === 0 ? "proc" : "short";
+    return {
+      id: String(b.id), projectId, itemId, key: item?.name ?? String(b.item ?? itemId), unit: String(b.unit ?? item?.unit ?? ""),
+      note: String(b.note ?? ""), item, need, issued, inProc: prOpen + poOpen, stock, net, status, ok: net === 0,
+    };
+  }), [data.bomItems, data.materialRequests, data.requisitions, data.purchaseOrders, inventory]);
+  const bomRows = useMemo(
+    () => bomRowsAll.filter((b) => bomProject === "Semua proyek" || b.projectId === bomProject),
+    [bomRowsAll, bomProject],
+  );
 
   const auditOf = (it: StoreItem) =>
     movements
@@ -942,14 +962,10 @@ if (k === "mattype") return matTypeOf(i);
   );
 
   const activeProjects = projects.filter((p) => String(p.status) !== "Selesai");
-  const forecastRows = activeProjects.flatMap((p) =>
-    BOM_NEEDS.map((b) => {
-      const item = inventory.find((i) => i.name.toLowerCase().includes(b.key.toLowerCase()));
-      const stock = item ? Number(item.stock) : 0;
-      const net = Math.max(0, b.need - stock);
-      return { project: p.id, vessel: String(p.vessel ?? ""), ...b, item, stock, net };
-    })
-  );
+  const activeIds = new Set(activeProjects.map((p) => String(p.id)));
+  const forecastRows = bomRowsAll
+    .filter((b) => activeIds.has(b.projectId))
+    .map((b) => ({ ...b, project: b.projectId, vessel: String(activeProjects.find((p) => String(p.id) === b.projectId)?.vessel ?? "") }));
   const forecastBase = useMemo(
     () => forecastRows.filter((f) => bomProject === "Semua proyek" || f.project === bomProject),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1181,7 +1197,21 @@ if (k === "mattype") return matTypeOf(i);
       return;
     }
     const wh = addInWh || String(data.warehouses?.[0]?.name ?? "Gudang Utama");
-    const matched = (data.inventory ?? []).find((i) => i.name.toLowerCase() === addInItem.trim().toLowerCase());
+    const matched = (data.inventory ?? []).find((i) => i.id === addInItem || i.name.toLowerCase() === addInItem.trim().toLowerCase());
+    /* Tersambung server: stok + movement ditulis server dalam satu transaksi.
+       Barang wajib sudah ada di katalog - jangan sampai tercatat masuk tanpa stok. */
+    if (isBackendConfigured()) {
+      if (!matched) { toast(S.bomAddNotInCatalog, "info"); return; }
+      if (addInSource.trim().length < 3) { toast(S.bomAddReasonReq, "info"); return; }
+      try {
+        await apiFetch(`/api/inventory/${encodeURIComponent(matched.id)}/additional`, { method: "POST", body: JSON.stringify({ direction: "in", qty: q, reason: addInSource.trim(), warehouse: wh }) });
+        await resyncCollections(["inventory", "movements"]);
+        log("mencatat penerimaan tambahan", `${matched.name} × ${fmtJumlah(q)}`, "Inventori");
+        toast(S.bomToastAddInSuccess, "success");
+        setAddInItem(""); setAddInQty(""); setAddInSource("");
+      } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+      return;
+    }
     if (matched) {
       await update("inventory", matched.id, {
         stock: Number(matched.stock) + q,
@@ -1220,6 +1250,21 @@ if (k === "mattype") return matTypeOf(i);
       return;
     }
     const matched = (data.inventory ?? []).find((i) => i.id === addOutItem || i.name.toLowerCase() === addOutItem.trim().toLowerCase());
+    if (isBackendConfigured()) {
+      if (!matched) { toast(S.bomAddNotInCatalog, "info"); return; }
+      if (addOutPurpose.trim().length < 3) { toast(S.bomAddReasonReq, "info"); return; }
+      try {
+        await apiFetch(`/api/inventory/${encodeURIComponent(matched.id)}/additional`, {
+          method: "POST",
+          body: JSON.stringify({ direction: "out", qty: q, reason: addOutPurpose.trim(), ...(bomProject !== "Semua proyek" ? { projectId: bomProject } : {}) }),
+        });
+        await resyncCollections(["inventory", "movements"]);
+        log("mencatat pengeluaran tambahan", `${matched.name} × ${fmtJumlah(q)}`, "Inventori");
+        toast(S.bomToastAddOutSuccess, "success");
+        setAddOutItem(""); setAddOutQty(""); setAddOutPurpose("");
+      } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+      return;
+    }
     if (matched) {
       const currStock = Number(matched.stock ?? 0);
       if (currStock < q) {
@@ -1562,20 +1607,43 @@ if (k === "mattype") return matTypeOf(i);
   };
 
   /* BOM explode → PR Draft, cegah duplikat PR terbuka untuk item sama. */
-  const buatPRDraft = async (itemName: string, qtyKurang: number, estAmount: number) => {
+  /* PR dari BOM membawa proyek, material, jumlah, dan satuan supaya rantai
+     BOM → PR → PO → penerimaan bisa ditelusuri (catatan CTO 14 Okt). */
+  const buatPRDraft = async (itemName: string, qtyKurang: number, estAmount: number, link?: { projectId: string; itemId: string; unit: string }) => {
     const open = requisitions.some(
       (r) => String(r.item).toLowerCase() === itemName.toLowerCase()
+        && (!link || String(r.projectId ?? "") === link.projectId)
         && ["Draft", "Draf", "Menunggu Approval", "RFQ", "Diajukan"].includes(String(r.status))
     );
     if (open) { toast(S.prOpenExists.replace("{n}", itemName), "info"); return; }
     try {
       const created = await add("requisitions", {
         item: itemName, by: "System BOM", amount: Math.max(0, Math.round(estAmount)), status: "Draft",
+        ...(link ? { projectId: link.projectId, itemId: link.itemId, qty: qtyKurang, unit: link.unit } : {}),
       }, { action: "membuat PR Draft (BOM)", target: `${itemName} × ${fmtJumlah(qtyKurang)}`, module: "Inventori" });
       toast(S.prDraftMade.replace("{a}", created.id).replace("{b}", itemName).replace("{n}", fmtJumlah(qtyKurang)));
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
+  };
+
+  const saveBom = async () => {
+    if (!bomForm) return;
+    const need = Number(bomForm.need);
+    if (!bomForm.projectId || !bomForm.itemId) { toast(S.bomNeedPick, "info"); return; }
+    if (!(need > 0)) { toast(S.qtyGtZero, "info"); return; }
+    const item = inventory.find((i) => i.id === bomForm.itemId);
+    const payload = { projectId: bomForm.projectId, itemId: bomForm.itemId, item: item?.name ?? "", unit: item?.unit ?? "", need, note: bomForm.note.trim() };
+    try {
+      if (bomForm.id) {
+        await update("bomItems", bomForm.id, payload);
+        log("mengubah BOM proyek", `${payload.projectId} · ${payload.item}`, "Inventori");
+      } else {
+        await add("bomItems", payload, { action: "menambah BOM proyek", target: `${payload.projectId} · ${payload.item}`, module: "Inventori" });
+      }
+      toast(S.bomSaved.replace("{a}", payload.item).replace("{b}", payload.projectId));
+      setBomForm(null);
+    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
   const downloadTemplate = () => {
@@ -2747,51 +2815,72 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <option value="Semua proyek">Semua proyek</option>
                   {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
                 </select>
-                {bomProject !== "Semua proyek" && (
-                  <p className="text-xs text-steel-500">Kebutuhan BOM bersifat generik (global) - tabel forecast difilter ke {bomProject}.</p>
-                )}
+
               </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <Card className="p-5 lg:col-span-2">
-                <CardHeader title={S.bomCardT} subtitle={S.bomCardS} />
-                <SearchBox
-                  value={bomNeedQ}
-                  onChange={setBomNeedQ}
-                  placeholder={S.anSearchPh}
-                  ariaLabel={S.anSearchPh}
-                  className="mt-2"
+                <CardHeader
+                  title={bomProject === "Semua proyek" ? S.bomCardAll : S.bomCardOne.replace("{a}", `${bomProject} · ${String(activeProjects.find((p) => String(p.id) === bomProject)?.vessel ?? "")}`)}
+                  subtitle={S.bomCardS}
+                  action={canBom ? (
+                    <button className="btn-primary text-xs" onClick={() => setBomForm({ id: null, projectId: bomProject === "Semua proyek" ? "" : bomProject, itemId: "", need: "", note: "" })}>
+                      <Plus className="h-3.5 w-3.5" /> {S.bomAddBtn}
+                    </button>
+                  ) : undefined}
                 />
-                <div className="mt-3 max-h-96 space-y-2 overflow-y-auto pr-1">
-                  {bomNeedShown.map((b) => {
-                    const kurang = Math.max(0, b.need - b.stock);
-                    return (
-                      <div key={b.key} className="flex items-center justify-between gap-3 border-b border-steel-100 py-2 text-sm">
-                        <div className="min-w-0">
-                          <p className="text-steel-700 truncate" title={b.item ? `${b.key} → ${b.item.name}` : b.key}>{b.key}</p>
-                          <p className="text-xs text-steel-400 truncate" title={b.item ? String(b.item.name) : "Belum ada item cocok"}>
-                            {b.item ? b.item.name : "Belum ada item cocok"}
-                          </p>
-                          {b.item && <Link to={`/inventori/bom/${b.item.id}`} className="text-xs font-semibold text-ocean-600 hover:underline">{S.openBom}</Link>}
-                          {!b.ok && b.item && (
-                            <button className="btn-secondary mt-1.5 text-xs" onClick={() => buatPRDraft(b.item!.name, kurang, kurang * Number(b.item!.cost || 0))}>
-                              {S.btnPrDraft.replace("{a}", fmtJumlah(kurang)).replace("{b}", b.unit)}
-                            </button>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-medium text-navy-900">Butuh {fmtJumlah(b.need)} {b.unit} · Stok {fmtJumlah(b.stock)}</p>
-                          <p className="mt-0.5 flex items-center justify-end gap-2 text-xs text-steel-500">
-                            {b.item ? fmtRupiah(b.need * Number(b.item.cost || 0)) : "-"}
-                            <Badge tone={b.ok ? "green" : "red"}>{b.ok ? "Cukup" : "Kurang"}</Badge>
-                          </p>
-                          {b.item && b.need > 0 && (
-                            <ProgressBar className="mt-1.5 w-40" value={(b.stock / b.need) * 100} tone={b.ok ? "green" : "amber"} />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <SearchBox value={bomNeedQ} onChange={setBomNeedQ} placeholder={S.anSearchPh} ariaLabel={S.anSearchPh} className="mt-2" />
+                {bomNeedShown.length === 0 ? (
+                  <EmptyState title={S.bomEmptyT} subtitle={canBom ? S.bomEmptyS : S.bomEmptySRead} />
+                ) : (
+                  <div className="mt-3 max-h-[28rem] overflow-auto">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead className="sticky top-0 z-10 bg-surface">
+                        <tr>
+                          <th className="th">{S.bomThMat}</th>
+                          <th className="th text-right">{S.bomThNeed}</th>
+                          <th className="th text-right">{S.bomThIssued}</th>
+                          <th className="th text-right">{S.stockLbl}</th>
+                          <th className="th text-right">{S.bomThInProc}</th>
+                          <th className="th">{S.bomThStatus}</th>
+                          <th className="th"><span className="sr-only">{S.thAksi}</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {bomNeedShown.map((b) => (
+                          <tr key={b.id} className="align-top hover:bg-surface">
+                            <td className="td">
+                              <p className="font-medium text-navy-900">{b.key}</p>
+                              <p className="text-[11px] text-steel-500">{bomProject === "Semua proyek" ? `${b.projectId} · ` : ""}{b.note || (b.item ? b.item.id : S.bomNoItem)}</p>
+                              {b.item && <Link to={`/inventori/bom/${b.item.id}`} className="text-[11px] font-semibold text-ocean-600 hover:underline">{S.openBom}</Link>}
+                            </td>
+                            <td className="td text-right whitespace-nowrap">{fmtJumlah(b.need)} {b.unit}</td>
+                            <td className="td text-right whitespace-nowrap">{fmtJumlah(b.issued)}</td>
+                            <td className="td text-right whitespace-nowrap">{fmtJumlah(b.stock)}</td>
+                            <td className="td text-right whitespace-nowrap">{fmtJumlah(b.inProc)}</td>
+                            <td className="td">
+                              <Badge tone={b.status === "done" ? "green" : b.status === "stock" ? "blue" : b.status === "proc" ? "amber" : "red"}>
+                                {b.status === "done" ? S.bomStDone : b.status === "stock" ? S.bomStStock : b.status === "proc" ? S.bomStProc : S.bomStShort.replace("{n}", `${fmtJumlah(b.net)} ${b.unit}`)}
+                              </Badge>
+                              {b.status === "short" && b.item && (
+                                <button className="btn-secondary mt-1.5 block text-xs" onClick={() => buatPRDraft(b.item!.name, b.net, b.net * Number(b.item!.cost || 0), { projectId: b.projectId, itemId: b.itemId, unit: b.unit })}>
+                                  {S.btnPrDraft.replace("{a}", fmtJumlah(b.net)).replace("{b}", b.unit)}
+                                </button>
+                              )}
+                            </td>
+                            <td className="td">
+                              {canBom && (
+                                <div className="flex gap-1">
+                                  <RowAction icon={Pencil} tone="neutral" label={S.bomEdit} ariaLabel={`${S.bomEdit} ${b.key}`} onClick={() => setBomForm({ id: b.id, projectId: b.projectId, itemId: b.itemId, need: String(b.need), note: b.note })} />
+                                  <RowAction icon={Trash2} tone="danger" label={S.bomDelete} ariaLabel={`${S.bomDelete} ${b.key}`} onClick={() => setBomDel({ id: b.id, label: `${b.projectId} · ${b.key}` })} />
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </Card>
               <Card className="p-5">
                 <CardHeader title={S.aksiMatT} subtitle={S.aksiMatS} />
@@ -2844,6 +2933,41 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 </div>
                 {forecastBase.length === 0 && <EmptyState title={S.emptyNoProjT} subtitle={S.emptyNoProjS} />}
               </Card>
+
+              <Modal open={bomForm !== null} onClose={() => setBomForm(null)} title={bomForm?.id ? S.bomEdit : S.bomAddBtn}
+                footer={<><button className="btn-secondary" onClick={() => setBomForm(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveBom}>{S.saveBtn}</AsyncButton></>}>
+                {bomForm && (
+                  <FormGrid>
+                    <Field label={S.thProyek}>
+                      <select className="input" value={bomForm.projectId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, projectId: e.target.value })}>
+                        <option value="">{S.bomPickProject}</option>
+                        {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
+                      </select>
+                    </Field>
+                    <Field label={S.bomThMat} hint={S.bomItemHint}>
+                      <select className="input" value={bomForm.itemId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, itemId: e.target.value })}>
+                        <option value="">{S.bomPickItem}</option>
+                        {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
+                      </select>
+                    </Field>
+                    <Field label={`${S.bomThNeed}${bomForm.itemId ? ` (${inventory.find((i) => i.id === bomForm.itemId)?.unit ?? ""})` : ""}`}>
+                      <NumInput min={0} className="input" value={bomForm.need} onChange={(e) => setBomForm({ ...bomForm, need: e.target.value })} />
+                    </Field>
+                    <Field label={S.bomNoteLbl}>
+                      <input className="input" value={bomForm.note} onChange={(e) => setBomForm({ ...bomForm, note: e.target.value })} />
+                    </Field>
+                  </FormGrid>
+                )}
+              </Modal>
+              <ConfirmModal open={bomDel !== null} danger title={S.bomDelete} confirmLabel={S.bomDelete}
+                desc={S.bomDeleteDesc.replace("{a}", bomDel?.label ?? "")}
+                onCancel={() => setBomDel(null)}
+                onConfirm={async () => {
+                  if (!bomDel) return;
+                  try { await remove("bomItems", bomDel.id); log("menghapus BOM proyek", bomDel.label, "Inventori"); toast(S.bomDeleted.replace("{a}", bomDel.label)); }
+                  catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+                  setBomDel(null);
+                }} />
 
               {/* PENERIMAAN BARANG (INBOUND BOM) */}
               <Card className="p-5 lg:col-span-3">
