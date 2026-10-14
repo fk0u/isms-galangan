@@ -1316,6 +1316,8 @@ export default function Drydock() {
       <Modal open={sel !== null} onClose={() => setSelected(null)} title={S.slotTitle.replace("{a}", sel?.id ?? "")} subtitle={sel ? `${sel.vessel} · ${sel.project}` : ""}>
         {sel && (
           <div>
+          {/* Modal slot = catatan jadwal; rincian tarif & tagihan disembunyikan
+              (catatan CTO 14 Okt). Invoice tetap dihitung dari tarif Pengaturan. */}
           <dl className="dl-div text-sm">
             <div className="flex justify-between"><dt className="text-steel-500">{S.colFacility}</dt><dd className="font-medium">{drydocks.find((d) => d.id === sel.dockId)?.name}</dd></div>
             <div className="flex items-center justify-between gap-2"><dt className="text-steel-500">{S.areaLabel}</dt><dd className="flex items-center gap-1.5">
@@ -1324,14 +1326,9 @@ export default function Drydock() {
             </dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.colDuration}</dt><dd className="font-medium">{formatSlotDateRange(sel)} ({S.durationDays.replace("{n}", String(slotDays(sel, todayWita)))})</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.colPriority}</dt><dd className="font-medium">{sel.priority ?? "Normal"}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.lblRate}</dt><dd className="font-medium">{S.perDay.replace("{a}", fmtRupiah(Number(sel.ratePerDay || 0)))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.lblCost}</dt><dd className="font-semibold text-navy-900">{S.durationDays.replace("{n}", String(slotDays(sel, todayWita)))} × {fmtRupiah(Number(sel.ratePerDay || 0))} = {fmtRupiah(slotCost(sel, todayWita))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects, todayWita)} label={mappingStatusLabel(slotStatus(sel, data.projects, todayWita))} /></dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblConflict}</dt><dd>{conflict.some((c) => c.id === sel.id) ? <Badge tone="red">{S.conflictBadge}</Badge> : <Badge tone="green">{S.safeBadge}</Badge>}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblRecorded}</dt><dd className="font-medium">{fmtJumlah(Number(sel.powerKwh || 0))} kWh · {fmtJumlah(Number(sel.waterM3 || 0))} m³</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">Tagihan konsumsi</dt><dd className="font-medium text-right">{fmtJumlah(Number(sel.powerKwh || 0))} kWh × {fmtRupiah(tarifKwh)} + {fmtJumlah(Number(sel.waterM3 || 0))} m³ × {fmtRupiah(tarifAir)} = {fmtRupiah(utilCostOf(sel))}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">Total tagihan slot</dt><dd className="font-semibold text-navy-900">Dock {fmtRupiah(slotCost(sel, todayWita))} + konsumsi {fmtRupiah(utilCostOf(sel))} = {fmtRupiah(tagihanOf(sel))}</dd></div>
-            <p className="text-right text-[11px] text-steel-400">Tarif dari Pengaturan (TARIF_LISTRIK_KWH / TARIF_AIR_M3)</p>
           </dl>
           <button className="btn-primary mt-2 w-full justify-center text-xs" onClick={() => void createInvoiceFromSlot(sel)}>Buat invoice dari slot (draft Milestone)</button>
           <div className="mt-3 border-t border-steel-100 pt-3">
