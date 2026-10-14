@@ -12,7 +12,7 @@ import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc, syncBoqDocToDocuments } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
-import { catalogStockGuardError, projectManagerError, stampRole, transferError } from "../domainGuards.js";
+import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -109,6 +109,7 @@ export const PREFIX: Record<string, string> = {
   materialRequests: "MR",
   checklistTemplates: "CLT",
   checklistResponses: "CLR",
+  bomItems: "BOM",
 };
 
 // Every envelope table from migrations/001_init.sql except users
@@ -123,7 +124,7 @@ export const COLLECTIONS: string[] = [
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
   "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
-  "checklistTemplates", "checklistResponses",
+  "checklistTemplates", "checklistResponses", "bomItems",
 ];
 
 // Tulis settings/coa dibatasi di registerCrud (requireSettingsWrite).
@@ -546,7 +547,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
     // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
     if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
-    const ruleCreate = transferError(table, rowData) ?? await projectManagerError(table, null, rowData);
+    const ruleCreate = transferError(table, rowData) ?? await projectManagerError(table, null, rowData) ?? await bomItemError(table, null, rowData);
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     const loanCreate = await loanOverlapError(table, null, rowData);
     if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
@@ -675,7 +676,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       merged = { ...merged, progressLog: stampRole(oldData.progressLog, m.progressLog, normalizeRole(req.user?.role)) } as typeof merged;
     }
     const rulePatch = (whChanged ? transferError(table, merged as Record<string, unknown>) : null)
-      ?? await projectManagerError(table, oldData, merged as Record<string, unknown>);
+      ?? await projectManagerError(table, oldData, merged as Record<string, unknown>)
+      ?? await bomItemError(table, id, merged as Record<string, unknown>);
     if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));
     const limitPatch = await dockLimitError(table, id, oldData, merged as Record<string, unknown>);
     if (limitPatch) return reply.status(limitPatch.status).send(fail(limitPatch.message, limitPatch.status === 409 ? "CONFLICT" : "UNPROCESSABLE"));

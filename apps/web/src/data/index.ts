@@ -614,6 +614,23 @@ export interface MaterialRequest {
   note: string;
 }
 
+/* BOM per proyek (catatan CTO 14 Okt): kebutuhan material tiap proyek. Data
+   sintetis; sebelumnya satu daftar generik dipakai semua proyek. */
+export interface BomItem { id: string; projectId: string; itemId: string; item: string; unit: string; need: number; note?: string }
+export const seedBomItems: BomItem[] = [
+  { id: "BOM-NB12-01", projectId: "NB-2025-012", itemId: "INV-001", item: "Pelat Baja AH36 12mm", unit: "kg", need: 82000 },
+  { id: "BOM-NB12-02", projectId: "NB-2025-012", itemId: "INV-002", item: "Mesin Bantu (Aux Engine)", unit: "unit", need: 2 },
+  { id: "BOM-NB12-03", projectId: "NB-2025-012", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", need: 1200 },
+  { id: "BOM-NB12-04", projectId: "NB-2025-012", itemId: "INV-004", item: "Pipa Schedule 40 6 inch", unit: "batang", need: 240 },
+  { id: "BOM-NB12-05", projectId: "NB-2025-012", itemId: "INV-006", item: "Kabel Listrik Marine 4x50", unit: "meter", need: 3500 },
+  { id: "BOM-NB12-06", projectId: "NB-2025-012", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 86 },
+  { id: "BOM-NB12-07", projectId: "NB-2025-012", itemId: "INV-007", item: "Baut Marine M20", unit: "pcs", need: 400 },
+  { id: "BOM-RP03-01", projectId: "RP-2026-003", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", need: 120 },
+  { id: "BOM-RP03-02", projectId: "RP-2026-003", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 40 },
+  { id: "BOM-RP05-01", projectId: "RP-2026-005", itemId: "INV-021", item: "Cat Antifouling (drum 200 L)", unit: "drum", need: 6 },
+  { id: "BOM-RP05-02", projectId: "RP-2026-005", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 24 },
+];
+
 export const seedMaterialRequests: MaterialRequest[] = [
   { id: "MR-2026-001", projectId: "RP-2026-003", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", purpose: "wbs", wbsTask: "Outfitting — Machinery", requested: 20, issued: 20, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Rudi Hartono", date: "2026-10-02", movementIds: ["M-MR-001"], requisitionId: null, sparepartId: null, note: "" },
   { id: "MR-2026-002", projectId: "RP-2026-003", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", purpose: "wbs", wbsTask: "Outfitting — Machinery", requested: 20, issued: 0, shortage: 20, status: "Menunggu PO", requestedBy: "Agus Setiawan", date: "2026-10-05", movementIds: [], requisitionId: "PR-2026-211", sparepartId: null, note: "Penggantian anoda lambung" },

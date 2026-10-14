@@ -129,3 +129,19 @@ export function catalogStockGuardError(table: string, data: Data): string | null
   }
   return null;
 }
+
+/** BOM per proyek (ADR-0020): kebutuhan > 0 dan satu material hanya sekali per
+ *  proyek - tambah kebutuhan dengan mengubah baris yang ada, bukan menduplikasi. */
+export async function bomItemError(table: string, id: string | null, data: Data): Promise<string | null> {
+  if (table !== "bomItems") return null;
+  const need = Number(data.need);
+  if (!Number.isFinite(need) || need <= 0) return "Kebutuhan BOM harus lebih dari 0";
+  if (str(data.projectId) === "" || str(data.itemId) === "") return "BOM wajib menyebut proyek dan material";
+  const rows = await q<{ id: string; data: string }>("SELECT id, data FROM bomItems", []);
+  const dup = rows.some((r) => {
+    if (r.id === id) return false;
+    const d = JSON.parse(r.data) as Data;
+    return str(d.projectId) === str(data.projectId) && str(d.itemId) === str(data.itemId);
+  });
+  return dup ? "Material ini sudah ada di BOM proyek tersebut; ubah kebutuhannya saja" : null;
+}

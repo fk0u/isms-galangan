@@ -63,6 +63,7 @@ export const REFS: Record<string, Record<string, RefDef>> = {
   activities: {},
   boq: { projectId: { target: "projects" }, boqDocId: { target: "boqDocs", allow: ["", "-"] } },
   checklistResponses: { templateId: { target: "checklistTemplates" }, projectId: { target: "projects", allow: ["", "-"] }, employeeId: { target: "employees", allow: ["", "-"] } },
+  bomItems: { projectId: { target: "projects" }, itemId: { target: "inventory" } },
   materialRequests: {
     projectId: { target: "projects" }, itemId: { target: "inventory" },
     requisitionId: { target: "requisitions", allow: [""] }, sparepartId: { target: "spareparts", allow: [""] },

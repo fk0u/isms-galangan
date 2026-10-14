@@ -36,6 +36,7 @@ import {
   seedBoqDocs,
   seedMaterialRequests,
   seedChecklistTemplates,
+  seedBomItems,
 } from "./index";
 import { COA_EXCEL, ASET_EXCEL } from "./financeExcel";
 import {
@@ -171,6 +172,8 @@ export interface StoreShape {
   materialRequests: StoreItem[];
   checklistTemplates: StoreItem[];
   checklistResponses: StoreItem[];
+  /** BOM per proyek: material inventori yang dibutuhkan satu proyek. */
+  bomItems: StoreItem[];
   wbsByProject: Record<string, WbsItem[]>;
   teamByProject: Record<string, string[]>;
 }
@@ -360,6 +363,7 @@ function buildSeeds(): StoreShape {
       materialRequests: clone(seedMaterialRequests) as StoreItem[],
       checklistTemplates: clone(seedChecklistTemplates) as StoreItem[],
       checklistResponses: clone(seedChecklistResponses) as StoreItem[],
+      bomItems: clone(seedBomItems) as StoreItem[],
       wbsByProject: clone(seedWbsByProject),
       teamByProject: clone(seedTeamByProject),
    };
@@ -517,6 +521,7 @@ const PREFIX: Record<string, string> = {
     materialRequests: "MR",
     checklistTemplates: "CLT",
     checklistResponses: "CLR",
+    bomItems: "BOM",
  };
 
 const ARRAY_KEYS: (keyof StoreShape)[] = [
@@ -528,7 +533,7 @@ const ARRAY_KEYS: (keyof StoreShape)[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties",
-  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
 ];
 
 function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
@@ -781,7 +786,7 @@ const OFFLINE_COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
   "wbsByProject", "teamByProject", "wbsBaseByProject", "teamBaseByProject",
 ];
 

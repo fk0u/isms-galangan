@@ -95,6 +95,26 @@ async function main(): Promise<void> {
     assert("hapus batas dock yang punya booking → 409 dengan penjelasan", hapusBatas.status === 409 && /booking/.test(hapusBatas.body.error?.message ?? ""), JSON.stringify(hapusBatas.body));
     assert("ubah nilai batas dock yang punya booking → 200", (await call("PATCH", `/api/drydocks/${dockId}`, { data: { maxLoa: 70 } })).status === 200);
 
+    /* ADR-0020: BOM per proyek + barang masuk/keluar additional lewat server */
+    const invId = `INV-G-${tag}`;
+    await exec("INSERT INTO inventory (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [invId, "Samarinda", JSON.stringify({ name: `Material Probe ${tag}`, unit: "pcs", stock: 5, warehouse: "Gudang Probe" }), now]);
+    cleanup.push(() => exec("DELETE FROM movements WHERE data LIKE ?", [`%${invId}%`]), () => exec("DELETE FROM bomItems WHERE data LIKE ?", [`%${invId}%`]), () => exec("DELETE FROM inventory WHERE id = ?", [invId]));
+    const bom = await call("POST", "/api/bomItems", { data: { projectId: pid, itemId: invId, need: 10, unit: "pcs" } });
+    assert("tambah BOM proyek → 201", bom.status === 201, JSON.stringify(bom.body));
+    assert("material sama dua kali di BOM proyek → 422", (await call("POST", "/api/bomItems", { data: { projectId: pid, itemId: invId, need: 3 } })).status === 422);
+    assert("kebutuhan BOM 0 → 422", (await call("POST", "/api/bomItems", { data: { projectId: pid, itemId: "INV-001", need: 0 } })).status === 422);
+    assert("BOM dengan proyek tak dikenal → ditolak", (await call("POST", "/api/bomItems", { data: { projectId: "PRJ-TIDAK-ADA", itemId: invId, need: 1 } })).status >= 400);
+    const masuk = await call("POST", `/api/inventory/${invId}/additional`, { direction: "in", qty: 7, reason: "sisa proyek lain", warehouse: "Gudang Baru" });
+    const stokMasuk = JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [invId]))[0]!.data) as { stock: number; warehouse: string };
+    assert("penerimaan additional: stok +7 dan gudang ditetapkan", masuk.status === 200 && stokMasuk.stock === 12 && stokMasuk.warehouse === "Gudang Baru", JSON.stringify(masuk.body));
+    const lebih = await call("POST", `/api/inventory/${invId}/additional`, { direction: "out", qty: 99, reason: "uji stok kurang" });
+    const stokTetap = JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [invId]))[0]!.data) as { stock: number };
+    assert("pengeluaran additional melebihi stok → 409 tanpa mengubah stok", lebih.status === 409 && stokTetap.stock === 12);
+    assert("pengeluaran additional tanpa alasan → 400", (await call("POST", `/api/inventory/${invId}/additional`, { direction: "out", qty: 1, reason: "" })).status === 400);
+    const keluar = await call("POST", `/api/inventory/${invId}/additional`, { direction: "out", qty: 2, reason: "pemakaian bengkel", projectId: pid });
+    const mvs = await q<{ n: number }>("SELECT COUNT(*) AS n FROM movements WHERE data LIKE ? AND data LIKE ?", [`%${invId}%`, "%Additional:%"]);
+    assert("pengeluaran additional: stok -2 dan 2 movement tercatat", keluar.status === 200 && (keluar.body.data as { stock?: number } | undefined)?.stock === 10 && mvs[0]!.n === 2, JSON.stringify(keluar.body));
+
     /* #82 */
     const bukanPm = await call("PATCH", `/api/projects/${pid}`, { data: { manager: `Fin Probe ${tag}` } });
     assert("manager non-PM → 422", bukanPm.status === 422, JSON.stringify(bukanPm.body));
@@ -107,7 +127,7 @@ async function main(): Promise<void> {
 
     /* #93 */
     // Hanya baris bertanda probe ini yang dihitung, agar tidak terganggu penulis lain.
-    const jumlah = async (): Promise<number> => (await q<{ n: number }>("SELECT COUNT(*) AS n FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]))[0]!.n;
+    const jumlah = async (): Promise<number> => (await q<{ n: number }>("SELECT COUNT(*) AS n FROM movements WHERE data LIKE ?", [`%"item":"Probe ${tag}"%`]))[0]!.n;
     const mv = { item: `Probe ${tag}`, itemId: "X", type: "Transfer", qty: 1, by: "A → A", date: "2026-10-12", tone: "in" };
     const sama = await call("POST", "/api/movements", { data: { ...mv, fromWh: "Gudang A", toWh: " gudang a " } });
     assert("transfer ke gudang asal → 422", sama.status === 422, JSON.stringify(sama.body));
