@@ -245,6 +245,12 @@ export default function Drydock() {
   const [utilDraft, setUtilDraft] = useState({ power: "", water: "" });
   const [bastOffer, setBastOffer] = useState<StoreItem | null>(null);
 
+  /* Catatan CTO 15 Okt: Drydock & Kapasitas sementara hanya pencatatan
+     (dock mana diisi kapal/proyek apa). Tarif, estimasi biaya, konsumsi,
+     invoice dari slot, dan docking report disembunyikan selama saklar ini 0.
+     Data tarif lama tetap tersimpan; nyalakan SHOW_DOCK_BILLING=1 untuk
+     menampilkannya lagi. */
+  const showBilling = getSetting(data, "SHOW_DOCK_BILLING", 0) === 1;
   const tarifKwh = getSetting(data, "TARIF_LISTRIK_KWH", 1500);
   const tarifAir = getSetting(data, "TARIF_AIR_M3", 15000);
   const utilCostOf = (s: StoreItem): number =>
@@ -446,13 +452,13 @@ export default function Drydock() {
 
   const exportAnnualPlan = () => {
     void exportExcel(
-      [["Slot", "Fasilitas", "Kapal", "Mulai", "Selesai", "Hari", "Tarif/Hari (Rp)", "Biaya Dock (Rp)", "Listrik (kWh)", "Air (m³)"],
+      [["Slot", "Fasilitas", "Kapal", "Mulai", "Selesai", "Hari", ...(showBilling ? ["Tarif/Hari (Rp)", "Biaya Dock (Rp)", "Listrik (kWh)", "Air (m³)"] : [])],
         ...dockSlots.map((s) => {
           const dates = slotDateRangeForView(s);
           return [s.id, drydocks.find((d) => d.id === s.dockId)?.name ?? s.dockId, s.vessel,
             dates ? fmtTanggal(dates.startDate) : "", dates ? fmtTanggal(dates.endDate) : "",
-            slotDays(s, todayWita), Number(s.ratePerDay || 0), slotCost(s, todayWita),
-            Number(s.powerKwh || 0), Number(s.waterM3 || 0)];
+            slotDays(s, todayWita),
+            ...(showBilling ? [Number(s.ratePerDay || 0), slotCost(s, todayWita), Number(s.powerKwh || 0), Number(s.waterM3 || 0)] : [])];
         })],
       "Rencana-Dock-Tahunan",
       "Dock Plan",
@@ -1328,8 +1334,11 @@ export default function Drydock() {
             <div className="flex justify-between"><dt className="text-steel-500">{S.colPriority}</dt><dd className="font-medium">{sel.priority ?? "Normal"}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.colStatus}</dt><dd><StatusBadge status={slotStatus(sel, data.projects, todayWita)} label={mappingStatusLabel(slotStatus(sel, data.projects, todayWita))} /></dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.lblConflict}</dt><dd>{conflict.some((c) => c.id === sel.id) ? <Badge tone="red">{S.conflictBadge}</Badge> : <Badge tone="green">{S.safeBadge}</Badge>}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.lblRecorded}</dt><dd className="font-medium">{fmtJumlah(Number(sel.powerKwh || 0))} kWh · {fmtJumlah(Number(sel.waterM3 || 0))} m³</dd></div>
+            {showBilling && (
+              <div className="flex justify-between"><dt className="text-steel-500">{S.lblRecorded}</dt><dd className="font-medium">{fmtJumlah(Number(sel.powerKwh || 0))} kWh · {fmtJumlah(Number(sel.waterM3 || 0))} m³</dd></div>
+            )}
           </dl>
+          {showBilling && (<>
           <button className="btn-primary mt-2 w-full justify-center text-xs" onClick={() => void createInvoiceFromSlot(sel)}>Buat invoice dari slot (draft Milestone)</button>
           <div className="mt-3 border-t border-steel-100 pt-3">
             <p className="text-xs font-semibold text-steel-500">{S.utilSection} (tambah: diakumulasi)</p>
@@ -1363,6 +1372,7 @@ export default function Drydock() {
               ))}
             </div>
           </div>
+          </>)}
             <div className="mt-3 flex gap-2">
               <button className="btn-secondary flex-1 justify-center" onClick={() => { setSelected(null); openMove(sel); }}>{S.btnMoveSlot}</button>
               <button className="btn-danger flex-1 justify-center" onClick={() => { setDeleting(sel); setSelected(null); }}><Trash2 className="h-4 w-4" /> {S.btnDelSlot}</button>
@@ -1440,9 +1450,11 @@ export default function Drydock() {
                 {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
               </select>
             </Field>
-            <Field label={S.lblRateDay} hint={S.hintRate}>
-              <MoneyInput className="input" value={bookForm.ratePerDay} onChange={(v) => setBookForm({ ...bookForm, ratePerDay: v })} placeholder={S.phRate} />
-            </Field>
+            {showBilling && (
+              <Field label={S.lblRateDay} hint={S.hintRate}>
+                <MoneyInput className="input" value={bookForm.ratePerDay} onChange={(v) => setBookForm({ ...bookForm, ratePerDay: v })} placeholder={S.phRate} />
+              </Field>
+            )}
             <Field label={S.lblDs} hint={S.hintDs}>
               <input className="input font-mono" value={bookForm.dsRef} onChange={(e) => setBookForm({ ...bookForm, dsRef: e.target.value })} placeholder={sbDsNumber(nextDsSeq())} />
             </Field>
@@ -1461,9 +1473,11 @@ export default function Drydock() {
               />
             </Field>
           </FormGrid>
-          <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
-            {S.costEstimate.replace("{a}", String(bookingDays ? bookingDays.to - bookingDays.from : 0)).replace("{b}", fmtRupiah(parseRupiah(bookForm.ratePerDay))).replace("{c}", fmtRupiah((bookingDays ? bookingDays.to - bookingDays.from : 0) * parseRupiah(bookForm.ratePerDay)))}
-          </p>
+          {showBilling && (
+            <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
+              {S.costEstimate.replace("{a}", String(bookingDays ? bookingDays.to - bookingDays.from : 0)).replace("{b}", fmtRupiah(parseRupiah(bookForm.ratePerDay))).replace("{c}", fmtRupiah((bookingDays ? bookingDays.to - bookingDays.from : 0) * parseRupiah(bookForm.ratePerDay)))}
+            </p>
+          )}
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
             {S.capInfo.replace("{a}", selDock?.capacity ?? "-")}
             {selProj ? (selLoa !== null ? S.loaInfo.replace("{a}", selProj.vessel).replace("{b}", String(selLoa)) : S.loaMissing.replace("{a}", selProj.vessel)) : ""}
