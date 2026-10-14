@@ -634,6 +634,10 @@ export default function Inventory() {
   // BOM Inbound (Penerimaan Barang) & Outbound (Pengeluaran Barang)
   const [bomInTab, setBomInTab] = useState<"procurement" | "additional">("procurement");
   const [bomOutTab, setBomOutTab] = useState<"request" | "additional">("request");
+  /* Checklist BOM masuk/keluar dibuka dari tombol Aksi Material, bukan tabel
+     panjang di bawah tab (permintaan 14 Okt). */
+  const [showBomIn, setShowBomIn] = useState(false);
+  const [showBomOut, setShowBomOut] = useState(false);
   const [selectedInIds, setSelectedInIds] = useState<string[]>([]);
   const [selectedOutIds, setSelectedOutIds] = useState<string[]>([]);
   const [inQtyInputs, setInQtyInputs] = useState<Record<string, string>>({});
@@ -2885,8 +2889,8 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               <Card className="p-5">
                 <CardHeader title={S.aksiMatT} subtitle={S.aksiMatS} />
                 <div className="mt-4 space-y-3">
-                  <button className="btn-primary w-full justify-center whitespace-nowrap py-5 text-base" title={grGiTip("Penerimaan", locale)} onClick={() => { const first = lowStock[0] ?? inventory[0]; if (first) openMove(first, "in"); }}><ArrowDownToLine className="h-4 w-4" /> {S.btnGr}</button>
-                  <button className="btn-secondary w-full justify-center" title={grGiTip("Pengeluaran", locale)} onClick={() => { const first = inventory[0]; if (first) openMove(first, "out"); }}><ArrowUpFromLine className="h-4 w-4" /> {S.btnGi}</button>
+                  <button className="btn-primary w-full justify-center whitespace-nowrap py-5 text-base" title={grGiTip("Penerimaan", locale)} onClick={() => setShowBomIn(true)}><ArrowDownToLine className="h-4 w-4" /> {S.btnGr}</button>
+                  <button className="btn-secondary w-full justify-center" title={grGiTip("Pengeluaran", locale)} onClick={() => setShowBomOut(true)}><ArrowUpFromLine className="h-4 w-4" /> {S.btnGi}</button>
                   <button className="btn-secondary w-full justify-center" onClick={() => setShowTransfer(true)}><Repeat className="h-4 w-4" /> {S.btnTransfer}</button>
                   <button className="btn-secondary w-full justify-center" onClick={() => { setRetItem(""); setRetQty(""); setRetVendor(""); setRetReason(""); setRetUom("base"); setShowRetur(true); }}><ArrowUpFromLine className="h-4 w-4" /> Retur ke Vendor</button>
                   <button className="btn-secondary w-full justify-center" onClick={() => setShowOpname(true)}><ClipboardCheck className="h-4 w-4" /> {S.opnameT}</button>
@@ -2969,17 +2973,9 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   setBomDel(null);
                 }} />
 
-              {/* PENERIMAAN BARANG (INBOUND BOM) */}
-              <Card className="p-5 lg:col-span-3">
+              {/* PENERIMAAN BARANG (INBOUND BOM): dibuka dari tombol "Terima Barang Masuk". */}
+              <Modal open={showBomIn} onClose={() => setShowBomIn(false)} title={S.bomInboundTitle} subtitle={S.bomInboundSub} extraWide>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold text-navy-900">
-                      {S.bomInboundTitle}
-                    </h3>
-                    <p className="text-xs text-steel-500">
-                      {S.bomInboundSub}
-                    </p>
-                  </div>
                   <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
                     <button
                       type="button"
@@ -3280,19 +3276,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                     </div>
                   </div>
                 )}
-              </Card>
+              </Modal>
 
-              {/* PENGELUARAN BARANG (OUTBOUND BOM) */}
-              <Card className="p-5 lg:col-span-3">
+              {/* PENGELUARAN BARANG (OUTBOUND BOM): dibuka dari tombol "Keluarkan Barang Keluar". */}
+              <Modal open={showBomOut} onClose={() => setShowBomOut(false)} title={S.bomOutboundTitle} subtitle={S.bomOutboundSub} extraWide>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h3 className="text-base font-semibold text-navy-900">
-                      {S.bomOutboundTitle}
-                    </h3>
-                    <p className="text-xs text-steel-500">
-                      {S.bomOutboundSub}
-                    </p>
-                  </div>
                   <div className="flex rounded-lg border border-steel-200 bg-surface p-1">
                     <button
                       type="button"
@@ -3585,7 +3573,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                     </div>
                   </div>
                 )}
-              </Card>
+              </Modal>
             </div>
             </div>
           )}
