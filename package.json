@@ -10,6 +10,7 @@
     "check:api": "npm run check --prefix services/api",
     "lint": "npm run lint --prefix apps/web && npm run lint --prefix services/api",
     "dev:api": "npm run dev --prefix services/api",
-    "dev:web": "npm run dev --prefix apps/web"
+    "dev:web": "npm run dev --prefix apps/web",
+    "ruas": "node /Users/kou/Project/Graph_Draft/packages/cli/dist/index.js"
   }
 }

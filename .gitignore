@@ -40,3 +40,4 @@ deploy/.env
 .env
 *.env
 .claude/
+.ruas/
