@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { UserCog } from "lucide-react";
+import { fetchLoginRoles, loginAsRole, type LoginRole } from "../auth/demoSwitch";
+import { isBackendConfigured } from "../services/http";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
@@ -22,6 +25,29 @@ export default function Login() {
   const [busy, setBusy] = useState<null | "auth">(null);
   const { t, locale } = useT();
   const S = n_misc[locale];
+
+  /* Pilihan peran untuk presentasi (permintaan 14 Okt): hanya muncul bila
+     server mengaktifkan DEMO_LOGIN_PAGE. */
+  const [loginRoles, setLoginRoles] = useState<LoginRole[]>([]);
+  const [pickRole, setPickRole] = useState("");
+  const [roleBusy, setRoleBusy] = useState(false);
+  useEffect(() => {
+    if (!isBackendConfigured()) return;
+    let alive = true;
+    void fetchLoginRoles().then((r) => { if (alive) setLoginRoles(r); });
+    return () => { alive = false; };
+  }, []);
+  const enterAsRole = async () => {
+    if (!pickRole || roleBusy) return;
+    setRoleBusy(true);
+    setError(null);
+    try {
+      await loginAsRole(pickRole, from);
+    } catch (e) {
+      setRoleBusy(false);
+      fail(e instanceof Error ? e.message : t.auth.roleLoginFail);
+    }
+  };
 
   const fail = (message: string) => {
     setError(message);
@@ -123,20 +149,7 @@ export default function Login() {
         </motion.div>
 
         <div>
-          <dl className="grid-ruled grid-cols-4">
-            {[
-              { v: "13", l: "Modul" },
-              { v: "120m", l: "Max dock" },
-              { v: "52T", l: "Bollard pull" },
-              { v: "24/7", l: "Yard ops" },
-            ].map((s) => (
-              <div key={s.l} className="px-4 py-3.5">
-                <dd className="text-xl font-semibold tracking-[-0.02em] text-navy-900 tabular-nums">{s.v}</dd>
-                <dt className="mt-0.5 text-xs text-steel-500">{s.l}</dt>
-              </div>
-            ))}
-          </dl>
-          <div className="mt-6 flex items-center justify-between text-xs text-steel-400">
+          <div className="flex items-center justify-between text-xs text-steel-400">
             <p>© 2026 PT Syukur Bersaudara</p>
             <p className="flex items-center gap-3">
               <span>ISO 9001</span>
@@ -221,6 +234,30 @@ export default function Login() {
               )}
             </button>
           </motion.form>
+
+          {loginRoles.length > 0 && (
+            <div className="card mt-4 p-5">
+              <p className="flex items-center gap-2 text-[15px] font-semibold text-navy-900">
+                <UserCog className="h-5 w-5 text-ocean-600" /> {t.auth.roleLoginTitle}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <select
+                  className="input flex-1 text-[15px]"
+                  aria-label={t.auth.roleLoginTitle}
+                  value={pickRole}
+                  onChange={(e) => setPickRole(e.target.value)}
+                  disabled={roleBusy}
+                >
+                  <option value="">{t.auth.rolePick}</option>
+                  {loginRoles.map((r) => <option key={r.role} value={r.role}>{r.name} · {r.role}</option>)}
+                </select>
+                <button type="button" className="btn-primary px-5" onClick={() => void enterAsRole()} disabled={!pickRole || roleBusy}>
+                  {roleBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : t.auth.roleGo}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-steel-500">{t.auth.roleLoginHint}</p>
+            </div>
+          )}
 
           {demoUsers.length > 0 && (
             <div className="card mt-4 p-5">

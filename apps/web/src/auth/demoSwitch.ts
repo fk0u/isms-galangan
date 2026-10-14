@@ -89,3 +89,32 @@ export async function restoreOriginal(): Promise<void> {
   await resetCacheFor(id);
   window.location.assign("/dashboard");
 }
+
+/* Login demo dari halaman login (server: GET/POST /api/auth/demo-login, hanya
+   aktif bila DEMO_LOGIN_PAGE=true). Dipakai untuk presentasi: pilih peran lalu
+   masuk tanpa mengetik password. */
+export interface LoginRole { role: string; name: string }
+
+export async function fetchLoginRoles(): Promise<LoginRole[]> {
+  try {
+    const res = await apiFetch<{ enabled: boolean; roles: LoginRole[] }>("/api/auth/demo-login");
+    return res.enabled ? res.roles : [];
+  } catch { return []; }
+}
+
+export async function loginAsRole(role: string, to = "/dashboard"): Promise<void> {
+  const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
+    "/api/auth/demo-login",
+    { method: "POST", body: JSON.stringify({ role }) },
+  );
+  const u = res.user;
+  sessionStorage.removeItem(ORIGIN_KEY);
+  setJwt(res.token);
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+    id: u.id, name: u.name, role: u.role, email: u.email, username: u.username,
+    initials: u.name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase(),
+    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, employeeId: u.employeeId ?? null,
+  }));
+  await resetCacheFor(u.id);
+  window.location.assign(to);
+}
