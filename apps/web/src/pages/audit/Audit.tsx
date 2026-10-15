@@ -4,13 +4,13 @@ import { Download, History } from "lucide-react";
 import { Badge, Card, EmptyState, Field, KpiCard, PageHeader, SortTh, toggleSort, sortRows, toast, usePager, useServerPager, AsyncButton, SearchBox, rowMatches } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { FilterPopover } from "../../components/FilterPopover";
-import { useStore } from "../../data/store";
+import { currentSessionUsername, useStore } from "../../data/store";
 import { apiFetch, isBackendConfigured } from "../../services/http";
 import { useT } from "../../i18n/LanguageContext";
 import { n_misc } from "../../i18n/n_misc";
 import { exportExcel } from "../../utils/export";
-import { fmtTanggal } from "../../utils/format";
-import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
+import { fmtTanggalJam } from "../../utils/format";
+import { createdAtOf, createdAtRaw, lastTouchedAt } from "../../utils/timestamps";
 
 /** Ambil YYYY-MM-DD dari string waktu bila bisa diparse; abaikan "baru saja" dan teks relatif. */
 function toISODateOrNull(v: unknown): string | null {
@@ -21,6 +21,24 @@ function toISODateOrNull(v: unknown): string | null {
   const t = new Date(s).getTime();
   if (Number.isNaN(t)) return null;
   return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Jejak lama di perangkat tercatat sebagai "Anda". Store aktivitas dipisah per
+ *  akun (sessionScopeKey), jadi "Anda" di sini selalu akun yang sedang login. */
+function actorOf(a: Record<string, unknown>): string {
+  const actor = String(a.actor ?? "").trim();
+  if (actor === "") return "-";
+  return actor === "Anda" ? currentSessionUsername() ?? actor : actor;
+}
+
+/** Waktu persis kejadian: `createdAt` (jejak baru), lalu `time` bila berupa
+ *  tanggal, lalu `updated_at` server (saat jejak lama tersinkron). */
+function timeOf(a: Record<string, unknown>): string | null {
+  const created = createdAtRaw(a);
+  if (created) return created;
+  const time = String(a.time ?? "").trim();
+  if (time && !Number.isNaN(Date.parse(time))) return time;
+  return lastTouchedAt(a);
 }
 
 interface ServerAuditRow {
@@ -113,7 +131,7 @@ export default function Audit() {
     return (localBase ?? []).filter((a) => {
       if (modul !== "SEMUA" && String(a.module ?? "") !== modul) return false;
       if (tanggal) {
-        const iso = toISODateOrNull(a.time);
+        const iso = toISODateOrNull(timeOf(a) ?? a.time);
         if (iso !== tanggal) return false;
       }
       return rowMatches(a, q, ["actor", "action", "target", "module"]);
@@ -122,7 +140,7 @@ export default function Audit() {
   /* Mode Server sudah terfilter dari backend; mode Perangkat disaring lokal. */
   const displayRows = isServer ? auditServer.rows : localRows;
   const sortedAudits = useMemo(() => sortRows(displayRows, sort, (a, key) =>
-    key === "waktu" ? String(a.time ?? "") : key === "aktor" ? String(a.actor ?? "") : key === "aksi" ? String(a.action ?? "") : key === "target" ? String(a.target ?? "") : key === "createdAt" ? createdAtOf(a) ?? "" : key === "updatedAt" ? lastTouchedAt(a) ?? "" : String(a.module ?? "")
+    key === "waktu" ? timeOf(a) ?? "" : key === "aktor" ? actorOf(a) : key === "aksi" ? String(a.action ?? "") : key === "target" ? String(a.target ?? "") : key === "createdAt" ? createdAtOf(a) ?? "" : key === "updatedAt" ? lastTouchedAt(a) ?? "" : String(a.module ?? "")
   ), [displayRows, sort]);
   const auditPager = usePager(localRows.length);
   useEffect(() => {
@@ -136,7 +154,7 @@ export default function Audit() {
   const actors = useMemo(() => {
     const set = new Set<string>();
     for (const a of displayRows ?? []) {
-      if (a.actor) set.add(String(a.actor));
+      if (a.actor) set.add(actorOf(a));
     }
     return set.size;
   }, [displayRows]);
@@ -144,8 +162,8 @@ export default function Audit() {
   const doExport = async () => {
     const head = ["Waktu", "Aktor", "Aksi", "Target", "Modul"];
     const toRow = (a: StoreItemLike): (string | number)[] => [
-      String(a.time ?? "-"),
-      String(a.actor ?? "-"),
+      fmtTanggalJam(timeOf(a)),
+      actorOf(a),
       String(a.action ?? "-"),
       String(a.target ?? "-"),
       String(a.module ?? "-"),
@@ -267,15 +285,15 @@ export default function Audit() {
             <tbody className="divide-y divide-steel-50">
               {(isServer ? sortedAudits : auditPager.slice(sortedAudits)).map((a) => (
                 <tr key={String(a.id)} className="hover:bg-surface">
-                  <td className="whitespace-nowrap px-5 py-2.5 text-xs text-steel-500">{String(a.time ?? "-")}</td>
-                  <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-navy-900">{String(a.actor ?? "-")}</td>
+                  <td className="whitespace-nowrap px-5 py-2.5 text-xs text-steel-500">{fmtTanggalJam(timeOf(a))}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-navy-900">{actorOf(a)}</td>
                   <td className="px-3 py-2.5 text-steel-700">{String(a.action ?? "-")}</td>
                   <td className="px-3 py-2.5 font-medium text-navy-800">{String(a.target ?? "-")}</td>
                   <td className="px-5 py-2.5">
                     <Badge tone="navy">{String(a.module ?? "-")}</Badge>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-steel-600">{createdAtOf(a) !== null ? fmtTanggal(createdAtOf(a)) : <span className="text-steel-400">-</span>}</td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-steel-600">{lastTouchedAt(a) !== null ? fmtTanggal(lastTouchedAt(a)) : <span className="text-steel-400">-</span>}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-steel-600">{createdAtRaw(a) !== null ? fmtTanggalJam(createdAtRaw(a)) : <span className="text-steel-400">-</span>}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-steel-600">{lastTouchedAt(a) !== null ? fmtTanggalJam(lastTouchedAt(a)) : <span className="text-steel-400">-</span>}</td>
                 </tr>
               ))}
             </tbody>
