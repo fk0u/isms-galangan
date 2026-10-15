@@ -41,6 +41,13 @@ function timeOf(a: Record<string, unknown>): string | null {
   return lastTouchedAt(a);
 }
 
+/** Tampilan kolom Waktu: tanggal + jam bila waktunya diketahui, selain itu
+ *  label relatif lama apa adanya (mis. jejak seed "5 menit lalu"). */
+function timeLabel(a: Record<string, unknown>): string {
+  const t = timeOf(a);
+  return t ? fmtTanggalJam(t) : String(a.time ?? "-");
+}
+
 interface ServerAuditRow {
   id?: unknown;
   actor?: unknown;
@@ -162,7 +169,7 @@ export default function Audit() {
   const doExport = async () => {
     const head = ["Waktu", "Aktor", "Aksi", "Target", "Modul"];
     const toRow = (a: StoreItemLike): (string | number)[] => [
-      fmtTanggalJam(timeOf(a)),
+      timeLabel(a),
       actorOf(a),
       String(a.action ?? "-"),
       String(a.target ?? "-"),
@@ -285,7 +292,7 @@ export default function Audit() {
             <tbody className="divide-y divide-steel-50">
               {(isServer ? sortedAudits : auditPager.slice(sortedAudits)).map((a) => (
                 <tr key={String(a.id)} className="hover:bg-surface">
-                  <td className="whitespace-nowrap px-5 py-2.5 text-xs text-steel-500">{fmtTanggalJam(timeOf(a))}</td>
+                  <td className="whitespace-nowrap px-5 py-2.5 text-xs text-steel-500">{timeLabel(a)}</td>
                   <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-navy-900">{actorOf(a)}</td>
                   <td className="px-3 py-2.5 text-steel-700">{String(a.action ?? "-")}</td>
                   <td className="px-3 py-2.5 font-medium text-navy-800">{String(a.target ?? "-")}</td>

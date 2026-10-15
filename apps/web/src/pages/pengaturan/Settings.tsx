@@ -239,7 +239,7 @@ export default function Settings() {
         const renderRow = (s: (typeof rows)[number]) => (
           <div key={s.id} className="rounded-xl border border-steel-100 p-3">
             {isToggleKey(String(s.key)) ? (
-              <Field label={String(s.label ?? s.key)} hint={S.toggle3dHint}>
+              <Field label={String(s.label ?? s.key)} hint={s.key === "SHOW_DOCK_BILLING" ? S.toggleDockHint : S.toggle3dHint}>
                 <button
                   type="button"
                   role="switch"
