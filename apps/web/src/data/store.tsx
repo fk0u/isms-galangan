@@ -591,6 +591,22 @@ function currentSessionOwnerId(): string | null {
   }
 }
 
+/** Username akun yang sedang login, untuk kolom "Aktor" jejak aktivitas.
+ *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
+ *  pelakunya (catatan CTO 15 Okt). */
+export function currentSessionUsername(): string | null {
+  try {
+    const raw = sessionStorage.getItem("isms.session");
+    if (!raw) return null;
+    const session = JSON.parse(raw) as { username?: unknown; name?: unknown };
+    const u = typeof session.username === "string" ? session.username.trim() : "";
+    const n = typeof session.name === "string" ? session.name.trim() : "";
+    return u || n || null;
+  } catch {
+    return null;
+  }
+}
+
 function storedCacheOwnerId(): string | null {
   try {
     return localStorage.getItem(CACHE_OWNER_KEY);
@@ -2284,11 +2300,14 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
   const api = useMemo<StoreCtx>(() => {
     const buildActivity = (action: string, target: string, module: string): StoreItem => ({
       id: newId("activities"),
-      actor: "Anda",
+      actor: currentSessionUsername() ?? "Anda",
       action,
       target,
       module,
+      /* `time` tetap label relatif untuk feed; waktu persis disimpan di
+         `createdAt` supaya Audit Trail bisa menampilkan tanggal + jam. */
       time: "baru saja",
+      createdAt: new Date().toISOString(),
       tone: ACTOR_TONE[module] ?? "navy",
     });
 

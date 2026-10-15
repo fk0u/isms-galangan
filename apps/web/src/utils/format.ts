@@ -22,6 +22,22 @@ export function fmtTanggal(v: string | null | undefined): string {
   return `${Number(p.d)} ${bulan} ${p.y}`;
 }
 
+/** Waktu lengkap dalam WITA: "2026-10-15T00:28:14Z" → "15 Okt 2026, 08.28.14 WITA".
+ *  String tanggal saja tetap tampil sebagai tanggal; selain itu "-". */
+export function fmtTanggalJam(v: string | null | undefined): string {
+  const s = String(v ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return fmtTanggal(s);
+  const t = Date.parse(s);
+  if (!s || Number.isNaN(t)) return "-";
+  const parts = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Makassar", day: "numeric", month: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(new Date(t));
+  const g = (k: string): string => parts.find((p) => p.type === k)?.value ?? "";
+  const bulan = BULAN[Number(g("month")) - 1] ?? g("month");
+  return `${g("day")} ${bulan} ${g("year")}, ${g("hour")}.${g("minute")}.${g("second")} WITA`;
+}
+
 /** "2026-08-01" → "Agu 2026" */
 export function fmtBulan(v: string | null | undefined): string {
   const p = parseISO(v);
