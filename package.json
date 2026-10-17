@@ -11,6 +11,8 @@
     "lint": "npm run lint --prefix apps/web && npm run lint --prefix services/api",
     "dev:api": "npm run dev --prefix services/api",
     "dev:web": "npm run dev --prefix apps/web",
-    "ruas": "node /Users/kou/Project/Graph_Draft/packages/cli/dist/index.js"
+    "ruas": "npx -y @fk0u/ruas@1.4.0",
+    "ruas:index": "npx -y @fk0u/ruas@1.4.0 index .",
+    "ruas:mcp": "npx -y @fk0u/ruas@1.4.0 mcp ."
   }
 }
