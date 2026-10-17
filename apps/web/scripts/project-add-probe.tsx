@@ -76,7 +76,7 @@ const dummyDocks: StoreItem[] = [
   assert(html.includes("Rencana lokasi docking"), "Modal menampilkan label 'Rencana lokasi docking'");
   assert(!html.includes("Cabang wajib dipilih"), "Modal tidak lagi berisi validasi select cabang manual");
   assert(html.includes("Pilih rencana dock"), "Modal menampilkan placeholder rencana dock");
-  assert(html.includes("Project manager"), "Modal menampilkan label Project Manager");
+  assert(html.includes("Pimpinan Proyek"), "Modal menampilkan label Pimpinan Proyek");
 }
 
 // 3. Verifikasi kontrak data penyimpanan proyek
