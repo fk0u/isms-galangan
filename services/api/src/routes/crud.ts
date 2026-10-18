@@ -9,7 +9,7 @@ import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate }
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
 import { fail, ok } from "../envelope.js";
-import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments } from "../boqDocs.js";
+import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments, withBoqLineTotal } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError } from "../domainGuards.js";
@@ -541,6 +541,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     // 5. activities: actor diisi dari token; tolak pemalsuan nama aktor
     let rowData: Record<string, unknown> = { ...parsed.data.data };
     if (table === "boqDocs") rowData = normalizeNewDoc(rowData);
+    if (table === "boq") rowData = withBoqLineTotal(rowData);
     if (table === "services") rowData = normalizeNewService(rowData);
     if (table === "changeOrders") rowData = normalizeNewChangeOrder(rowData);
     if (table === "activities") {
@@ -705,6 +706,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const clPatch = await checklistHook(table, merged as Record<string, unknown>);
     if ("error" in clPatch) return reply.status(422).send(fail(clPatch.error, "UNPROCESSABLE"));
     merged = clPatch.data as typeof merged;
+    if (table === "boq") merged = withBoqLineTotal(merged, (parsed.data.data ?? {}) as Record<string, unknown>) as typeof merged;
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const changedRange = table === "dockSlots" && (

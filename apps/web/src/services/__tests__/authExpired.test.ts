@@ -52,4 +52,25 @@ describe("401 → pemberitahuan sesi berakhir", () => {
     await expect(http.apiFetch("/api/auth/login", { method: "POST", body: "{}" })).rejects.toBeInstanceOf(http.ApiError);
     expect(expired).toBe(0);
   });
+
+  it("401 di permintaan latar: sesi dicek ulang, habis → satu pemberitahuan", async () => {
+    const http = await import("../http");
+    http.setJwt("token-dicabut");
+    await Promise.allSettled([http.apiFetch("/api/a", { background: true }), http.apiFetch("/api/b", { background: true })]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(expired).toBe(1);
+    expect(http.getJwt()).toBeNull();
+  });
+
+  it("401 latar sesaat (auth/me masih 200) tidak mengakhiri sesi", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => (String(url).endsWith("/api/auth/me")
+      ? new Response(JSON.stringify({ ok: true, data: {} }), { status: 200 })
+      : new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), { status: 401 }))));
+    const http = await import("../http");
+    http.setJwt("token-masih-sah");
+    await Promise.allSettled([http.apiFetch("/api/a", { background: true })]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(expired).toBe(0);
+    expect(http.getJwt()).toBe("token-masih-sah");
+  });
 });

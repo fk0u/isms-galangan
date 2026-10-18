@@ -37,6 +37,7 @@ async function main(): Promise<void> {
   const item = await call("POST", "/api/boq", { data: { projectId: project.id, boqDocId: doc.id, name: "Probe plat", quantity: 2, unitPrice: 1500000 } });
   const itemId = (item.json().data as { id: string }).id;
   assert("item BoQ ke surat Draft → 201", item.statusCode === 201, item.body);
+  assert("totalPrice diisi server = qty × harga bila tidak dikirim", (item.json().data as { data: { totalPrice?: number } }).data.totalPrice === 3000000, item.body);
 
   /* Revisi 18 Okt: register Dokumen mengikuti isi surat BoQ. */
   const docRow = async (id: string) => {

@@ -1917,6 +1917,10 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
               if (!isCurrentSession()) return "session";
               if (err instanceof ApiError && (err.status === 401 || err.status === 403)) return "auth";
               if (err instanceof ApiError && err.status === 409) {
+                /* activities append-only: 409 saat create berarti baris log ini
+                   sudah tersimpan (mis. push ulang setelah 429). Jatuh ke PATCH
+                   pasti 403 dan koleksi tertahan "belum tersinkron" selamanya. */
+                if (col === "activities") return isCurrentSession() ? "ok" : "session";
                 try {
                   // Kirim baseUpdatedAt agar STALE terdeteksi, bukan timpa buta.
                   // staleBase dipakai saat percobaan ulang: `updated_at` yang

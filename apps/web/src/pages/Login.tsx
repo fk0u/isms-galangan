@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
 import { useAuth, demoUsers } from "../auth/auth";
+import { takeSessionExpired } from "../auth/sessionExpired";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import { toast } from "../components/ui";
@@ -15,15 +16,16 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const { t, locale } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  // Datang dari sesi yang berakhir (AppShell): tampilkan alasannya di form.
+  const [error, setError] = useState<string | null>(() => (takeSessionExpired() ? t.auth.sessionExpired : null));
   const [shake, setShake] = useState(0);
   const [fails, setFails] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(0);
   // Mencegah double-submit selama autentikasi; sinkronisasi dilakukan per modul.
   const [busy, setBusy] = useState<null | "auth">(null);
-  const { t, locale } = useT();
   const S = n_misc[locale];
 
   /* Pilihan peran untuk presentasi (permintaan 14 Okt): hanya muncul bila

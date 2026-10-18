@@ -152,6 +152,22 @@ function notifyAuthExpired(): void {
   }
 }
 
+/* 401 pada permintaan latar sengaja tidak langsung mengakhiri sesi (lihat
+   `background`). Tapi tanpa pemeriksaan lanjutan, sesi yang benar-benar habis
+   saat pengguna hanya membuka halaman (semua GET = latar) membuat aplikasi
+   terus mencoba ulang dan tampil "offline" tanpa pernah kembali ke login
+   (K17-UMUM-01). Satu kali cek /api/auth/me memastikan: 401 juga → sesi
+   berakhir; selain itu 401 tadi hanya gangguan sesaat. */
+let verifyingSession: Promise<void> | null = null;
+function verifySessionAfterBackground401(): void {
+  const jwt = getJwt();
+  if (verifyingSession || jwt === null) return;
+  verifyingSession = fetch(`${BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${jwt}` } })
+    .then((r) => { if (r.status === 401 && getJwt() === jwt) notifyAuthExpired(); })
+    .catch(() => undefined)
+    .finally(() => { verifyingSession = null; });
+}
+
 /** Timeout default 20 dtk: jaringan mati total tidak boleh diam selamanya. */
 export const API_TIMEOUT_MS = 20000;
 
@@ -219,7 +235,10 @@ async function apiFetchRaw<T>(path: string, init?: ApiFetchInit): Promise<T> {
   }
   if (!res.ok) {
     /* Lihat catatan `background` pada ApiFetchInit. */
-    if (res.status === 401 && !background) notifyAuthExpired();
+    if (res.status === 401) {
+      if (background) verifySessionAfterBackground401();
+      else notifyAuthExpired();
+    }
     const retryAfter = Number(res.headers.get("Retry-After"));
     throw new ApiError(
       res.status,
