@@ -83,7 +83,7 @@ const prioritasTone: Record<string, "gray" | "blue" | "amber" | "red"> = {
 };
 
 /* Batch koleksi modul Proyek untuk useModuleSync (pengganti resync penuh). */
-const PRJ_COLS: CollectionKey[] = ["activities", "clients", "drydocks", "employees", "projects", "vessels"];
+const PRJ_COLS: CollectionKey[] = ["activities", "clients", "drydocks", "employees", "projects", "vessels", "boq", "risks", "workOrders"];
 
 export default function Projects() {
   const { locale } = useT();

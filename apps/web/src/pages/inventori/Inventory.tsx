@@ -383,7 +383,9 @@ export default function Inventory() {
   const INV_COLS: CollectionKey[] = [
     "inventory", "movements", "projects", "requisitions",
     "documents", "settings", "purchaseOrders", "payables", "warehouses", "materialRequests", "spareparts",
-  ];
+    "bomItems",
+    "employees",
+];
   useModuleSync(INV_COLS);
   /* INV-01: tanpa tombol "Muat ulang". Selama realtime (F4-03) belum ada,
      tiga koleksi stok ditarik ulang tiap 30 detik saat tab terlihat. */

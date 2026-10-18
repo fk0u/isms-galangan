@@ -225,7 +225,7 @@ function loadTargets(): Record<string, BranchTarget> {
 }
 
 /* Batch koleksi modul Dashboard untuk useModuleSync (pengganti resync penuh). */
-const DB_COLS: CollectionKey[] = ["activities", "drydocks", "employees", "incidents", "inventory", "invoices", "ncr", "projects", "quotations", "vessels"];
+const DB_COLS: CollectionKey[] = ["activities", "drydocks", "employees", "incidents", "inventory", "invoices", "ncr", "projects", "quotations", "vessels", "boq", "contracts"];
 
 export default function Dashboard() {
 

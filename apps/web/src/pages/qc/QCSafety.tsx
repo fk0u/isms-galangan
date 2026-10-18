@@ -99,7 +99,7 @@ function nextItp(inspections: StoreItem[]): string {
 }
 
 /* Batch koleksi modul QC & Safety untuk useModuleSync (pengganti resync penuh). */
-const QC_COLS: CollectionKey[] = ["activities", "auditPlans", "bast", "branches", "calibrations", "checklistResponses", "checklistTemplates", "clients", "drawings", "employees", "equipment", "incidents", "inspections", "journals", "ncr", "projects", "toolbox", "vessels", "walks"];
+const QC_COLS: CollectionKey[] = ["activities", "auditPlans", "bast", "branches", "calibrations", "checklistResponses", "checklistTemplates", "clients", "drawings", "employees", "equipment", "incidents", "inspections", "journals", "ncr", "projects", "toolbox", "vessels", "walks", "subcontractors"];
 
 export default function QCSafety() {
   const busy = useBusy();

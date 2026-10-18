@@ -11,6 +11,8 @@ export const PROCUREMENT_COLLECTIONS: CollectionKey[] = [
   "settings",
   "services",
   "vendors",
+  "boq",
+  "warehouses",
 ];
 
 /* Koleksi yang dibaca bell/sidebar/dashboard setelah full boot sync dihapus. */

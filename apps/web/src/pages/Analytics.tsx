@@ -168,7 +168,7 @@ function exportChartPNG(chartId: string, filename: string): void {
    grafik pendapatan & margin hanya tampak benar karena jatuh ke seed, bukan
    karena datanya benar-benar terbaca. Sekarang eksplisit. `attendance` juga
    dihapus karena tidak pernah dipakai di halaman ini. */
-const AN_COLS: CollectionKey[] = ["bookings", "calibrations", "changeOrders", "dockSlots", "employees", "equipment", "incidents", "inspections", "inventory", "invoices", "journals", "maintenances", "ncr", "payables", "projects", "purchaseOrders", "quotations", "settings", "vendors"];
+const AN_COLS: CollectionKey[] = ["bookings", "calibrations", "changeOrders", "dockSlots", "employees", "equipment", "incidents", "inspections", "inventory", "invoices", "journals", "maintenances", "ncr", "payables", "projects", "purchaseOrders", "quotations", "settings", "vendors", "boq"];
 
 /* Opsi rentang bulan untuk SEMUA grafik rentang-bulan. Nilai adalah jumlah
    titik, bulan berjalan selalu titik TERAKHIR (lihat utils/monthAxis.ts). */
