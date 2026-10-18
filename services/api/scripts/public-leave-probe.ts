@@ -40,6 +40,8 @@ async function main(): Promise<void> {
     const qr = (made.json() as { data: { token: string; createdBy: string; expiresAt: string } }).data;
     const token = qr.token;
     assert("HR membuat QR: token + pembuat + kedaluwarsa", made.statusCode === 200 && token.length >= 32 && qr.createdBy !== "" && Date.parse(qr.expiresAt) > Date.now(), made.body);
+    const ttlDays = (Date.parse(qr.expiresAt) - Date.now()) / 86_400_000;
+    assert("QR berlaku 1 tahun (K17-HR-01)", ttlDays > 364 && ttlDays <= 365, `sisa ${ttlDays.toFixed(1)} hari`);
     const stored = (await q<{ value: string }>("SELECT value FROM access_secrets WHERE access_key = ?", ["qr:token"]))[0]?.value ?? "";
     assert("token disimpan sebagai hash, bukan teks asli", !stored.includes(token) && stored.includes("hash"), "");
     const status = await app.inject({ method: "GET", url: "/api/leave-qr", headers: hr });
