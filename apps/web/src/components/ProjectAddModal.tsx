@@ -33,7 +33,6 @@ const emptyForm = {
   prioritas: "Sedang",
   vesselLoa: "",
   vesselType: "",
-  vesselImo: "",
 };
 
 type Dict = Record<string, string>;
@@ -76,7 +75,7 @@ export default function ProjectAddModal({
       vessels.map((v) => ({
         value: String(v.name ?? ""),
         label: String(v.name ?? ""),
-        subLabel: v.type ? `${v.type} · IMO ${v.imo || "-"}` : undefined,
+        subLabel: v.type ? `${v.type}${v.owner ? ` · ${v.owner}` : ""}` : undefined,
       })),
     [vessels]
   );
@@ -155,11 +154,6 @@ export default function ProjectAddModal({
       const loa = Number(form.vesselLoa);
       if (!Number.isFinite(loa) || loa <= 0) { toast(S.prjToastLoa, "info"); return; }
       if (!form.vesselType.trim()) { toast(S.prjToastVType, "info"); return; }
-      const imoRaw = form.vesselImo.trim();
-      if (!imoRaw || imoRaw === "-" || imoRaw.toUpperCase() === "IMO" || imoRaw.toUpperCase() === "IMO -") {
-        toast(S.prjToastImo, "info");
-        return;
-      }
     }
     const code = nextProjectCode(form.type, form.start);
     try {
@@ -188,19 +182,18 @@ export default function ProjectAddModal({
       );
       if (!vesselExists) {
         await add("vessels", {
+          /* IMO, tahun bangun & bollard tidak lagi dicatat untuk kapal (K17-KPL-01). */
           name: form.vessel.trim(),
-          imo: form.vesselImo.trim(),
           type: form.vesselType.trim(),
           class: "BKI",
           flag: "Indonesia",
-          built: new Date().getFullYear(),
           owner: form.client.trim(),
-          loa: Number(form.vesselLoa), beam: 0, draft: 0, bollard: 0,
+          loa: Number(form.vesselLoa), beam: 0, draft: 0,
           status: form.type === "New Build" ? "Dalam Pembangunan" : "Dalam Docking",
           certificates: [],
           history: [{ date: form.start, event: "Proyek dibuat", type: "Kontrak" }],
         }, { action: "mendaftarkan kapal", target: form.vessel.trim(), module: "Kapal" });
-        toast(S.prjToastCreatedVessel.replace("{a}", created.id).replace("{b}", form.vesselImo.trim()));
+        toast(S.prjToastCreatedVessel.replace("{a}", created.id).replace("{b}", form.vessel.trim()));
       } else {
         toast(S.prjToastCreated.replace("{a}", created.id));
       }
@@ -308,11 +301,6 @@ export default function ProjectAddModal({
                 <Field label={S.prjLoa}><NumInput min={0} step={0.1} className="input" value={form.vesselLoa} onChange={(e) => setF("vesselLoa", e.target.value)} placeholder={S.prjLoaPh} /></Field>
                 <Field label={S.prjVesselType}><input className="input" value={form.vesselType} onChange={(e) => setF("vesselType", e.target.value)} placeholder={S.prjVesselTypePh} /></Field>
               </FormGrid>
-              <div className="mt-2">
-                <Field label={S.prjImo} hint={S.prjImoHint}>
-                  <input className="input font-mono" value={form.vesselImo} onChange={(e) => setF("vesselImo", e.target.value)} placeholder={S.prjImoPh} />
-                </Field>
-              </div>
             </div>
           )}
           <Field label={S.prjBudget}>

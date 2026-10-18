@@ -29,8 +29,14 @@ const statusTone: Record<string, "green" | "blue" | "amber" | "gray"> = {
   "Menganggur": "gray",
 };
 
-const CLASS_OPTIONS = ["BKI", "ABS", "DNV", "LR", "NK"];
-const FLAG_OPTIONS = ["Indonesia", "Panama", "Singapura", "Malaysia"];
+/* Form pendaftaran kapal disederhanakan (catatan klien 17 Okt, K17-KPL-01):
+   IMO, MMSI, tahun bangun, mesin utama, GT, DWT, NT, BHP, bendera, dan status
+   tidak lagi diisi. Nilai lama tetap tersimpan karena edit hanya mengirim field
+   form (patch), dan bendera kapal baru otomatis Indonesia. */
+const CLASS_OPTIONS = ["BKI", "RINA"];
+/** Kapal lama bisa ber-class lain (ABS, DNV, …): tetap jadi pilihan supaya tidak tertimpa diam-diam. */
+const classOptionsFor = (current: string): string[] =>
+  current && !CLASS_OPTIONS.includes(current) ? [...CLASS_OPTIONS, current] : CLASS_OPTIONS;
 
 export const COMPLIANCE_ITEMS = ["SOLAS", "MARPOL", "ISM Code", "Flag State", "PSC Readiness", "ISPS Code"];
 
@@ -75,83 +81,59 @@ export function complianceSummary(v: StoreItem): { total: number; valid: number;
 }
 
 const emptyForm = {
-  name: "", imo: "", mmsi: "", type: "", owner: "", loa: "", beam: "", draft: "", bollard: "",
-  gt: "", dwt: "", nt: "", bhp: "", engineType: "", built: "",
-  status: "Dalam Operasi", class: "BKI", flag: "Indonesia",
+  name: "", type: "", owner: "", loa: "", lbp: "", beam: "", depth: "", draft: "",
+  class: "BKI", status: "Dalam Operasi",
 };
 
 type VesselForm = typeof emptyForm;
 
-function validateForm(form: VesselForm, vessels: StoreItem[], excludeId: string | undefined, S: (typeof n_eqp)["id"]): string | null {
-  if (!form.name.trim() || !form.owner.trim() || !form.imo.trim()) return S.vsReqBasic;
-  const imo = form.imo.trim();
-  // "-" = kapal tanpa IMO (tongkang) - boleh dipakai banyak kapal, tetap unik untuk IMO asli.
-  if (imo !== "-" && vessels.some((v) => v.id !== excludeId && String(v.imo).toLowerCase() === imo.toLowerCase())) {
-    return S.vsImoUsed.replace("{a}", imo);
-  }
+function validateForm(form: VesselForm, S: (typeof n_eqp)["id"]): string | null {
+  if (!form.name.trim() || !form.owner.trim()) return S.vsReqBasic;
   if (!form.type.trim()) return S.vsTypeReq;
-  const dims = { loa: Number(form.loa), beam: Number(form.beam), draft: Number(form.draft), bollard: Number(form.bollard) };
+  const dims = { loa: Number(form.loa), beam: Number(form.beam), draft: Number(form.draft) };
   if (Object.values(dims).some((n) => !Number.isFinite(n))) return S.vsDimsNum;
-  const hasZero = Object.values(dims).some((n) => n <= 0);
-  if (form.status !== "Dalam Pembangunan" && hasZero) return S.vsDimsPos;
-  const gt = Number(form.gt);
-  const bhp = Number(form.bhp);
-  if (!Number.isFinite(gt) || !Number.isFinite(bhp)) return S.vsGtBhpNum;
-  if (form.status !== "Dalam Pembangunan" && (gt <= 0 || bhp <= 0)) return S.vsGtBhpPos;
-  const nt = form.nt.trim() === "" ? 0 : Number(form.nt);
-  if (!Number.isFinite(nt) || nt < 0) return S.vsNtMin;
-  const dwt = form.dwt.trim() === "" ? null : Number(form.dwt);
-  if (dwt !== null && (!Number.isFinite(dwt) || dwt < 0)) return S.vsDwtMin;
-  const built = form.built.trim() === "" ? null : Number(form.built);
-  if (built !== null && (!Number.isInteger(built) || built < 1800 || built > new Date().getFullYear() + 1)) return S.vsBuiltYear;
-  if (!form.engineType.trim()) return S.vsEngineReq;
-  if (form.mmsi.trim() !== "" && !/^\d{9}$/.test(form.mmsi.trim())) return S.vsMmsiFormat;
+  // "Dalam Pembangunan" hanya ada pada kapal lama (status tidak lagi diisi di form).
+  if (form.status !== "Dalam Pembangunan" && Object.values(dims).some((n) => n <= 0)) return S.vsDimsPos;
+  /* LBP & Depth baru ditambahkan: opsional supaya kapal lama tetap bisa diedit. */
+  for (const v of [form.lbp, form.depth]) {
+    if (v.trim() !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0)) return S.vsDimsOptMin;
+  }
   return null;
 }
 
+const optNum = (v: string): number | null => (v.trim() === "" ? null : Number(v));
+/** "31.5m" atau "-" (tanpa satuan) bila ukuran belum diisi. */
+const meters = (x: unknown): string => (x === undefined || x === null || x === "" ? "-" : `${String(x)}m`);
+
+/** Hanya field form. Saat edit dipakai sebagai patch, jadi field lama yang sudah
+ *  tidak ada di form (IMO, GT, …) tidak ikut tertimpa. */
 function formToPayload(form: VesselForm) {
   return {
     name: form.name.trim(),
-    imo: form.imo.trim(),
-    mmsi: form.mmsi.trim(),
     type: form.type.trim(),
     class: form.class,
-    flag: form.flag,
     owner: form.owner.trim(),
     loa: Number(form.loa),
+    lbp: optNum(form.lbp),
     beam: Number(form.beam),
+    depth: optNum(form.depth),
     draft: Number(form.draft),
-    bollard: Number(form.bollard),
-    gt: Number(form.gt),
-    dwt: form.dwt.trim() === "" ? null : Number(form.dwt),
-    nt: form.nt.trim() === "" ? 0 : Number(form.nt),
-    bhp: Number(form.bhp),
-    engineType: form.engineType.trim(),
-    built: form.built.trim() === "" ? null : Number(form.built),
-    status: form.status,
   };
 }
 
 function vesselToForm(v: StoreItem): VesselForm {
+  const str = (x: unknown): string => (x === undefined || x === null ? "" : String(x));
   return {
-    name: String(v.name ?? ""),
-    imo: String(v.imo ?? ""),
-    mmsi: String(v.mmsi ?? ""),
-    type: String(v.type ?? ""),
-    owner: String(v.owner ?? ""),
-    loa: String(v.loa ?? ""),
-    beam: String(v.beam ?? ""),
-    draft: String(v.draft ?? ""),
-    bollard: String(v.bollard ?? ""),
-    gt: v.gt === undefined || v.gt === null ? "" : String(v.gt),
-    dwt: v.dwt === undefined || v.dwt === null ? "" : String(v.dwt),
-    nt: v.nt === undefined || v.nt === null ? "" : String(v.nt),
-    bhp: v.bhp === undefined || v.bhp === null ? "" : String(v.bhp),
-    engineType: String(v.engineType ?? ""),
-    built: v.built === undefined || v.built === null ? "" : String(v.built),
-    status: String(v.status ?? "Dalam Operasi"),
+    name: str(v.name),
+    type: str(v.type),
+    owner: str(v.owner),
+    loa: str(v.loa),
+    lbp: str(v.lbp),
+    beam: str(v.beam),
+    depth: str(v.depth),
+    draft: str(v.draft),
     class: String(v.class ?? "BKI"),
-    flag: String(v.flag ?? "Indonesia"),
+    status: String(v.status ?? "Dalam Operasi"),
   };
 }
 
@@ -276,12 +258,14 @@ export default function Vessels() {
 
   const save = async () => {
     try {
-    const err = validateForm(form, vessels, undefined, S);
+    const err = validateForm(form, S);
     if (err) { toast(err, "info"); return; }
-    const dimsZero = [form.loa, form.beam, form.draft, form.bollard].some((n) => Number(n) <= 0);
+    const dimsZero = [form.loa, form.beam, form.draft].some((n) => Number(n) <= 0);
     const warnZero = form.status === "Dalam Pembangunan" && dimsZero;
     const created = await add("vessels", {
       ...formToPayload(form),
+      flag: "Indonesia",
+      status: "Dalam Operasi",
       certificates: [],
       history: [{ date: todayISO(), event: "Kapal didaftarkan", type: "Registrasi" }],
     }, { action: "mendaftarkan kapal", module: "Kapal" });
@@ -299,7 +283,7 @@ export default function Vessels() {
   const saveEdit = async () => {
     try {
     if (!editingId) return;
-    const err = validateForm(editForm, vessels, editingId, S);
+    const err = validateForm(editForm, S);
     if (err) { toast(err, "info"); return; }
     const prev = vessels.find((v) => v.id === editingId);
     const oldName = String(prev?.name ?? "");
@@ -337,8 +321,6 @@ export default function Vessels() {
     <div className="space-y-3">
       <FormGrid>
         <Field label={S.vsNameField}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={S.vsNamePh} /></Field>
-        <Field label={S.vsImoField}><input className="input font-mono" value={f.imo} onChange={(e) => setF({ ...f, imo: e.target.value })} placeholder={S.vsImoPh} /></Field>
-        <Field label={S.vsMmsiField}><input className="input font-mono" value={f.mmsi} onChange={(e) => setF({ ...f, mmsi: e.target.value })} placeholder={S.vsMmsiPh} /></Field>
         <Field label={S.typeLabel}><input className="input" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} placeholder={S.vsTypePh} /></Field>
         <Field label={S.vsOwnerField}>
           <SearchSelect
@@ -351,32 +333,17 @@ export default function Vessels() {
             required
           />
         </Field>
-        <Field label={S.vsBuiltField}><NumInput min={1800} max={new Date().getFullYear() + 1} step={1} className="input" value={f.built} onChange={(e) => setF({ ...f, built: e.target.value })} placeholder={S.vsBuiltPh} /></Field>
-        <Field label={S.vsEngineField}><input className="input" value={f.engineType} onChange={(e) => setF({ ...f, engineType: e.target.value })} placeholder={S.vsEnginePh} /></Field>
-        <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={f.loa} onChange={(e) => setF({ ...f, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
-        <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={f.beam} onChange={(e) => setF({ ...f, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
-        <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={f.draft} onChange={(e) => setF({ ...f, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
-        <Field label={S.vsBollardField}><NumInput min={0} step={0.1} className="input" value={f.bollard} onChange={(e) => setF({ ...f, bollard: e.target.value })} placeholder={S.vsBollardPh} /></Field>
-        <Field label={S.vsGtField}><NumInput min={0} step={1} className="input" value={f.gt} onChange={(e) => setF({ ...f, gt: e.target.value })} placeholder={S.vsGtPh} /></Field>
-        <Field label={S.vsDwtField}><NumInput min={0} step={1} className="input" value={f.dwt} onChange={(e) => setF({ ...f, dwt: e.target.value })} placeholder={S.vsDwtPh} /></Field>
-        <Field label={S.vsNtField}><NumInput min={0} step={1} className="input" value={f.nt} onChange={(e) => setF({ ...f, nt: e.target.value })} placeholder={S.vsNtPh} /></Field>
-        <Field label={S.vsBhpField}><NumInput min={0} step={1} className="input" value={f.bhp} onChange={(e) => setF({ ...f, bhp: e.target.value })} placeholder={S.vsBhpPh} /></Field>
         <Field label={S.vsClassField}>
           <select className="input" value={f.class} onChange={(e) => setF({ ...f, class: e.target.value })}>
-            {CLASS_OPTIONS.map((c) => <option key={c}>{c}</option>)}
+            {classOptionsFor(f.class).map((c) => <option key={c}>{c}</option>)}
           </select>
         </Field>
-        <Field label={S.vsFlagField}>
-          <select className="input" value={f.flag} onChange={(e) => setF({ ...f, flag: e.target.value })}>
-            {FLAG_OPTIONS.map((fl) => <option key={fl}>{fl}</option>)}
-          </select>
-        </Field>
+        <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={f.loa} onChange={(e) => setF({ ...f, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
+        <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={f.lbp} onChange={(e) => setF({ ...f, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
+        <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={f.beam} onChange={(e) => setF({ ...f, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
+        <Field label={S.vsDepthField}><NumInput min={0} step={0.1} className="input" value={f.depth} onChange={(e) => setF({ ...f, depth: e.target.value })} placeholder={S.vsDepthPh} /></Field>
+        <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={f.draft} onChange={(e) => setF({ ...f, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
       </FormGrid>
-      <Field label={S.thStatus} hint={S.vsStatusHint}>
-        <select className="input" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value })}>
-          {["Dalam Operasi", "Dalam Docking", "Dalam Pembangunan", "Menganggur"].map((s) => <option key={s}>{s}</option>)}
-        </select>
-      </Field>
     </div>
   );
 
@@ -442,7 +409,7 @@ export default function Vessels() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-navy-900">{v.name}</p>
-                        <p className="font-mono text-xs text-steel-500">{v.imo}{v.mmsi ? ` · MMSI ${v.mmsi}` : ""}</p>
+                        <p className="text-xs text-steel-500">{S.vsClassField} {v.class || "-"}</p>
                       </div>
                     </div>
                   </div>
@@ -474,13 +441,13 @@ export default function Vessels() {
                     return <p className="mt-1.5 text-xs text-steel-500">{S.vsPolicyLine.replace("{a}", ins.polis).replace("{b}", Number(ins.premi || 0) > 0 ? fmtRupiah(Number(ins.premi)) : "-").replace("{c}", ins.expiry ? fmtTanggal(ins.expiry) : "-")}</p>;
                   })()}
                   <div className="mt-3 grid grid-cols-3 gap-2 border-t border-steel-100 pt-3 text-center">
-                    <div><p className="text-sm font-bold text-navy-900">{v.loa ?? "-"}m</p><p className="text-[10px] text-steel-500">LOA</p></div>
-                    <div><p className="text-sm font-bold text-navy-900">{v.bollard ?? "-"}T</p><p className="text-[10px] text-steel-500">{S.vsBollardField}</p></div>
-                    <div><p className="text-sm font-bold text-navy-900">{v.built ?? "-"}</p><p className="text-[10px] text-steel-500">{S.vsBuiltField}</p></div>
+                    <div><p className="text-sm font-bold text-navy-900">{meters(v.loa)}</p><p className="text-[10px] text-steel-500">LOA</p></div>
+                    <div><p className="text-sm font-bold text-navy-900">{meters(v.beam)}</p><p className="text-[10px] text-steel-500">{S.vdKpiBeam}</p></div>
+                    <div><p className="text-sm font-bold text-navy-900">{meters(v.draft)}</p><p className="text-[10px] text-steel-500">{S.vdKpiDraft}</p></div>
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-                    <div><p className="text-sm font-bold text-navy-900">{v.gt ?? "-"}</p><p className="text-[10px] text-steel-500">GT</p></div>
-                    <div><p className="text-sm font-bold text-navy-900">{v.dwt ?? "-"}</p><p className="text-[10px] text-steel-500">DWT</p></div>
+                    <div><p className="text-sm font-bold text-navy-900">{meters(v.lbp)}</p><p className="text-[10px] text-steel-500">{S.vdKpiLbp}</p></div>
+                    <div><p className="text-sm font-bold text-navy-900">{meters(v.depth)}</p><p className="text-[10px] text-steel-500">{S.vdKpiDepth}</p></div>
                     <div><p className="text-sm font-bold text-navy-900">{slotCountFor(String(v.name))}</p><p className="text-[10px] text-steel-500">{S.vsDockSlotLabel}</p></div>
                   </div>
                   {(v.certificates ?? []).length > 0 && <p className="mt-2 text-[11px] text-steel-400">{S.vsCertSurveyCount.replace("{a}", String((v.certificates ?? []).length)).replace("{b}", String(data.surveys.filter((s) => sameName(s.vessel, v.name)).length))}</p>}
