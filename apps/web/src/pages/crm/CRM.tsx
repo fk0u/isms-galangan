@@ -281,7 +281,7 @@ export default function CRM() {
     if (hoChecks.some((c) => !c)) { toast(S.hoIncomplete, "info"); return; }
     if (!hoBy.trim()) { toast(S.handoverByRequired, "info"); return; }
     if (num(q.value) <= 0) { toast(S.tQuoteValuePositive, "info"); return; }
-    if (!convManager.trim() || convManager.trim() === "Belum ditentukan") { toast(S.tPickPm ?? "Pilih PM dulu", "info"); return; }
+    if (!convManager.trim() || convManager.trim() === "Belum ditentukan") { toast(S.tPickPm ?? "Pilih pimpinan proyek dulu", "info"); return; }
     if (!convStart || !convEnd) { toast(S.tPlanDatesRequired ?? "Tanggal rencana mulai & selesai wajib diisi", "info"); return; }
     if (convEnd < convStart) { toast(S.tEndBeforeStart ?? "Tanggal selesai sebelum mulai", "info"); return; }
     // SATU jalur konversi (sama dengan QuotationDetail): PM + tanggal + kode +
