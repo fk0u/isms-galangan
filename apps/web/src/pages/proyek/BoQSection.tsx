@@ -16,6 +16,7 @@ import { docAttachment, looksLikeUrl } from "../../utils/docAttachment";
 import { SATUAN, STATUS_BOQ_ID } from "../../utils/format";
 import { todayISO, parseRupiah } from "../../utils/format";
 import { readSheetRows, sheetNumber } from "../../utils/readSheet";
+import ImportPreviewModal, { type ImportPreviewRow } from "../../components/ImportPreviewModal";
 import { fmtTanggal } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import type { BoQItem } from "../../data";
@@ -125,6 +126,7 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
   const { locale } = useT();
   const S = n_prj[locale];
   const { data, update, add, remove, log } = useStore();
+  const [boqPreview, setBoqPreview] = useState<{ file: string; rows: ImportPreviewRow[]; items: Record<string, unknown>[] } | null>(null);
   const { user } = useAuth();
   const items = ((data.boq ?? []) as BoQExt[]).filter((b) => String(b.projectId ?? "") === String(projectId) && (!docId || String(b.boqDocId ?? "") === String(docId)));
   const [showAdd, setShowAdd] = useState(false);
@@ -195,33 +197,46 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
   const importBoq = async (file: File): Promise<void> => {
     try {
       const rows = await readSheetRows(file);
-      const header = rows[0] && Number.isNaN(sheetNumber(rows[0][2] ?? "")) && /nama|pekerjaan|item|uraian|name/i.test(rows[0][0] ?? "") ? 1 : 0;
-      const valid: Record<string, unknown>[] = [];
-      const errors: string[] = [];
-      rows.slice(header).forEach((row, i) => {
+      const header = rows[0] && Number.isNaN(sheetNumber(rows[0][2] ?? "")) && /nama|pekerjaan|item|uraian|name|work/i.test(rows[0][0] ?? "") ? 1 : 0;
+      const items: Record<string, unknown>[] = [];
+      const preview: ImportPreviewRow[] = rows.slice(header).map((row, i) => {
         const line = i + header + 1;
-        const name = (row[0] ?? "").trim();
-        const qty = sheetNumber(row[2] ?? "");
-        const price = sheetNumber(row[4] ?? "");
-        const unit = matchUnit(row[3] ?? "");
-        const category = matchCategory(row[5] ?? "");
+        const cells = [0, 1, 2, 3, 4, 5].map((k) => (row[k] ?? "").trim());
+        const name = cells[0] ?? "";
+        const qty = sheetNumber(cells[2] ?? "");
+        const price = sheetNumber(cells[4] ?? "");
+        const unit = matchUnit(cells[3] ?? "");
+        const category = matchCategory(cells[5] ?? "");
         const why = !name ? S.boqImpErrName
           : !(qty > 0) ? S.boqImpErrQty
           : !(price > 0) ? S.boqImpErrPrice
-          : unit === null ? S.boqImpErrUnit.replace("{a}", row[3] ?? "")
-          : category === null ? S.boqImpErrCat.replace("{a}", row[5] ?? "")
+          : unit === null ? S.boqImpErrUnit.replace("{a}", cells[3] ?? "")
+          : category === null ? S.boqImpErrCat.replace("{a}", cells[5] ?? "")
           : "";
-        if (why) { errors.push(`${line}: ${why}`); return; }
-        valid.push({
-          projectId: String(projectId), name, description: (row[1] ?? "").trim(), quantity: qty, unit, unitPrice: price,
+        if (why) return { line, cells, error: why };
+        items.push({
+          projectId: String(projectId), name, description: cells[1] ?? "", quantity: qty, unit, unitPrice: price,
           totalPrice: qty * price, category, status: "Draft", requestedBy: "Anda",
           ...(docId ? { boqDocId: String(docId) } : {}),
         });
+        // Tampilkan nilai yang SUDAH dinormalisasi agar pengguna melihat hasil akhirnya.
+        return { line, cells: [name, cells[1] ?? "", String(qty), String(unit), fmtRupiah(price), String(category)] };
       });
-      if (valid.length === 0) { toast(S.boqImpNone + (errors.length ? ` (${errors.slice(0, 3).join("; ")})` : ""), "info"); return; }
-      for (const item of valid) await add("boq", item, { action: "mengimpor BoQ item", module: "BoQ" });
-      log("mengimpor BoQ", `${String(docId ?? projectId)} · ${valid.length} baris dari ${file.name}`, "BoQ");
-      toast(S.boqImpDone.replace("{n}", String(valid.length)) + (errors.length ? S.boqImpSkipped.replace("{m}", String(errors.length)).replace("{rows}", errors.slice(0, 5).join("; ")) : ""));
+      if (preview.length === 0) { toast(S.boqImpNone, "info"); return; }
+      setBoqPreview({ file: file.name, rows: preview, items });
+    } catch (e) {
+      toast(S.boqImpFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
+    }
+  };
+  const confirmBoqImport = async (): Promise<void> => {
+    if (!boqPreview || boqPreview.items.length === 0) return;
+    const { items, rows, file } = boqPreview;
+    try {
+      for (const item of items) await add("boq", item, { action: "mengimpor BoQ item", module: "BoQ" });
+      log("mengimpor BoQ", `${String(docId ?? projectId)} · ${items.length} baris dari ${file}`, "BoQ");
+      const bad = rows.filter((x) => x.error);
+      toast(S.boqImpDone.replace("{n}", String(items.length)) + (bad.length ? S.boqImpSkipped.replace("{m}", String(bad.length)).replace("{rows}", bad.slice(0, 5).map((x) => `${x.line}: ${x.error}`).join("; ")) : ""));
+      setBoqPreview(null);
     } catch (e) {
       toast(S.boqImpFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
     }
@@ -345,6 +360,15 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
 
   return (
     <div className="space-y-4">
+      <ImportPreviewModal
+        open={boqPreview !== null}
+        title={S.boqImpPreviewTitle}
+        fileName={boqPreview?.file ?? ""}
+        columns={[S.boqColName, S.boqColDesc, S.boqColQty, S.boqColUnit, S.boqColPrice, S.boqColCat]}
+        rows={boqPreview?.rows ?? []}
+        onCancel={() => setBoqPreview(null)}
+        onConfirm={confirmBoqImport}
+      />
       <Card className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-navy-900 flex items-center gap-2"><FileDown className="h-4 w-4" /> {S.boqTitle.replace("{n}", String(items.length))}</h3>
