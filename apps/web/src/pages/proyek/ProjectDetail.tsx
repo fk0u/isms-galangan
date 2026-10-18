@@ -73,6 +73,7 @@ import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../util
 import { exportExcel } from "../../utils/export";
 import { readSheetRows } from "../../utils/readSheet";
 import DockPlanCard from "./DockPlanCard";
+import ImportPreviewModal, { type ImportPreviewRow } from "../../components/ImportPreviewModal";
 import WbsMaterialModal, { stageMaterialCount } from "./WbsMaterialModal";
 
 /* "Dalam Proses" = status default proyek baru (ProjectAddModal). Tanpa baris
@@ -170,6 +171,8 @@ export default function ProjectDetail() {
 
   const [showScope, setShowScope] = useState(false);
   const [scopeVal, setScopeVal] = useState({ service: "", lokasi: "", deskripsi: "" });
+  /* Pratinjau impor ruang lingkup: berkas dibaca dulu, disimpan setelah dikonfirmasi. */
+  const [scopePreview, setScopePreview] = useState<{ file: string; rows: ImportPreviewRow[]; items: { service: string; lokasi?: string; deskripsi?: string }[] } | null>(null);
   const [showDoc, setShowDoc] = useState(false);
   const [showActual, setShowActual] = useState(false);
   const [actualVal, setActualVal] = useState("");
@@ -1116,18 +1119,35 @@ const createWarranty = async (wbsTask?: string) => {
   const importScope = async (file: File): Promise<void> => {
     try {
       const rows = await readSheetRows(file);
-      const header = rows[0] && /jenis|pekerjaan|service|lingkup|scope/i.test(rows[0][0] ?? "") ? 1 : 0;
+      const header = rows[0] && /jenis|pekerjaan|service|lingkup|scope|work/i.test(rows[0][0] ?? "") ? 1 : 0;
+      const key = (service: string, lokasi = ""): string => `${service.trim().toLowerCase()}|${lokasi.trim().toLowerCase()}`;
+      const seen = new Set(scopeList(project.scope).map((x) => key(x.service, x.lokasi)));
       const items: { service: string; lokasi?: string; deskripsi?: string }[] = [];
-      const skipped: number[] = [];
-      rows.slice(header).forEach((row, i) => {
-        const service = (row[0] ?? "").trim();
-        if (!service) { skipped.push(i + header + 1); return; }
-        items.push({ service, ...(row[1]?.trim() ? { lokasi: row[1].trim() } : {}), ...(row[2]?.trim() ? { deskripsi: row[2].trim() } : {}) });
+      const preview: ImportPreviewRow[] = rows.slice(header).map((row, i) => {
+        const cells = [row[0] ?? "", row[1] ?? "", row[2] ?? ""].map((c) => c.trim());
+        const [service, lokasi, deskripsi] = cells as [string, string, string];
+        const line = i + header + 1;
+        if (!service) return { line, cells, error: S.detScopeImpNoService };
+        if (seen.has(key(service, lokasi))) return { line, cells, error: S.detScopeImpDup };
+        seen.add(key(service, lokasi));
+        items.push({ service, ...(lokasi ? { lokasi } : {}), ...(deskripsi ? { deskripsi } : {}) });
+        return { line, cells };
       });
-      if (items.length === 0) { toast(S.detScopeImportEmpty, "info"); return; }
+      if (preview.length === 0) { toast(S.detScopeImportEmpty, "info"); return; }
+      setScopePreview({ file: file.name, rows: preview, items });
+    } catch (e) {
+      toast(S.detScopeImportFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
+    }
+  };
+  const confirmScopeImport = async (): Promise<void> => {
+    if (!scopePreview || scopePreview.items.length === 0) return;
+    const { items, rows, file } = scopePreview;
+    try {
       await update("projects", pid, { scope: [...scopeList(project.scope), ...items] });
-      log("mengimpor lingkup", `${pid} · ${items.length} baris dari ${file.name}`, "Proyek");
+      log("mengimpor lingkup", `${pid} · ${items.length} baris dari ${file}`, "Proyek");
+      const skipped = rows.filter((r) => r.error).map((r) => r.line);
       toast(S.detScopeImportDone.replace("{n}", String(items.length)) + (skipped.length ? S.detScopeImportSkipped.replace("{m}", String(skipped.length)).replace("{rows}", skipped.slice(0, 8).join(", ")) : ""));
+      setScopePreview(null);
     } catch (e) {
       toast(S.detScopeImportFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
     }
@@ -3363,6 +3383,15 @@ const createWarranty = async (wbsTask?: string) => {
 
       {/* Modal Assign WBS */}
       <WbsMaterialModal projectId={pid} task={wbsMatTask} onClose={() => setWbsMatTask(null)} />
+      <ImportPreviewModal
+        open={scopePreview !== null}
+        title={S.detScopeImpPreviewTitle}
+        fileName={scopePreview?.file ?? ""}
+        columns={[S.detScopeColService, S.detScopeColLoc, S.detScopeColDesc]}
+        rows={scopePreview?.rows ?? []}
+        onCancel={() => setScopePreview(null)}
+        onConfirm={confirmScopeImport}
+      />
       <Modal
         open={wbsAssignTask !== null}
         onClose={() => setWbsAssignTask(null)}
