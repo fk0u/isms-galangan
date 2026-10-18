@@ -239,7 +239,9 @@ const termin: Recipe<KwitansiInput> = {
       { label: L(ctx.locale, "Nilai termin", "Term value"), value: amount },
     ];
     if (pph > 0) {
-      breakdown.push({ label: `${L(ctx.locale, "PPh dipotong", "Income tax withheld")} (${pphPct}%)`, value: -pph });
+      // Subkon perorangan bisa memakai nominal PPh manual (K17-SUB-01), bukan tarif %.
+      const pphNote = num(t, "pphManual") > 0 ? L(ctx.locale, "nominal manual", "manual amount") : `${pphPct}%`;
+      breakdown.push({ label: `${L(ctx.locale, "PPh dipotong", "Income tax withheld")} (${pphNote})`, value: -pph });
     }
     if (ret > 0) {
       breakdown.push({ label: `${L(ctx.locale, "Retensi ditahan", "Retention held")} (${retPct}%)`, value: -ret });
