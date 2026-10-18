@@ -134,7 +134,7 @@ function undockList(s: StoreItem): boolean[] {
 }
 
 /* Batch koleksi modul Drydock untuk useModuleSync (pengganti resync penuh). */
-const DRY_COLS: CollectionKey[] = ["activities", "dockSlots", "drydocks", "invoices", "ncr", "projects", "vessels"];
+const DRY_COLS: CollectionKey[] = ["activities", "dockSlots", "drydocks", "invoices", "ncr", "projects", "vessels", "employees"];
 
 export default function Drydock() {
   const { data, add, update, remove, log } = useStore();

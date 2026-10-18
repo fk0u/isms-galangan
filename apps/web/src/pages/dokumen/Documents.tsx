@@ -52,7 +52,7 @@ const PDF_HEIGHT_RE = /\.pdf(\?|$)/i;
 const IMAGE_URL_RE = /\.(png|jpe?g|webp|bmp)(\?|$)/i;
 
 /* Batch koleksi modul Dokumen untuk useModuleSync (pengganti resync penuh). */
-const DOC_COLS: CollectionKey[] = ["activities", "documents", "vessels", "projects", "boqDocs", "boq"];
+const DOC_COLS: CollectionKey[] = ["activities", "documents", "vessels", "projects", "boqDocs", "boq", "employees"];
 const EXPIRY_WINDOW = 30;
 
 

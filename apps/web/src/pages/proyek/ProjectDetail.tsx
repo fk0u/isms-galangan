@@ -123,7 +123,7 @@ function docExtOf(url: string): string {
 }
 
 /* Batch koleksi halaman detail proyek untuk useModuleSync. */
-const PD_COLS: CollectionKey[] = ["activities", "projects", "documents", "bookings", "equipment", "maintenances"];
+const PD_COLS: CollectionKey[] = ["activities", "projects", "documents", "bookings", "equipment", "maintenances", "bast", "bomItems", "boq", "boqDocs", "changeOrders", "contracts", "drydocks", "employees", "inspections", "quotations", "risks", "services", "spareparts", "subcontractors", "surveys", "trials", "warranties", "workOrders"];
 
 export default function ProjectDetail() {
   const busy = useBusy();
