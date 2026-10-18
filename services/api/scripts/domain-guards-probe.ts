@@ -104,6 +104,13 @@ async function main(): Promise<void> {
     assert("material sama dua kali di BOM proyek → 422", (await call("POST", "/api/bomItems", { data: { projectId: pid, itemId: invId, need: 3 } })).status === 422);
     assert("kebutuhan BOM 0 → 422", (await call("POST", "/api/bomItems", { data: { projectId: pid, itemId: "INV-001", need: 0 } })).status === 422);
     assert("BOM dengan proyek tak dikenal → ditolak", (await call("POST", "/api/bomItems", { data: { projectId: "PRJ-TIDAK-ADA", itemId: invId, need: 1 } })).status >= 400);
+    /* K17-PM-03: alokasi material per tahapan WBS. */
+    const bomId = String((bom.body as { data?: { id?: string } }).data?.id ?? "");
+    const alloc = (alokasi: unknown) => call("PATCH", `/api/bomItems/${bomId}`, { data: { alokasi } });
+    assert("alokasi per tahapan dalam batas kebutuhan → 200", (await alloc([{ wbsTask: "Fabrikasi", qty: 6 }, { wbsTask: "Outfitting", qty: 4 }])).status === 200);
+    assert("total alokasi melebihi kebutuhan → 422", (await alloc([{ wbsTask: "Fabrikasi", qty: 8 }, { wbsTask: "Outfitting", qty: 4 }])).status === 422);
+    assert("tahapan ganda dalam alokasi → 422", (await alloc([{ wbsTask: "Fabrikasi", qty: 1 }, { wbsTask: "Fabrikasi", qty: 1 }])).status === 422);
+    assert("alokasi tanpa tahapan atau jumlah 0 → 422", (await alloc([{ wbsTask: "", qty: 1 }])).status === 422 && (await alloc([{ wbsTask: "Fabrikasi", qty: 0 }])).status === 422);
     const masuk = await call("POST", `/api/inventory/${invId}/additional`, { direction: "in", qty: 7, reason: "sisa proyek lain", warehouse: "Gudang Baru" });
     const stokMasuk = JSON.parse((await q<{ data: string }>("SELECT data FROM inventory WHERE id = ?", [invId]))[0]!.data) as { stock: number; warehouse: string };
     assert("penerimaan additional: stok +7 dan gudang ditetapkan", masuk.status === 200 && stokMasuk.stock === 12 && stokMasuk.warehouse === "Gudang Baru", JSON.stringify(masuk.body));
