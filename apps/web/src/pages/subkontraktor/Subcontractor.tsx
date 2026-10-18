@@ -82,8 +82,18 @@ const CONTRACT_TYPES = ["Borongan", "Lump-sum", "Spesialis", "Support"];
 const PAY_SCHEMES = ["harian", "unit", "meter", "jam"];
 
 const pphOf = (p: StoreItem, fallback = 2): number => Number(p.pphPct ?? fallback);
+/* Subkon perorangan: PPh boleh diisi nominal Rupiah langsung (catatan klien
+   17 Okt, K17-SUB-01). Bila `pphManual` > 0, nominal itu menggantikan tarif %. */
+const pphManualOf = (p: StoreItem): number => Math.max(0, Number(p.pphManual) || 0);
+const pphAmountOf = (p: StoreItem, fallback = 2): number => {
+  const manual = pphManualOf(p);
+  return manual > 0 ? Math.min(manual, Number(p.amount || 0)) : Number(p.amount || 0) * pphOf(p, fallback) / 100;
+};
+/** Teks tarif untuk tampilan & catatan hutang: "0.5%" atau kata "manual". */
+const pphLabelOf = (p: StoreItem, fallback: number, manualWord: string): string =>
+  pphManualOf(p) > 0 ? manualWord : `${pphOf(p, fallback)}%`;
 const retOf = (p: StoreItem): number => Number(p.retPct ?? 5);
-const potonganOf = (p: StoreItem, pphFallback = 2): number => Number(p.amount || 0) * (pphOf(p, pphFallback) + retOf(p)) / 100;
+const potonganOf = (p: StoreItem, pphFallback = 2): number => pphAmountOf(p, pphFallback) + Number(p.amount || 0) * retOf(p) / 100;
 const netoOf = (p: StoreItem, pphFallback = 2): number => Number(p.amount || 0) - potonganOf(p, pphFallback);
 
 /* Baca ulang payables segar (bukan snapshot render): mode remote → list BE,
@@ -200,6 +210,8 @@ export default function Subcontractor() {
     milestone: string;
     amount: string;
     pphPct: string;
+    /** Nominal PPh manual (Rp) bila pphPct = "manual". */
+    pphManual: string;
     retPct: string;
     schemeType: TerminSchemeType;
     pct: string;
@@ -210,6 +222,7 @@ export default function Subcontractor() {
     milestone: "",
     amount: "",
     pphPct: "0.5",
+    pphManual: "",
     retPct: "5",
     schemeType: "Persentase",
     pct: "30",
@@ -417,7 +430,10 @@ export default function Subcontractor() {
   };
 
   const termGross = parseRupiah(termForm.amount) || 0;
-  const termPphCut = Math.round((termGross * (Number(termForm.pphPct) || 0)) / 100);
+  const termPphManual = termForm.pphPct === "manual";
+  const termPphCut = termPphManual
+    ? Math.min(termGross, parseRupiah(termForm.pphManual) || 0)
+    : Math.round((termGross * (Number(termForm.pphPct) || 0)) / 100);
   const termRetCut = Math.round((termGross * (Number(termForm.retPct) || 0)) / 100);
   const termNetoEst = Math.max(0, termGross - termPphCut - termRetCut);
   /* Opsi milestone untuk form termin: milestone SOW subkontraktor DIGABUNG
@@ -700,10 +716,15 @@ const known = ms.map((m) => m.title);
       if (!wo) { toast(S.tWoBelongsSub, "info"); return; }
       const amount = parseRupiah(termForm.amount);
       if (!amount || amount <= 0) { toast(S.tTermPositive, "info"); return; }
-      const pphPct = Number(termForm.pphPct);
+      const pphManual = termForm.pphPct === "manual" ? parseRupiah(termForm.pphManual) || 0 : 0;
+      const pphPct = termForm.pphPct === "manual" ? 0 : Number(termForm.pphPct);
       const retPct = Number(termForm.retPct);
       if (Number.isNaN(pphPct) || pphPct < 0 || pphPct > 100 || Number.isNaN(retPct) || retPct < 0 || retPct > 100) {
         toast(S.tTaxRange, "info");
+        return;
+      }
+      if (termForm.pphPct === "manual" && (pphManual <= 0 || pphManual > amount)) {
+        toast(T.tTaxManualRange, "info");
         return;
       }
       const sub = subcontractors.find((s) => s.name === termForm.sub);
@@ -745,12 +766,12 @@ const known = ms.map((m) => m.title);
 
       const created = await add("termins", {
         sub: termForm.sub, woId: wo.id, project: wo.project, milestone: milestoneTitle, progress: `${wo.id} (${effProgress(wo)}%)`, amount,
-        pphPct, retPct, status: "Draf", date: todayISO(), branch: branchOfProject(String(wo.project ?? "")),
+        pphPct, ...(pphManual > 0 ? { pphManual } : {}), retPct, status: "Draf", date: todayISO(), branch: branchOfProject(String(wo.project ?? "")),
         fromScheme: termForm.schemeType,
       }, { action: "mengajukan termin", module: "Subkontraktor" });
       toast(S.tTermFiled.replace("{n}", created.id));
       setShowTerm(false);
-      setTermForm({ sub: "", wo: "", milestone: "", amount: "", pphPct: "0.5", retPct: "5", schemeType: "Persentase", pct: "30", dpStage: "DP 1" });
+      setTermForm({ sub: "", wo: "", milestone: "", amount: "", pphPct: "0.5", pphManual: "", retPct: "5", schemeType: "Persentase", pct: "30", dpStage: "DP 1" });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -834,7 +855,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
     const prevStatus = String(termPay.status ?? "");
     try {
     // PPh variatif RawData (cth PAK YUSUF 0.5%): potong saat bayar + simpan bukti potong.
-    const pphAmt = Math.round(Number(termPay.amount || 0) * pphOf(termPay, pphDefault) / 100);
+    const pphAmt = Math.round(pphAmountOf(termPay, pphDefault));
     const retAmt = Math.round(Number(termPay.amount || 0) * retOf(termPay) / 100);
     const wo = workOrders.find((w) => w.id === termPay.woId);
     const penalty = Math.max(0, Math.round(Number(wo?.penaltyAmount || 0)));
@@ -860,7 +881,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       await add("payables", {
         v: String(termPay.sub ?? ""), kodePembantu: String(termPay.sub ?? ""),
         po: poNeto, openAwal: 0, amt: netoPayable,
-        due: proof.date, pph: `${pphOf(termPay, pphDefault)}%`, st: "Belum Dibayar",
+        due: proof.date, pph: pphLabelOf(termPay, pphDefault, T.taxManualWord), st: "Belum Dibayar",
         vessel: vesselProj, project: vesselProj, branch: branchOfProject(vesselProj),
         item: String(termPay.milestone ?? termPay.progress ?? ""),
         pay1: 0, pay2: 0,
@@ -874,7 +895,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
       await add("payables", {
         v: String(termPay.sub ?? ""), kodePembantu: String(termPay.sub ?? ""),
         po: poRet, openAwal: 0, amt: retAmt,
-        due: proof.date, pph: `${pphOf(termPay, pphDefault)}%`, st: "Ditahan",
+        due: proof.date, pph: pphLabelOf(termPay, pphDefault, T.taxManualWord), st: "Ditahan",
         vessel: vesselProj, project: vesselProj, branch: branchOfProject(vesselProj),
         item: `Retensi ${termPay.milestone ?? termPay.id}`,
         pay1: 0, pay2: 0,
@@ -937,7 +958,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         }
       }
     }
-    log("melunasi termin", `${termPay.id} via ${proof.method} ${proof.ref.trim()} · PPh ${pphOf(termPay, pphDefault)}% = ${fmtRupiah(pphAmt)} · hutang ${poNeto} ${fmtRupiah(netoPayable)}${retAmt > 0 ? ` + retensi ${fmtRupiah(retAmt)} ditahan` : ""}`, "Subkontraktor");
+    log("melunasi termin", `${termPay.id} via ${proof.method} ${proof.ref.trim()} · PPh ${pphLabelOf(termPay, pphDefault, T.taxManualWord)} = ${fmtRupiah(pphAmt)} · hutang ${poNeto} ${fmtRupiah(netoPayable)}${retAmt > 0 ? ` + retensi ${fmtRupiah(retAmt)} ditahan` : ""}`, "Subkontraktor");
     toast(S.tTermPaid.replace("{a}", termPay.id).replace("{b}", fmtRupiah(pphAmt)).replace("{c}", fmtRupiah(netoPayable)));
     setTermPay(null);
     setWithholdingRef("");
@@ -1399,7 +1420,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                         <td className="td text-steel-600 truncate" title={String(p.sub)}>{p.sub}</td>
                         <td className="td font-mono text-xs text-steel-500">{p.progress}{p.milestone ? <span className="block text-steel-400">{S.msPrefix.replace("{n}", String(p.milestone))}</span> : null}</td>
                         <td className="td font-semibold">{fmtMiliar(p.amount)}</td>
-                        <td className="td text-steel-600">{fmtRupiah(Number(p.amount || 0) * pphOf(p, pphDefault) / 100)} <span className="text-xs text-steel-400">({pphOf(p, pphDefault)}%)</span></td>
+                        <td className="td text-steel-600">{fmtRupiah(pphAmountOf(p, pphDefault))} <span className="text-xs text-steel-400">({pphLabelOf(p, pphDefault, T.taxManualWord)})</span></td>
                         <td className="td text-steel-600">{fmtRupiah(Number(p.amount || 0) * retOf(p) / 100)} <span className="text-xs text-steel-400">({retOf(p)}%)</span></td>
                         <td className="td font-semibold text-emerald-600">{fmtRupiah(netoOf(p, pphDefault))}</td>
                         <td className="td text-steel-600">{fmtTanggal(p.date)}</td>
@@ -2233,8 +2254,14 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 {taxRates.map((rate) => (
                   <option key={rate} value={String(rate)}>{rate}%{rate === 0.5 ? " (PPh final)" : ""}</option>
                 ))}
+                <option value="manual">{T.taxManualOpt}</option>
               </select>
             </Field>
+            {termPphManual && (
+              <Field label={T.taxManualAmt}>
+                <MoneyInput className="input" value={termForm.pphManual} onChange={(v) => setTermForm({ ...termForm, pphManual: v })} placeholder="0" />
+              </Field>
+            )}
             <Field label={S.retensiLabel}>
               <NumInput min={0} max={100} className="input" value={termForm.retPct} onChange={(e) => setTermForm({ ...termForm, retPct: e.target.value })} />
             </Field>
@@ -2249,7 +2276,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 <span className="font-medium text-navy-900">{fmtRupiah(termGross)}</span>
               </div>
               <div className="flex justify-between text-xs text-steel-600">
-                <span>{T.calcPph} ({termForm.pphPct}%)</span>
+                <span>{T.calcPph} ({termPphManual ? T.taxManualWord : `${termForm.pphPct}%`})</span>
                 <span className="text-rose-600 font-medium">- {fmtRupiah(termPphCut)}</span>
               </div>
               <div className="flex justify-between text-xs text-steel-600">
@@ -2305,7 +2332,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               )}
             </div>
           </Field>
-          <Field label={S.withholdLabel} hint={S.withholdHint.replace("{a}", String(termPay ? pphOf(termPay, pphDefault) : "")).replace("{b}", fmtRupiah(termPay ? Math.round(Number(termPay.amount || 0) * pphOf(termPay, pphDefault) / 100) : 0))}>
+          <Field label={S.withholdLabel} hint={(termPay && pphManualOf(termPay) > 0 ? T.withholdHintManual : S.withholdHint).replace("{a}", String(termPay ? pphOf(termPay, pphDefault) : "")).replace("{b}", fmtRupiah(termPay ? Math.round(pphAmountOf(termPay, pphDefault)) : 0))}>
             <input className="input font-mono" value={withholdingRef} onChange={(e) => setWithholdingRef(e.target.value)} placeholder={S.withholdPh} />
           </Field>
           {needsTermDirector(termPay) && (
