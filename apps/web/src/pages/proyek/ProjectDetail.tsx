@@ -483,7 +483,26 @@ const confirmStatus = async () => {
 
   const wbs = wbsFor(pid) as WbsExt[];
   const teamIds = teamFor(pid);
-  const team = data.employees.filter((e) => teamIds.includes(e.id));
+  /* Penugasan WBS ↔ tab Tim (catatan klien 17 Okt, K17-PM-08): karyawan yang
+     ditugaskan di tahapan WBS ikut tampil di Tim (juga penugasan lama yang
+     belum tercatat di team_by_project), dan subkon ditampilkan per tahapan. */
+  const wbsAssignments = (() => {
+    const emp = new Map<string, string[]>();
+    const sub = new Map<string, { name: string; stages: string[]; woIds: string[] }>();
+    for (const w of wbs) {
+      const a = w.assignee;
+      if (!a?.id) continue;
+      if (a.type === "internal") emp.set(a.id, [...(emp.get(a.id) ?? []), w.task]);
+      else {
+        const cur = sub.get(a.id) ?? { name: String(a.name ?? a.id), stages: [], woIds: [] };
+        cur.stages.push(w.task);
+        if (a.woId && !cur.woIds.includes(a.woId)) cur.woIds.push(a.woId);
+        sub.set(a.id, cur);
+      }
+    }
+    return { emp, sub };
+  })();
+  const team = data.employees.filter((e) => teamIds.includes(e.id) || wbsAssignments.emp.has(String(e.id)));
   const vessel = data.vessels.find((v) => sameName(v.name, project.vessel));
   const invoices = data.invoices.filter((i) => i.project === pid);
   const ncrs = data.ncr.filter((n) => n.project === pid);
@@ -1241,6 +1260,12 @@ const createWarranty = async (wbsTask?: string) => {
     try {
       await saveWbsWithConflictRetry(updated);
       log("menugaskan tahap WBS", `${wbsAssignTask} → ${assignee.type}: ${assignee.name}`, "Proyek");
+      /* Karyawan yang ditugaskan otomatis masuk Tim proyek: keanggotaan tim juga
+         menentukan akses (mis. mekanik hanya bisa memperbarui proyek timnya). */
+      if (assignee.type === "internal" && !teamIds.includes(assignee.id)) {
+        try { await setTeam(pid, [...teamIds, assignee.id]); }
+        catch { toast(S.detAssignTeamFail, "info"); }
+      }
       toast(S.detAssignSuccess);
       setWbsAssignTask(null);
       setAssignForm({ type: "internal", employeeId: "", subconId: "" });
@@ -2210,14 +2235,37 @@ const createWarranty = async (wbsTask?: string) => {
                       <Link to={`/sdm/karyawan/${e.id}`} className="block truncate text-sm font-semibold text-navy-900 hover:text-ocean-600 hover:underline">{e.name}</Link>
                       <p className="text-xs text-steel-500">{e.role} · {e.dept}</p>
                       {(e.phone || e.email) ? <p className="truncate text-xs text-steel-400">{[e.phone, e.email].filter(Boolean).join(" · ")}</p> : null}
+                      {wbsAssignments.emp.has(String(e.id)) && (
+                        <p className="mt-1 truncate text-xs text-ocean-700" title={(wbsAssignments.emp.get(String(e.id)) ?? []).join(", ")}>
+                          {S.detTeamWbsStages.replace("{a}", (wbsAssignments.emp.get(String(e.id)) ?? []).join(", "))}
+                        </p>
+                      )}
                     </div>
+                    {!teamIds.includes(e.id) ? (
+                      <Badge tone="blue">{S.detTeamFromWbs}</Badge>
+                    ) : (
                     <button className="rounded p-1 text-rose-400 hover:bg-rose-50" title={S.detRemoveTitle} onClick={async () => { try { await saveTeamWithConflictRetry(teamIds.filter((t) => t !== e.id)); toast(S.detToastRemoved.replace("{a}", e.name), "info"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    )}
                   </Card>
                 ))}
                 {team.length === 0 && <p className="text-sm text-steel-400">{S.detNoTeam}</p>}
               </div>
+              {wbsAssignments.sub.size > 0 && (
+                <div className="mt-5">
+                  <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detTeamSubTitle}</h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {[...wbsAssignments.sub.entries()].map(([id, sc]) => (
+                      <Card key={id} className="p-4">
+                        <p className="text-sm font-semibold text-navy-900">{sc.name}</p>
+                        <p className="mt-1 text-xs text-steel-500" title={sc.stages.join(", ")}>{S.detTeamWbsStages.replace("{a}", sc.stages.join(", "))}</p>
+                        {sc.woIds.length > 0 && <p className="mt-1 font-mono text-xs text-amber-700">{sc.woIds.join(", ")}</p>}
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
