@@ -885,6 +885,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     for (const p of inBranch(data.projects ?? [])) m[String(p.id)] = p;
     return m;
   }, [data.projects, inBranch]);
+  /* Nama kapal invoice (K17-FIN-03): field invoice, lalu kapal proyeknya. */
+  const invVesselOf = (inv: Record<string, unknown>): string => String(inv.vessel || projectById[String(inv.project ?? "")]?.vessel || "");
 
   const matchBranch = (projectId: string): boolean => {
     if (branch === "SEMUA") return true;
@@ -3703,7 +3705,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       const bukti = String(inv.paidProofUrl ?? inv.buktiUrl ?? "");
                       return (
                       <tr key={inv.id} id={notifRowId(String(inv.id))} className={rowHighlightClass({ id: String(inv.id), flash, notified: notified.has(String(inv.id)), base: "hover:bg-surface" })}>
-                        <td className="td font-mono text-xs font-semibold text-navy-900">{inv.id}<span className="block font-sans text-[11px] font-normal text-steel-500">{fmtTanggal(String(inv.due ?? ""))}</span></td>
+                        <td className="td font-mono text-xs font-semibold text-navy-900">{inv.id}<span className="block font-sans text-[11px] font-normal text-steel-500">{fmtTanggal(String(inv.due ?? ""))}</span>
+                          <span className="block max-w-[220px] truncate font-sans text-[11px] font-normal text-steel-600">{String(inv.client || "-")} · {invVesselOf(inv) || S.detNoVessel}</span></td>
                         <td className="td text-xs text-steel-600">{String(inv.billingType ?? inv.paymentTerm ?? "-")}{inv.serviceRef ? ` · ${inv.serviceRef}` : ""}</td>
                         <td className="td text-xs text-steel-600">{S.linesCount.replace("{n}", String(Array.isArray(inv.lines) ? inv.lines.length : 1))}</td>
                         <td className="td text-xs">
@@ -5489,7 +5492,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
 
       {/* Modal Detail Invoice: ringkasan + baris + pajak + bukti & jurnal viewer. */}
       <Modal open={invDetail !== null} onClose={() => setInvDetail(null)} title={invDetail ? S.detTitle.replace("{a}", invDetail.id) : S.detBtn}
-        subtitle={invDetail ? `${String(invDetail.client ?? "")} · ${String(invDetail.project ?? "")} · ${String(invDetail.status ?? "")}` : ""} wide
+        subtitle={invDetail ? [invDetail.client, invDetail.project, invDetail.status].map((v) => String(v ?? "").trim()).filter(Boolean).join(" · ") : ""} wide
         footer={<>
           <button className="btn-secondary" onClick={() => setInvDetail(null)}>{S.cancelBtn}</button>
           <button
@@ -5522,7 +5525,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <div className="space-y-4">
               <dl className="dl-div grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detClientProject}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.client ?? "-")} / {String(invDetail.project ?? "-")}</dd></div>
-                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detVessel}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.vessel || projectById[String(invDetail.project ?? "")]?.vessel || "-")}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detVessel}</dt><dd className="text-right font-medium text-navy-900">{invVesselOf(invDetail) || S.detNoVessel}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTypeTerm}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.billingType ?? invDetail.paymentTerm ?? "-")}{invDetail.milestoneRef ? ` · ${String(invDetail.milestoneRef)}` : ""}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.dueLabel}</dt><dd className="text-right font-medium text-navy-900">{fmtTanggal(String(invDetail.due ?? ""))}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.colStatus}</dt><dd className="text-right"><StatusBadge status={String(invDetail.status ?? "")} /></dd></div>

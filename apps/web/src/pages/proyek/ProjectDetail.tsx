@@ -51,7 +51,7 @@ import { usePdfDoc } from "../../components/usePdfDoc";
 import { canonPrioritas, scopeList } from "../../utils/scope";
 import { equipmentCostSummary } from "../../utils/projectCost";
 import { employeeOptions } from "../../utils/employeeOptions";
-import { projectDelayDetailsOf, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
+import { projectDelayDetailsOf, runAutoWriteOnce, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
 import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRisk } from "../../utils/riskAuto";
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
@@ -435,7 +435,7 @@ const confirmStatus = async () => {
       const today = todayISO();
       // Override sudah tidak relevan (mis. end diperbaiki) → clear.
       if (shouldClearOverride(project as Record<string, unknown>, today, isOverdue as (p: Record<string, unknown>, t: string) => boolean)) {
-        void update("projects", project.id, { statusOverride: null }).catch(() => {});
+        runAutoWriteOnce(`${project.id}:override`, () => update("projects", project.id, { statusOverride: null }).catch(() => {}));
       }
       // Auto-logic hanya menulis "Terlambat" kalau tidak ada override aktif.
       if (shouldAutoSetLate(project as Record<string, unknown>, today, isOverdue as (p: Record<string, unknown>, t: string) => boolean)) {
@@ -445,9 +445,9 @@ const confirmStatus = async () => {
            tidak ada yang tahu kenapa. Sekarang error dikembalikan ke
            pendingSync - Monitoring sudah menampilkannya sebagai banner
            "Data belum tersinkron", jadi user tetap diberi tahu. */
-        void update("projects", project.id, { status: "Terlambat" }).catch((err) => {
+        runAutoWriteOnce(`${project.id}:late`, () => update("projects", project.id, { status: "Terlambat" }).catch((err) => {
           log("gagal menandai proyek terlambat", `${project.id} · ${err instanceof Error ? err.message : String(err)}`, "Proyek");
-        });
+        }));
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [project?.status, project?.end, project?.progress, project?.statusOverride, canAutoWrite]);

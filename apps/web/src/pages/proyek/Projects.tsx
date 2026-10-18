@@ -28,7 +28,7 @@ import { n_prj } from "../../i18n/n_prj";
 import { fmtMiliar } from "../../data";
 import { todayISO, fmtTanggal } from "../../utils/format";
 import { getSetting } from "../../utils/settings";
-import { shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
+import { runAutoWriteOnce, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
 import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRisk } from "../../utils/riskAuto";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { canonPrioritas } from "../../utils/scope";
@@ -150,17 +150,17 @@ export default function Projects() {
     for (const p of projects) {
       // Override sudah tidak relevan → clear.
       if (shouldClearOverride(p as Record<string, unknown>, today, isOverdue as (r: Record<string, unknown>, t: string) => boolean)) {
-        void update("projects", p.id, { statusOverride: null }).catch(() => {});
+        runAutoWriteOnce(`${p.id}:override`, () => update("projects", p.id, { statusOverride: null }).catch(() => {}));
       }
       // Auto-logic hanya menulis "Terlambat" kalau tidak ada override aktif.
       if (shouldAutoSetLate(p as Record<string, unknown>, today, isOverdue as (r: Record<string, unknown>, t: string) => boolean)) {
-        void update("projects", p.id, { status: "Terlambat" }).catch((err) => {
+        runAutoWriteOnce(`${p.id}:late`, () => update("projects", p.id, { status: "Terlambat" }).catch((err) => {
           log(
             "gagal menandai proyek terlambat",
             `${p.id} · ${err instanceof Error ? err.message : String(err)}`,
             "Proyek",
           );
-        });
+        }));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

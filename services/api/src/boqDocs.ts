@@ -296,3 +296,14 @@ export async function reviseDoc(id: string): Promise<{ id: string; revision: num
     return { id: newDocId, revision, items: copied };
   });
 }
+
+/** totalPrice baris BoQ diisi server (qty × harga satuan) bila klien tidak
+ *  mengirimnya. UI selalu mengirim, tetapi pemanggil REST API (dokumentasi
+ *  Bruno) sering hanya mengirim quantity + unitPrice → baris tampil Rp 0 di
+ *  daftar surat. PATCH yang mengubah qty/harga tanpa totalPrice ikut dihitung ulang. */
+export function withBoqLineTotal(data: Record<string, unknown>, sent: Record<string, unknown> = data): Record<string, unknown> {
+  const has = (v: unknown): boolean => v !== undefined && v !== null && v !== "";
+  if (has(sent.totalPrice)) return data;
+  if (sent !== data && !("quantity" in sent) && !("unitPrice" in sent) && has(data.totalPrice)) return data;
+  return { ...data, totalPrice: (Number(data.quantity) || 0) * (Number(data.unitPrice) || 0) };
+}

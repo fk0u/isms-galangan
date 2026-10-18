@@ -129,3 +129,15 @@ export function shouldClearOverride(
   if (!project.statusOverride) return false;
   return !isOverdueFn(project, today);
 }
+
+/* Efek auto-Terlambat berjalan setiap kali daftar proyek berubah, termasuk
+   saat tulisan otomatis sebelumnya belum selesai. PATCH kedua lalu memakai
+   versi baris yang basi dan ditolak 409, sehingga muncul toast "Data sudah
+   diubah pengguna lain" begitu aplikasi dibuka. Satu tulisan per kunci
+   (proyek + jenis) yang boleh berjalan sekaligus; kunci lepas setelah selesai. */
+const inFlight = new Set<string>();
+export function runAutoWriteOnce(key: string, write: () => Promise<unknown>): void {
+  if (inFlight.has(key)) return;
+  inFlight.add(key);
+  void write().finally(() => inFlight.delete(key));
+}

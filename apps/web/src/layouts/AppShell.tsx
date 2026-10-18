@@ -39,6 +39,7 @@ import { useAuth, hasPermission } from "../auth/auth";
 import { useStore } from "../data/store";
 import DemoGuide from "../components/DemoGuide";
 import { Badge, Modal, Field, Toaster, toast } from "../components/ui";
+import { markSessionExpired } from "../auth/sessionExpired";
 import { apiFetch } from "../services/http";
 import { computeAlerts } from "../utils/alerts";
 import { loadNotifRead, saveNotifRead, loadModSeen } from "../utils/notifRead";
@@ -87,7 +88,11 @@ export default function AppShell() {
 
   useEffect(() => {
     const onExpired = () => {
-      toast(t.auth.sessionExpired, "info");
+      /* Toaster hidup di AppShell yang ikut lepas saat pindah ke /login, jadi
+         toast di sini tidak pernah terlihat. Pesan "Sesi berakhir" ditandai di
+         sessionStorage dan ditampilkan halaman Login (K17-UMUM-01) - state
+         navigasi tidak cukup karena RequireAuth ikut mengalihkan dan menimpanya. */
+      markSessionExpired();
       logout(true);
       reset();
       navigate("/login");
