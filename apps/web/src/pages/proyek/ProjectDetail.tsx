@@ -235,7 +235,8 @@ export default function ProjectDetail() {
   const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", materialQty: "1", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
   const [wbsAssignTask, setWbsAssignTask] = useState<string | null>(null);
   const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
-  const [assignForm, setAssignForm] = useState({ type: "internal" as "internal" | "external", employeeId: "", subconId: "" });
+  /* woValue: nilai kontrak WO subkon untuk tahapan ini (K17-PM-14). */
+  const [assignForm, setAssignForm] = useState({ type: "internal" as "internal" | "external", employeeId: "", subconId: "", woValue: "" });
   const [wbsHistoryTask, setWbsHistoryTask] = useState<string | null>(null);
   const [showShare, setShowShare] = useState(false);
   const [shareForm, setShareForm] = useState({ docId: "", to: "" });
@@ -821,7 +822,17 @@ const createWarranty = async (wbsTask?: string) => {
     .filter((sv) => String(sv.projectId ?? "") === pid && ["Scheduled", "In Progress"].includes(String(sv.status ?? ""))
       && String(sv.approval ?? "Disetujui") === "Disetujui")
     .reduce((sum, sv) => sum + (Number(sv.cost) || 0), 0);
-  const hppWithEquip = Number(project.actual ?? 0) + equipCost.totalRealized + serviceCostDone;
+  /* Subkon ↔ WBS ↔ anggaran (catatan klien 17 Okt, K17-PM-14): komitmen = nilai
+     kontrak WO proyek, realisasi = termin Lunas. Realisasi ikut biaya aktual EVM
+     seperti equipment & service. */
+  const subkonByWo = wos.map((w) => {
+    const paid = (data.termins ?? []).filter((t) => String(t.woId ?? "") === String(w.id) && String(t.status ?? "") === "Lunas")
+      .reduce((s2, t) => s2 + (Number(t.amount) || 0), 0);
+    return { wo: w, task: String(w.wbsTask ?? w.scope ?? ""), value: Number(w.value) || 0, paid };
+  });
+  const subkonCommitted = subkonByWo.reduce((s2, r) => s2 + r.value, 0);
+  const subkonPaid = subkonByWo.reduce((s2, r) => s2 + r.paid, 0);
+  const hppWithEquip = Number(project.actual ?? 0) + equipCost.totalRealized + serviceCostDone + subkonPaid;
 
   // SATU angka grand invoice: grandTotal bila ada, else amount dikurangi retensi.
   const invGrand = (i: StoreItem): number => {
@@ -1254,6 +1265,7 @@ const createWarranty = async (wbsTask?: string) => {
           status: "Dalam Proses",
           date: todayISO(),
           targetDate: targetTask.end || todayISO(),
+          ...(parseRupiah(assignForm.woValue) > 0 ? { value: parseRupiah(assignForm.woValue) } : {}),
           branch: project.branch || session?.branch || "Samarinda",
           wbsTask: wbsAssignTask,
         }, { action: "buat WO dari penugasan WBS", module: "Proyek" });
@@ -1280,7 +1292,7 @@ const createWarranty = async (wbsTask?: string) => {
       }
       toast(S.detAssignSuccess);
       setWbsAssignTask(null);
-      setAssignForm({ type: "internal", employeeId: "", subconId: "" });
+      setAssignForm({ type: "internal", employeeId: "", subconId: "", woValue: "" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -1902,6 +1914,7 @@ const createWarranty = async (wbsTask?: string) => {
                                   type: w.assignee?.type ?? "internal",
                                   employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
                                   subconId: w.assignee?.type === "external" ? w.assignee.id : "",
+                                  woValue: "",
                                 });
                               }}
                             />
@@ -2027,6 +2040,33 @@ const createWarranty = async (wbsTask?: string) => {
           {tab === "WBS & Anggaran" && (
             <div className="mt-6">
               <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detBudgetTitle}</h3>
+              {subkonByWo.length > 0 && (
+                <Card className="mb-4 p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-semibold text-navy-900">{S.subBudgetTitle}</h4>
+                    <p className="text-xs text-steel-500">{S.subBudgetSummary.replace("{a}", fmtRupiah(subkonCommitted)).replace("{b}", fmtRupiah(subkonPaid))}</p>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-surface"><tr>
+                        <th className="th">{S.eqStageCol}</th><th className="th">WO</th><th className="th">{S.subBudgetColSub}</th>
+                        <th className="th text-right">{S.subBudgetColValue}</th><th className="th text-right">{S.subBudgetColPaid}</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {subkonByWo.map(({ wo, task, value, paid }) => (
+                          <tr key={String(wo.id)}>
+                            <td className="td text-xs">{wbs.some((w) => w.task === task) ? task : <span className="text-steel-400">{task || S.eqNoStage}</span>}</td>
+                            <td className="td font-mono text-xs">{String(wo.id)}</td>
+                            <td className="td text-sm">{String(wo.sub ?? "-")}</td>
+                            <td className="td text-right text-sm">{value > 0 ? fmtRupiah(value) : <span className="text-xs text-amber-600">{S.subBudgetNoValue}</span>}</td>
+                            <td className="td text-right text-sm font-semibold">{fmtRupiah(paid)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Card className="p-5">
                 <div className="mb-2 flex items-center justify-between">
@@ -2220,8 +2260,8 @@ const createWarranty = async (wbsTask?: string) => {
                   {/* Efek ke EAC: CPI dengan AC + equipment, bukan AC saja. */}
                   <p className="mt-4 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">
                     {locale === "en"
-                      ? `Actual cost used in EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + services ${fmtRupiah(serviceCostDone)} = ${fmtRupiah(hppWithEquip)}.`
-                      : `Biaya aktual dipakai untuk EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + service ${fmtRupiah(serviceCostDone)} = ${fmtRupiah(hppWithEquip)}.`}
+                      ? `Actual cost used in EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + services ${fmtRupiah(serviceCostDone)} + subcontractors (paid terms) ${fmtRupiah(subkonPaid)} = ${fmtRupiah(hppWithEquip)}.`
+                      : `Biaya aktual dipakai untuk EVM: ${fmtRupiah(Number(project.actual ?? 0))} + equipment ${fmtRupiah(equipCost.totalRealized)} + service ${fmtRupiah(serviceCostDone)} + subkon (termin lunas) ${fmtRupiah(subkonPaid)} = ${fmtRupiah(hppWithEquip)}.`}
                     {equipCost.maintenanceCommitted > 0 && (
                       <span className="block text-amber-600">
                         {locale === "en"
@@ -3391,6 +3431,11 @@ const createWarranty = async (wbsTask?: string) => {
                 emptyText={locale === "en" ? "No subcontractors found" : "Subkontraktor tidak ditemukan"}
                 onOpenChange={setAssignDropdownOpen}
               />
+            </Field>
+          )}
+          {assignForm.type === "external" && (
+            <Field label={S.subWoValueLabel} hint={S.subWoValueHint}>
+              <MoneyInput className="input" value={assignForm.woValue} onChange={(v) => setAssignForm({ ...assignForm, woValue: v })} placeholder="0" />
             </Field>
           )}
         </div>
