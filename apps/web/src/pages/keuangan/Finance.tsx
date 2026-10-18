@@ -4723,21 +4723,20 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fKodePembantu} hint={S.kodePembantuHint}>
               <input className="input font-mono" value={invForm.kodePembantu} onChange={(e) => setInv("kodePembantu", e.target.value)} placeholder={S.kodePembantuPh} />
             </Field>
-            <Field label={S.fNsfp} hint={S.nsfpHint}>
-              <input className="input font-mono" value={invForm.nsfp} onChange={(e) => setInv("nsfp", e.target.value)} placeholder="NSFP" />
-            </Field>
-          </FormGrid>
-          <FormGrid>
+            {/* Field NSFP dihapus (catatan klien 17 Okt, K17-FIN-05); NSFP invoice lama
+                tetap tampil di daftar, detail, dan ekspor e-Faktur. */}
             <Field label={S.fNoFaktur} hint={S.noFakturHint}>
               <input className="input font-mono" value={invForm.noFaktur} onChange={(e) => setInv("noFaktur", e.target.value)} placeholder={S.noFakturShort} />
             </Field>
+          </FormGrid>
+          <FormGrid>
             <Field label={S.fDpAmort} hint={S.dpAmortHint}>
               <NumInput min={0} className="input" value={invForm.dpApplied} onChange={(e) => setInv("dpApplied", e.target.value)} placeholder="0" />
             </Field>
+            <Field label={S.fDpRef} hint={S.dpRefHint}>
+              <input className="input font-mono" value={invForm.dpRef} onChange={(e) => setInv("dpRef", e.target.value)} placeholder={S.dpRefPh} />
+            </Field>
           </FormGrid>
-          <Field label={S.fDpRef} hint={S.dpRefHint}>
-            <input className="input font-mono" value={invForm.dpRef} onChange={(e) => setInv("dpRef", e.target.value)} placeholder={S.dpRefPh} />
-          </Field>
           <label className="flex items-center gap-2 text-sm text-steel-600">
             <input type="checkbox" checked={invForm.skdt} onChange={(e) => setInvForm((f) => ({ ...f, skdt: e.target.checked }))} />
             {S.skdtCheck}
@@ -5229,7 +5228,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.dueLabel}><input type="date" required className="input" value={invEditForm.due} onChange={(e) => setInvEditForm({ ...invEditForm, due: e.target.value })} /></Field>
             <Field label={S.fTermin}><input className="input" value={invEditForm.paymentTerm} onChange={(e) => setInvEditForm({ ...invEditForm, paymentTerm: e.target.value })} /></Field>
             <Field label={S.fMilestone}><input className="input" value={invEditForm.milestoneRef} onChange={(e) => setInvEditForm({ ...invEditForm, milestoneRef: e.target.value })} /></Field>
-            <Field label="NSFP"><input className="input font-mono" value={invEditForm.nsfp} onChange={(e) => setInvEditForm({ ...invEditForm, nsfp: e.target.value })} /></Field>
             <Field label={S.noFakturShort}><input className="input font-mono" value={invEditForm.noFaktur} onChange={(e) => setInvEditForm({ ...invEditForm, noFaktur: e.target.value })} /></Field>
           </FormGrid>
         </div>
