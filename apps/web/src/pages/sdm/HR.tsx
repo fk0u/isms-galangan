@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { leaveUsedByEmployee, reducesLeaveBalance } from "../../utils/leaveBalance";
 import { QRCodeSVG } from "qrcode.react";
 import { Award, BadgeCheck, Download, Eye, Lock, Network, Plus, Users, Pencil, Trash2, Printer } from "lucide-react";
 import {
@@ -388,13 +389,7 @@ export default function HR() {
     [data.employees],
   );
 
-  const leaveUsed = useMemo(() => {
-    const m = new Map<string, number>();
-    data.leaves
-      .filter((l) => l.type === "Tahunan" && l.status === "Disetujui")
-      .forEach((l) => m.set(String(l.employeeId), (m.get(String(l.employeeId)) ?? 0) + Number(l.days || 0)));
-    return m;
-  }, [data.leaves]);
+  const leaveUsed = useMemo(() => leaveUsedByEmployee(data.leaves), [data.leaves]);
   const saldoCuti = useCallback(
     (empId: string) => jatahCuti - (leaveUsed.get(empId) ?? 0),
     [jatahCuti, leaveUsed],
@@ -717,7 +712,7 @@ export default function HR() {
       toast(S.tCutiRange, "info");
       return;
     }
-    if (leaveForm.type === "Tahunan" && saldoCuti(leaveForm.employeeId) < leaveDays) {
+    if (reducesLeaveBalance(leaveForm.type) && saldoCuti(leaveForm.employeeId) < leaveDays) {
       toast(S.tSaldoKurang, "info");
       return;
     }
@@ -810,7 +805,7 @@ export default function HR() {
     if (!leaveEditId) return;
     if (!leaveForm.employeeId) { toast(S.tPilihKaryawan, "info"); return; }
     if (leaveDays <= 0) { toast(S.tCutiRange, "info"); return; }
-    if (leaveForm.type === "Tahunan" && saldoCuti(leaveForm.employeeId) < leaveDays) {
+    if (reducesLeaveBalance(leaveForm.type) && saldoCuti(leaveForm.employeeId) < leaveDays) {
       toast(S.tSaldoKurang, "info");
       return;
     }
@@ -2159,7 +2154,7 @@ const finishTraining = async (t: StoreItem) => {
             </select>
           </Field>
           <FormGrid>
-            <Field label={S.thTipe}>
+            <Field label={S.thTipe} hint={reducesLeaveBalance(leaveForm.type) ? S.hintCutiPotong : S.hintCutiTidakPotong}>
               <select
                 className="input"
                 value={leaveForm.type}
