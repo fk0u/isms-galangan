@@ -357,7 +357,7 @@ export default function AppShell() {
               label: String(p.vessel ?? p.id), sub: `${p.id} · ${p.client ?? ""}`, to: `/proyek/${p.id}`, kind: "Proyek",
             })),
             ...(vsl ?? []).slice(0, 2).map((v) => ({
-              label: String(v.name ?? v.id), sub: String(v.imo ?? ""), to: `/kapal/${v.id}`, kind: "Kapal",
+              label: String(v.name ?? v.id), sub: String(v.type ?? v.imo ?? ""), to: `/kapal/${v.id}`, kind: "Kapal",
             })),
             ...(doc ?? []).slice(0, 2).map((d) => ({
               label: String(d.title ?? d.id), sub: `${d.type ?? ""} · ${d.project ?? ""}`, to: "/dokumen", kind: "Dokumen",
@@ -386,9 +386,9 @@ export default function AppShell() {
         .slice(0, 3)
         .map((p) => ({ label: p.vessel, sub: `${p.id} · ${p.client}`, to: `/proyek/${p.id}`, kind: "Proyek" })),
       ...data.vessels
-        .filter((v) => `${v.name} ${v.imo}`.toLowerCase().includes(query))
+        .filter((v) => `${v.name} ${v.imo ?? ""} ${v.owner ?? ""}`.toLowerCase().includes(query))
         .slice(0, 2)
-        .map((v) => ({ label: v.name, sub: `${v.imo}`, to: `/kapal/${v.id}`, kind: "Kapal" })),
+        .map((v) => ({ label: v.name, sub: String(v.type ?? v.imo ?? ""), to: `/kapal/${v.id}`, kind: "Kapal" })),
       ...data.invoices
         .filter((i) => `${i.id} ${i.client}`.toLowerCase().includes(query))
         .slice(0, 2)
