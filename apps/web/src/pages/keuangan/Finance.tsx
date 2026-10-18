@@ -3743,6 +3743,26 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("bb"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={bbHist} onChange={setBbHist} idPrefix="bb" />
+              {/* Ringkasan buku besar (K17-FIN-06): total debit, total kredit, dan status
+                  keseimbangan selalu terlihat, nominal penuh (bukan dibulatkan miliar). */}
+              {(() => {
+                const diff = bbDAll - bbKAll;
+                const balanced = Math.abs(diff) < 1;
+                return (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Card className="p-4"><p className="text-xs text-steel-500">{S.bbTotalDebit}</p><p className="mt-1 text-lg font-bold text-navy-900">{fmtRupiah(bbDAll)}</p></Card>
+                    <Card className="p-4"><p className="text-xs text-steel-500">{S.bbTotalKredit}</p><p className="mt-1 text-lg font-bold text-navy-900">{fmtRupiah(bbKAll)}</p></Card>
+                    <Card className={`p-4 ${balanced ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                      <p className="text-xs text-steel-500">{S.bbBalanceStatus}</p>
+                      <p className={`mt-1 text-lg font-bold ${balanced ? "text-emerald-700" : "text-red-700"}`}>{balanced ? S.bbStatusBalanced : S.bbStatusUnbalanced}</p>
+                      {!balanced && <p className="mt-1 text-[11px] text-red-700">{S.bbDiffLabel.replace("{a}", fmtRupiah(Math.abs(diff)))}</p>}
+                    </Card>
+                  </div>
+                );
+              })()}
+              <div className="flex justify-end">
+                <SearchBox value={bbQ} onChange={setBbQ} className="w-full sm:max-w-xs" placeholder={S.bbSearchPh} ariaLabel={S.bbSearchPh} />
+              </div>
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.bbLiveBadge.replace("{n}", String(bbLive.reduce((s, r) => s + r.n, 0))).replace("{d}", bbAsOf).replace("{s}", bbSnap ? S.bbSnapSuffix : S.bbLiveSuffix)}
               </p>
@@ -3755,9 +3775,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               )}
               {bbSnap && (
               <>
-              <div className="mb-2 flex justify-end">
-                <SearchBox value={bbQ} onChange={setBbQ} className="max-w-xs" placeholder={locale === "en" ? "Search ledger..." : "Cari buku besar..."} ariaLabel={locale === "en" ? "Search ledger" : "Cari buku besar"} />
-              </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface sticky top-0 z-10">
@@ -3821,22 +3838,36 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <tr><td className="td text-xs italic text-steel-400" colSpan={8}>{S.bbEmptyLive}</td></tr>
                       )}
                     </tbody>
+                    {bbLive.length > 0 && (() => {
+                      const shown = bbLive.filter((r) => rowMatches(r as unknown as Record<string, unknown>, bbQ, ["kode", "nama"]));
+                      const t = shown.reduce((a, r) => ({ dAll: a.dAll + r.dAll, kAll: a.kAll + r.kAll, d: a.d + r.d, k: a.k + r.k }), { dAll: 0, kAll: 0, d: 0, k: 0 });
+                      return (
+                        <tfoot className="border-t-2 border-steel-200 bg-surface">
+                          <tr>
+                            <td className="td text-xs font-bold text-navy-900" colSpan={2}>{bbQ.trim() ? S.bbTotalFiltered : S.bbTotalRow}</td>
+                            <td className="td text-xs font-bold">{fmtRupiah(t.dAll)}</td>
+                            <td className="td text-xs font-bold">{fmtRupiah(t.kAll)}</td>
+                            <td className="td text-xs font-bold">{fmtRupiah(t.dAll - t.kAll)}</td>
+                            <td className="td text-xs font-bold">{fmtRupiah(t.d)}</td>
+                            <td className="td text-xs font-bold">{fmtRupiah(t.k)}</td>
+                            <td className="td" />
+                          </tr>
+                        </tfoot>
+                      );
+                    })()}
                   </table>
                 </div>
               </Card>
               <p className="text-xs text-steel-500">{S.bbNote}{bbSnap ? S.bbSnapNote : ""}</p>
               <Card className="p-4">
                 <CardHeader title={S.bbVoucherTitle.replace("{d}", bbAsOf.slice(0, 7))} subtitle={S.bbVoucherSub} />
-                <div className="mb-2 flex justify-end">
-                  <SearchBox value={bbQ} onChange={setBbQ} className="max-w-xs" placeholder={locale === "en" ? "Search vouchers..." : "Cari voucher..."} ariaLabel={locale === "en" ? "Search vouchers" : "Cari voucher buku besar"} />
-                </div>
                 <div className="overflow-x-auto px-1 pb-3">
                   <table className="w-full">
                     <thead className="bg-surface sticky top-0 z-10">
                       <tr><th className="th">Tanggal</th><th className="th">Dokumen</th><th className="th">Uraian</th><th className="th">DB</th><th className="th">KR</th><th className="th">Nominal</th></tr>
                     </thead>
                     <tbody className="divide-y divide-steel-100">
-                      {manJournals.filter((j) => matchHist(String(j.date ?? ""), bbHist)).slice(0, 100).map((j) => (
+                      {manJournals.filter((j) => matchHist(String(j.date ?? ""), bbHist) && rowMatches(j as unknown as Record<string, unknown>, bbQ, ["dokumen", "uraian", "db", "kr"])).slice(0, 100).map((j) => (
                         <tr key={String(j.id)} className="hover:bg-surface">
                           <td className="td font-mono text-xs text-steel-600">{fmtTanggal(String(j.date ?? ""))}</td>
                           <td className="td font-mono text-xs">{String(j.dokumen ?? "-")}</td>
