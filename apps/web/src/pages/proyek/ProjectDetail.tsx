@@ -72,6 +72,7 @@ import { getSetting } from "../../utils/settings";
 import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../utils/sb";
 import { exportExcel } from "../../utils/export";
 import { readSheetRows } from "../../utils/readSheet";
+import DockPlanCard from "./DockPlanCard";
 
 /* "Dalam Proses" = status default proyek baru (ProjectAddModal). Tanpa baris
    ini, <select> status tidak punya <option> yang cocok untuk proyek-proyek itu
@@ -1762,6 +1763,15 @@ const createWarranty = async (wbsTask?: string) => {
 
           {tab === "WBS & Anggaran" && (
             <div>
+              <DockPlanCard
+                project={project}
+                drydocks={data.drydocks ?? []}
+                canEdit={canAutoWrite}
+                onSave={async (patch) => {
+                  await update("projects", pid, patch);
+                  log("mengubah rencana docking", `${pid} · dock ${patch.plannedDockId || "-"} · ${patch.start || "-"} s.d. ${patch.end || "-"}`, "Proyek");
+                }}
+              />
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-navy-900">{S.detWbsTitle}</h3>
                 {wbs.length > 0 && (
