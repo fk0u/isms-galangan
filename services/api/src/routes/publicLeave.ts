@@ -4,7 +4,7 @@
  * 12 Okt) PIN tidak lagi diminta: karyawan dikenali dari token QR + NIK, dan
  * setelah NIK cocok hanya nama, jabatan, departemen yang ditampilkan untuk
  * verifikasi. Pengajuan selalu berstatus Diajukan - HR tetap yang memutuskan.
- * Token QR disimpan sebagai hash, kedaluwarsa 90 hari, dan diganti saat HR
+ * Token QR disimpan sebagai hash, kedaluwarsa 1 tahun, dan diganti saat HR
  * membuat QR baru. */
 import type { FastifyInstance } from "fastify";
 import fs from "node:fs";
@@ -24,7 +24,10 @@ const ipLimiter = createRateLimiter(10, 10 * 60_000);
 const nikLimiter = createRateLimiter(5, 15 * 60_000);
 // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
 const lookupLimiter = createRateLimiter(30, 10 * 60_000);
-const QR_TTL_MS = 90 * 86_400_000;
+/* 1 tahun (catatan klien 17 Okt, K17-HR-01; ADR-0019): QR tertempel di lokasi
+   kerja dan mengganti cetakan tiap 90 hari terlalu sering. Batas lain tetap:
+   NIK aktif, rate limit, pengajuan menunggu HR, dan QR baru mencabut yang lama. */
+const QR_TTL_MS = 365 * 86_400_000;
 const MAX_ATTACHMENT = 3 * 1024 * 1024;
 const ATTACHMENT_EXT = new Set([".pdf", ".png", ".jpg", ".jpeg"]);
 const GONE = "Tautan sudah kedaluwarsa atau diganti. Pindai QR terbaru dari HR.";
