@@ -38,6 +38,25 @@ async function main(): Promise<void> {
   const itemId = (item.json().data as { id: string }).id;
   assert("item BoQ ke surat Draft → 201", item.statusCode === 201, item.body);
 
+  /* Revisi 18 Okt: register Dokumen mengikuti isi surat BoQ. */
+  const docRow = async (id: string) => {
+    const r = (await q<{ data: string }>("SELECT data FROM documents WHERE id = ?", [`DOC-${id}`]))[0];
+    return r ? (JSON.parse(r.data) as { total?: number; itemCount?: number }) : null;
+  };
+  const afterAdd = await docRow(doc.id);
+  assert("dokumen BoQ ikut memuat total & jumlah item setelah item ditambah", afterAdd?.total === 3000000 && afterAdd.itemCount === 1, JSON.stringify(afterAdd));
+  const extra = await call("POST", "/api/boq", { data: { projectId: project.id, boqDocId: doc.id, name: "Probe cat", quantity: 1, unitPrice: 500000 } });
+  const extraId = (extra.json().data as { id: string }).id;
+  const afterExtra = await docRow(doc.id);
+  assert("item kedua → dokumen total 3,5 jt, 2 item", afterExtra?.total === 3500000 && afterExtra.itemCount === 2, JSON.stringify(afterExtra));
+  await call("DELETE", `/api/boq/${extraId}`);
+  const afterDel = await docRow(doc.id);
+  assert("hapus item → dokumen kembali 3 jt, 1 item", afterDel?.total === 3000000 && afterDel.itemCount === 1, JSON.stringify(afterDel));
+  const tmp = await call("POST", "/api/boqDocs", { data: { projectId: project.id, number: `${number}-HAPUS` } });
+  const tmpId = (tmp.json().data as { id: string }).id;
+  const delTmp = await call("DELETE", `/api/boqDocs/${tmpId}`);
+  assert("surat Draft tanpa item bisa dihapus (tidak tertahan baris Dokumen-nya) dan baris Dokumen ikut hilang", delTmp.statusCode === 200 && (await docRow(tmpId)) === null, delTmp.body);
+
   const badStatus = await call("PATCH", `/api/boqDocs/${doc.id}`, { data: { status: "Disetujui" } });
   assert("ubah status lewat PATCH → 409", badStatus.statusCode === 409, badStatus.body);
 

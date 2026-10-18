@@ -148,6 +148,11 @@ export async function syncBoqDocToDocuments(id: string, boqData: Data, branch: s
   const status = String(boqData.status ?? "Draft");
   const rev = Number(boqData.revision ?? 0);
   const title = `BoQ ${String(boqData.number ?? id)} Rev ${rev}`;
+  /* Ringkasan isi surat ikut disimpan di register Dokumen (revisi 18 Okt: BoQ di
+     proyek tidak "nyambung" ke modul Dokumen) - dihitung dari baris boq. */
+  const items = (await q<Row>("SELECT id, branch, data, updated_at FROM boq")).filter((rw) => String(parse(rw)?.boqDocId ?? "") === id);
+  const total = await docTotal(id);
+  const itemCount = items.length;
 
   if (exists.length === 0) {
     const docRecord: Data = {
@@ -162,6 +167,8 @@ export async function syncBoqDocToDocuments(id: string, boqData: Data, branch: s
       owner: assigner || actor || "",
       assigner: assigner || "",
       boqDocId: id,
+      total,
+      itemCount,
       archived: status === "Digantikan",
       docCopy: "Terkendali",
     };
@@ -188,12 +195,26 @@ export async function syncBoqDocToDocuments(id: string, boqData: Data, branch: s
       owner: assigner || prev.owner || actor || "",
       assigner: assigner || prev.assigner || "",
       boqDocId: id,
+      total,
+      itemCount,
       archived: status === "Digantikan",
     };
     await exec("UPDATE documents SET data = ?, updated_at = ? WHERE id = ?", [
       JSON.stringify(updated), now, docId,
     ]);
   }
+}
+
+/** Sinkron ulang register Dokumen untuk satu surat: dipanggil setelah baris boq
+ *  atau suratnya berubah. Surat yang sudah dihapus → baris dokumennya ikut hilang. */
+export async function resyncBoqDocument(docId: string, actor?: string): Promise<void> {
+  if (!docId) return;
+  const doc = await loadDoc(docId);
+  if (!doc) {
+    await exec("DELETE FROM documents WHERE id = ?", [`DOC-${docId}`]);
+    return;
+  }
+  await syncBoqDocToDocuments(docId, doc.data, String(doc.row.branch ?? ""), actor);
 }
 
 export async function setDocStatus(id: string, to: string, actor: string, note = ""): Promise<Data> {
