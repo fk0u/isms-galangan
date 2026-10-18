@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { bucketByMonth, monthAxis, rebindLegacyMonthSeries } from "../../utils/monthAxis";
+import { n_prj } from "../../i18n/n_prj";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Cpu, Pencil, Trash2, Wrench, Gauge, CheckCircle2, Download, Eye, History as HistoryIcon } from "lucide-react";
@@ -233,9 +234,10 @@ function oeeGrade(v: number, en: boolean): { label: string; tone: "green" | "amb
 const EQ_COLS: CollectionKey[] = ["activities", "bookings", "branches", "calibrations", "equipment", "inventory", "projects", "maintenances", "employees", "movements", "settings"];
 
 export default function EquipmentPage() {
-  const { data, add, update, remove, log, branch } = useStore();
+  const { data, add, update, remove, log, branch, wbsFor } = useStore();
   const { locale } = useT();
   const S = n_eqp[locale];
+  const P = n_prj[locale];
   const modAlert = useModuleAlert("equipment");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -334,7 +336,8 @@ const [utilQ, setUtilQ] = useState("");
 
 
   const [showBook, setShowBook] = useState(false);
-  const [bookForm, setBookForm] = useState({ equip: "", proyek: "", date: todayISO(), mulai: "", selesai: "", priority: "Normal" });
+  /* wbsTask: tahap WBS proyek yang memakai equipment (catatan klien 17 Okt, K17-PM-07). */
+  const [bookForm, setBookForm] = useState({ equip: "", proyek: "", wbsTask: "", date: todayISO(), mulai: "", selesai: "", priority: "Normal" });
   const [bookError, setBookError] = useState<string | null>(null);
   const [gusur, setGusur] = useState<{ clash: StoreItem[] } | null>(null);
 
@@ -1333,13 +1336,13 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
     const selesai = norm24(bookForm.selesai);
     const eq = resolveEquip(equip);
     if (!eq) { setBookError(S.eqNotFound); return; }
-    const created = await add("bookings", { equip: eq.id, equipCode: eq.code, equipName: eq.name, proyek, jam: `${mulai}–${selesai}`, mulai, selesai, status: "Terjadwal", date, priority, branch: String((data.projects ?? []).find((p) => String(p.id) === String(proyek))?.branch ?? (branch !== "SEMUA" ? branch : "")) },
+    const created = await add("bookings", { equip: eq.id, equipCode: eq.code, equipName: eq.name, proyek, ...(bookForm.wbsTask ? { wbsTask: bookForm.wbsTask } : {}), jam: `${mulai}–${selesai}`, mulai, selesai, status: "Terjadwal", date, priority, branch: String((data.projects ?? []).find((p) => String(p.id) === String(proyek))?.branch ?? (branch !== "SEMUA" ? branch : "")) },
       { action: "membooking equipment", target: `${eq.name} · ${priority}`, module: "Equipment" });
     await update("equipment", eq.id, { status: "Terpakai" });
     toast(S.eqBookingCreated.replace("{a}", created.id).replace("{b}", priority));
     setShowBook(false);
     setBookError(null);
-    setBookForm({ equip: "", proyek: "", date: todayISO(), mulai: "", selesai: "", priority: "Normal" });
+    setBookForm({ equip: "", proyek: "", wbsTask: "", date: todayISO(), mulai: "", selesai: "", priority: "Normal" });
   };
 
   const saveBooking = async () => {
@@ -2862,11 +2865,19 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
               </select>
             </Field>
             <Field label={S.thProject}>
-              <select className="input" value={bookForm.proyek} onChange={(e) => setBookForm({ ...bookForm, proyek: e.target.value })}>
+              <select className="input" value={bookForm.proyek} onChange={(e) => setBookForm({ ...bookForm, proyek: e.target.value, wbsTask: "" })}>
                 <option value="">{S.eqChoose}</option>
                 {data.projects.filter((p) => p.status !== "Selesai").map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
               </select>
             </Field>
+            {bookForm.proyek && wbsFor(bookForm.proyek).length > 0 && (
+              <Field label={P.eqWbsStageField}>
+                <select className="input" value={bookForm.wbsTask} onChange={(e) => setBookForm({ ...bookForm, wbsTask: e.target.value })}>
+                  <option value="">{P.eqNoStage}</option>
+                  {wbsFor(bookForm.proyek).map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label={S.dateLabel}><input type="date" className="input" value={bookForm.date} onChange={(e) => setBookForm({ ...bookForm, date: e.target.value })} /></Field>
             <Field label={S.eqStartField} hint="24 jam · 00:00–23:59 tanpa AM/PM (cth 14:00)"><TimeInput value={norm24(bookForm.mulai)} ariaLabel={S.eqStartField} onChange={(v) => setBookForm({ ...bookForm, mulai: v })} /></Field>
             <Field label={S.eqEndField} hint="24 jam · 00:00–23:59 tanpa AM/PM (cth 17:30)"><TimeInput value={norm24(bookForm.selesai)} ariaLabel={S.eqEndField} onChange={(v) => setBookForm({ ...bookForm, selesai: v })} /></Field>

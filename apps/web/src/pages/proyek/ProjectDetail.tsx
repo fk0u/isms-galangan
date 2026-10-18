@@ -158,10 +158,13 @@ export default function ProjectDetail() {
   useModuleSync(PD_COLS);
   /* `?tab=` membuka tab tertentu (tautan panduan demo & tautan berbagi). */
   const [tabParams] = useSearchParams();
-  const [tab, setTab] = useState(() => tabParams.get("tab") || "Ringkasan");
+  /* Tab Equipment digabung ke WBS (catatan klien 17 Okt, K17-PM-07); tautan
+     lama `?tab=Equipment` diarahkan ke tab WBS. */
+  const normTab = (t: string): string => (t === "Equipment" ? "WBS & Anggaran" : t);
+  const [tab, setTab] = useState(() => normTab(tabParams.get("tab") || "Ringkasan"));
   useEffect(() => {
     const wanted = tabParams.get("tab");
-    if (wanted) setTab(wanted);
+    if (wanted) setTab(normTab(wanted));
   }, [tabParams]);
 
   const [showScope, setShowScope] = useState(false);
@@ -482,6 +485,13 @@ const confirmStatus = async () => {
   };
 
   const wbs = wbsFor(pid) as WbsExt[];
+  /* Semua booking equipment proyek (juga yang masih terjadwal), dikelompokkan
+     per tahapan WBS: tahapan sesuai urutan WBS, lalu "tanpa tahapan". */
+  const stageOrder = new Map(wbs.map((w, i) => [w.task, i]));
+  const projectBookings = (data.bookings ?? [])
+    .filter((b) => String(b.proyek ?? "") === pid)
+    .sort((a, b) => (stageOrder.get(String(a.wbsTask ?? "")) ?? 9999) - (stageOrder.get(String(b.wbsTask ?? "")) ?? 9999) || String(a.date ?? "").localeCompare(String(b.date ?? "")));
+  const canWriteBookings = hasPermission(session?.permissions, "bookings", "w");
   const teamIds = teamFor(pid);
   /* Penugasan WBS ↔ tab Tim (catatan klien 17 Okt, K17-PM-08): karyawan yang
      ditugaskan di tahapan WBS ikut tampil di Tim (juga penugasan lama yang
@@ -1448,7 +1458,7 @@ const createWarranty = async (wbsTask?: string) => {
       </div>
 
       <div className="mt-5 card">
-        <Tabs tabs={["Ringkasan", "BoQ", "WBS & Anggaran", "Dokumen & Laporan", "Equipment", "Perubahan & Risiko", "Subkon", "Terkait", ...(getSetting(data, "SHOW_3D_PROJECT", 0) === 1 ? ["3D Viewer"] : []), "Service", "Sparepart", "Tim"]} active={tab} onChange={setTab} labels={{ Ringkasan: S.tabRingkasan, "WBS & Anggaran": S.tabWbs, BoQ: S.tabBoq, "Dokumen & Laporan": S.tabDocs, Equipment: S.detEqTab, "Perubahan & Risiko": S.tabChange, Subkon: S.tabSubkon, Terkait: S.tabRelated, "3D Viewer": S.tabViewer, Service: S.tabService, Sparepart: S.tabSparepart, Tim: S.tabTeam }} />
+        <Tabs tabs={["Ringkasan", "BoQ", "WBS & Anggaran", "Dokumen & Laporan", "Perubahan & Risiko", "Subkon", "Terkait", ...(getSetting(data, "SHOW_3D_PROJECT", 0) === 1 ? ["3D Viewer"] : []), "Service", "Sparepart", "Tim"]} active={tab} onChange={setTab} labels={{ Ringkasan: S.tabRingkasan, "WBS & Anggaran": S.tabWbs, BoQ: S.tabBoq, "Dokumen & Laporan": S.tabDocs, Equipment: S.detEqTab, "Perubahan & Risiko": S.tabChange, Subkon: S.tabSubkon, Terkait: S.tabRelated, "3D Viewer": S.tabViewer, Service: S.tabService, Sparepart: S.tabSparepart, Tim: S.tabTeam }} />
         <div className="p-5">
           {tab === "Ringkasan" && (
             <div className="space-y-6">
@@ -2428,7 +2438,7 @@ const createWarranty = async (wbsTask?: string) => {
             </div>
           )}
 
-          {tab === "Equipment" && (
+          {tab === "WBS & Anggaran" && (
             /* Item 5d revisi 2 Oktober: equipment yang dipakai PROYEK INI.
                Modul Equipment punya tab "Sedang Dipakai", tapi isinya
                seluruh yard - manajer proyek tidak bisa memilih unit
@@ -2445,36 +2455,51 @@ const createWarranty = async (wbsTask?: string) => {
                     : "Booking dan maintenance yang tercatat pada proyek ini."}
                 />
                 <div className="p-4">
-                  {equipCost.bookingRows.length === 0 && equipCost.maintenanceRows.length === 0 ? (
+                  {projectBookings.length === 0 && equipCost.maintenanceRows.length === 0 ? (
                     <p className="py-6 text-center text-sm text-steel-400">
                       {locale === "en" ? "No equipment used on this project yet." : "Belum ada equipment yang dipakai proyek ini."}
                     </p>
                   ) : (
                     <div className="space-y-4">
-                      {equipCost.bookingRows.length > 0 && (
+                      {projectBookings.length > 0 && (
                         <div>
                           <SearchBox value={cardBkQ} onChange={setCardBkQ} className="mb-2 max-w-xs" placeholder={locale === "en" ? "Search bookings..." : "Cari booking..."} ariaLabel={locale === "en" ? "Search bookings" : "Cari booking"} />
                           <div className="overflow-x-auto">
                             <table className="w-full">
                             <thead className="bg-surface">
                               <tr>
-                                <th className="th">{locale === "en" ? "Booking" : "Booking"}</th>
-                                <th className="th">{locale === "en" ? "Equipment" : "Equipment"}</th>
+                                <th className="th">{S.eqStageCol}</th>
+                                <th className="th">Booking</th>
+                                <th className="th">Equipment</th>
                                 <th className="th">{locale === "en" ? "Date" : "Tanggal"}</th>
-                                <th className="th text-right">{locale === "en" ? "Hours" : "Jam"}</th>
+                                <th className="th">{locale === "en" ? "Status" : "Status"}</th>
                                 <th className="th text-right">{locale === "en" ? "Cost" : "Biaya"}</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-steel-100">
-                              {equipCost.bookingRows.filter((r) => rowMatches(r as unknown as Record<string, unknown>, cardBkQ, ["id", "equipmentName", "date", "hours", "rental", "fuel", "cost"])).map((r) => (
-                                <tr key={r.id} className="hover:bg-surface">
-                                  <td className="td font-mono text-xs text-navy-900">{r.id}</td>
-                                  <td className="td text-steel-600">{r.equipmentName}</td>
-                                  <td className="td text-steel-600 text-xs">{fmtTanggal(r.date)}</td>
-                                  <td className="td text-right">{r.hours}</td>
-                                  <td className="td text-right font-semibold">{fmtRupiah(r.cost)}</td>
+                              {projectBookings.filter((b) => rowMatches(b, cardBkQ, ["id", "equipName", "equip", "date", "status", "wbsTask"])).map((b) => {
+                                const costRow = equipCost.bookingRows.find((r) => r.id === String(b.id));
+                                return (
+                                <tr key={String(b.id)} className="hover:bg-surface">
+                                  <td className="td text-xs">
+                                    {canWriteBookings ? (
+                                      <select className="input py-1 text-xs" value={String(b.wbsTask ?? "")} aria-label={S.eqStageCol}
+                                        onChange={async (e) => { try { await update("bookings", String(b.id), { wbsTask: e.target.value }); log("mengaitkan booking ke tahap WBS", `${String(b.id)} → ${e.target.value || "-"}`, "Proyek"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
+                                        <option value="">{S.eqNoStage}</option>
+                                        {wbs.map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
+                                      </select>
+                                    ) : (
+                                      <span className={b.wbsTask ? "font-medium text-navy-900" : "text-steel-400"}>{String(b.wbsTask || S.eqNoStage)}</span>
+                                    )}
+                                  </td>
+                                  <td className="td font-mono text-xs text-navy-900">{String(b.id)}</td>
+                                  <td className="td text-steel-600">{costRow?.equipmentName ?? String(b.equipName ?? b.equip ?? "-")}</td>
+                                  <td className="td text-xs text-steel-600">{fmtTanggal(String(b.date ?? ""))}{b.jam ? ` · ${String(b.jam)}` : ""}</td>
+                                  <td className="td"><StatusBadge status={String(b.status ?? "-")} /></td>
+                                  <td className="td text-right font-semibold">{costRow ? fmtRupiah(costRow.cost) : <span className="text-steel-400">-</span>}</td>
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </tbody>
                             </table>
                           </div>
