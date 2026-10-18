@@ -1598,10 +1598,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* Nilai efektif = nominal manual bila diisi, selain itu hasil hitung otomatis.
      Dipakai di kartu, konfirmasi Lapor, snapshot kunci, dan hutang pajak, jadi
      angka yang dilihat = angka yang dikunci = angka hutang (K17-FIN-01). */
-  const taxEff = useMemo(() => {
-    const pick = (k: TaxManualKey): number => taxManualOf(activeTax, k) || num(taxCalc[k]);
-    return { ...taxCalc, ppnKeluar: pick("ppnKeluar"), ppnMasuk: pick("ppnMasuk"), pph23: pick("pph23"), pph21: pick("pph21") };
-  }, [taxCalc, activeTax]);
+  const pickTax = (k: TaxManualKey): number => taxManualOf(activeTax, k) || num(taxCalc[k]);
+  const taxEff = { ...taxCalc, ppnKeluar: pickTax("ppnKeluar"), ppnMasuk: pickTax("ppnMasuk"), pph23: pickTax("pph23"), pph21: pickTax("pph21") };
   const ppnFinal = sptNumOf(activeTax?.ppnTerutangManual) > 0
     ? sptNumOf(activeTax?.ppnTerutangManual)
     : taxEff.ppnKeluar - taxEff.ppnMasuk;
