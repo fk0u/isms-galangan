@@ -2521,8 +2521,10 @@ const sparkVendors = useMemo(() => {
             <div className="space-y-2">
               {bigLines.map((l, idx) => (
                 <div key={idx} className="rounded-xl border border-steel-200 bg-white p-2.5 shadow-sm">
+                  {/* Field Spesifikasi PO Besar dihapus (catatan klien 17 Okt, K17-PROC-03);
+                      kolomnya diberikan ke nama item. Spesifikasi di PO lama tetap tampil di daftar. */}
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-4">
+                    <div className="col-span-5">
                       <input
                         list="inv-item-catalog-list"
                         className="input w-full"
@@ -2542,7 +2544,6 @@ const sparkVendors = useMemo(() => {
                                           itemId: String(matched.id),
                                           unit: String(matched.unit || x.unit || "pcs"),
                                           price: matched.cost ? String(matched.cost) : x.price,
-                                          spec: x.spec || (matched.spec ? String(matched.spec) : ""),
                                         }
                                       : {}),
                                   }
@@ -2552,9 +2553,8 @@ const sparkVendors = useMemo(() => {
                         }}
                       />
                     </div>
-                    <input className="input col-span-3" placeholder="Spesifikasi (cth: MS 6x100)" value={l.spec ?? ""} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, spec: e.target.value } : x)))} />
-                    <NumInput min={0} className="input col-span-1" placeholder={S.qty} value={l.qty} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
-                    <select className="input col-span-1" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
+                    <NumInput min={0} className="input col-span-2" placeholder={S.qty} value={l.qty} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
+                    <select className="input col-span-2" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
                       {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
                     </select>
                     <MoneyInput className="input col-span-2" placeholder={S.harga} value={l.price} onChange={(v) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, price: v } : x)))} />
