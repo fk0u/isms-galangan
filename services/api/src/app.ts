@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import fs from "node:fs";
+import { registerRelations } from "./routes/relations.js";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
@@ -384,6 +385,7 @@ export function buildApp(): FastifyInstance {
   });
 
   for (const table of COLLECTIONS) registerCrud(app, table);
+  registerRelations(app);
   registerAuditRoutes(app);
   registerFileRoutes(app);
   registerOcrRoutes(app);

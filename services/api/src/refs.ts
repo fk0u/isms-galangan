@@ -99,7 +99,10 @@ function idColumn(table: string): string {
   return table === "wbs_by_project" || table === "team_by_project" ? "project_id" : "id";
 }
 
-function jsonEq(field: string): string {
+/** Predikat kesetaraan field JSON `data.<field>`. Nama field WAJIB sudah
+ *  divalidasi pemanggil (SAFE_FIELD) karena disisipkan ke path JSON. */
+export const SAFE_FIELD = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+export function jsonEq(field: string): string {
   // MySQL JSON_EXTRACT mengembalikan string ber-quote → UNQUOTE dulu.
   // SQLite json_extract mengembalikan teks polos.
   if (getDialect() === "mysql") return `JSON_UNQUOTE(JSON_EXTRACT(data, '$.${field}')) = ?`;
