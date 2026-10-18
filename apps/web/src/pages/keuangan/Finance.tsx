@@ -2020,6 +2020,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       client: proj.client,
       kodePembantu: invForm.kodePembantu.trim() || proj.client,
       project: proj.id,
+      /* Nama kapal ikut tersimpan agar tampil di invoice & PDF (K17-FIN-03). */
+      vessel: String(proj.vessel ?? ""),
       branch: String(proj.branch ?? (branch !== "SEMUA" ? branch : "")),
       amount: total,
       due: invForm.due,
@@ -5452,6 +5454,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <div className="space-y-4">
               <dl className="dl-div grid grid-cols-1 gap-x-6 text-sm sm:grid-cols-2">
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detClientProject}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.client ?? "-")} / {String(invDetail.project ?? "-")}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detVessel}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.vessel || projectById[String(invDetail.project ?? "")]?.vessel || "-")}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTypeTerm}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.billingType ?? invDetail.paymentTerm ?? "-")}{invDetail.milestoneRef ? ` · ${String(invDetail.milestoneRef)}` : ""}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.dueLabel}</dt><dd className="text-right font-medium text-navy-900">{fmtTanggal(String(invDetail.due ?? ""))}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.colStatus}</dt><dd className="text-right"><StatusBadge status={String(invDetail.status ?? "")} /></dd></div>

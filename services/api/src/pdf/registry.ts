@@ -167,6 +167,14 @@ const invoiceRecipe: Recipe<InvoiceInput> = {
        bila ada, kalau tidak amount dikurangi retensi. Kalau aturan ini
        berbeda, angka di PDF dan angka di kartu invoice tidak akan sama
        dan pembukuan tidak bisa diaudit. */
+    /* K17-FIN-03: nama kapal wajib tampil di invoice. Invoice lama, impor, dan
+       otomatis sering hanya menyimpan proyek, jadi kapal diambil dari proyeknya. */
+    let vessel = str(inv, "vessel");
+    if (vessel === "-" && str(inv, "project") !== "-") {
+      const proj = await loadEntity({ field: "projects", prefix: "PRJ" }, str(inv, "project"));
+      if (proj) vessel = str(proj, "vessel");
+    }
+
     const grand = num(inv, "grandTotal");
     const retentionAmt = num(inv, "retentionAmt");
     const neto = grand > 0 ? grand : Math.max(0, num(inv, "amount") - retentionAmt);
@@ -176,7 +184,7 @@ const invoiceRecipe: Recipe<InvoiceInput> = {
       tanggal: str(inv, "date") !== "-" ? str(inv, "date") : today(),
       client: str(inv, "client"),
       project: str(inv, "project"),
-      vessel: str(inv, "vessel"),
+      vessel,
       paymentTerm: str(inv, "paymentTerm"),
       billingType: str(inv, "billingType"),
       milestoneRef: str(inv, "milestoneRef"),
