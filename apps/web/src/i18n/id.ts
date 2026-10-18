@@ -84,6 +84,7 @@ export const id: Dict = {
     password: "Password",
     welcome: "Selamat datang kembali!",
     sessionExpired: "Sesi berakhir - silakan login ulang",
+    syncForbidden: "Akses ditolak untuk sebagian perubahan - perubahan ditahan. Hubungi admin bila perlu hak akses.",
     invalidCredentials: "Username atau password salah.",
     lockedOut: "Terlalu banyak percobaan gagal. Tunggu 30 detik sebelum mencoba lagi.",
     fillUsername: "Isi username/NIK atau email yang valid (tanpa spasi).",

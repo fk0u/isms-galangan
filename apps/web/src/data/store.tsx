@@ -2,6 +2,8 @@ import { idbAvailable, idbGetAll, idbPut, lsClearAll, lsGet, lsPut, purgeOffline
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { newId as newPrefixedId } from "../services/ids";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../services/http";
+import { id as idDict } from "../i18n/id";
+import { en as enDict } from "../i18n/en";
 import { remoteRepository } from "../services/repositories";
 import { collectionSyncCache } from "./collectionSyncCache";
 import { cacheOwnerAction } from "./cacheOwner";
@@ -718,6 +720,17 @@ function notifyBackendFallback(): void {
 /* Toast generik dari store. Sumber bahasa dibaca langsung dari localStorage
    agar store tidak perlu mengimpor LanguageContext (menghindari lingkaran
    impor dengan komponen yang memakai store). */
+/** 401 sudah ditangani AppShell (satu toast "Sesi berakhir" + ke login), jadi
+ *  store hanya bersuara untuk 403: token masih ada tetapi hak akses ditolak.
+ *  Dulu keduanya diberi pesan "Sesi berakhir" sehingga 403 menyesatkan
+ *  (K17-UMUM-01). */
+function notifyAuthStop(): void {
+  if (getJwt() === null) return;
+  let en = false;
+  try { en = localStorage.getItem("isms.locale") === "en"; } catch { /* abaikan */ }
+  notifyStore((en ? enDict : idDict).auth.syncForbidden ?? "");
+}
+
 function notifyStore(message: string): void {
   try {
     window.dispatchEvent(
@@ -1954,7 +1967,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
             setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
             if (fallbackToasted.current !== "401") {
               fallbackToasted.current = "401";
-              notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+              notifyAuthStop();
             }
             return;
           }
@@ -1996,7 +2009,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
             setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
             if (fallbackToasted.current !== "401") {
               fallbackToasted.current = "401";
-              notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+              notifyAuthStop();
             }
             return;
           }
@@ -2075,7 +2088,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
           setBackendError("Sesi berakhir - login ulang; perubahan ditahan untuk sinkronisasi");
           if (fallbackToasted.current !== "401") {
             fallbackToasted.current = "401";
-            notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+            notifyAuthStop();
           }
           return;
         }
@@ -2345,7 +2358,7 @@ type PushOutcome = "ok" | "stale" | "fail" | "auth" | "session";
         setRemoteLive(false);
         if (fallbackToasted.current !== "401") {
           fallbackToasted.current = "401";
-          notifyStore("Sesi berakhir - login ulang. Perubahan ditahan untuk sinkronisasi.");
+          notifyAuthStop();
         }
         return false;
       }

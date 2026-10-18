@@ -136,7 +136,13 @@ function envelopeMessage(v: unknown): string | null {
 }
 
 function notifyAuthExpired(): void {
+  /* Satu sesi kedaluwarsa = satu pemberitahuan (K17-UMUM-01). Request paralel
+     yang sama-sama ditolak 401 dulu masing-masing memicu toast "Sesi berakhir";
+     sekarang hanya 401 pertama (yang masih membawa token) yang memberi tahu.
+     401 tanpa token (belum login, mis. salah password) bukan "sesi berakhir". */
+  const hadToken = getJwt() !== null;
   clearJwt();
+  if (!hadToken) return;
   try {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("isms:auth-expired"));

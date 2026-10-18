@@ -86,6 +86,7 @@ export const en: Dict = {
     password: "Password",
     welcome: "Welcome back!",
     sessionExpired: "Session expired - please sign in again",
+    syncForbidden: "Access denied for some changes - changes are held. Contact an admin if you need access.",
     invalidCredentials: "Incorrect username or password.",
     lockedOut: "Too many failed attempts. Wait 30 seconds and try again.",
     fillUsername: "Enter a valid username/ID or email (no spaces).",
