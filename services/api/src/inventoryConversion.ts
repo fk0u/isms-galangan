@@ -137,7 +137,18 @@ export function inventoryConversionError(
     }
   }
 
-  if (!rule) return null;
+  if (!rule) {
+    /* Sak N kg (K17-INV-01): beratnya bagian dari nama satuan, jadi konversi
+       wajib tepat N kg agar pengeluaran per kg tidak menyimpang. */
+    const sack = /^sak\s*(\d+(?:[.,]\d+)?)\s*kg$/i.exec(purchaseUnit);
+    if (sack) {
+      const kg = Number((sack[1] ?? "").replace(",", "."));
+      if (normalized(baseUnit) !== "kg" || !closeEnough(perUnit, kg)) {
+        return `Konversi satuan "${purchaseUnit}" harus ${kg} kg per sak.`;
+      }
+    }
+    return null;
+  }
   const dims = asRecord(conversion.dims);
   if (rule.kind === "plate") {
     const lengthMm = positiveNumber(dims?.lengthMm);

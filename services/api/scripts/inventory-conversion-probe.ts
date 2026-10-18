@@ -46,6 +46,10 @@ async function runHelperChecks(): Promise<void> {
   assert("Cat menolak satuan pembelian kg", inventoryConversionError({ ...validCat, unit: "kg" }) !== null);
   assert("Cat mewajibkan nilai konversi", inventoryConversionError({ ...validCat, conversion: null, uom2: "", konversi: 0 }) !== null);
   assert("1 drum Cat = 200 liter diterima", inventoryConversionError(validCat) === null);
+  const sak = { category: "Material Bangunan", unit: "sak 40 kg", conversion: { baseUnit: "kg", perUnit: 40 }, uom2: "kg", konversi: 40 };
+  assert("sak 40 kg = 40 kg diterima (K17-INV-01)", inventoryConversionError(sak) === null);
+  assert("sak 40 kg dengan konversi 50 kg ditolak", inventoryConversionError({ ...sak, conversion: { baseUnit: "kg", perUnit: 50 }, konversi: 50 }) !== null);
+  assert("sak 40 kg dengan satuan dasar liter ditolak", inventoryConversionError({ ...sak, conversion: { baseUnit: "liter", perUnit: 40 }, uom2: "liter" }) !== null);
   assert("Cairan menerima satuan liter dan konversi positif", inventoryConversionError({
     category: "Cairan", unit: "liter", conversion: { baseUnit: "liter", perUnit: 18 },
   }) === null);

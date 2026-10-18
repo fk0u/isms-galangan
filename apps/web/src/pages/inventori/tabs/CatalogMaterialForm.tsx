@@ -10,6 +10,8 @@ import {
   conversionRuleForCategory,
   formatUnitConversion,
   purchaseUnitsForCategory,
+  sackKgOf,
+  suggestedBaseUnit,
   type UnitConversionDraft,
 } from "../../../utils/unitConversion";
 
@@ -247,15 +249,18 @@ export default function CatalogMaterialForm({
                 {numericField(form.conversionAmount ?? "", (value) => onFieldChange("conversionAmount", value), S.kgPerUnitLbl)}
               </FormGrid>
             )}
-            {!rule && form.eceran && (
+            {!rule && sackKgOf(form.unit) !== null && (
+              <p className="rounded-xl bg-steel-50 px-3 py-2 text-sm text-steel-600">{S.sackAutoHint}</p>
+            )}
+            {!rule && sackKgOf(form.unit) === null && form.eceran && (
               <FormGrid>
                 <Field label={S.conversionBaseUnitLbl}>
-                  <input className="input" value={form.conversionBaseUnit ?? ""} onChange={(event) => onFieldChange("conversionBaseUnit", event.target.value)} placeholder={S.conversionBaseUnitPh} />
+                  <input className="input" value={form.conversionBaseUnit ?? ""} onChange={(event) => onFieldChange("conversionBaseUnit", event.target.value)} placeholder={suggestedBaseUnit(form.unit) || S.conversionBaseUnitPh} />
                 </Field>
                 {numericField(form.conversionAmount ?? "", (value) => onFieldChange("conversionAmount", value), S.conversionQtyPerUnitLbl)}
               </FormGrid>
             )}
-            {!rule && !form.eceran && <p className="rounded-xl border border-dashed border-steel-300 px-3 py-3 text-sm text-steel-500">{S.conversionOptional}</p>}
+            {!rule && sackKgOf(form.unit) === null && !form.eceran && <p className="rounded-xl border border-dashed border-steel-300 px-3 py-3 text-sm text-steel-500">{S.conversionOptional}</p>}
             {preview && (
               <p className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800" aria-live="polite">
                 {S.conversionPreviewLbl}: {formatUnitConversion(form.unit, preview, locale)}
