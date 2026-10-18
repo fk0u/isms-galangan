@@ -7,7 +7,7 @@ import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
 import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate } from "./crudSearch.js";
 import { exec, getDialect, q, withTx } from "../db.js";
-import { checkRefs, findUsages } from "../refs.js";
+import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
@@ -440,6 +440,15 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (query.q !== undefined && query.q !== "") {
       where.push(searchContainsPredicate(getDialect()));
       params.push(query.q);
+    }
+    /* Filter kesetaraan per field: `?where.projectId=PRJ-001&where.status=Draft`
+       (REST API, revisi 18 Okt). Nama field divalidasi ketat sebelum masuk path JSON. */
+    for (const [key, value] of Object.entries(query)) {
+      const field = /^where\.(.+)$/.exec(key)?.[1];
+      if (field === undefined || value === undefined) continue;
+      if (!SAFE_FIELD.test(field)) return reply.status(400).send(fail(`Nama field filter tidak valid: ${field}`, "VALIDATION_ERROR"));
+      where.push(jsonEq(field));
+      params.push(value);
     }
     if (table === "inventory" && query.exactName?.trim()) {
       where.push(exactJsonNamePredicate(getDialect()));
