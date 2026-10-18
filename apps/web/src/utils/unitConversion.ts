@@ -47,6 +47,25 @@ const UNITS_BY_KIND: Readonly<Record<ConversionKind, readonly string[]>> = {
   tonnage: ["ton", "kg", "unit"],
 };
 
+/* Satuan sak berisi berat tetap (catatan klien 17 Okt, K17-INV-01/02): semen
+   dibeli per sak 25/40 kg lalu dikeluarkan per kg. Konversi dibaca dari nama
+   satuan, jadi tidak perlu diketik dan tidak bisa salah isi. */
+export const SACK_UNITS = ["sak 25 kg", "sak 40 kg"] as const;
+export function sackKgOf(unit: unknown): number | null {
+  const m = /^sak\s*(\d+(?:[.,]\d+)?)\s*kg$/i.exec(String(unit ?? "").trim());
+  const kg = m ? Number((m[1] ?? "").replace(",", ".")) : NaN;
+  return kg > 0 ? kg : null;
+}
+
+/** Satuan dasar yang lazim untuk kemasan tanpa aturan kategori: roll dikeluarkan
+ *  per meter, drum/galon/kaleng per liter. Dipakai sebagai isian awal. */
+export function suggestedBaseUnit(purchaseUnit: unknown): string {
+  const u = String(purchaseUnit ?? "").trim().toLowerCase();
+  if (u === "roll") return "meter";
+  if (u === "drum" || u === "galon" || u === "kaleng") return "liter";
+  return "";
+}
+
 function normalizedCategory(value: unknown): string {
   return String(value ?? "").trim().toLocaleLowerCase("id-ID").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
@@ -69,7 +88,7 @@ export function purchaseUnitsForCategory(category: unknown, currentUnit = ""): s
   const rule = conversionRuleForCategory(category);
   const units = rule
     ? [...UNITS_BY_KIND[rule.kind]]
-    : ["pcs", "drum", "galon", "kaleng", "lembar", "batang", "kg", "ton", "liter", "meter", "unit", "roll"];
+    : ["pcs", ...SACK_UNITS, "drum", "galon", "kaleng", "lembar", "batang", "kg", "ton", "liter", "meter", "unit", "roll"];
   const current = currentUnit.trim();
   if (current !== "" && !units.some((unit) => normalizedCategory(unit) === normalizedCategory(current))) units.unshift(current);
   return units;
@@ -122,6 +141,8 @@ export function unitConversionRequiredForEdit(
   draft: UnitConversionDraft,
   existing?: ExistingUnitConversionState | null,
 ): boolean {
+  // Sak N kg selalu punya konversi (otomatis) agar bisa dikeluarkan per kg.
+  if (!conversionRuleForCategory(category) && sackKgOf(purchaseUnit) !== null) return true;
   const hasStoredConversion = existing !== undefined && existing !== null && (
     (existing.conversion !== undefined && existing.conversion !== null)
     || String(existing.uom2 ?? "").trim() !== ""
@@ -145,7 +166,9 @@ export function buildUnitConversion(
 ): UnitConversion | null {
   const rule = conversionRuleForCategory(category);
   if (!rule) {
-    const baseUnit = String(draft.conversionBaseUnit ?? "").trim();
+    const sackKg = sackKgOf(purchaseUnit);
+    if (sackKg !== null) return { baseUnit: "kg", perUnit: sackKg };
+    const baseUnit = String(draft.conversionBaseUnit ?? "").trim() || suggestedBaseUnit(purchaseUnit);
     const perUnit = positiveNumber(draft.conversionAmount);
     return baseUnit !== "" && perUnit !== null ? { baseUnit, perUnit } : null;
   }

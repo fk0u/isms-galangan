@@ -5,10 +5,13 @@ import {
   formatUnitConversion,
   hasUnitConversionDraft,
   purchaseUnitsForCategory,
+  sackKgOf,
+  suggestedBaseUnit,
   unitConversionOf,
   unitConversionRequired,
   unitConversionRequiredForEdit,
 } from "../src/utils/unitConversion";
+import { issueBase } from "../src/utils/stockIssue";
 
 declare const process: { exit(code: number): never };
 let failures = 0;
@@ -88,6 +91,18 @@ assert("Konversi baru dapat dibaca kembali dengan dimensi", roundTrip?.perUnit =
 const legacy = unitConversionOf({ uom2: "liter", konversi: 200 });
 assert("Field UOM2 lama tetap terbaca sebagai konversi", legacy?.baseUnit === "liter" && legacy.perUnit === 200);
 assert("Konversi tidak valid ditolak saat dibaca", unitConversionOf({ conversion: { baseUnit: "liter", perUnit: -1 } }) === null);
+
+/* K17-INV-01/02: sak N kg otomatis ke kg; roll/drum menyarankan meter/liter. */
+assert("sak 40 kg terbaca 40", sackKgOf("sak 40 kg") === 40 && sackKgOf("Sak 25kg") === 25 && sackKgOf("sak") === null);
+assert("Satuan sak tersedia untuk kategori umum", purchaseUnitsForCategory("Material Bangunan").includes("sak 40 kg"));
+const sak = buildUnitConversion("Material Bangunan", "sak 40 kg", {});
+assert("Konversi sak otomatis tanpa isian", sak?.baseUnit === "kg" && sak.perUnit === 40);
+assert("Material sak wajib berkonversi", unitConversionRequiredForEdit("Material Bangunan", "sak 40 kg", false, {}, null));
+const semen = issueBase({ stock: 2, openBase: 0 }, 40, 12);
+assert("Keluar 12 kg dari 2 sak 40 kg: buka 1 sak, sisa 28 kg terbuka", semen.ok && semen.next.stock === 1 && semen.next.openBase === 28);
+const roll = buildUnitConversion("Rigging", "roll", { conversionAmount: "100" });
+assert("Roll tanpa satuan dasar memakai meter", roll?.baseUnit === "meter" && roll.perUnit === 100);
+assert("Drum disarankan liter", suggestedBaseUnit("drum") === "liter");
 
 if (failures > 0) {
   console.error(`\n${failures} pemeriksaan unit-conversion gagal.`);
