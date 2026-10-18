@@ -1,0 +1,11 @@
+meta {
+  name: DELETE auth logout
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/auth/logout
+  body: none
+  auth: inherit
+}

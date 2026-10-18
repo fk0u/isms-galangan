@@ -1,0 +1,19 @@
+meta {
+  name: POST projects id material-requests
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/projects/:id/material-requests
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

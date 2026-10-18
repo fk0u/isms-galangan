@@ -1,0 +1,25 @@
+meta {
+  name: Create warranties
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/warranties
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - vessel -> vessels (lunak: id atau nama)
+}

@@ -1,0 +1,19 @@
+meta {
+  name: POST boqDocs id revise
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/boqDocs/:id/revise
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

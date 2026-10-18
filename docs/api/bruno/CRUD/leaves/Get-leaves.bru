@@ -1,0 +1,15 @@
+meta {
+  name: Get leaves
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/leaves/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

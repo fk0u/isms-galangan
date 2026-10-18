@@ -1,0 +1,29 @@
+meta {
+  name: List boq
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/boq?limit=50
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  Daftar baris (terbaru dulu). Query opsional:
+  - limit, offset, atau after=<cursor> (paginasi)
+  - q (cari teks), branch (filter cabang)
+  - where.<field>=<nilai> (filter persis, bisa berulang)
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - boqDocId -> boqDocs
+  
+  Dirujuk oleh:
+  - services.boqRef
+}

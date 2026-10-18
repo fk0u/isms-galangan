@@ -1,0 +1,28 @@
+meta {
+  name: Related quotations
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/quotations/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Field relasi (merujuk koleksi lain):
+  - requestId -> requests
+  - vessel -> vessels (lunak: id atau nama)
+  - client -> clients (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - contracts.quotationId
+  - communications.quotationId
+}

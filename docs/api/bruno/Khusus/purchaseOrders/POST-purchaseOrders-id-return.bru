@@ -1,0 +1,19 @@
+meta {
+  name: POST purchaseOrders id return
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/purchaseOrders/:id/return
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

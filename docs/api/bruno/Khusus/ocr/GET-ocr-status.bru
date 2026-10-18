@@ -1,0 +1,11 @@
+meta {
+  name: GET ocr status
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/ocr/status
+  body: none
+  auth: inherit
+}

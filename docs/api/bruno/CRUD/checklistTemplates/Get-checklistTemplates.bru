@@ -1,0 +1,15 @@
+meta {
+  name: Get checklistTemplates
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/checklistTemplates/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

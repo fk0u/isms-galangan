@@ -1,0 +1,15 @@
+meta {
+  name: Get checklistResponses
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/checklistResponses/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

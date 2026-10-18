@@ -1,0 +1,15 @@
+meta {
+  name: POST attendance ingest
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/attendance/ingest
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

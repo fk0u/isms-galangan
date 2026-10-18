@@ -1,0 +1,15 @@
+meta {
+  name: Get bomItems
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/bomItems/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

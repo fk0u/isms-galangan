@@ -1,0 +1,25 @@
+meta {
+  name: Update spareparts
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/spareparts/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

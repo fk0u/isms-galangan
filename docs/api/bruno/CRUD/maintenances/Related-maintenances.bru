@@ -1,0 +1,23 @@
+meta {
+  name: Related maintenances
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/maintenances/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Field relasi (merujuk koleksi lain):
+  - equipmentId -> equipment
+  - projectId -> projects
+}

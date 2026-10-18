@@ -1,0 +1,28 @@
+meta {
+  name: Create inventory
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/inventory
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Dirujuk oleh:
+  - movements.itemId
+  - spareparts.inventoryItemId
+  - requisitions.itemId
+  - bomItems.itemId
+  - materialRequests.itemId
+}

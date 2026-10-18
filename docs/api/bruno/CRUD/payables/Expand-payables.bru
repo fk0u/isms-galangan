@@ -1,0 +1,23 @@
+meta {
+  name: Expand payables
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/payables/:id/expand?fields=*
+  body: none
+  auth: inherit
+}
+
+params:query {
+  fields: *
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Baris + data induk untuk field relasi (fields=a,b atau *).
+}

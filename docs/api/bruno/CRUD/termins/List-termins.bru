@@ -1,0 +1,26 @@
+meta {
+  name: List termins
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/termins?limit=50
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  Daftar baris (terbaru dulu). Query opsional:
+  - limit, offset, atau after=<cursor> (paginasi)
+  - q (cari teks), branch (filter cabang)
+  - where.<field>=<nilai> (filter persis, bisa berulang)
+  
+  Field relasi (merujuk koleksi lain):
+  - woId -> workOrders
+  - sub -> subcontractors (lunak: id atau nama)
+}

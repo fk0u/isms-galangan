@@ -1,0 +1,25 @@
+meta {
+  name: Update ncr
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/ncr/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

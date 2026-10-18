@@ -1,0 +1,19 @@
+meta {
+  name: Delete incidents
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/incidents/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  409 bila masih dirujuk koleksi lain.
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get quotations
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/quotations/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

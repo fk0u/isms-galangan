@@ -1,0 +1,22 @@
+meta {
+  name: List walks
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/walks?limit=50
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  Daftar baris (terbaru dulu). Query opsional:
+  - limit, offset, atau after=<cursor> (paginasi)
+  - q (cari teks), branch (filter cabang)
+  - where.<field>=<nilai> (filter persis, bisa berulang)
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get bast
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/bast/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Update documents
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/documents/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

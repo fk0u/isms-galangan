@@ -1,0 +1,15 @@
+meta {
+  name: Get payroll
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/payroll/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get drydocks
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/drydocks/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

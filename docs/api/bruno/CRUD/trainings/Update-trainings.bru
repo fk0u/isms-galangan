@@ -1,0 +1,25 @@
+meta {
+  name: Update trainings
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/trainings/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

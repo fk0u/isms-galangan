@@ -1,0 +1,15 @@
+meta {
+  name: Get walks
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/walks/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Related employees
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/employees/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Dirujuk oleh:
+  - timesheets.employeeId
+  - letters.employeeId
+  - payroll.employeeId
+  - attendance.employeeId
+  - leaves.employeeId
+  - checklistResponses.employeeId
+  - projects.manager
+}

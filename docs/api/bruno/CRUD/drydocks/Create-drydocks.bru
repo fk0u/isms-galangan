@@ -1,0 +1,25 @@
+meta {
+  name: Create drydocks
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/drydocks
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Dirujuk oleh:
+  - dockSlots.dockId
+  - projects.plannedDockId
+}

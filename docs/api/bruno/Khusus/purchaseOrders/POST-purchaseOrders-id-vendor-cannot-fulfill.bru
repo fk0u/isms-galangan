@@ -1,0 +1,19 @@
+meta {
+  name: POST purchaseOrders id vendor-cannot-fulfill
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/purchaseOrders/:id/vendor-cannot-fulfill
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

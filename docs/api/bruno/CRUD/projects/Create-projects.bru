@@ -1,0 +1,53 @@
+meta {
+  name: Create projects
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/projects
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - plannedDockId -> drydocks
+  - vessel -> vessels (lunak: id atau nama)
+  - client -> clients (lunak: id atau nama)
+  - manager -> employees (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - invoices.project
+  - services.projectId
+  - spareparts.projectId
+  - contracts.projectId
+  - maintenances.projectId
+  - dockSlots.project
+  - documents.project
+  - workOrders.project
+  - ncr.project
+  - inspections.project
+  - requisitions.projectId
+  - boq.projectId
+  - checklistResponses.projectId
+  - bomItems.projectId
+  - materialRequests.projectId
+  - boqDocs.projectId
+  - changeOrders.project
+  - risks.project
+  - toolbox.project
+  - drawings.project
+  - warranties.projectId
+  - bast.projectId
+  - trials.projectId
+  - clientPos.projectId
+}

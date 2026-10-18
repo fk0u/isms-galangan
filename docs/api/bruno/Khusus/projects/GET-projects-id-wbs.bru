@@ -1,0 +1,15 @@
+meta {
+  name: GET projects id wbs
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/projects/:id/wbs
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Related inventory
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Dirujuk oleh:
+  - movements.itemId
+  - spareparts.inventoryItemId
+  - requisitions.itemId
+  - bomItems.itemId
+  - materialRequests.itemId
+}

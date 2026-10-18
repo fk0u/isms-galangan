@@ -1,0 +1,34 @@
+meta {
+  name: Create vessels
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/vessels
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - owner -> clients (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - services.vesselId
+  - spareparts.vesselId
+  - projects.vessel
+  - dockSlots.vessel
+  - surveys.vessel
+  - warranties.vessel
+  - invoices.vessel
+  - quotations.vessel
+}

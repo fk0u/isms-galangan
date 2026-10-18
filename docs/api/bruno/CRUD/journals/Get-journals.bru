@@ -1,0 +1,15 @@
+meta {
+  name: Get journals
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/journals/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

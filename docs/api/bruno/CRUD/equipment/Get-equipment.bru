@@ -1,0 +1,15 @@
+meta {
+  name: Get equipment
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/equipment/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

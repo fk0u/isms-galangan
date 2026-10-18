@@ -1,0 +1,15 @@
+meta {
+  name: Get purchaseOrders
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/purchaseOrders/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

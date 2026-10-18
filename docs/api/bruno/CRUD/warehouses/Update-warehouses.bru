@@ -1,0 +1,25 @@
+meta {
+  name: Update warehouses
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/warehouses/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

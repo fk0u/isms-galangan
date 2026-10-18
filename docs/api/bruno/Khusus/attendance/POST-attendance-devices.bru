@@ -1,0 +1,15 @@
+meta {
+  name: POST attendance devices
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/attendance/devices
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

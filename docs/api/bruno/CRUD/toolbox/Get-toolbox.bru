@@ -1,0 +1,15 @@
+meta {
+  name: Get toolbox
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/toolbox/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

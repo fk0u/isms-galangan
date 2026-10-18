@@ -1,0 +1,15 @@
+meta {
+  name: Get payables
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/payables/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

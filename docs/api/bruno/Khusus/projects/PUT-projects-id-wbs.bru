@@ -1,0 +1,19 @@
+meta {
+  name: PUT projects id wbs
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/projects/:id/wbs
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

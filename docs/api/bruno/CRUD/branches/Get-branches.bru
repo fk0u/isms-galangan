@@ -1,0 +1,15 @@
+meta {
+  name: Get branches
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/branches/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

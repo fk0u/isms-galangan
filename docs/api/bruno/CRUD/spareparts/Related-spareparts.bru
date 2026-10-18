@@ -1,0 +1,27 @@
+meta {
+  name: Related spareparts
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/spareparts/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - vesselId -> vessels
+  - inventoryItemId -> inventory
+  
+  Dirujuk oleh:
+  - materialRequests.sparepartId
+}
