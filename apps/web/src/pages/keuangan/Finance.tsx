@@ -598,6 +598,54 @@ const sptNumOf = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/* Nominal pajak manual per periode (catatan klien 17 Okt, K17-FIN-01). Kosong/0 =
+   pakai angka otomatis dari data operasional. Disimpan sebagai `<kunci>Manual`
+   supaya angka otomatis tetap bisa dibandingkan. */
+const TAX_MANUAL_KEYS = ["ppnKeluar", "ppnMasuk", "pph23", "pph21"] as const;
+type TaxManualKey = (typeof TAX_MANUAL_KEYS)[number];
+const taxManualOf = (period: StoreItem | null | undefined, k: TaxManualKey): number =>
+  period ? Math.max(0, sptNumOf(period[`${k}Manual`])) : 0;
+
+function ManualTaxForm({ period, locked, labels, auto, onSave }: {
+  period: StoreItem;
+  locked: boolean;
+  labels: Record<TaxManualKey, string>;
+  auto: Record<TaxManualKey, number>;
+  onSave: (patch: Record<string, unknown>) => Promise<void>;
+}) {
+  const { locale } = useT();
+  const S = n_fin[locale];
+  const init = (): Record<TaxManualKey, string> => ({
+    ppnKeluar: String(taxManualOf(period, "ppnKeluar") || ""),
+    ppnMasuk: String(taxManualOf(period, "ppnMasuk") || ""),
+    pph23: String(taxManualOf(period, "pph23") || ""),
+    pph21: String(taxManualOf(period, "pph21") || ""),
+  });
+  const [draft, setDraft] = useState<Record<TaxManualKey, string>>(init);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => { setDraft(init()); setDirty(false); }, [period.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = async (): Promise<void> => {
+    const patch: Record<string, unknown> = {};
+    for (const k of TAX_MANUAL_KEYS) patch[`${k}Manual`] = sptNumOf(draft[k]);
+    await onSave(patch);
+    setDirty(false);
+  };
+  return (
+    <Card className="p-4">
+      <CardHeader title={S.taxManualTitle} subtitle={S.taxManualSub}
+        action={dirty && !locked ? <button className="btn-primary text-xs" onClick={() => void save()}>{S.taxManualSave}</button> : undefined} />
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {TAX_MANUAL_KEYS.map((k) => (
+          <Field key={k} label={labels[k]} hint={S.taxManualAuto.replace("{a}", fmtRupiah(auto[k]))}>
+            <MoneyInput className="input" value={draft[k]} disabled={locked} placeholder={S.taxManualPh}
+              onChange={(v) => { setDraft((d) => ({ ...d, [k]: String(parseRupiah(v) || "") })); setDirty(true); }} />
+          </Field>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function SptFilingForm({ period, locked, onSave }: {
   period: StoreItem;
   locked: boolean;
@@ -1547,9 +1595,19 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       setDelTax(null);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
+  /* Nilai efektif = nominal manual bila diisi, selain itu hasil hitung otomatis.
+     Dipakai di kartu, konfirmasi Lapor, snapshot kunci, dan hutang pajak, jadi
+     angka yang dilihat = angka yang dikunci = angka hutang (K17-FIN-01). */
+  const taxEff = useMemo(() => {
+    const pick = (k: TaxManualKey): number => taxManualOf(activeTax, k) || num(taxCalc[k]);
+    return { ...taxCalc, ppnKeluar: pick("ppnKeluar"), ppnMasuk: pick("ppnMasuk"), pph23: pick("pph23"), pph21: pick("pph21") };
+  }, [taxCalc, activeTax]);
+  const ppnFinal = sptNumOf(activeTax?.ppnTerutangManual) > 0
+    ? sptNumOf(activeTax?.ppnTerutangManual)
+    : taxEff.ppnKeluar - taxEff.ppnMasuk;
   const taxShown = taxLocked
     ? { ppnKeluar: num(activeTax.ppnKeluar), ppnMasuk: num(activeTax.ppnMasuk), pph23: num(activeTax.pph23), pph21: num(activeTax.pph21) }
-    : taxCalc;
+    : taxEff;
 
   // 3. Nomor invoice auto per tipe
   const invPreview = useMemo(() => {
@@ -2837,25 +2895,25 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     try {
       await update("taxPeriods", activeTax.id, {
       status: "Lapor",
-      ppnKeluar: taxCalc.ppnKeluar,
-      ppnMasuk: taxCalc.ppnMasuk,
-      pph23: taxCalc.pph23,
-      pph21: taxCalc.pph21,
+      ppnKeluar: taxEff.ppnKeluar,
+      ppnMasuk: taxEff.ppnMasuk,
+      pph23: taxEff.pph23,
+      pph21: taxEff.pph21,
       reportedAt: todayISO(),
       /* PPN terutang OTOMATIS disimpan terpisah dari override manual, supaya
          saat periode terkunci masih kelihatan berapa yang dihitung sistem
          dan berapa yang dikoreksi orang. Tanpa ini selisih koreksi hilang
          begitu Lapor ditekan. */
       ppnTerutangAuto: taxCalc.ppnKeluar - taxCalc.ppnMasuk,
-      ppnTerutangFinal: sptNumOf(activeTax.ppnTerutangManual) > 0
-        ? sptNumOf(activeTax.ppnTerutangManual)
-        : taxCalc.ppnKeluar - taxCalc.ppnMasuk,
+      ppnTerutangFinal: ppnFinal,
     });
     // Kunci pajak menerbitkan hutang pajak (idempoten via po TAX-<periode>-*):
     // PPh 23 dan PPh 21 sebagai DUA baris terpisah.
-    const ppnNet = Math.max(0, num(taxCalc.ppnKeluar) - num(taxCalc.ppnMasuk));
-    const pph23 = Math.round(num(taxCalc.pph23));
-    const pph21lock = Math.round(num(taxCalc.pph21));
+    /* Hutang pajak = angka yang dikunci (manual/override bila ada). Dulu memakai
+       hitung otomatis sehingga override PPN terutang tidak sampai ke hutang. */
+    const ppnNet = Math.max(0, Math.round(ppnFinal));
+    const pph23 = Math.round(num(taxEff.pph23));
+    const pph21lock = Math.round(num(taxEff.pph21));
     const taxDue = `${activePeriod}-28`;
     if (ppnNet > 0 && !(data.payables ?? []).some((a) => String(a.po ?? "") === `TAX-${activePeriod}-PPN`)) {
       await add("payables", {
@@ -4485,18 +4543,30 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[
-                    { label: S.ppnOut, value: fmtRupiah(taxShown.ppnKeluar), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.invBase)) },
-                    { label: S.ppnIn, value: fmtRupiah(taxShown.ppnMasuk), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.apBase)) },
-                    { label: S.pph23, value: fmtRupiah(taxShown.pph23), hint: S.pph23Hint.replace("{a}", String(taxCalc.pphRate)) },
-                    { label: S.pph21, value: fmtRupiah(taxShown.pph21), hint: S.payrollHint.replace("{a}", activePeriod) },
+                    { key: "ppnKeluar" as const, label: S.ppnOut, value: fmtRupiah(taxShown.ppnKeluar), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.invBase)) },
+                    { key: "ppnMasuk" as const, label: S.ppnIn, value: fmtRupiah(taxShown.ppnMasuk), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.apBase)) },
+                    { key: "pph23" as const, label: S.pph23, value: fmtRupiah(taxShown.pph23), hint: S.pph23Hint.replace("{a}", String(taxCalc.pphRate)) },
+                    { key: "pph21" as const, label: S.pph21, value: fmtRupiah(taxShown.pph21), hint: S.payrollHint.replace("{a}", activePeriod) },
                   ].map((k) => (
                     <Card key={k.label} className="p-4">
-                      <p className="text-xs text-steel-500">{k.label}</p>
+                      <p className="flex items-center gap-1.5 text-xs text-steel-500">{k.label}{taxManualOf(activeTax, k.key) > 0 && <Badge tone="amber">{S.taxManualBadge}</Badge>}</p>
                       <p className="mt-1 text-lg font-bold text-navy-900">{k.value}</p>
                       <p className="mt-1 text-[11px] text-steel-400">{k.hint}</p>
                     </Card>
                   ))}
                 </div>
+              )}
+              {activeTax && (
+                <ManualTaxForm
+                  period={activeTax}
+                  locked={taxLocked}
+                  labels={{ ppnKeluar: S.ppnOut, ppnMasuk: S.ppnIn, pph23: S.pph23, pph21: S.pph21 }}
+                  auto={{ ppnKeluar: num(taxCalc.ppnKeluar), ppnMasuk: num(taxCalc.ppnMasuk), pph23: num(taxCalc.pph23), pph21: num(taxCalc.pph21) }}
+                  onSave={async (patch) => {
+                    try { await update("taxPeriods", activeTax.id, patch); toast(S.taxManualSaved); }
+                    catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+                  }}
+                />
               )}
               <Card className="p-4">
                 <p className="text-sm text-steel-600">
@@ -4946,8 +5016,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           ? `File ${activeTax ? String(activeTax.period) : ""} as SPT?`
           : `Tandai periode ${activeTax ? String(activeTax.period) : ""} sebagai Lapor?`}
         desc={locale === "en"
-          ? `PPN payable ${fmtRupiah(Math.max(0, num(taxCalc.ppnKeluar) - num(taxCalc.ppnMasuk)))}, PPh23 ${fmtRupiah(Math.round(num(taxCalc.pph23)))}, PPh21 ${fmtRupiah(Math.round(num(taxCalc.pph21)))} will be locked and published as tax payables. Once filed, the period can no longer be edited.`
-          : `PPN terutang ${fmtRupiah(Math.max(0, num(taxCalc.ppnKeluar) - num(taxCalc.ppnMasuk)))}, PPh23 ${fmtRupiah(Math.round(num(taxCalc.pph23)))}, PPh21 ${fmtRupiah(Math.round(num(taxCalc.pph21)))} akan dikunci dan terbit sebagai hutang pajak. Setelah ditandai Lapor, angka periode ini tidak bisa diedit lagi.`}
+          ? `PPN payable ${fmtRupiah(Math.max(0, ppnFinal))}, PPh23 ${fmtRupiah(Math.round(num(taxEff.pph23)))}, PPh21 ${fmtRupiah(Math.round(num(taxEff.pph21)))} will be locked and published as tax payables. Once filed, the period can no longer be edited.`
+          : `PPN terutang ${fmtRupiah(Math.max(0, ppnFinal))}, PPh23 ${fmtRupiah(Math.round(num(taxEff.pph23)))}, PPh21 ${fmtRupiah(Math.round(num(taxEff.pph21)))} akan dikunci dan terbit sebagai hutang pajak. Setelah ditandai Lapor, angka periode ini tidak bisa diedit lagi.`}
         confirmLabel={locale === "en" ? "File as SPT" : "Tandai Lapor"}
         danger
         confirmDisabled={!activeTax || taxLocked}
