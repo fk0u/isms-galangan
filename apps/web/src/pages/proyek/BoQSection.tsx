@@ -9,12 +9,13 @@ import { Card, Modal, Field, FormGrid, toast, EmptyState, StatusBadge, Badge, So
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { findUsages } from "../../utils/usages";
-import { Plus, FileDown, Pencil, Trash2, History } from "lucide-react";
+import { Plus, FileDown, Pencil, Trash2, History, Upload } from "lucide-react";
 import { exportExcel, fmtRupiah } from "../../utils/export";
 import { DocumentPreviewCell, InlineDocPreview, type PreviewDoc } from "../../components/DocumentPreview";
 import { docAttachment, looksLikeUrl } from "../../utils/docAttachment";
 import { SATUAN, STATUS_BOQ_ID } from "../../utils/format";
 import { todayISO, parseRupiah } from "../../utils/format";
+import { readSheetRows, sheetNumber } from "../../utils/readSheet";
 import { fmtTanggal } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import type { BoQItem } from "../../data";
@@ -57,6 +58,20 @@ const boqFlowId = (s: string): string =>
   s === "Draft" ? "Draf" : s === "Pending" ? "Diajukan" : s === "Approved" ? "Disetujui" : s === "Completed" ? "Selesai" : s === "Rejected" ? "Ditolak" : s;
 
 const CATEGORIES = ["Mechanical", "Paint", "Survey", "Fabrikasi", "Electrical", "Piping", "Rigging"];
+
+/* Impor BoQ dari Excel (catatan klien 17 Okt, K17-PM-05). Satuan & kategori
+   dicocokkan ke daftar baku agar baris hasil impor tetap bisa diedit di form. */
+const UNIT_ALIAS: Record<string, string> = { m2: "m²", m3: "m³", ls: "package", lot: "package", paket: "package", lumpsum: "package", "lump sum": "package", ltr: "liter", lt: "liter", btg: "batang", hr: "jam", hour: "jam" };
+function matchUnit(raw: string): string | null {
+  const v = raw.trim().toLowerCase();
+  if (v === "") return "pcs";
+  return (SATUAN as readonly string[]).find((u) => u.toLowerCase() === v) ?? UNIT_ALIAS[v] ?? null;
+}
+function matchCategory(raw: string): string | null {
+  const v = raw.trim().toLowerCase();
+  if (v === "") return CATEGORIES[0] as string;
+  return CATEGORIES.find((c) => c.toLowerCase() === v) ?? null;
+}
 
 const PRESET: Record<string, { name: string; unit: string; price: number }[]> = {
   Mechanical: [
@@ -169,6 +184,48 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
       .map((a) => ({ time: String(a.time ?? "-"), text: `${String(a.actor ?? "")} ${String(a.action ?? "")}`, target: String(a.target ?? "") }));
 
   const nextStatus = (current: string): string[] => STATUS_FLOW[current] ?? [];
+
+  const downloadBoqTemplate = (): void => {
+    void exportExcel([
+      [S.boqColName, S.boqColDesc, S.boqColQty, S.boqColUnit, S.boqColPrice, S.boqColCat],
+      ["Sandblasting & painting lambung", "Sa 2.5, 3 lapis", 450, "m²", 185000, "Paint"],
+      ["Ganti zink anode", "", 24, "pcs", 350000, "Mechanical"],
+    ], "template-boq", "BoQ");
+  };
+  const importBoq = async (file: File): Promise<void> => {
+    try {
+      const rows = await readSheetRows(file);
+      const header = rows[0] && Number.isNaN(sheetNumber(rows[0][2] ?? "")) && /nama|pekerjaan|item|uraian|name/i.test(rows[0][0] ?? "") ? 1 : 0;
+      const valid: Record<string, unknown>[] = [];
+      const errors: string[] = [];
+      rows.slice(header).forEach((row, i) => {
+        const line = i + header + 1;
+        const name = (row[0] ?? "").trim();
+        const qty = sheetNumber(row[2] ?? "");
+        const price = sheetNumber(row[4] ?? "");
+        const unit = matchUnit(row[3] ?? "");
+        const category = matchCategory(row[5] ?? "");
+        const why = !name ? S.boqImpErrName
+          : !(qty > 0) ? S.boqImpErrQty
+          : !(price > 0) ? S.boqImpErrPrice
+          : unit === null ? S.boqImpErrUnit.replace("{a}", row[3] ?? "")
+          : category === null ? S.boqImpErrCat.replace("{a}", row[5] ?? "")
+          : "";
+        if (why) { errors.push(`${line}: ${why}`); return; }
+        valid.push({
+          projectId: String(projectId), name, description: (row[1] ?? "").trim(), quantity: qty, unit, unitPrice: price,
+          totalPrice: qty * price, category, status: "Draft", requestedBy: "Anda",
+          ...(docId ? { boqDocId: String(docId) } : {}),
+        });
+      });
+      if (valid.length === 0) { toast(S.boqImpNone + (errors.length ? ` (${errors.slice(0, 3).join("; ")})` : ""), "info"); return; }
+      for (const item of valid) await add("boq", item, { action: "mengimpor BoQ item", module: "BoQ" });
+      log("mengimpor BoQ", `${String(docId ?? projectId)} · ${valid.length} baris dari ${file.name}`, "BoQ");
+      toast(S.boqImpDone.replace("{n}", String(valid.length)) + (errors.length ? S.boqImpSkipped.replace("{m}", String(errors.length)).replace("{rows}", errors.slice(0, 5).join("; ")) : ""));
+    } catch (e) {
+      toast(S.boqImpFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
+    }
+  };
 
   const saveBoq = async () => {
     if (!form.name.trim()) { toast(S.boqToastName, "info"); return; }
@@ -293,6 +350,14 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
           <h3 className="text-sm font-semibold text-navy-900 flex items-center gap-2"><FileDown className="h-4 w-4" /> {S.boqTitle.replace("{n}", String(items.length))}</h3>
           <div className="flex gap-2">
             <AsyncButton className="btn-secondary text-xs" onAction={handleExport}><FileDown className="h-3.5 w-3.5" /> {S.exportExcelBtn}</AsyncButton>
+            {!locked && <button type="button" className="btn-secondary text-xs" onClick={downloadBoqTemplate}><FileDown className="h-3.5 w-3.5" /> {S.boqTemplateBtn}</button>}
+            {!locked && (
+              <label className="btn-secondary cursor-pointer text-xs">
+                <Upload className="h-3.5 w-3.5" /> {S.boqImportBtn}
+                <input type="file" accept=".xlsx,.csv" className="hidden" aria-label={S.boqImportBtn}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importBoq(f); }} />
+              </label>
+            )}
             {!locked && <button className="btn-primary text-xs" onClick={() => setShowAdd(true)}><Plus className="h-3.5 w-3.5" /> {S.boqAddBtn}</button>}
           </div>
         </div>
