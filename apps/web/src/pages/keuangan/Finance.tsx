@@ -236,7 +236,16 @@ const INV_NEXT: Record<string, string[]> = {
   Dihapusbukukan: [],
 };
 
-const BILLING_TYPES = ["Milestone", "Progres", "Uang Muka", "Retensi", "T&M"] as const;
+/* Pilihan tipe billing di form invoice baru (catatan klien 17 Okt, K17-FIN-04):
+   DP 1-5 lalu Pelunasan. Tipe lama (Milestone/Progres/Uang Muka/Retensi/T&M) tetap
+   dikenali karena dipakai invoice lama dan invoice otomatis (BAST, pelepasan retensi). */
+const BILLING_TYPES = ["DP 1", "DP 2", "DP 3", "DP 4", "DP 5", "Pelunasan"] as const;
+const LEGACY_BILLING_TYPES = ["Milestone", "Progres", "Uang Muka", "Retensi", "T&M", "Saldo Awal"] as const;
+
+/** DP = uang muka: tanpa retensi, dan menandai proyek punya uang muka. */
+function isAdvanceBilling(t: string): boolean {
+  return t === "Uang Muka" || /^DP [1-5]$/.test(t);
+}
 
 /* Pipeline invoice: Draft → Diajukan → Disetujui → Belum Dibayar → Lunas.
    Terlambat = cabang Belum Dibayar; Ditolak kembali ke Draft. */
@@ -281,6 +290,8 @@ const INV_PREFIX: Record<string, string> = {
   Milestone: "INV/MS-SMD",
   Progres: "INV/PR-SMD",
   "Uang Muka": "INV/UM-SMD",
+  "DP 1": "INV/DP-SMD", "DP 2": "INV/DP-SMD", "DP 3": "INV/DP-SMD", "DP 4": "INV/DP-SMD", "DP 5": "INV/DP-SMD",
+  Pelunasan: "INV/PL-SMD",
   Retensi: "INV/RT-SMD",
   "T&M": "INV/TM-SMD",
 };
@@ -856,7 +867,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [showInv, setShowInv] = useState(false);
   const [invForm, setInvForm] = useState({
     project: "",
-    billingType: "Milestone" as string,
+    billingType: "DP 1" as string,
     milestoneRef: "",
     serviceRef: "",
     clientPO: "",
@@ -1407,7 +1418,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       pphRate: getSetting(data, "PPH_JASA_RATE", PPH_JASA_DEFAULT),
       skdt: invForm.skdt,
       dpApplied: num(invForm.dpApplied),
-      retentionPct: invForm.billingType === "Uang Muka" || isTMForm ? 0 : num(invForm.retentionPct),
+      retentionPct: isAdvanceBilling(invForm.billingType) || isTMForm ? 0 : num(invForm.retentionPct),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invLines, invForm.skdt, invForm.dpApplied, invForm.retentionPct, invForm.billingType, isTMForm, data.settings]);
@@ -1954,7 +1965,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       }
     }
     const total = validLines.reduce((s, l) => s + lineAmount(l, isTMForm), 0);
-    const pct = invForm.billingType === "Uang Muka" || invForm.billingType === "T&M" ? 0 : num(invForm.retentionPct);
+    const pct = isAdvanceBilling(invForm.billingType) || invForm.billingType === "T&M" ? 0 : num(invForm.retentionPct);
     const retentionAmt = Math.round(total * (pct / 100));
     const jasaTotal = validLines.filter((l) => (l.kategori || "Jasa") === "Jasa").reduce((s, l) => s + lineAmount(l, isTMForm), 0);
     const matTotal = validLines.filter((l) => l.kategori === "Material").reduce((s, l) => s + lineAmount(l, isTMForm), 0);
@@ -2036,13 +2047,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       noFaktur: invForm.noFaktur.trim(),
       dunning: "Belum Ditagih",
     }, { action: "menerbitkan invoice", module: "Keuangan" });
-    if (invForm.billingType === "Uang Muka") {
+    if (isAdvanceBilling(invForm.billingType)) {
       await update("projects", proj.id, { hasAdvance: true });
       log("menandai uang muka proyek", proj.id, "Keuangan");
     }
     toast(S.invCreated.replace("{a}", created.id));
     setShowInv(false);
-    setInvForm({ project: "", billingType: "Milestone", milestoneRef: "", serviceRef: "", clientPO: "", retentionPct: "5", due: "", paymentTerm: "Termin 1", nsfp: "", noFaktur: "", kodePembantu: "", skdt: false, dpApplied: "", dpRef: "" });
+    setInvForm({ project: "", billingType: "DP 1", milestoneRef: "", serviceRef: "", clientPO: "", retentionPct: "5", due: "", paymentTerm: "Termin 1", nsfp: "", noFaktur: "", kodePembantu: "", skdt: false, dpApplied: "", dpRef: "" });
     setInvLines([emptyLine()]);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
@@ -3600,7 +3611,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </Field>
                       <Field label={S.billingTypeLabel}>
                         <select className="input w-full" value={draft.billing} onChange={(e) => setDraft({ ...draft, billing: e.target.value })}>
-                          {["Semua", "Milestone", "Progres", "Uang Muka", "Retensi", "T&M", "Saldo Awal"].map((s) => <option key={s} value={s}>{s === "Semua" ? S.allTypes : s}</option>)}
+                          {["Semua", ...BILLING_TYPES, ...LEGACY_BILLING_TYPES].map((s) => <option key={s} value={s}>{s === "Semua" ? S.allTypes : s}</option>)}
                         </select>
                       </Field>
                     </div>
@@ -4736,7 +4747,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <input className="input font-mono" value={invForm.serviceRef} onChange={(e) => setInv("serviceRef", e.target.value)} placeholder="SRV-002" />
             </Field>
           )}
-          {!isTMForm && invForm.billingType !== "Uang Muka" && (
+          {!isTMForm && !isAdvanceBilling(invForm.billingType) && (
             <FormGrid>
               <Field label={S.fRetentionPct}>
                 <NumInput min={0} max={100} className="input" value={invForm.retentionPct} onChange={(e) => setInv("retentionPct", e.target.value)} />
