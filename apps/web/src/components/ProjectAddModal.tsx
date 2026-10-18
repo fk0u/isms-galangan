@@ -14,7 +14,6 @@ import { isProjectManager } from "../utils/employeeOptions";
 import ClientModal from "./ClientModal";
 
 const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
-const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
 const PREFIX_TIPE: Record<string, string> = { "New Build": "NB", Repair: "RP", Retrofit: "RF" };
 
 const emptyForm = {
@@ -28,6 +27,9 @@ const emptyForm = {
   manager: "",
   status: "Dalam Proses",
   tahap: "Inquiry",
+  /* Field Prioritas dihapus dari form (catatan klien 17 Okt, K17-PM-11), tetapi
+     daftar proyek, Monitoring, dan detail masih memakai prioritas - proyek baru
+     tetap disimpan "Sedang" dan bisa diubah di detail proyek. */
   prioritas: "Sedang",
   vesselLoa: "",
   vesselType: "",
@@ -274,11 +276,6 @@ export default function ProjectAddModal({
             <Field label={S.prjInitStage}>
               <select className="input" value={form.tahap} onChange={(e) => setF("tahap", e.target.value)}>
                 {TAHAP.map((t) => <option key={t} value={t}>{t === "Desain" ? S.prjStagePlanning : t}</option>)}
-              </select>
-            </Field>
-            <Field label={S.prjFieldPrioritas}>
-              <select className="input" value={form.prioritas} onChange={(e) => setF("prioritas", e.target.value)}>
-                {PRIORITAS.map((r) => <option key={r}>{r}</option>)}
               </select>
             </Field>
             <Field label={S.prjPlannedDock}>
