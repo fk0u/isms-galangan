@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass, Upload } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass, Upload, Boxes } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -73,6 +73,7 @@ import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../util
 import { exportExcel } from "../../utils/export";
 import { readSheetRows } from "../../utils/readSheet";
 import DockPlanCard from "./DockPlanCard";
+import WbsMaterialModal, { stageMaterialCount } from "./WbsMaterialModal";
 
 /* "Dalam Proses" = status default proyek baru (ProjectAddModal). Tanpa baris
    ini, <select> status tidak punya <option> yang cocok untuk proyek-proyek itu
@@ -228,6 +229,7 @@ export default function ProjectDetail() {
   const [reqForm, setReqForm] = useState({ name: "", type: "Drawing", notes: "" });
   const [showTeam, setShowTeam] = useState(false);
   const [teamPick, setTeamPick] = useState("");
+  const [wbsMatTask, setWbsMatTask] = useState<string | null>(null);
   const [teamDropdownOpen, setTeamDropdownOpen] = useState(false);
   const [wbsTaskUpdate, setWbsTaskUpdate] = useState<string | null>(null);
   const [wbsUpdateForm, setWbsUpdateForm] = useState({ hours: "", material: "", materialQty: "1", status: "Sedang" as "Sedang" | "Selesai", progress: "", predecessor: "", station: "", photoNote: "", photoUrl: "", photos: [] as PhotoUploadItem[], dft: "" });
@@ -1885,6 +1887,12 @@ const createWarranty = async (wbsTask?: string) => {
                         <td className="td">
                           <div className="flex items-center gap-1">
                             <RowAction
+                              icon={Boxes}
+                              tone="neutral"
+                              label={`${S.wbsMatBtn} ${w.task} (${stageMaterialCount(data.bomItems ?? [], pid, w.task)})`}
+                              onClick={() => setWbsMatTask(w.task)}
+                            />
+                            <RowAction
                               icon={UserPlus}
                               tone="neutral"
                               label={`${S.detAssignBtn} ${w.task}`}
@@ -3314,6 +3322,7 @@ const createWarranty = async (wbsTask?: string) => {
       </Modal>
 
       {/* Modal Assign WBS */}
+      <WbsMaterialModal projectId={pid} task={wbsMatTask} onClose={() => setWbsMatTask(null)} />
       <Modal
         open={wbsAssignTask !== null}
         onClose={() => setWbsAssignTask(null)}

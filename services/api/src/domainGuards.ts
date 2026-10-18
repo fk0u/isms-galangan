@@ -132,11 +132,34 @@ export function catalogStockGuardError(table: string, data: Data): string | null
 
 /** BOM per proyek (ADR-0020): kebutuhan > 0 dan satu material hanya sekali per
  *  proyek - tambah kebutuhan dengan mengubah baris yang ada, bukan menduplikasi. */
+/** Alokasi material per tahapan WBS (catatan klien 17 Okt, K17-PM-03):
+ *  `alokasi` opsional, berisi {wbsTask, qty}; tahapan wajib & unik, qty > 0,
+ *  dan total alokasi tidak boleh melebihi kebutuhan BOM proyek. */
+export function bomAllocationError(alokasi: unknown, need: number): string | null {
+  if (alokasi === undefined || alokasi === null) return null;
+  if (!Array.isArray(alokasi)) return "Alokasi BOM harus berupa daftar tahapan";
+  const seen = new Set<string>();
+  let total = 0;
+  for (const a of alokasi) {
+    const row = (typeof a === "object" && a !== null ? a : {}) as Data;
+    const task = str(row.wbsTask);
+    const qty = Number(row.qty);
+    if (task === "") return "Alokasi BOM wajib menyebut tahapan WBS";
+    if (!Number.isFinite(qty) || qty <= 0) return `Jumlah material untuk tahapan "${task}" harus lebih dari 0`;
+    if (seen.has(task)) return `Tahapan "${task}" tercatat dua kali pada material yang sama`;
+    seen.add(task);
+    total += qty;
+  }
+  return total > need + 1e-9 ? `Total alokasi per tahapan (${total}) melebihi kebutuhan BOM (${need})` : null;
+}
+
 export async function bomItemError(table: string, id: string | null, data: Data): Promise<string | null> {
   if (table !== "bomItems") return null;
   const need = Number(data.need);
   if (!Number.isFinite(need) || need <= 0) return "Kebutuhan BOM harus lebih dari 0";
   if (str(data.projectId) === "" || str(data.itemId) === "") return "BOM wajib menyebut proyek dan material";
+  const allocErr = bomAllocationError(data.alokasi, need);
+  if (allocErr) return allocErr;
   const rows = await q<{ id: string; data: string }>("SELECT id, data FROM bomItems", []);
   const dup = rows.some((r) => {
     if (r.id === id) return false;
