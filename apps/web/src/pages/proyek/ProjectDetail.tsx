@@ -931,7 +931,7 @@ const createWarranty = async (wbsTask?: string) => {
         });
         try {
           await add("invoices", {
-            id: invId, client: project.client, project: pid, amount,
+            id: invId, client: project.client, project: pid, vessel: String(project.vessel ?? ""), amount,
             due, status: "Draft", paymentTerm: `Termin ${String(b.milestone)}`,
             billingType: "Milestone", type: "Milestone", milestoneRef: `BAST ${String(b.id)}`,
             bastId: String(b.id),

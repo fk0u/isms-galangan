@@ -429,7 +429,7 @@ export default function Drydock() {
     })();
     try {
       const created = await add("invoices", {
-        client: proj.client, kodePembantu: proj.client, project: proj.id,
+        client: proj.client, kodePembantu: proj.client, project: proj.id, vessel: String(s.vessel ?? proj.vessel ?? ""),
         branch: String(proj.branch ?? ""),
         amount: total, grandTotal: total, dpp: total, ppnAmt: 0, pphAmt: 0,
         jasaTotal: dockAmt, matTotal: kwh * tarifKwh + m3 * tarifAir,

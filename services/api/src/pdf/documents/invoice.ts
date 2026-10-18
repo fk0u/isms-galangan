@@ -95,7 +95,8 @@ export function invoiceDoc(input: InvoiceInput, opts: DocOptions = {}): Document
     { label: L(locale, "Kepada", "Bill to"), value: input.client },
     { label: L(locale, "Proyek", "Project"), value: input.project },
   ];
-  if (!isBlank(input.vessel)) pairs.push({ label: L(locale, "Kapal", "Vessel"), value: String(input.vessel) });
+  // Baris kapal selalu ada (K17-FIN-03): "-" bila memang tidak diketahui, bukan hilang.
+  pairs.push({ label: L(locale, "Kapal", "Vessel"), value: isBlank(input.vessel) ? "-" : String(input.vessel) });
   if (!isBlank(input.paymentTerm)) {
     pairs.push({ label: L(locale, "Termin", "Term"), value: String(input.paymentTerm) });
   }
