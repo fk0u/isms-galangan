@@ -11,6 +11,7 @@ import {
   Bar,
   ComposedChart,
   Legend,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -3897,6 +3898,64 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("lr"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={lrHist} onChange={setLrHist} idPrefix="lr" />
+              {/* Grafik detail laba rugi (K17-FIN-07): tren bulanan + komposisi periode
+                  berjalan. Sumber sama dengan tabel di bawah (plMonthly / lrLive). */}
+              {(() => {
+                const jt = (n: number): number => Math.round(n / 1e5) / 10;
+                const series = plMonthly.filter((p) => matchHistPeriod(p.period, lrHist)).map((p) => {
+                  const [y, m] = p.period.split("-");
+                  return { name: `${MONTH_ID[Number(m) - 1] ?? m} ${String(y).slice(2)}`, revenue: jt(p.revenue), costProj: jt(p.costProj), salary: jt(p.salary), laba: jt(p.laba) };
+                });
+                const opex = lrLive.salary + lrLive.writeoff;
+                const base = Math.max(lrLive.revenue, lrLive.costProj + opex, 1);
+                const parts = [
+                  { label: S.lrSerCost, value: lrLive.costProj, cls: "bg-accent" },
+                  { label: S.lrOpexTitle, value: opex, cls: "bg-steel-400" },
+                  { label: S.lrSerLaba, value: Math.max(lrLive.laba, 0), cls: "bg-emerald-600" },
+                ];
+                const margin = lrLive.revenue > 0 ? (lrLive.laba / lrLive.revenue) * 100 : null;
+                return (
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                    <Card className="p-4 xl:col-span-2">
+                      <CardHeader title={S.lrChartTitle} subtitle={S.lrChartSub} />
+                      {series.length === 0 ? (
+                        <p className="py-10 text-center text-xs italic text-steel-400">{S.lrEmptyHist}</p>
+                      ) : (
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={series} margin={{ top: 8, right: 10, left: -10, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
+                              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                              <YAxis tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                              <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} jt`} />} />
+                              <Legend wrapperStyle={{ fontSize: 12 }} />
+                              <Bar dataKey="revenue" name={S.lrSerRevenue} fill="#0A0A0A" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="costProj" name={S.lrSerCost} fill="#E61919" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="salary" name={S.lrSerSalary} fill="#A3A3A3" radius={[4, 4, 0, 0]} />
+                              <Line type="monotone" dataKey="laba" name={S.lrSerLaba} stroke="#059669" strokeWidth={2.5} dot={{ r: 3 }} />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </Card>
+                    <Card className="p-4">
+                      <CardHeader title={S.lrCompTitle} subtitle={S.lrCompSub.replace("{a}", fmtRupiah(lrLive.revenue))} />
+                      <div className="space-y-3">
+                        {parts.map((pt) => (
+                          <div key={pt.label}>
+                            <div className="mb-1 flex justify-between text-xs"><span className="text-steel-600">{pt.label}</span><span className="font-semibold text-navy-900">{fmtRupiah(pt.value)} · {Math.round((pt.value / base) * 100)}%</span></div>
+                            <div className="h-2 overflow-hidden rounded-full bg-steel-100"><div className={`h-full rounded-full ${pt.cls}`} style={{ width: `${Math.min(100, (pt.value / base) * 100)}%` }} /></div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 rounded-lg bg-surface px-3 py-2">
+                        <p className="text-xs text-steel-500">{S.lrMargin}</p>
+                        <p className={`text-lg font-bold ${margin === null ? "text-steel-400" : margin >= 0 ? "text-emerald-600" : "text-red-600"}`}>{margin === null ? "-" : `${margin.toFixed(1)}%`}</p>
+                      </div>
+                    </Card>
+                  </div>
+                );
+              })()}
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.lrLiveBadge.replace("{n}", String(lrLive.n)).replace("{d}", lrAsOf).replace("{s}", lrSnap ? S.lrSnapSuffix : S.lrLiveSuffix)}
               </p>
