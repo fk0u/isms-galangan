@@ -1,0 +1,25 @@
+meta {
+  name: Update employees
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/employees/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

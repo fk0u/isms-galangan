@@ -1,0 +1,15 @@
+meta {
+  name: Get coa
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/coa/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

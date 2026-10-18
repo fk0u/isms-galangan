@@ -1,0 +1,15 @@
+meta {
+  name: Get inspections
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/inspections/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

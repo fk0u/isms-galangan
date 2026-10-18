@@ -1,0 +1,19 @@
+meta {
+  name: POST changeOrders id decision
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/changeOrders/:id/decision
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

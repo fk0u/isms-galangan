@@ -1,0 +1,15 @@
+meta {
+  name: POST public leave check
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/public/leave/check
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}

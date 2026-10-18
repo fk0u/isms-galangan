@@ -1,0 +1,15 @@
+meta {
+  name: Get auditPlans
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/auditPlans/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

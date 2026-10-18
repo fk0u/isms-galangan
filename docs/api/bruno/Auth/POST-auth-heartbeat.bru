@@ -1,0 +1,15 @@
+meta {
+  name: POST auth heartbeat
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/heartbeat
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

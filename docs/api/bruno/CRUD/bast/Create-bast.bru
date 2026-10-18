@@ -1,0 +1,24 @@
+meta {
+  name: Create bast
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/bast
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+}

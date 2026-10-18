@@ -1,0 +1,15 @@
+meta {
+  name: Get employees
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/employees/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

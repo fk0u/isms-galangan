@@ -1,0 +1,15 @@
+meta {
+  name: Get communications
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/communications/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

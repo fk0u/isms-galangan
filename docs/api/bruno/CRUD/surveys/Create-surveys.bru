@@ -1,0 +1,25 @@
+meta {
+  name: Create surveys
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/surveys
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - linkedTrial -> trials
+  - vessel -> vessels (lunak: id atau nama)
+}

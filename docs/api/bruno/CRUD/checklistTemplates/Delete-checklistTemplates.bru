@@ -1,0 +1,19 @@
+meta {
+  name: Delete checklistTemplates
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/checklistTemplates/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  409 bila masih dirujuk koleksi lain.
+}

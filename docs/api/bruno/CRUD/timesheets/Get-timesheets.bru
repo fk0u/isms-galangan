@@ -1,0 +1,15 @@
+meta {
+  name: Get timesheets
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/timesheets/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

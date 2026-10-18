@@ -1,0 +1,15 @@
+meta {
+  name: Get maintenances
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/maintenances/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

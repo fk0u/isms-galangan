@@ -1,0 +1,19 @@
+meta {
+  name: POST material-requests id fulfill
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/material-requests/:id/fulfill
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

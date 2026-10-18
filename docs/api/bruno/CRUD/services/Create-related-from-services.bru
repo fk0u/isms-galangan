@@ -1,0 +1,26 @@
+meta {
+  name: Create related from services
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/services/:id/related/:child
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+  child: {{child}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Buat baris koleksi :child dengan field relasinya terisi otomatis. Tambah ?field= bila :child punya lebih dari satu relasi ke koleksi ini.
+}

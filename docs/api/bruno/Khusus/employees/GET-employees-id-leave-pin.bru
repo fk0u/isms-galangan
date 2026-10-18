@@ -1,0 +1,15 @@
+meta {
+  name: GET employees id leave-pin
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/employees/:id/leave-pin
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

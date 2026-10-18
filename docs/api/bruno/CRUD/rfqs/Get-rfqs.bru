@@ -1,0 +1,15 @@
+meta {
+  name: Get rfqs
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/rfqs/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Update letters
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/letters/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

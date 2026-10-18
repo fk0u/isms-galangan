@@ -1,0 +1,25 @@
+meta {
+  name: Update drydocks
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/drydocks/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

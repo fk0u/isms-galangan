@@ -1,0 +1,30 @@
+meta {
+  name: Create employees
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/employees
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Dirujuk oleh:
+  - timesheets.employeeId
+  - letters.employeeId
+  - payroll.employeeId
+  - attendance.employeeId
+  - leaves.employeeId
+  - checklistResponses.employeeId
+  - projects.manager
+}

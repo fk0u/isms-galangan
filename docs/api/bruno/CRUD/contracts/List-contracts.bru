@@ -1,0 +1,30 @@
+meta {
+  name: List contracts
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/contracts?limit=50
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  Daftar baris (terbaru dulu). Query opsional:
+  - limit, offset, atau after=<cursor> (paginasi)
+  - q (cari teks), branch (filter cabang)
+  - where.<field>=<nilai> (filter persis, bisa berulang)
+  
+  Field relasi (merujuk koleksi lain):
+  - quotationId -> quotations
+  - projectId -> projects
+  - client -> clients (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - clientPos.contractId
+}

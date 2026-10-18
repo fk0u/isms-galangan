@@ -1,0 +1,15 @@
+meta {
+  name: Get boqDocs
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/boqDocs/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

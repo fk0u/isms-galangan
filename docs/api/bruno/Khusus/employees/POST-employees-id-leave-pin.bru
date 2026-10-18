@@ -1,0 +1,19 @@
+meta {
+  name: POST employees id leave-pin
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/employees/:id/leave-pin
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

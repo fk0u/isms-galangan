@@ -1,0 +1,30 @@
+meta {
+  name: Create quotations
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/quotations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - requestId -> requests
+  - vessel -> vessels (lunak: id atau nama)
+  - client -> clients (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - contracts.quotationId
+  - communications.quotationId
+}

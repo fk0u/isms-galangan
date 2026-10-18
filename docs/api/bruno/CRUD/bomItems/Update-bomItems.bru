@@ -1,0 +1,25 @@
+meta {
+  name: Update bomItems
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/bomItems/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get trainings
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/trainings/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

@@ -1,0 +1,16 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  # ISMS Galangan REST API
+  1. Pilih environment (Lokal / Server).
+  2. Jalankan Auth/Login - token tersimpan otomatis ke variabel {{token}}.
+  3. Semua request lain mewarisi Bearer {{token}}.
+  Respons berbentuk { ok, data } atau { ok:false, error:{ message, code } }.
+  Koleksi ini DIBANGKITKAN oleh services/api/scripts/gen-bruno.ts - jangan diedit manual.
+}

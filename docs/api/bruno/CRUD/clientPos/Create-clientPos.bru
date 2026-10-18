@@ -1,0 +1,25 @@
+meta {
+  name: Create clientPos
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/clientPos
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - contractId -> contracts
+  - projectId -> projects
+}

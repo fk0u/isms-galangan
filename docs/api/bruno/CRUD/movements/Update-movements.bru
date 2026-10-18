@@ -1,0 +1,25 @@
+meta {
+  name: Update movements
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/movements/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

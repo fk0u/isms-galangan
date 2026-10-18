@@ -1,0 +1,19 @@
+meta {
+  name: Delete branches
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/branches/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  409 bila masih dirujuk koleksi lain.
+}

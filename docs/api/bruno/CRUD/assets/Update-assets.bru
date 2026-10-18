@@ -1,0 +1,25 @@
+meta {
+  name: Update assets
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/assets/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

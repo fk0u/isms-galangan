@@ -1,0 +1,15 @@
+meta {
+  name: Get trials
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/trials/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

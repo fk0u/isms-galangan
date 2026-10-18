@@ -1,0 +1,15 @@
+meta {
+  name: Get services
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/services/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

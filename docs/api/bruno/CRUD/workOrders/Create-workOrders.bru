@@ -1,0 +1,29 @@
+meta {
+  name: Create workOrders
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/workOrders
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - project -> projects
+  - sub -> subcontractors (lunak: id atau nama)
+  
+  Dirujuk oleh:
+  - termins.woId
+  - timesheets.woId
+}

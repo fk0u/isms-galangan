@@ -1,0 +1,15 @@
+meta {
+  name: Get taxPeriods
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/taxPeriods/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

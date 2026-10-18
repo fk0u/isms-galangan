@@ -1,0 +1,25 @@
+meta {
+  name: Update purchaseOrders
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/purchaseOrders/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

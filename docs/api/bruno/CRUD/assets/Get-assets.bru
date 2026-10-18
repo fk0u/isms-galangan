@@ -1,0 +1,15 @@
+meta {
+  name: Get assets
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/assets/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

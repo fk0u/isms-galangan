@@ -1,0 +1,15 @@
+meta {
+  name: Get warehouses
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/warehouses/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

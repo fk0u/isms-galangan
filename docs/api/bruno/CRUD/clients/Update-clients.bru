@@ -1,0 +1,25 @@
+meta {
+  name: Update clients
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/clients/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

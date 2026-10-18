@@ -1,0 +1,23 @@
+meta {
+  name: Related surveys
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/surveys/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Field relasi (merujuk koleksi lain):
+  - linkedTrial -> trials
+  - vessel -> vessels (lunak: id atau nama)
+}

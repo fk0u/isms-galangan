@@ -1,0 +1,15 @@
+meta {
+  name: Get inventory
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/inventory/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

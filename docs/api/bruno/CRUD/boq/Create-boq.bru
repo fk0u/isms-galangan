@@ -1,0 +1,28 @@
+meta {
+  name: Create boq
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/boq
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - boqDocId -> boqDocs
+  
+  Dirujuk oleh:
+  - services.boqRef
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Related vendors
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/vendors/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Dirujuk oleh:
+  - purchaseOrders.vendor
+  - payables.v
+}

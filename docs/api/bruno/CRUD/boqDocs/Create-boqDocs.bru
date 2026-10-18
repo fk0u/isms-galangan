@@ -1,0 +1,31 @@
+meta {
+  name: Create boqDocs
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/boqDocs
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Field relasi divalidasi (422 bila induk tidak ada).
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - supersedes -> boqDocs
+  
+  Dirujuk oleh:
+  - documents.boqDocId
+  - boq.boqDocId
+  - boqDocs.supersedes
+  - changeOrders.boqDocId
+}

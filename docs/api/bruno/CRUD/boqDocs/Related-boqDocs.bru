@@ -1,0 +1,29 @@
+meta {
+  name: Related boqDocs
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/boqDocs/:id/related
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+docs {
+  Semua baris koleksi lain yang merujuk baris ini.
+  
+  Field relasi (merujuk koleksi lain):
+  - projectId -> projects
+  - supersedes -> boqDocs
+  
+  Dirujuk oleh:
+  - documents.boqDocId
+  - boq.boqDocId
+  - boqDocs.supersedes
+  - changeOrders.boqDocId
+}
