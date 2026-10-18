@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass, Upload } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -71,6 +71,7 @@ import {
 import { getSetting } from "../../utils/settings";
 import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../utils/sb";
 import { exportExcel } from "../../utils/export";
+import { readSheetRows } from "../../utils/readSheet";
 
 /* "Dalam Proses" = status default proyek baru (ProjectAddModal). Tanpa baris
    ini, <select> status tidak punya <option> yang cocok untuk proyek-proyek itu
@@ -1063,6 +1064,32 @@ const createWarranty = async (wbsTask?: string) => {
   };
 
   // E7: QA gate + history otomatis saat Selesai.
+  /* Impor Ruang Lingkup dari Excel/CSV (catatan klien 17 Okt, K17-PM-13).
+     Kolom: Jenis pekerjaan | Lokasi | Deskripsi. Baris judul dilewati otomatis;
+     baris tanpa jenis pekerjaan dilaporkan nomornya, bukan disimpan setengah. */
+  const downloadScopeTemplate = (): void => {
+    void exportExcel([[S.detScopeColService, S.detScopeColLoc, S.detScopeColDesc], [S.detScopeTplEx1, S.detScopeTplEx2, S.detScopeTplEx3]], "template-ruang-lingkup", "Ruang Lingkup");
+  };
+  const importScope = async (file: File): Promise<void> => {
+    try {
+      const rows = await readSheetRows(file);
+      const header = rows[0] && /jenis|pekerjaan|service|lingkup|scope/i.test(rows[0][0] ?? "") ? 1 : 0;
+      const items: { service: string; lokasi?: string; deskripsi?: string }[] = [];
+      const skipped: number[] = [];
+      rows.slice(header).forEach((row, i) => {
+        const service = (row[0] ?? "").trim();
+        if (!service) { skipped.push(i + header + 1); return; }
+        items.push({ service, ...(row[1]?.trim() ? { lokasi: row[1].trim() } : {}), ...(row[2]?.trim() ? { deskripsi: row[2].trim() } : {}) });
+      });
+      if (items.length === 0) { toast(S.detScopeImportEmpty, "info"); return; }
+      await update("projects", pid, { scope: [...scopeList(project.scope), ...items] });
+      log("mengimpor lingkup", `${pid} · ${items.length} baris dari ${file.name}`, "Proyek");
+      toast(S.detScopeImportDone.replace("{n}", String(items.length)) + (skipped.length ? S.detScopeImportSkipped.replace("{m}", String(skipped.length)).replace("{rows}", skipped.slice(0, 8).join(", ")) : ""));
+    } catch (e) {
+      toast(S.detScopeImportFail.replace("{a}", e instanceof Error ? e.message : String(e)), "info");
+    }
+  };
+
   const saveScope = async () => {
     if (!scopeVal.service.trim()) { toast(S.detToastSvcReq, "info"); return; }
     const item = {
@@ -1431,7 +1458,15 @@ const createWarranty = async (wbsTask?: string) => {
               <div className="lg:col-span-2">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.detScopeTitle}</h3>
-                  <button className="btn-secondary text-xs" onClick={() => setShowScope(true)}><Plus className="h-3.5 w-3.5" /> {S.addBtn}</button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" className="btn-secondary text-xs" onClick={downloadScopeTemplate}><FileDown className="h-3.5 w-3.5" /> {S.detScopeTemplate}</button>
+                    <label className="btn-secondary cursor-pointer text-xs">
+                      <Upload className="h-3.5 w-3.5" /> {S.detScopeImport}
+                      <input type="file" accept=".xlsx,.csv" className="hidden" aria-label={S.detScopeImport}
+                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importScope(f); }} />
+                    </label>
+                    <button className="btn-secondary text-xs" onClick={() => setShowScope(true)}><Plus className="h-3.5 w-3.5" /> {S.addBtn}</button>
+                  </div>
                 </div>
                 <ul className="space-y-2">
                   {scopeList(project.scope).map((s, i) => (
