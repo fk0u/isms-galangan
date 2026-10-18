@@ -9,7 +9,7 @@ import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate }
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages } from "../refs.js";
 import { fail, ok } from "../envelope.js";
-import { boqLockError, normalizeNewDoc, syncBoqDocToDocuments } from "../boqDocs.js";
+import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError } from "../domainGuards.js";
@@ -598,6 +598,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (table === "boqDocs") {
       await syncBoqDocToDocuments(id as string, rowData, branch, requestActor(req));
     }
+    // Baris BoQ baru mengubah total & jumlah item surat di register Dokumen.
+    if (table === "boq") await resyncBoqDocument(String(rowData.boqDocId ?? ""), requestActor(req));
     return reply.status(201).send(ok({ id, branch, data: rowData, updated_at: now }));
   });
 
@@ -754,6 +756,14 @@ export function registerCrud(app: FastifyInstance, table: string): void {
         ...(fresh[0] ? { data: toJson(fresh[0]) } : {}),
       });
     }
+    /* Register Dokumen mengikuti perubahan surat BoQ dan barisnya (revisi 18 Okt).
+       Baris yang dipindah ke surat lain menyinkronkan surat lama dan baru. */
+    if (table === "boqDocs") await resyncBoqDocument(id, requestActor(req));
+    if (table === "boq") {
+      for (const docId of new Set([String(oldData.boqDocId ?? ""), String((merged as Record<string, unknown>).boqDocId ?? "")])) {
+        await resyncBoqDocument(docId, requestActor(req));
+      }
+    }
     return ok({ id, branch, data: merged, updated_at: now });
   });
 
@@ -822,6 +832,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
         data: toJson(fresh[0]),
       });
     }
+    if (table === "boqDocs") await resyncBoqDocument(id, requestActor(req));
+    if (table === "boq") await resyncBoqDocument(String((toJson(doomed).data as Record<string, unknown>).boqDocId ?? ""), requestActor(req));
     return ok({ id, deleted: true });
   });
 }

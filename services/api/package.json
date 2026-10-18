@@ -53,6 +53,7 @@
     "probe:wo-spk": "tsx --env-file-if-exists=.env scripts/wo-spk-probe.ts",
     "probe:demo-roles": "tsx --env-file-if-exists=.env scripts/demo-roles-probe.ts",
     "probe:boq": "tsx --env-file-if-exists=.env scripts/boq-docs-probe.ts",
+    "sync:boq-documents": "tsx --env-file-if-exists=.env scripts/sync-boq-documents.ts",
     "probe:drydock": "tsx --env-file-if-exists=.env scripts/drydock-booking-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint . --max-warnings=29",

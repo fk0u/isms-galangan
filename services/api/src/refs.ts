@@ -154,6 +154,8 @@ export async function findUsages(table: string, id: string): Promise<string[]> {
       try {
         const rows = await q<{ id: string }>(`SELECT id FROM ${src} WHERE ${jsonEq(field)}`, [id]);
         for (const r of rows) {
+          // Baris register Dokumen milik surat BoQ (DOC-<id>) dibuat & dihapus otomatis bersama suratnya.
+          if (table === "boqDocs" && src === "documents" && r.id === `DOC-${id}`) continue;
           out.push(`${src} ${r.id}`);
           if (out.length >= 5) return out;
         }
