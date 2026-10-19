@@ -9,6 +9,7 @@ import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate }
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
 import { fail, ok } from "../envelope.js";
+import { ensurePayableOnApproval } from "../poPayable.js";
 import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments, withBoqLineTotal } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
@@ -610,6 +611,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     // Baris BoQ baru mengubah total & jumlah item surat di register Dokumen.
     if (table === "boq") await resyncBoqDocument(String(rowData.boqDocId ?? ""), requestActor(req));
+    if (table === "purchaseOrders") await ensurePayableOnApproval(id as string, {}, rowData, requestActor(req), requestIp(req));
     return reply.status(201).send(ok({ id, branch, data: rowData, updated_at: now }));
   });
 
@@ -770,6 +772,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     /* Register Dokumen mengikuti perubahan surat BoQ dan barisnya (revisi 18 Okt).
        Baris yang dipindah ke surat lain menyinkronkan surat lama dan baru. */
     if (table === "boqDocs") await resyncBoqDocument(id, requestActor(req));
+    // K17-PROC-05: PO Besar yang baru Disetujui langsung punya hutang (AP).
+    if (table === "purchaseOrders") await ensurePayableOnApproval(id, oldData, merged as Record<string, unknown>, requestActor(req), requestIp(req));
     if (table === "boq") {
       for (const docId of new Set([String(oldData.boqDocId ?? ""), String((merged as Record<string, unknown>).boqDocId ?? "")])) {
         await resyncBoqDocument(docId, requestActor(req));

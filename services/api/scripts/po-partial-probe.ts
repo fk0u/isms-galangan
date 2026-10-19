@@ -121,6 +121,28 @@ async function main(): Promise<void> {
     assert("vendor B kirim 4 → PO Diterima", r4.statusCode === 200 && (await poOf(poBId)).status === "Diterima", r4.body);
     assert("permintaan selesai (10 dari 10)", mrDone.status === "Selesai" && mrDone.issued === 10 && mrDone.shortage === 0, JSON.stringify(mrDone));
 
+    // K17-PROC-05: PO Besar yang Disetujui otomatis punya hutang (sekali), dan
+    // hutang belum dibayar berkurang bila vendor tidak sanggup sebagian.
+    const apOf = async (poId: string) => (await q<{ id: string; data: string }>("SELECT id, data FROM payables WHERE json_extract(data, '$.poId') = ?", [poId]))
+      .map((r) => ({ id: r.id, ...(JSON.parse(r.data) as { amt: number; st: string }) }));
+    const big = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", item: "Probe Pompa", itemId, vendor: "PT Vendor A Probe", req: "-", qty: 4, amount: 4_000_000,
+      receivedQty: 0, status: "Diajukan", date: "2026-10-10", project: project.id,
+    } });
+    const bigId = (big.json().data as { id: string }).id;
+    poIds.push(bigId);
+    assert("PO Diajukan belum punya hutang", (await apOf(bigId)).length === 0);
+    await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Disetujui" } } });
+    const ap1 = await apOf(bigId);
+    assert("PO Besar Disetujui → hutang otomatis Rp4 jt Belum Dibayar", ap1.length === 1 && ap1[0]?.amt === 4_000_000 && ap1[0]?.st === "Belum Dibayar", JSON.stringify(ap1));
+    await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Dikirim" } } });
+    await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Disetujui" } } });
+    assert("persetujuan ulang tidak membuat hutang ganda", (await apOf(bigId)).length === 1);
+    const cut = await post(dir, `/api/purchaseOrders/${bigId}/vendor-cannot-fulfill`, { qty: 1, reason: "stok vendor habis" });
+    const ap2 = await apOf(bigId);
+    assert("vendor batal 1 dari 4 → hutang jadi Rp3 jt", cut.statusCode === 200 && ap2[0]?.amt === 3_000_000, `${cut.statusCode} ${JSON.stringify(ap2)}`);
+    for (const a of ap2) await exec("DELETE FROM payables WHERE id = ?", [a.id]);
+
     // PO Kecil: Diajukan → Disetujui → Diterima, tanpa tahap kirim (K17-PROC-01).
     const small = await post(dir, "/api/purchaseOrders", { data: {
       poType: "Kecil", item: "Probe Kawat Las", itemId, vendor: "Workshop Internal", req: "-", qty: 2, amount: 0,
