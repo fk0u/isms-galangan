@@ -22,6 +22,7 @@
  */
 import type { Document } from "./document.js";
 import { kwitansi, type KwitansiInput } from "./documents/kwitansi.js";
+import { voucher, type VoucherInput } from "./documents/voucher.js";
 import { suratPersetujuanCutiDoc, suratHrDoc, type CutiDocInput, type SuratHrInput } from "./documents/hr.js";
 import { bast, type BastInput } from "./documents/bast.js";
 import { spk, type SpkInput } from "./documents/spk.js";
@@ -217,6 +218,43 @@ const invoiceRecipe: Recipe<InvoiceInput> = {
 /* ==========================================================================
    Tahap 1 + 2 per jenis dokumen
    ========================================================================== */
+
+/* ---- Voucher jurnal (K17-FIN-08) ----
+ * `id` = id baris jurnal mana pun dalam transaksi; semua baris bernomor voucher
+ * sama (atau, untuk jurnal lama tanpa nomor, ber-`dokumen` sama) ikut dicetak. */
+const voucherRecipe: Recipe<VoucherInput> = {
+  kind: "voucher",
+  title: "Voucher jurnal",
+  entity: { field: "journals", prefix: "JU" },
+  requiresEntity: true,
+  async prepare(id, ctx) {
+    const j = await loadEntity({ field: "journals", prefix: "JU" }, id);
+    if (!j) throw new Error(`Jurnal ${id} tidak ditemukan`);
+    const no = String(j.voucherNo ?? "").trim();
+    const dok = String(j.dokumen ?? "").trim();
+    const all = await loadMany({ field: "journals", prefix: "JU" });
+    const group = all.filter((r) => (no ? String(r.voucherNo ?? "") === no : dok ? String(r.dokumen ?? "") === dok : String(r.id) === id));
+    const coa = await loadMany({ field: "coa", prefix: "COA" });
+    const nameOf = (kode: string): string => String(coa.find((c) => String(c.kode ?? "") === kode)?.nama ?? "-").replace(/\s+/g, " ");
+    const lines: VoucherInput["lines"] = [];
+    for (const r of group) {
+      const amt = Math.round(num(r, "amount") * 100) / 100;
+      const ur = str(r, "uraian");
+      if (str(r, "db") !== "-") lines.push({ kode: str(r, "db"), nama: nameOf(str(r, "db")), uraian: ur, debit: amt, kredit: 0 });
+      if (str(r, "kr") !== "-") lines.push({ kode: str(r, "kr"), nama: nameOf(str(r, "kr")), uraian: ur, debit: 0, kredit: amt });
+    }
+    return {
+      no: no || `${L(ctx.locale, "Tanpa nomor", "Unnumbered")} (${dok || id})`,
+      tanggal: str(j, "date"),
+      dokumen: dok,
+      sumber: str(j, "sumber"),
+      uraian: str(j, "uraian"),
+      lines,
+      locale: ctx.locale,
+    };
+  },
+  assemble: (input) => voucher(input),
+};
 
 /* ---- Kwitansi termin ---- */
 const termin: Recipe<KwitansiInput> = {
@@ -1322,6 +1360,7 @@ function view<T>(r: Recipe<T>): RecipeView {
 const RECIPES: RecipeView[] = [
   view(invoiceRecipe),
   view(termin),
+  view(voucherRecipe),
   view(suratCutiRecipe),
   view(suratHr),
   view(bastRecipe),

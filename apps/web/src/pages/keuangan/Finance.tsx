@@ -1082,7 +1082,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     k === "vessel" ? String(a.vessel ?? "") : k === "openAwal" ? num(a.openAwal) : k === "amt" ? num(a.amt) :
     k === "sisa" ? Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)) : k === "due" ? String(a.due ?? "") : String(a.st)), [filteredAp, apSort]);
   const sortedJu = useMemo(() => sortRows(filteredJu, juSort, (j, k) =>
-    k === "kode" ? String(j.kodePembantu ?? "") : k === "dok" ? String(j.dokumen ?? "") : k === "uraian" ? String(j.uraian ?? "") :
+    k === "kode" ? String(j.kodePembantu ?? "") : k === "voucher" ? String(j.voucherNo ?? "") : k === "dok" ? String(j.dokumen ?? "") : k === "uraian" ? String(j.uraian ?? "") :
     k === "db" ? String(j.db ?? "") : k === "kr" ? String(j.kr ?? "") : k === "amount" ? num(j.amount) :
     k === "sumber" ? String(j.sumber ?? "") : k === "status" ? String(j.status ?? "") : String(j.date ?? "")), [filteredJu, juSort]);
   const invPager = usePager(filteredInvoices.length);
@@ -3603,7 +3603,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     {sortedSched.length > 0 && (
                       <tfoot className="border-t border-steel-200 bg-steel-50/70 text-xs font-semibold text-navy-900">
                         <tr>
-                          <td className="td font-bold" colSpan={6}>
+                          <td className="td font-bold" colSpan={7}>
                             {S.colTotal} ({sortedSched.length} {locale === "en" ? "items" : "item"})
                             {schedSel.length > 0 && ` · ${schedSel.length} ${locale === "en" ? "selected" : "dipilih"}`}
                           </td>
@@ -4673,6 +4673,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <tr>
                       <SortTh label={S.colTanggal} sortKey="date" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colKodePembantu} sortKey="kode" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
+                      <SortTh label={S.colVoucher} sortKey="voucher" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colDokumen} sortKey="dok" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colUraian} sortKey="uraian" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colAkunDB} sortKey="db" sort={juSort} onSort={(k) => setJuSort((s) => toggleSort(s, k))} />
@@ -4689,6 +4690,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       <tr key={String(j.id)} className="hover:bg-surface">
                         <td className="td text-xs text-steel-600">{fmtTanggal(String(j.date ?? ""))}</td>
                         <td className="td font-mono text-xs text-steel-600">{String(j.kodePembantu || "-")}</td>
+                        <td className="td whitespace-nowrap font-mono text-xs text-navy-900">{String(j.voucherNo || "-")}</td>
                         <td className="td font-mono text-xs text-steel-600">{String(j.dokumen ?? "-")}</td>
                         <td className="td max-w-56 truncate text-xs text-steel-600" title={String(j.uraian ?? "")}>{String(j.uraian ?? "")}</td>
                         <td className="td font-mono text-xs">{String(j.db || "-")}</td>
@@ -4703,7 +4705,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                             </button>
                           ) : <span className="text-xs text-steel-300">-</span>}
                         </td>
-                        <td className="td">
+                        <td className="td whitespace-nowrap">
+                          {/* K17-FIN-08: voucher jurnal per transaksi (PDF dirakit server). */}
+                          <RowAction icon={FileText} label={S.printVoucher} ariaLabel={`${S.printVoucher} ${String(j.voucherNo || j.id)}`} disabled={pdfDoc.state.busy} onClick={() => void pdfDoc.request({ kind: "voucher", id: String(j.id), locale }, `Voucher-${String(j.voucherNo || j.id).replaceAll("/", "-")}`, false)} />
                           {String(j.status) !== "Void" && (
                             <RowAction icon={Ban} tone="danger" label={S.voidBtn} ariaLabel={`${S.voidBtn} ${String(j.id)}`} disabled={busy.isBusy(`voidJu-${j.id}`)} onClick={() => void busy.run(`voidJu-${j.id}`, async () => { try { await update("journals", String(j.id), { status: "Void" }); log("mem-void jurnal", String(j.id), "Keuangan"); toast(S.voided.replace("{a}", String(j.id))); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } })} />
                           )}
@@ -4718,7 +4722,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </tr>
                     ))}
                     {manJournals.length === 0 && (
-                      <tr><td className="td text-xs text-steel-400" colSpan={12}>{S.emptyJuManual}</td></tr>
+                      <tr><td className="td text-xs text-steel-400" colSpan={13}>{S.emptyJuManual}</td></tr>
                     )}
                   </tbody>
                   {sortedJu.length > 0 && (

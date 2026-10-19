@@ -21,5 +21,6 @@ Format: konteks → opsi → keputusan → konsekuensi. ADR tidak diedit setelah
 | [0015](0015-material-request-dan-persetujuan-service.md) | Koleksi `materialRequests` & persetujuan service lewat field `approval` | Accepted |
 | [0016](0016-demo-lihat-sebagai-peran.md) | "Lihat sebagai peran" untuk demo RBAC | Accepted |
 | [0021](0021-ruas-code-intelligence.md) | RUAS sebagai alat bantu penelusuran kode (npx dipin, MCP) | Accepted |
+| [0022](0022-voucher-jurnal.md) | Nomor voucher jurnal diberikan server per transaksi | Accepted |
 
 Template ADR baru: salin [`template.md`](template.md).

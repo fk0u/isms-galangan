@@ -10,6 +10,7 @@ import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { ensurePayableOnApproval } from "../poPayable.js";
+import { withVoucherNo } from "../voucher.js";
 import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments, withBoqLineTotal } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
@@ -543,6 +544,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     let rowData: Record<string, unknown> = { ...parsed.data.data };
     if (table === "boqDocs") rowData = normalizeNewDoc(rowData);
     if (table === "boq") rowData = withBoqLineTotal(rowData);
+    // K17-FIN-08: tiap jurnal baru mendapat nomor voucher urut (VJ/YYYY/MM/NNNN).
+    if (table === "journals") rowData = await withVoucherNo(rowData);
     if (table === "services") rowData = normalizeNewService(rowData);
     if (table === "changeOrders") rowData = normalizeNewChangeOrder(rowData);
     if (table === "activities") {

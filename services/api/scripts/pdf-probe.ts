@@ -464,6 +464,18 @@ const MODELS: Record<string, unknown> = {
     signer: "H. Syarif Sarapping",
     locale: "id",
   },
+  voucher: {
+    no: "VJ/2026/10/0001",
+    tanggal: "2026-10-19",
+    dokumen: "PAY-AP-0001",
+    sumber: "Bank",
+    uraian: "Pembayaran hutang vendor contoh",
+    lines: [
+      { kode: "2-110", nama: "Hutang Usaha", uraian: "Bayar hutang", debit: 12_500_000, kredit: 0 },
+      { kode: "1-120", nama: "Bank BRI", uraian: "Bayar hutang", debit: 0, kredit: 12_500_000 },
+    ],
+    locale: "id",
+  },
   kwitansi: {
     no: "KW/TRM-2026-001",
     tanggal: "2026-10-02",
