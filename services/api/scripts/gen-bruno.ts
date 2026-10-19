@@ -16,6 +16,10 @@ import { isPublicRoute, routeList } from "../src/routeList.js";
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../docs/api/bruno");
 const CHECK = process.argv.includes("--check");
 
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = "isms-local-dev-jwt-secret-key-32chars-minimum-length-ok";
+}
+
 
 const files = new Map<string, string>();
 const put = (rel: string, body: string): void => { files.set(rel, body.endsWith("\n") ? body : `${body}\n`); };
