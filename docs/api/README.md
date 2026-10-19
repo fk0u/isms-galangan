@@ -1,4 +1,13 @@
-# Dokumentasi REST API (Bruno)
+# Dokumentasi REST API
+
+## Swagger UI (di peramban)
+Buka **`/api/docs`** di server mana pun, mis. `https://galangan.alk-tech.my.id/api/docs` atau `https://isms-sb.kousozo.tech/api/docs`.
+- Daftar semua rute, dikelompokkan per koleksi/modul (deskripsi tag memuat relasinya).
+- **Try it out**: login dulu lewat `POST /api/auth/login`, salin `data.token`, klik **Authorize**, lalu jalankan request.
+- Spesifikasi mentah: `/api/docs/openapi.json` (OpenAPI 3.0), bisa diimpor ke Postman/Insomnia.
+- Spesifikasi dibangkitkan dari rute yang terdaftar di Fastify (`services/api/src/routeList.ts`), jadi rute baru otomatis muncul. `probe:relations` gagal bila ada rute yang tidak ada di spesifikasi.
+
+## Koleksi Bruno
 
 Koleksi [Bruno](https://www.usebruno.com/) ada di `docs/api/bruno/`. Isinya **dibangkitkan dari rute Fastify yang terdaftar**, jadi selalu sama dengan kode.
 

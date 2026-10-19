@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyReply } from "fastify";
 import fs from "node:fs";
 import { registerRelations } from "./routes/relations.js";
+import { DOCS_CSP, registerApiDocs } from "./routes/apiDocs.js";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
@@ -152,7 +153,8 @@ export function buildApp(): FastifyInstance {
     reply.header("X-Frame-Options", "SAMEORIGIN");
     reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
     reply.header("Strict-Transport-Security", "max-age=31536000");
-    reply.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'");
+    // Halaman Swagger UI (/api/docs) butuh skrip & gaya dari CDN; rute lain tetap ketat.
+    reply.header("Content-Security-Policy", req.url === "/api/docs" || req.url.startsWith("/api/docs?") ? DOCS_CSP : "default-src 'none'; frame-ancestors 'self'");
     const origin = resolveCorsOrigin(req);
     if (origin) reply.header("Access-Control-Allow-Origin", origin);
     // Correlation id: echo inbound X-Request-Id (or generated req.id).
@@ -386,6 +388,7 @@ export function buildApp(): FastifyInstance {
 
   for (const table of COLLECTIONS) registerCrud(app, table);
   registerRelations(app);
+  registerApiDocs(app);
   registerAuditRoutes(app);
   registerFileRoutes(app);
   registerOcrRoutes(app);

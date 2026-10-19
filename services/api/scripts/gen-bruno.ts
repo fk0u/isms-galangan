@@ -11,33 +11,17 @@ import { fileURLToPath } from "node:url";
 import { buildApp } from "../src/app.js";
 import { COLLECTIONS } from "../src/routes/crud.js";
 import { allLinks } from "../src/routes/relations.js";
+import { isPublicRoute, routeList } from "../src/routeList.js";
 
 const OUT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../docs/api/bruno");
 const CHECK = process.argv.includes("--check");
 
-/** printRoutes({commonPrefix:false}) berbentuk pohon; tiap tingkat 4 karakter. */
-function parseRoutes(tree: string): Array<{ method: string; path: string }> {
-  const stack: string[] = [];
-  const out: Array<{ method: string; path: string }> = [];
-  for (const line of tree.split("\n")) {
-    const m = /^([│ ]*)[├└]── (\S+)(?: \(([^)]+)\))?/.exec(line);
-    if (!m) continue;
-    const depth = (m[1] ?? "").length / 4;
-    stack.length = depth;
-    stack.push(m[2] as string);
-    for (const method of (m[3] ?? "").split(",").map((s) => s.trim()).filter((s) => s && s !== "HEAD")) {
-      out.push({ method, path: stack.join("") });
-    }
-  }
-  return out;
-}
 
 const files = new Map<string, string>();
 const put = (rel: string, body: string): void => { files.set(rel, body.endsWith("\n") ? body : `${body}\n`); };
 const seqOf = new Map<string, number>();
 const METHOD_ORDER = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
-const PUBLIC = new Set(["/health", "/api/auth/login", "/api/auth/demo-login", "/api/public/leave"]);
 
 function bru(folder: string, name: string, method: string, path: string, opts: { body?: string; docs?: string; script?: string; query?: Record<string, string> } = {}): void {
   const seq = (seqOf.get(folder) ?? 0) + 1;
@@ -45,7 +29,7 @@ function bru(folder: string, name: string, method: string, path: string, opts: {
   const params = [...path.matchAll(/:([A-Za-z]+)/g)].map((m) => m[1] as string);
   const query = Object.entries(opts.query ?? {});
   const qs = query.length ? `?${query.map(([k, v]) => `${k}=${v}`).join("&")}` : "";
-  const isPublic = PUBLIC.has(path) || path.startsWith("/api/public/");
+  const isPublic = isPublicRoute(path);
   const hasBody = ["POST", "PUT", "PATCH"].includes(method);
   const parts = [
     `meta {\n  name: ${name}\n  type: http\n  seq: ${seq}\n}`,
@@ -63,7 +47,7 @@ function bru(folder: string, name: string, method: string, path: string, opts: {
 async function main(): Promise<void> {
   const app = buildApp();
   await app.ready();
-  const routes = parseRoutes(app.printRoutes({ commonPrefix: false }));
+  const routes = routeList(app);
   await app.close();
 
   put("bruno.json", JSON.stringify({ version: "1", name: "ISMS Galangan API", type: "collection", ignore: ["node_modules", ".git"] }, null, 2));
