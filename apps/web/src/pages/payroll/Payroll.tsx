@@ -38,6 +38,7 @@ import { findUsages } from "../../utils/usages";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
 import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
+import { applyKasbonPotongan, KASBON_CICILAN_OPTIONS, normKasbonList, type KasbonEntry } from "../../utils/kasbon";
 
 const NEXT_STATUS: Record<string, string> = {
   Draft: "Dihitung",
@@ -102,14 +103,6 @@ interface AllowanceLine {
   amount: number;
 }
 
-interface KasbonEntry {
-  id: string;
-  tanggal: string;
-  jumlah: number;
-  cicilan: number;
-  sisa: number;
-}
-
 /* Pola rates dipertahankan dari versi sebelumnya, dikembangkan dengan lapis
    progresif, PTKP per status, dan porsi BPJS perusahaan. */
 export interface PayrollRates {
@@ -150,16 +143,7 @@ function sumAllowances(v: unknown): number {
 }
 
 function normKasbon(e: StoreItem): KasbonEntry[] {
-  if (!Array.isArray(e.kasbon)) return [];
-  return (e.kasbon as unknown[])
-    .filter((k): k is Record<string, unknown> => typeof k === "object" && k !== null)
-    .map((k) => ({
-      id: String(k.id ?? ""),
-      tanggal: String(k.tanggal ?? ""),
-      jumlah: Number(k.jumlah ?? 0),
-      cicilan: Number(k.cicilan ?? 0),
-      sisa: Number(k.sisa ?? 0),
-    }));
+  return normKasbonList(e.kasbon);
 }
 
 function kasbonSisa(e: StoreItem): number {
@@ -328,7 +312,7 @@ export default function Payroll() {
   const [pesForm, setPesForm] = useState({ masaKerja: "5", upah: "6500000" });
 
   /* ---------- kasbon ---------- */
-  const [kasbonForm, setKasbonForm] = useState({ employeeId: "", tanggal: todayISO(), jumlah: "", cicilan: "" });
+  const [kasbonForm, setKasbonForm] = useState({ employeeId: "", tanggal: todayISO(), jumlah: "", cicilan: String(KASBON_CICILAN_OPTIONS[0]) });
 
   const activeEmps = useMemo(
     () => inBranch(data.employees as Branchable[]).filter((e) => e.status === "Aktif"),
@@ -600,12 +584,8 @@ export default function Payroll() {
       const empKas = empOf(String(payTarget.employeeId));
       const kasbon = empKas ? normKasbon(empKas) : [];
       if (kasbon.length > 0 && String(payTarget.status ?? "") !== "Dibayar") {
-        let pot = 0;
-        const next = kasbon.map((k) => {
-          const inst = Math.min(Math.max(0, Number(k.cicilan) || 0), Math.max(0, Number(k.sisa) || 0));
-          pot += inst;
-          return { ...k, sisa: Math.max(0, Number(k.sisa) - inst) };
-        });
+        // K17-HR-03: potongan per kasbon tercatat di riwayatnya (slip + periode).
+        const { next, pot } = applyKasbonPotongan(kasbon, { id: String(payTarget.id), period: String(payTarget.period ?? period), tanggal: proof.date });
         if (pot > 0) {
           await update("employees", String(payTarget.employeeId), { kasbon: next });
           kasbonPot += pot;
@@ -793,12 +773,12 @@ export default function Payroll() {
       return;
     }
     const jumlah = parseRupiah(kasbonForm.jumlah);
-    const cicilan = parseRupiah(kasbonForm.cicilan);
+    const cicilan = Number(kasbonForm.cicilan);
     if (!Number.isFinite(jumlah) || jumlah <= 0) {
       toast(S.tKasbonInvalid, "info");
       return;
     }
-    if (!Number.isFinite(cicilan) || cicilan <= 0) {
+    if (!(KASBON_CICILAN_OPTIONS as readonly number[]).includes(cicilan)) {
       toast(S.tInstallInvalid, "info");
       return;
     }
@@ -812,12 +792,13 @@ export default function Payroll() {
       jumlah: Math.round(jumlah),
       cicilan: Math.round(cicilan),
       sisa: Math.round(jumlah),
+      riwayat: [],
     };
     try {
     await update("employees", emp.id, { kasbon: [...normKasbon(emp), entry] });
     log("mencatat kasbon", `${entry.id} · ${emp.name} · ${fmtRupiah(entry.jumlah)}`, "Payroll");
     toast(S.tKasbonSaved.replace("{a}", fmtRupiah(entry.jumlah)).replace("{b}", String(emp.name)));
-    setKasbonForm({ employeeId: "", tanggal: todayISO(), jumlah: "", cicilan: "" });
+    setKasbonForm({ employeeId: "", tanggal: todayISO(), jumlah: "", cicilan: String(KASBON_CICILAN_OPTIONS[0]) });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1227,7 +1208,9 @@ export default function Payroll() {
                     <MoneyInput className="input w-44" value={kasbonForm.jumlah} onChange={(v) => setKasbonForm({ ...kasbonForm, jumlah: v })} placeholder={S.phKasbonAmount} />
                   </Field>
                   <Field label={S.lblInstall}>
-                    <MoneyInput className="input w-44" value={kasbonForm.cicilan} onChange={(v) => setKasbonForm({ ...kasbonForm, cicilan: v })} placeholder={S.phKasbonInstall} />
+                    <select className="input w-44" value={kasbonForm.cicilan} onChange={(e) => setKasbonForm({ ...kasbonForm, cicilan: e.target.value })}>
+                      {KASBON_CICILAN_OPTIONS.map((n) => <option key={n} value={String(n)}>{fmtRupiah(n)} / {S.perMonth}</option>)}
+                    </select>
                   </Field>
                   <button className="btn-primary" onClick={saveKasbon}>{S.btnAddKasbon}</button>
                 </div>
@@ -1245,6 +1228,7 @@ export default function Payroll() {
                       <SortTh label={S.colAmount} sortKey="amount" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} />
                       <SortTh label={S.colInstall} sortKey="install" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} />
                       <SortTh label={S.colRemain} sortKey="sisa" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} />
+                      <th className="th">{S.colKasbonHist}</th>
                       <th className="th">{S.colAction}</th>
                     </tr>
                   </thead>
@@ -1273,6 +1257,13 @@ export default function Payroll() {
                           <td className="td text-steel-600">{fmtRupiah(k.jumlah)}</td>
                           <td className="td text-steel-600">{fmtRupiah(k.cicilan)}</td>
                           <td className="td font-bold text-navy-900">{fmtRupiah(Math.max(0, k.sisa))}</td>
+                          <td className="td text-xs text-steel-600">
+                            {k.riwayat.length === 0 ? <span className="text-steel-400">-</span> : (
+                              <ul className="space-y-0.5">
+                                {k.riwayat.map((r) => <li key={r.slip}>{r.period} · {fmtRupiah(r.jumlah)} <span className="font-mono text-steel-400">{r.slip}</span></li>)}
+                              </ul>
+                            )}
+                          </td>
                           <td className="td">
                             <RowAction icon={Trash2} tone="danger" label={`${S.btnDelete} ${k.id}`} onClick={() => setDelKasbon({ e, kasbonId: k.id })} />
                           </td>
