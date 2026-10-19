@@ -73,6 +73,7 @@ import { sbInvoiceMath, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../util
 import { exportExcel } from "../../utils/export";
 import { readSheetRows } from "../../utils/readSheet";
 import DockPlanCard from "./DockPlanCard";
+import FeeProjectCard from "./FeeProjectCard";
 import ImportPreviewModal, { type ImportPreviewRow } from "../../components/ImportPreviewModal";
 import WbsMaterialModal, { stageMaterialCount } from "./WbsMaterialModal";
 
@@ -2060,6 +2061,23 @@ const createWarranty = async (wbsTask?: string) => {
           {tab === "WBS & Anggaran" && (
             <div className="mt-6">
               <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detBudgetTitle}</h3>
+              <FeeProjectCard
+                project={project}
+                canEdit={canAutoWrite}
+                onSaveFees={async (fees, note) => {
+                  await update("projects", pid, { fees });
+                  log("fee proyek", `${pid} · ${note}`, "Proyek");
+                }}
+                onTagih={async (fee, amount) => {
+                  const created = await add("payables", {
+                    v: fee.penerima, kodePembantu: fee.penerima, po: `FEE ${pid} / ${fee.id}`, projectId: pid,
+                    openAwal: 0, amt: amount, due: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+                    pph: "-", st: "Belum Dibayar", vessel: String(project.vessel ?? ""), item: `Fee proyek ${pid} - ${fee.penerima}`,
+                    pay1: 0, pay2: 0, sumber: "Fee proyek",
+                  }, { action: "hutang fee proyek", target: pid, module: "Proyek" });
+                  return String(created.id);
+                }}
+              />
               {subkonByWo.length > 0 && (
                 <Card className="mb-4 p-4">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

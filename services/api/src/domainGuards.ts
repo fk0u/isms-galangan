@@ -168,3 +168,30 @@ export async function bomItemError(table: string, id: string | null, data: Data)
   });
   return dup ? "Material ini sudah ada di BOM proyek tersebut; ubah kebutuhannya saja" : null;
 }
+
+/** Fee proyek untuk pihak ketiga (K17-PM-15, jawaban klien Q22): dasar hitung
+ *  persen ATAU nominal dari nilai proyek, dan baru boleh ditagihkan/dibayar
+ *  setelah proyek Selesai. `fees` disimpan di baris proyek. */
+export function projectFeeError(table: string, before: Data | null, after: Data): string | null {
+  if (table !== "projects" || after.fees === undefined) return null;
+  if (!Array.isArray(after.fees)) return "Fee proyek harus berupa daftar";
+  const old = new Map((Array.isArray(before?.fees) ? (before?.fees as Data[]) : []).map((f) => [str(f.id), f]));
+  for (const f of after.fees as Data[]) {
+    if (typeof f !== "object" || f === null) return "Baris fee tidak valid";
+    if (str(f.penerima) === "") return "Penerima fee wajib diisi";
+    const nilai = Number(f.nilai);
+    if (str(f.basis) === "persen") {
+      if (!Number.isFinite(nilai) || nilai <= 0 || nilai > 100) return "Persentase fee harus di antara 0 dan 100";
+    } else if (str(f.basis) === "nominal") {
+      if (!Number.isFinite(nilai) || nilai <= 0) return "Nominal fee harus lebih dari 0";
+    } else {
+      return "Dasar fee harus persen atau nominal";
+    }
+    const status = str(f.status) || "Belum";
+    const was = str(old.get(str(f.id))?.status) || "Belum";
+    if (status !== "Belum" && status !== was && str(after.status) !== "Selesai") {
+      return "Fee proyek baru bisa ditagihkan setelah proyek Selesai";
+    }
+  }
+  return null;
+}
