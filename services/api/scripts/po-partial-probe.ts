@@ -121,6 +121,17 @@ async function main(): Promise<void> {
     assert("vendor B kirim 4 → PO Diterima", r4.statusCode === 200 && (await poOf(poBId)).status === "Diterima", r4.body);
     assert("permintaan selesai (10 dari 10)", mrDone.status === "Selesai" && mrDone.issued === 10 && mrDone.shortage === 0, JSON.stringify(mrDone));
 
+    // PO Kecil: Diajukan → Disetujui → Diterima, tanpa tahap kirim (K17-PROC-01).
+    const small = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Kecil", item: "Probe Kawat Las", itemId, vendor: "Workshop Internal", req: "-", qty: 2, amount: 0,
+      receivedQty: 0, status: "Disetujui", date: "2026-10-10", project: project.id,
+      lines: [{ name: "Probe Kawat Las", qty: 2, unit: "kg", price: 0 }],
+    } });
+    const smallId = (small.json().data as { id: string }).id;
+    poIds.push(smallId);
+    const smallRecv = await post(dir, `/api/purchaseOrders/${smallId}/receive`, { qty: 2, noFaktur: "NOTA-PROBE" });
+    assert("PO Kecil Disetujui bisa langsung diterima → Diterima", smallRecv.statusCode === 200 && (await poOf(smallId)).status === "Diterima", smallRecv.body);
+
     // PO konsolidasi tanpa perincian baris ditolak; PO lama tanpa qty tetap bisa diterima penuh.
     const multi = await post(dir, "/api/purchaseOrders", { data: {
       poType: "Besar", item: "Campuran", itemId, vendor: "PT Vendor A Probe", qty: 5, amount: 500000, status: "Dikirim", date: "2026-10-10",
