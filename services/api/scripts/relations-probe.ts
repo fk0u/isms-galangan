@@ -6,6 +6,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, q } from "../src/db.js";
 import { allLinks } from "../src/routes/relations.js";
+import { routeList } from "../src/routeList.js";
 
 async function main(): Promise<void> {
   console.log("=== ISMS Relations Probe (revisi 18 Okt) ===");
@@ -78,6 +79,16 @@ async function main(): Promise<void> {
   /* 5. Keamanan: tanpa login ditolak, induk tak ada → 404. */
   assert("related tanpa login → 401", (await app.inject({ method: "GET", url: `/api/projects/${encodeURIComponent(proj)}/related` })).statusCode === 401);
   assert("related induk tidak ada → 404", (await call("GET", "/api/projects/TIDAK-ADA/related")).statusCode === 404);
+
+  /* 6. Dokumentasi Swagger UI (/api/docs): publik, CSP longgar hanya di halaman,
+        dan setiap rute (kecuali preflight OPTIONS & docs) ada di OpenAPI. */
+  const page = await app.inject({ method: "GET", url: "/api/docs" });
+  assert("GET /api/docs (tanpa login) → 200 HTML", page.statusCode === 200 && String(page.headers["content-type"]).startsWith("text/html"));
+  assert("CSP halaman docs hanya mengizinkan skrip self + jsDelivr", String(page.headers["content-security-policy"]).includes("script-src 'self' https://cdn.jsdelivr.net"));
+  const spec = (await app.inject({ method: "GET", url: "/api/docs/openapi.json" })).json() as { openapi: string; paths: Record<string, Record<string, unknown>> };
+  const missing = routeList(app).filter((r) => r.method !== "OPTIONS" && !r.path.startsWith("/api/docs"))
+    .filter((r) => !spec.paths[r.path.replace(/:([A-Za-z]+)/g, "{$1}")]?.[r.method.toLowerCase()]);
+  assert("OpenAPI 3 mencakup semua rute API", spec.openapi.startsWith("3.") && missing.length === 0, missing.slice(0, 5).map((r) => `${r.method} ${r.path}`).join(", "));
 
   console.log(`\n${passed}/${total} pemeriksaan relasi lolos.`);
   await app.close();
