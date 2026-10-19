@@ -1328,7 +1328,19 @@ export default function Procurement() {
       });
 
       const poKey = recvPo.docNo ? `${recvPo.id} / ${recvPo.docNo}` : String(recvPo.id);
-      const apExists = (await freshPayables(data.payables ?? [])).some((a) => String(a.po ?? "") === poKey);
+      const apRow = (await freshPayables(data.payables ?? [])).find((a) => String(a.po ?? "") === poKey || String(a.poId ?? "") === String(recvPo.id));
+      const apExists = apRow !== undefined;
+      /* K17-PROC-05: PO Besar sudah punya hutang sejak Disetujui (dibuat server).
+         Penerimaan hanya melengkapi faktur & jatuh tempo (dan denda), tidak
+         membuat hutang kedua. */
+      if (apRow && String(apRow.st ?? "") === "Belum Dibayar" && (recvNoFaktur.trim() || dendaBaru > 0)) {
+        const t = Date.parse(recvTglFaktur || todayISO());
+        await update("payables", String(apRow.id), {
+          ...(recvNoFaktur.trim() ? { noFaktur: recvNoFaktur.trim(), tglFaktur: recvTglFaktur } : {}),
+          ...(Number.isNaN(t) ? {} : { due: new Date(t + 30 * 86400000).toISOString().slice(0, 10) }),
+          ...(dendaBaru > 0 ? { amt: Number(apRow.amt || 0) + dendaBaru } : {}),
+        });
+      }
       if (!apExists && poAmount > 0) {
         const orderedQty = Number(recvPo.qty || 0);
         const apAmt = orderedQty > 0 ? Math.round((poAmount * totalRecvQty) / orderedQty) : poAmount;

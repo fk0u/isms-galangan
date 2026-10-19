@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { exec, getDialect, q, withTx } from "./db.js";
 import { DEFAULT_BRANCH } from "./routes/crud.js";
 import { fulfillMaterialRequest, type FulfillResult } from "./materialRequests.js";
+import { shrinkPayableOnCancel } from "./poPayable.js";
 
 type Data = Record<string, unknown>;
 interface Row { id: string; branch: string; data: string; updated_at: string }
@@ -413,6 +414,7 @@ export async function vendorCannotFulfill(id: string, qty: number, reason: strin
     };
     next.status = statusAfter(next, st === "Dalam Pengiriman" ? "Dikirim" : st);
     await savePo(row, next, now);
+    await shrinkPayableOnCancel(id, next, actor);
     return { id, ...next };
   });
 }
