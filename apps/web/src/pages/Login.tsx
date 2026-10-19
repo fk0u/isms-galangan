@@ -4,8 +4,8 @@ import { fetchLoginRoles, loginAsRole, type LoginRole } from "../auth/demoSwitch
 import { isBackendConfigured } from "../services/http";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, User, AlertCircle, ArrowRight, ArrowUpRight, Container, ShipWheel, Loader2 } from "lucide-react";
-import { useAuth, demoUsers } from "../auth/auth";
+import { Lock, User, AlertCircle, ArrowRight, Container, ShipWheel, Loader2 } from "lucide-react";
+import { useAuth } from "../auth/auth";
 import { takeSessionExpired } from "../auth/sessionExpired";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
@@ -96,26 +96,6 @@ export default function Login() {
     navigate(from, { replace: true });
   };
 
-  const quickLogin = async (u: string) => {
-    if (busy) return;
-    if (Date.now() < lockedUntil) {
-      fail(t.auth.lockedOut);
-      return;
-    }
-    setError(null);
-    setBusy("auth");
-    const found = demoUsers.find((x) => x.username.toLowerCase() === u.toLowerCase());
-    const err = await login(u, found?.password ?? "");
-    if (!err) {
-      setFails(0);
-      setLockedUntil(0);
-      toast(`${t.auth.asUser} ${found?.name ?? t.auth.demoAccount}`);
-      setBusy(null);
-      navigate(from, { replace: true });
-    } else {
-      setBusy(null);
-    }
-  };
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -276,32 +256,7 @@ export default function Login() {
             </div>
           )}
 
-          {demoUsers.length > 0 && (
-            <div className="card mt-4 p-5">
-              <p className="text-[13px] font-medium text-steel-500">{t.auth.demoTitle}</p>
-              <div className="mt-3 space-y-2">
-                {demoUsers.map((u) => (
-                  <button
-                    key={u.username}
-                    onClick={() => quickLogin(u.username)}
-                    disabled={busy !== null}
-                    className="group flex w-full items-center gap-2.5 rounded-xl border border-steel-200 px-3 py-2.5 text-left transition-[background-color,border-color,transform] duration-150 hover:border-steel-300 hover:bg-steel-50 active:scale-[0.99] disabled:opacity-60"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-900 text-xs font-semibold text-white">
-                      {u.initials}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold text-navy-900">{u.name}</span>
-                      <span className="block truncate text-[11px] text-steel-500">
-                        {u.role} · <span className="font-mono">{u.username}</span>
-                      </span>
-                    </span>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-steel-300 transition-colors group-hover:text-ocean-500" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
         </motion.div>
       </div>
     </div>
