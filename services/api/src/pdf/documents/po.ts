@@ -125,7 +125,7 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
       pairs: [
         { label: L(locale, "Subtotal", "Subtotal"), value: rupiah(input.subtotal) },
         ...(input.taxAmount !== undefined
-          ? [{ label: `${L(locale, "PPN", "VAT")} (${input.taxRate ?? 11}%)`, value: rupiah(input.taxAmount) }]
+          ? [{ label: `${L(locale, "PPN", "VAT")} (${input.taxRate ?? 12}%)`, value: rupiah(input.taxAmount) }]
           : []),
         { label: L(locale, "Total Nilai", "Total Amount"), value: rupiah(input.totalAmount), bold: true },
       ],
