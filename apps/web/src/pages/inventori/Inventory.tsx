@@ -19,6 +19,7 @@ import {
   Printer,
   Upload,
   Download,
+  FileSpreadsheet,
   Camera,
   History,
   Trash2,
@@ -69,7 +70,7 @@ import { apiFetch, isBackendConfigured } from "../../services/http";
 import { uploadFile } from "../../services/upload";
 import { fmtJumlah, fmtRupiah, fmtMiliar, fmtPersen, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
-import { exportExcel } from "../../utils/export";
+import { exportExcel, exportExcelSheets } from "../../utils/export";
 import { sbTonasePlat, sbSjNumber, sbTtNumber, maxSeq, parseSjSeq, SB_KOP } from "../../utils/sb";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -1663,32 +1664,98 @@ if (k === "mattype") return matTypeOf(i);
     ).then(() => toast(S.tplExcelDone)).catch(() => toast(S.saveFail, "info"));
   };
 
-  const downloadCSV = (filename: string, headers: string[], example: (string | number)[]) => {
-    const esc = (v: string | number): string => {
-      const s = String(v);
-      return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
-    };
-    const csv = [headers.map(esc).join(","), example.map(esc).join(",")].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${filename}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast(S.tplDone.replace("{n}", filename));
-  };
 
   const downloadTemplateIN = () => {
-    downloadCSV("Template-IN", ["Tanggal", "Kode", "Qty", "Supplier", "Harga-nonPPN", "Pajak", "Total", "Purpose", "PIC"],
-      ["2026-08-02", "AH36-12", 100, "PT Bahana Baja", 14500, 0, 1450000, "TB BANGUNAN BARU", "Budi"]);
+    void exportExcel([
+      ["TANGGAL", "KODE BARANG", "NAMA BARANG", "KODE SUPPLIER", "NAMA SUPPLIER", "JUMLAH BARANG MASUK", "QTY", "HARGA (NON PPN 11%)", "PAJAK (JIKA ADA)", "TOTAL"],
+      ["2026-01-05", "DX0000GEN5", "OXYGEN ISI", "C0011", "CV SUMBER GAS ABADI", 10, "TBG", 1600000, 176000, 16176000],
+      ["2026-01-05", "EZ0000BAR14", "ROUNDBAR 125MMX6MTR S-45C/5\"", "P0011", "PT KALTIM LESTARI UNGGUL", 1, "BTG", 13176000, 0, 13176000],
+    ], "Template-Warehouse-IN", "IN JAN-DES")
+      .then(() => toast(S.tplDone.replace("{n}", "Template-Warehouse-IN")))
+      .catch(() => toast(S.saveFail, "info"));
   };
 
   const downloadTemplateOUT = () => {
-    downloadCSV("Template-OUT", ["Tanggal", "Purpose", "Kode", "Qty", "PIC", "Keterangan"],
-      ["2026-08-03", "U/TB. TRIALFA 01", "AH36-12", 50, "Agus", "Pemakaian fabrikasi"]);
+    void exportExcel([
+      ["TANGGAL", "PURPOSE", "KODE BARANG", "NAMA BARANG", "JUMLAH BARANG KELUAR", "QTY", "PIC"],
+      ["2026-01-05", "PT SAHA AGROMANDIRI/KEBUN SAWIT", "M0000AS 1", "AS BRONZE HOLLOW 5X5 GALVANIS", 3, "BTG", "AMIRUL"],
+      ["2026-01-05", "CRANE AMERICAN", "AC0000OLT4", "BOLT CON ROD DETROID", 6, "PCS", "GAZALI"],
+    ], "Template-Warehouse-OUT", "OUT JAN-DES")
+      .then(() => toast(S.tplDone.replace("{n}", "Template-Warehouse-OUT")))
+      .catch(() => toast(S.saveFail, "info"));
+  };
+
+  const downloadWarehouseReport = async () => {
+    try {
+      const inHeaders = [
+        "TANGGAL", "KODE BARANG", "NAMA BARANG", "KODE SUPPLIER", "NAMA SUPPLIER",
+        "JUMLAH BARANG MASUK", "QTY", "HARGA (NON PPN 11%)", "PAJAK (JIKA ADA)", "TOTAL",
+      ];
+      const inRows = movements
+        .filter((m) => m.tone === "in" || String(m.type) === "Penerimaan")
+        .map((m) => {
+          const item = inventory.find((i) => i.id === m.itemId || i.name === m.item);
+          const qty = Number(m.qty || 0);
+          const price = Number(m.priceExcl || item?.cost || 0);
+          const tax = Number(m.tax || 0);
+          const total = Number(m.total || (qty * price + tax));
+          return [
+            String(m.date || todayISO()),
+            String(item?.sku || m.itemId || ""),
+            String(m.item || item?.name || ""),
+            String(m.supplierCode || "-"),
+            String(m.supplier || "-"),
+            qty,
+            String(item?.unit || "PCS"),
+            price,
+            tax,
+            total,
+          ];
+        });
+
+      const outHeaders = [
+        "TANGGAL", "PURPOSE", "KODE BARANG", "NAMA BARANG", "JUMLAH BARANG KELUAR", "QTY", "PIC",
+      ];
+      const outRows = movements
+        .filter((m) => m.tone === "out" || String(m.type) === "Pengeluaran")
+        .map((m) => {
+          const item = inventory.find((i) => i.id === m.itemId || i.name === m.item);
+          return [
+            String(m.date || todayISO()),
+            String(m.purpose || m.to || m.project || "Pemakaian Galangan"),
+            String(item?.sku || m.itemId || ""),
+            String(m.item || item?.name || ""),
+            Number(m.qty || 0),
+            String(item?.unit || "PCS"),
+            String(m.pic || m.by || "Gudang"),
+          ];
+        });
+
+      const stockHeaders = [
+        "KODE BARANG", "NAMA BARANG", "KATEGORI", "GUDANG", "STOK SAAT INI", "MIN STOK", "SATUAN", "HARGA SATUAN", "TOTAL NILAI",
+      ];
+      const stockRows = inventory.map((i) => [
+        String(i.sku || i.id),
+        String(i.name),
+        String(i.category || "-"),
+        String(i.warehouse || "-"),
+        Number(i.stock || 0),
+        Number(i.minStock || 0),
+        String(i.unit || "PCS"),
+        Number(i.cost || 0),
+        Number(i.stock || 0) * Number(i.cost || 0),
+      ]);
+
+      await exportExcelSheets([
+        { name: "IN JAN-DES", rows: [inHeaders, ...inRows] },
+        { name: "OUT JAN-DES", rows: [outHeaders, ...outRows] },
+        { name: "LOGISTIK", rows: [stockHeaders, ...stockRows] },
+      ], "Warehouse Report 2026");
+
+      toast(locale === "en" ? "Warehouse Report 2026 exported successfully" : "Warehouse Report 2026 berhasil diunduh");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : S.saveFail, "info");
+    }
   };
 
   const normHeader = (h: string): string =>
@@ -1704,7 +1771,7 @@ if (k === "mattype") return matTypeOf(i);
   };
 
   const splitCsvLine = (line: string): string[] =>
-    line.split(",").map((s) => s.trim().replace(/^"|"$/g, "").trim());
+    line.split(/[,;\t]/).map((s) => s.trim().replace(/^"|"$/g, "").trim());
 
   const findItemByKode = (kode: string): StoreItem | undefined => {
     const k = kode.trim().toLowerCase();
@@ -1722,19 +1789,23 @@ if (k === "mattype") return matTypeOf(i);
       const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
       if (lines.length === 0) { setImportReport([S.fileEmpty]); return; }
       const firstCells = splitCsvLine(lines[0]);
-      const hasHeader = firstCells.some((c) => normHeader(c) === "kode" || normHeader(c) === "sku");
+      const hasHeader = firstCells.some((c) => {
+        const nh = normHeader(c);
+        return nh === "kode" || nh === "sku" || nh === "kodebarang" || nh === "tanggal" || nh === "tangggal";
+      });
       const headers = hasHeader ? firstCells : [];
       const start = hasHeader ? 1 : 0;
-      const idxTanggal = hasHeader ? colIndex(headers, ["tanggal", "date"]) : 0;
-      const idxKode = hasHeader ? colIndex(headers, ["kode", "sku", "code"]) : 1;
-      const idxQty = hasHeader ? colIndex(headers, ["qty", "jumlah", "quantity"]) : 2;
-      const idxSupplier = hasHeader ? colIndex(headers, ["supplier", "vendor", "namasupplier"]) : 3;
-      const idxHarga = hasHeader ? colIndex(headers, ["harganett", "harganppn", "harga", "price", "priceexcl"]) : 4;
-      const idxPajak = hasHeader ? colIndex(headers, ["pajak", "tax", "ppn"]) : 5;
-      const idxTotal = hasHeader ? colIndex(headers, ["total"]) : 6;
+      const idxTanggal = hasHeader ? colIndex(headers, ["tanggal", "tangggal", "date"]) : 0;
+      const idxKode = hasHeader ? colIndex(headers, ["kode barang", "kodebarang", "kode", "sku", "code"]) : 1;
+      const idxNama = hasHeader ? colIndex(headers, ["nama barang", "namabarang", "nama", "item"]) : 2;
+      const idxSupplier = hasHeader ? colIndex(headers, ["nama supplier", "namasupplier", "supplier", "vendor"]) : 4;
+      const idxQty = hasHeader ? colIndex(headers, ["jumlah barang masuk", "jumlahbarangmasuk", "jumlah", "quantity", "qty"]) : 5;
+      const idxHarga = hasHeader ? colIndex(headers, ["harga (non ppn 11%)", "harganonppn11%", "harganonppn", "harganett", "harga", "price", "priceexcl"]) : 7;
+      const idxPajak = hasHeader ? colIndex(headers, ["pajak (jika ada)", "pajakjikaada", "pajak", "tax", "ppn"]) : 8;
+      const idxTotal = hasHeader ? colIndex(headers, ["total"]) : 9;
       const idxPurpose = hasHeader ? colIndex(headers, ["purpose", "untuk", "untukkapal", "keperluan", "u"]) : 7;
       const idxPic = hasHeader ? colIndex(headers, ["pic"]) : 8;
-      if (idxKode < 0 || idxQty < 0) { setImportReport([S.badHeaderIn]); return; }
+      if ((idxKode < 0 && idxNama < 0) || idxQty < 0) { setImportReport([S.badHeaderIn]); return; }
       const stockMap: Record<string, number> = Object.fromEntries(inventory.map((i) => [i.id, Number(i.stock || 0)]));
       const avgMap: Record<string, number> = Object.fromEntries(inventory.map((i) => [i.id, Number(i.avgCost) || 0]));
       const fails: string[] = [];
@@ -1793,16 +1864,20 @@ if (k === "mattype") return matTypeOf(i);
       const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
       if (lines.length === 0) { setImportReport([S.fileEmpty]); return; }
       const firstCells = splitCsvLine(lines[0]);
-      const hasHeader = firstCells.some((c) => normHeader(c) === "kode" || normHeader(c) === "sku");
+      const hasHeader = firstCells.some((c) => {
+        const nh = normHeader(c);
+        return nh === "kode" || nh === "sku" || nh === "kodebarang" || nh === "purpose" || nh === "tanggal";
+      });
       const headers = hasHeader ? firstCells : [];
       const start = hasHeader ? 1 : 0;
       const idxTanggal = hasHeader ? colIndex(headers, ["tanggal", "date"]) : 0;
       const idxPurpose = hasHeader ? colIndex(headers, ["purpose", "untuk", "untukkapal", "keperluan", "u"]) : 1;
-      const idxKode = hasHeader ? colIndex(headers, ["kode", "sku", "code"]) : 2;
-      const idxQty = hasHeader ? colIndex(headers, ["qty", "jumlah", "quantity"]) : 3;
-      const idxPic = hasHeader ? colIndex(headers, ["pic"]) : 4;
+      const idxKode = hasHeader ? colIndex(headers, ["kode barang", "kodebarang", "kode", "sku", "code"]) : 2;
+      const idxNama = hasHeader ? colIndex(headers, ["nama barang", "namabarang", "nama", "item"]) : 3;
+      const idxQty = hasHeader ? colIndex(headers, ["jumlah barang keluar", "jumlahbarangkeluar", "jumlah", "quantity", "qty"]) : 4;
+      const idxPic = hasHeader ? colIndex(headers, ["pic", "penerima"]) : 6;
       const idxKet = hasHeader ? colIndex(headers, ["keterangan", "note", "referensi", "ref", "by"]) : 5;
-      if (idxKode < 0 || idxQty < 0) { setImportReport([S.badHeaderOut]); return; }
+      if ((idxKode < 0 && idxNama < 0) || idxQty < 0) { setImportReport([S.badHeaderOut]); return; }
       const stockMap: Record<string, number> = Object.fromEntries(inventory.map((i) => [i.id, Number(i.stock || 0)]));
       const batchMap: Record<string, BatchRow[]> = Object.fromEntries(
         inventory.map((i) => [i.id, [...batchesOf(i)].sort((a, b) => String(a.date).localeCompare(String(b.date)))])
@@ -1815,13 +1890,13 @@ if (k === "mattype") return matTypeOf(i);
       for (const [idx, line] of lines.slice(start).entries()) {
         const rowNo = idx + start + 1;
         const c = splitCsvLine(line);
-        const kode = (c[idxKode] ?? "").trim();
-        const item = kode ? findItemByKode(kode) : undefined;
-        if (!item) { fails.push(S.rowUnknownCode.replace("{a}", String(rowNo)).replace("{b}", kode || S.emptyParen)); continue; }
+        const kode = idxKode >= 0 ? (c[idxKode] ?? "").trim() : "";
+        const item = kode ? findItemByKode(kode) : (idxNama >= 0 ? inventory.find((i) => String(i.name).toLowerCase() === (c[idxNama] ?? "").trim().toLowerCase()) : undefined);
+        if (!item) { fails.push(S.rowUnknownCode.replace("{a}", String(rowNo)).replace("{b}", kode || (idxNama >= 0 ? (c[idxNama] ?? "") : "") || S.emptyParen)); continue; }
         const qty = Number(c[idxQty] ?? "");
         if (!Number.isFinite(qty) || qty <= 0) { fails.push(S.rowQty.replace("{a}", String(rowNo))); continue; }
-        const purpose = idxPurpose >= 0 ? (c[idxPurpose] ?? "").trim() : "";
-        const pic = idxPic >= 0 ? (c[idxPic] ?? "").trim() : "";
+        const purpose = (idxPurpose >= 0 ? (c[idxPurpose] ?? "").trim() : "") || "Pemakaian Galangan";
+        const pic = (idxPic >= 0 ? (c[idxPic] ?? "").trim() : "") || "Gudang";
         if (!purpose) { fails.push(S.rowPurpose.replace("{a}", String(rowNo))); continue; }
         if (!pic) { fails.push(S.rowPic.replace("{a}", String(rowNo))); continue; }
         const avail = stockMap[item.id] ?? Number(item.stock || 0);
@@ -2556,6 +2631,15 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <input type="file" accept=".csv" className="hidden" aria-label={importMode === "Katalog" ? S.impAriaKatalog : importMode === "IN" ? S.impAriaIn : S.impAriaOut}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) { if (importMode === "IN") handleImportINFile(f); else if (importMode === "OUT") handleImportOUTFile(f); else handleImportFile(f); } e.target.value = ""; }} />
                 </label>
+                <button
+                  type="button"
+                  className="btn-secondary text-xs"
+                  onClick={() => void downloadWarehouseReport()}
+                  title={locale === "en" ? "Export Warehouse Report 2026 (.xlsx) matching client template" : "Unduh Warehouse Report 2026 (.xlsx) sesuai template galangan"}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                  {locale === "en" ? "Warehouse Report (.xlsx)" : "Laporan Gudang (.xlsx)"}
+                </button>
               </div>
               {importReport.length > 0 && (
                 <div className="mb-3 rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">

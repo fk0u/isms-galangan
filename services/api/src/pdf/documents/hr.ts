@@ -191,7 +191,7 @@ export interface SuratHrInput {
 
 function hrCompanyFooter(): Block {
   return paragraph({
-    text: "Kantor : Jl. Mulawarman No. 23 Tlp. (0541) 6246750 Samarinda\nShipyard : Jl. Olah Bebaya Kampung Tengah Pulau Atas (Samarinda Ilir)\nEmail: Syukurbersaudara@gmail.com · Web: www.syukurbersaudara.com",
+    text: "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda\nShipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)\nEmail: Syukurbersaudara@gmail.com · Web: www.syukurbersaudara.com",
     size: TYPE.base - 2,
     color: COLOR.steel,
     align: "center",
@@ -333,7 +333,7 @@ function phkBody(d: Document, input: SuratHrInput, locale: Locale): void {
     paragraph({
       text: L(
         locale,
-        `Dengan demikian, terhitung mulai tanggal ${tglAkhir} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${input.namaKaryawan} dinyatakan sudah berakhir. Dan atas nama perusahaan, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`,
+        `Dengan demikian, terhitung mulai tanggal ${tglAkhir} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${input.namaKaryawan} dinyatakan sudah berakhir. Dan atas nama lembaga, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`,
         `Therefore, effective as of ${tglAkhir}, the employment relationship between PT. SYUKUR BERSAUDARA and ${input.namaKaryawan} is declared terminated. On behalf of the company, we express our gratitude for the performance you have provided.`,
       ),
       size: TYPE.base,
@@ -404,7 +404,7 @@ function pengalamanKerjaBody(d: Document, input: SuratHrInput, locale: Locale): 
     paragraph({
       text: L(
         locale,
-        "Yang bersangkutan telah memberikan kontribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.",
+        "Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.",
         "The person concerned has made a good contribution to the company and during employment has never taken any actions detrimental to our company.",
       ),
       size: TYPE.base,

@@ -1127,23 +1127,23 @@ const finishTraining = async (t: StoreItem) => {
     let defIsi = "";
 
     if (/^SP\s*1$/i.test(jenis)) {
-      defDocNo = `001/HRD-SP/SB-SMD/${rom}/${yr}`;
-      defIsi = "Keterlambatan masuk kerja tanpa keterangan";
+      defDocNo = `004/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Keterlambatan";
     } else if (/^SP\s*2$/i.test(jenis)) {
-      defDocNo = `002/HRD-SP/SB-SMD/${rom}/${yr}`;
-      defIsi = "Keluar dari galangan pada saat jam kerja tanpa izin";
+      defDocNo = `004/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Keluar Dari Galangan Pada Saat Jam Kerja Tanpa Izin";
     } else if (/^SP\s*3$/i.test(jenis)) {
-      defDocNo = `003/HRD-SP/SB-SMD/${rom}/${yr}`;
-      defIsi = "Pelanggaran disiplin dan tata tertib kerja berulang";
+      defDocNo = `005/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Pelanggaran tata tertib dan disiplin kerja berulang";
     } else if (/pemutusan|phk/i.test(jenis)) {
       defDocNo = `002/HR/SPHK/${rom}/${yr}`;
-      defIsi = "Pelanggaran disiplin berupa ketidakhadiran tanpa adanya konfirmasi";
+      defIsi = "ketidakhadiran tanpa adanya konfirmasi";
     } else if (/pengalaman/i.test(jenis)) {
       defDocNo = `012/SPK-SB/SMD/${rom}/${yr}`;
-      defIsi = "Telah memberikan kontribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan.";
+      defIsi = "Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.";
     } else if (/keterangan/i.test(jenis)) {
       defDocNo = `002/SK-SB/SMD/${rom}/${yr}`;
-      defIsi = "Benar bekerja sebagai karyawan di PT. SYUKUR BERSAUDARA.";
+      defIsi = "Benar bekerja sebagai karyawan di PT. SYUKUR BERSAUDARA";
     }
 
     setSuratForm((f) => {
@@ -1172,26 +1172,180 @@ const finishTraining = async (t: StoreItem) => {
   const suratNomor = nextSuratId(suratForm.tanggal || todayISO());
 
   /** Teks surat. SATU fungsi dipakai untuk preview di form, pratinjau arsip,
-   *  dan pratinjau teks - sebelumnya teks disusun ulang di tiga tempat
-   *  terpisah sehingga prone to drift. */
+   *  dan pratinjau teks - persis mengikuti template resmi dokumen PT Syukur Bersaudara. */
   const suratText = (row: {
     id?: unknown; jenis?: unknown; tanggal?: unknown; isi?: unknown;
     nama?: unknown; nik?: unknown; role?: unknown; dept?: unknown; branch?: unknown;
     docNo?: unknown;
+    employeeId?: unknown;
+    emp?: StoreItem;
+    contractStart?: unknown;
+    contractEnd?: unknown;
+    approvedBy?: unknown;
   }): string => {
+    const jenis = String(row.jenis ?? "").trim();
+    const isSp = /^SP\s*[123]$/i.test(jenis) || /peringatan/i.test(jenis);
+    const isPhk = /pemutusan|phk/i.test(jenis);
+    const isPengalaman = /pengalaman/i.test(jenis);
+    const isKeterangan = /keterangan/i.test(jenis);
+
+    const docNo = String(row.docNo || row.id || "-");
+    const tgl = fmtTanggal(String(row.tanggal ?? todayISO()));
+    const nama = String(row.nama ?? "-");
+    const emp = row.emp ?? (row.employeeId ? data.employees.find((e) => String(e.id) === String(row.employeeId)) : data.employees.find((e) => String(e.name) === nama));
+    const jabatan = String(row.role ?? emp?.role ?? "-");
+    const alamat = String(emp?.address ?? emp?.alamat ?? "-");
+    const pob = emp ? String(emp.pob ?? emp.tempatLahir ?? "") : "";
+    const dob = emp ? String(emp.dob ?? emp.tanggalLahir ?? "") : "";
+    const ttl = (pob || dob) ? `${pob || "-"}${dob ? `, ${fmtTanggal(dob)}` : ""}` : "-";
+    const genderRaw = emp ? String(emp.gender ?? "") : "";
+    const jenisKelamin = genderRaw === "L" ? "Laki-laki" : genderRaw === "P" ? "Perempuan" : genderRaw || "-";
+    const agama = emp ? String(emp.religion ?? emp.agama ?? "Islam") : "Islam";
+    const maritalRaw = emp ? String(emp.marital ?? "") : "";
+    const statusKawin = maritalRaw === "TK" ? "Belum Menikah" : maritalRaw === "K" ? "Menikah" : maritalRaw || "Belum Menikah";
+
+    const tglMulai = String(row.contractStart || emp?.join || emp?.lastContractStart || row.tanggal || todayISO());
+    const tglSelesai = String(row.contractEnd || emp?.contractEnd || row.tanggal || todayISO());
+
+    const tMulai = fmtTanggal(tglMulai);
+    const tSelesai = fmtTanggal(tglSelesai);
+    const isi = String(row.isi ?? "").trim();
+
+    if (isSp) {
+      const spNum = /1/.test(jenis) ? "1" : /2/.test(jenis) ? "2" : "3";
+      const tind = spNum === "1"
+        ? "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan Surat Peringatan yang kedua."
+        : spNum === "2"
+          ? "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan Surat Peringatan yang Terakhir atau PHK"
+          : "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan tindakan Pemutusan Hubungan Kerja (PHK)";
+
+      return [
+        `SURAT PERINGATAN ${spNum}`,
+        `No ${docNo}`,
+        "",
+        "Surat peringatan ini diberikan Kepada :",
+        `Nama: ${nama}`,
+        `Jabatan: ${jabatan}`,
+        "",
+        `Sehubungan kinerja Saudara sebagai karyawan yang harus mematuhi dan melaksanakan semua kewajiban dan tata tertib serta disiplin dalam bekerja yang harus saudara laksanakan sepunuhnya. Maka, dengan ini kami memberikan Surat Peringatan Ke-${spNum} Kepada Saudara atas tindakan penyimpangan yang telah di lakukan oleh saudara sebagai berikut :`,
+        "",
+        isi || (spNum === "1" ? "Keterlambatan" : "Keluar Dari Galangan Pada Saat Jam Kerja Tanpa Izin"),
+        "",
+        tind,
+        "",
+        "Demikian surat ini kami sampaikan dan berlaku selama menjadi karyawan PT. SYUKUR BERSAUDARA Kepada yang bersangkutan harap di perhatikan dan di perbaiki dengan segera.",
+        "",
+        `Samarinda, ${tgl}`,
+        "PT SYUKUR BERSAUDARA",
+        "",
+        "Management",
+        "",
+        "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda",
+        "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)",
+        "Email: Syukurbersaudara@gmail.com",
+        "Web: www.syukurbersaudara.com",
+      ].join("\n");
+    }
+
+    if (isPhk) {
+      return [
+        `Nomor : ${docNo}`,
+        "Perihal : Surat Pemutusan Hubungan Kerja",
+        "",
+        "Kepada Yth,",
+        `Sdr. ${nama}`,
+        "Di-Tempat",
+        "",
+        "Dengan Hormat,",
+        `Sehubungan dengan Saudara masih melakukan pelanggaran disiplin berupa ${isi || "ketidakhadiran tanpa adanya konfirmasi"}.`,
+        "",
+        `Dengan demikian, terhitung mulai tanggal ${tSelesai} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${nama} dinyatakan sudah berakhir. Dan atas nama lembaga, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`,
+        "",
+        "Demikian surat pemutusan hubungan kerja ini kami sampaikan, dan agar dapat dimaklumi, terima kasih.",
+        "",
+        `Samarinda, ${tgl}`,
+        "",
+        "Suci Permata Sari",
+        "HR",
+      ].join("\n");
+    }
+
+    if (isPengalaman) {
+      return [
+        "SURAT  PENGALAMAN  KERJA",
+        "Kepada yang berkepentingan,",
+        `No: ${docNo}`,
+        "Hal: Surat Pengalaman Kerja",
+        "",
+        "Dengan ini kami dari PT. SYUKUR BERSAUDARA menyatakan bahwa :",
+        `Nama: ${nama}`,
+        `Alamat: ${alamat}`,
+        `Jabatan: ${jabatan}`,
+        "",
+        "Telah benar-benar bekerja pada perusahaan kami dalam kurun waktu :",
+        ` ${tMulai} sampai dengan ${tSelesai}`,
+        "",
+        "Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.",
+        "",
+        "Kami berterima kasih atas segala kerjasama, konstribusi dan segala upaya yang telah diberikan guna perkembangan perusahaan yang lebih baik.",
+        "",
+        `Samarinda, ${tgl}`,
+        "PT. Syukur Bersaudara",
+        "",
+        "Suci Permata Sari",
+        "HR",
+        "",
+        "Kantor : Jl. Mulawarman  no. 23 tlp. (0541) 742529 Fax. (0541) 731034 Samarinda",
+        "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)",
+        "Email: Syukurbersaudara@gmail.com",
+        "www.syukurbersaudara.com",
+      ].join("\n");
+    }
+
+    if (isKeterangan) {
+      return [
+        "SURAT KETERANGAN",
+        `Nomor : ${docNo}`,
+        "",
+        "Bersama ini kami menyatakan bahwa :",
+        `Nama: ${nama}`,
+        `Tempat/Tgl Lahir : ${ttl}`,
+        `Jenis Kelamin: ${jenisKelamin}`,
+        `Alamat : ${alamat}`,
+        `Agama: ${agama}`,
+        `Status : ${statusKawin}`,
+        "",
+        `Benar bekerja sebagai karyawan di PT. SYUKUR BERSAUDARA sejak ${tMulai}`,
+        `sampai dengan sekarang, dengan jabatan ${jabatan}.`,
+        "",
+        "Demikian surat keterangan ini kami buat agar dipergunakan sebagaimana mestinya.",
+        "",
+        `Samarinda, ${tgl}`,
+        "PT. Syukur Bersaudara",
+        "",
+        "Suci Permata Sari",
+        "HRD",
+        "",
+        "Kantor : Jl. Mulawarman No. 23 Tlp Adm. (08115524456)  Tlp. (0541) 6246750 Samarinda",
+        "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)",
+        "Email: Syukurbersaudara@gmail.com",
+        "Web : www.syukurbersaudara.com",
+      ].join("\n");
+    }
+
     const lines = [
-      `SURAT ${String(row.jenis ?? "").toUpperCase()}`,
+      `SURAT ${jenis.toUpperCase()}`,
       "PT Syukur Bersaudara",
       "",
-      `Nomor: ${String(row.docNo || row.id || "-")}`,
-      `Tanggal: ${fmtTanggal(String(row.tanggal ?? ""))}`,
+      `Nomor: ${docNo}`,
+      `Tanggal: ${tgl}`,
       "",
-      `Kepada Yth. ${String(row.nama ?? "-")}${row.nik ? ` (${String(row.nik)})` : ""}`,
+      `Kepada Yth. ${nama}${row.nik ? ` (${String(row.nik)})` : ""}`,
     ];
-    if (row.role || row.dept || row.branch) {
-      lines.push(`Jabatan: ${String(row.role ?? "-")} · Departemen: ${String(row.dept ?? "-")} · Cabang: ${String(row.branch ?? "-")}`);
+    if (jabatan || row.dept || row.branch) {
+      lines.push(`Jabatan: ${jabatan} · Departemen: ${String(row.dept ?? "-")} · Cabang: ${String(row.branch ?? "-")}`);
     }
-    lines.push("", String(row.isi ?? "").trim() || (locale === "en" ? "(Letter body not written yet)" : "(Isi surat belum ditulis)"));
+    lines.push("", isi || (locale === "en" ? "(Letter body not written yet)" : "(Isi surat belum ditulis)"));
     return lines.join("\n");
   };
 
@@ -1207,6 +1361,11 @@ const finishTraining = async (t: StoreItem) => {
       role: suratEmp.role,
       dept: suratEmp.dept,
       branch: suratEmp.branch,
+      emp: suratEmp,
+      employeeId: suratEmp.id,
+      contractStart: suratForm.contractStart,
+      contractEnd: suratForm.contractEnd,
+      approvedBy: suratForm.approvedBy,
     })
     : "";
 
