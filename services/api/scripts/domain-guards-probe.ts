@@ -147,6 +147,19 @@ async function main(): Promise<void> {
     const invNol = await call("POST", "/api/inventory", { data: { name: `Material Probe ${tag}`, category: "Baja", sku: `SKU-G-${tag}`, stock: 0, unit: "pcs" } });
     assert("tambah material baru dengan stok 0 → 200/201", invNol.status === 200 || invNol.status === 201, JSON.stringify(invNol.body));
     if (invNol.body.data?.id) made.push(invNol.body.data.id);
+
+    /* K17-PM-15: fee proyek pihak ketiga - persen/nominal, ditagihkan setelah Selesai. */
+    const fee = { id: "FEE-1", penerima: "CV Agen Probe", basis: "persen", nilai: 2.5, status: "Belum" };
+    const pUrl = `/api/projects/${pid}`;
+    assert("fee persen 2,5% → 200", (await call("PATCH", pUrl, { data: { fees: [fee] } })).status === 200);
+    assert("fee persen > 100 → 422", (await call("PATCH", pUrl, { data: { fees: [{ ...fee, nilai: 150 }] } })).status === 422);
+    assert("fee dasar tak dikenal → 422", (await call("PATCH", pUrl, { data: { fees: [{ ...fee, basis: "lain" }] } })).status === 422);
+    assert("fee tanpa penerima → 422", (await call("PATCH", pUrl, { data: { fees: [{ ...fee, penerima: "" }] } })).status === 422);
+    await exec("UPDATE projects SET data = json_set(data, '$.status', 'Dalam Proses') WHERE id = ?", [pid]);
+    const early = await call("PATCH", pUrl, { data: { fees: [{ ...fee, status: "Ditagihkan" }] } });
+    assert("tagihkan fee saat proyek belum Selesai → 422", early.status === 422, `${early.status} ${JSON.stringify(early.body)}`);
+    await exec("UPDATE projects SET data = json_set(data, '$.status', 'Selesai') WHERE id = ?", [pid]);
+    assert("tagihkan fee setelah proyek Selesai → 200", (await call("PATCH", pUrl, { data: { fees: [{ ...fee, status: "Ditagihkan" }] } })).status === 200);
   } finally {
     for (const undo of cleanup) await undo();
     await exec("DELETE FROM movements WHERE data LIKE ?", [`%Probe ${tag}%`]);
