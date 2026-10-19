@@ -698,7 +698,10 @@ export function callout(lines: string[], opts: { fill?: RGB; border?: RGB; size?
       const size = opts.size ?? TYPE.base;
       const font: FontName = opts.bold ? "bold" : "regular";
       const pad = 3;
-      const laid: string[][] = lines.map((l) => wrap(ctx.pdf, l, Math.max(4, width - pad * 2), { font, size, embedded: ctx.embedded }));
+      /* Baris berisi "\n" (mis. catatan PO multi-baris) dipecah dulu: wrap()
+         menganggapnya satu baris, jadi tinggi kotak terlalu pendek dan teks
+         sisanya tercetak di luar kotak. */
+      const laid: string[][] = lines.flatMap((l) => l.split("\n")).map((l) => wrap(ctx.pdf, l, Math.max(4, width - pad * 2), { font, size, embedded: ctx.embedded }));
       const lh = lineHeightFor(size);
       const inner = laid.reduce((s, ls) => s + ls.length * lh, 0);
       const total = inner + pad * 2;
