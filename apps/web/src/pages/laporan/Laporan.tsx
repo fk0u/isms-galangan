@@ -8,7 +8,7 @@ import { useStore } from "../../data/store";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync, useProjectWbsSync } from "../../data/useModuleSync";
 import { fmtTanggal, fmtRupiah, fmtMiliar, fmtJumlah, fmtBulan, todayISO } from "../../utils/format";
-import { SB_KOP } from "../../utils/sb";
+import { SB_KOP, DPP_FACTOR } from "../../utils/sb";
 import { getSetting } from "../../utils/settings";
 import { equipmentCostSummary } from "../../utils/projectCost";
 import { useT } from "../../i18n/LanguageContext";
@@ -182,7 +182,7 @@ export default function Laporan() {
        hidup membuat PPN keluaran ~9% lebih besar dari yang tercatat di
        faktur. Fallback kept untuk invoice lawas tanpa ppnAmt. */
     const ppnTersimpan = invLunas.reduce((s, i) => s + num(i.ppnAmt), 0);
-    const ppnKeluar = ppnTersimpan > 0 ? Math.round(ppnTersimpan) : Math.round(revenue * ppnRate);
+    const ppnKeluar = ppnTersimpan > 0 ? Math.round(ppnTersimpan) : Math.round(revenue * DPP_FACTOR * ppnRate);
     const ppnKeluarEstimasi = ppnTersimpan <= 0;
     /* PPN masukan tidak bisa dihitung akurat: payable tidak menyimpan
        rincian PPN, hanya nilai nett dan PPh. Angka ini tetap estimasi. */
