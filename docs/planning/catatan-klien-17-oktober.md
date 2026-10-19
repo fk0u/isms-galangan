@@ -37,6 +37,8 @@ Ketergantungan utama:
 
 ## Perlu konfirmasi klien sebelum implementasi
 
+**Sudah dijawab klien 19 Okt 2026** - lihat `decisions.md` Q17-Q25. Daftar di bawah disimpan sebagai riwayat pertanyaan.
+
 Catatan baru ini belum tercakup keputusan 7 Okt di `decisions.md`. Butir berikut ditandai di issue-nya dan **jangan ditebak**:
 
 1. **K17-PM-15 Fee Project** — fee siapa (marketing/agen/manajemen), dasar hitung (persen nilai kontrak atau nominal), dan kapan dibayar.
