@@ -56,9 +56,19 @@ const CERT_WINDOW = 90;
 const TIPE_KARYAWAN = ["Training", "Kontrak", "Tetap", "Outsourcing"];
 const TIPE_LAMA = ["Harian"];
 const PTKP_STATUS = ["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"];
-const SURAT_JENIS = ["Kontrak Baru", "Perpanjang Kontrak", "SP 1", "SP 2", "SP 3", "Mutasi"];
+const SURAT_JENIS = [
+  "Kontrak Baru",
+  "Perpanjang Kontrak",
+  "SP 1",
+  "SP 2",
+  "SP 3",
+  "Pemutusan Hubungan Kerja (PHK)",
+  "Surat Pengalaman Kerja",
+  "Surat Keterangan Bekerja",
+  "Mutasi",
+];
 const isKontrak = (jenis: string): boolean => jenis === "Kontrak Baru" || jenis === "Perpanjang Kontrak";
-const SURAT_KOSONG = { employeeId: "", jenis: "SP 1", isi: "", tanggal: "", fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "", contractNo: "", contractStart: "", contractEnd: "" };
+const SURAT_KOSONG = { employeeId: "", jenis: "SP 1", docNo: "", isi: "", tanggal: "", fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "", contractNo: "", contractStart: "", contractEnd: "" };
 const IMPORT_HEADERS = ["NIK", "Nama", "Jabatan", "Departemen", "Cabang", "Status", "Tanggal Gabung (YYYY-MM-DD)", "Tipe", "Gaji Pokok", "PTKP Status", "Tanggungan", "Kontrak Berakhir (YYYY-MM-DD)"];
 const DEPT_OPTIONS = ["Direksi", "Proyek", "Produksi", "Quality", "Finance", "Procurement", "Support"];
 const LEAVE_TYPES = ["Tahunan", "Sakit", "Izin", "Melahirkan", "Cuti Besar", "Unpaid"];
@@ -1107,14 +1117,55 @@ const finishTraining = async (t: StoreItem) => {
       ? new Date(Date.parse(`${end}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
       : "";
     const lastNo = String(kontrakOf(employeeId)[0]?.contractNo ?? emp?.lastContractNo ?? "");
+
+    const tgl = suratForm.tanggal || todayISO();
+    const d = new Date(tgl);
+    const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const rom = romanMonths[d.getMonth()] || "X";
+    const yr = d.getFullYear() || 2026;
+    let defDocNo = "";
+    let defIsi = "";
+
+    if (/^SP\s*1$/i.test(jenis)) {
+      defDocNo = `001/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Keterlambatan masuk kerja tanpa keterangan";
+    } else if (/^SP\s*2$/i.test(jenis)) {
+      defDocNo = `002/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Keluar dari galangan pada saat jam kerja tanpa izin";
+    } else if (/^SP\s*3$/i.test(jenis)) {
+      defDocNo = `003/HRD-SP/SB-SMD/${rom}/${yr}`;
+      defIsi = "Pelanggaran disiplin dan tata tertib kerja berulang";
+    } else if (/pemutusan|phk/i.test(jenis)) {
+      defDocNo = `002/HR/SPHK/${rom}/${yr}`;
+      defIsi = "Pelanggaran disiplin berupa ketidakhadiran tanpa adanya konfirmasi";
+    } else if (/pengalaman/i.test(jenis)) {
+      defDocNo = `012/SPK-SB/SMD/${rom}/${yr}`;
+      defIsi = "Telah memberikan kontribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan.";
+    } else if (/keterangan/i.test(jenis)) {
+      defDocNo = `002/SK-SB/SMD/${rom}/${yr}`;
+      defIsi = "Benar bekerja sebagai karyawan di PT. SYUKUR BERSAUDARA.";
+    }
+
     setSuratForm((f) => {
       const ganti = employeeId !== f.employeeId;
-      if (!isKontrak(jenis)) return { ...f, jenis, employeeId, contractStart: "", contractEnd: "", contractNo: "" };
+      const tglMulai = jenis === "Surat Pengalaman Kerja" || jenis === "Surat Keterangan Bekerja"
+        ? String(emp?.join || emp?.lastContractStart || "")
+        : next || (ganti ? "" : f.contractStart);
+      const tglSelesai = jenis === "Surat Pengalaman Kerja"
+        ? String(emp?.contractEnd || todayISO())
+        : jenis === "Pemutusan Hubungan Kerja (PHK)"
+          ? (f.contractEnd || todayISO())
+          : (ganti ? "" : f.contractEnd);
+
       return {
-        ...f, jenis, employeeId,
-        contractStart: next || (ganti ? "" : f.contractStart),
-        contractEnd: ganti ? "" : f.contractEnd,
-        contractNo: ganti || !f.contractNo ? lastNo : f.contractNo,
+        ...f,
+        jenis,
+        employeeId,
+        docNo: ganti || !f.docNo ? defDocNo : f.docNo,
+        isi: (!f.isi || ganti) && defIsi ? defIsi : f.isi,
+        contractStart: tglMulai,
+        contractEnd: tglSelesai,
+        contractNo: isKontrak(jenis) ? (ganti || !f.contractNo ? lastNo : f.contractNo) : (f.contractNo || defDocNo),
       };
     });
   };
@@ -1126,12 +1177,13 @@ const finishTraining = async (t: StoreItem) => {
   const suratText = (row: {
     id?: unknown; jenis?: unknown; tanggal?: unknown; isi?: unknown;
     nama?: unknown; nik?: unknown; role?: unknown; dept?: unknown; branch?: unknown;
+    docNo?: unknown;
   }): string => {
     const lines = [
       `SURAT ${String(row.jenis ?? "").toUpperCase()}`,
       "PT Syukur Bersaudara",
       "",
-      `Nomor: ${String(row.id ?? "-")}`,
+      `Nomor: ${String(row.docNo || row.id || "-")}`,
       `Tanggal: ${fmtTanggal(String(row.tanggal ?? ""))}`,
       "",
       `Kepada Yth. ${String(row.nama ?? "-")}${row.nik ? ` (${String(row.nik)})` : ""}`,
@@ -1146,6 +1198,7 @@ const finishTraining = async (t: StoreItem) => {
   const suratPreview = suratEmp
     ? suratText({
       id: suratNomor,
+      docNo: suratForm.docNo || suratNomor,
       jenis: suratForm.jenis,
       tanggal: suratForm.tanggal,
       isi: suratForm.isi,
@@ -1170,9 +1223,10 @@ const finishTraining = async (t: StoreItem) => {
       approvedAt: String(s.approvedAt ?? ""),
       sourceType: String(s.sourceType ?? ""),
       sourceId: String(s.sourceId ?? ""),
-      contractNo: String(s.contractNo ?? ""),
-      contractStart: String(s.contractStart ?? ""),
-      contractEnd: String(s.contractEnd ?? ""),
+      docNo: String(s.docNo ?? s.id ?? ""),
+      contractNo: String(s.contractNo ?? s.docNo ?? ""),
+      contractStart: String(s.startDate ?? s.contractStart ?? ""),
+      contractEnd: String(s.endDate ?? s.contractEnd ?? ""),
     });
     setShowSurat(true);
   };
@@ -1235,6 +1289,9 @@ const finishTraining = async (t: StoreItem) => {
       fileName: url !== "" ? `surat-${suratEditId ?? suratNomor}.pdf` : "",
       approvedBy: suratForm.approvedBy.trim(),
       approvedAt: suratForm.approvedAt,
+      docNo: suratForm.docNo.trim(),
+      startDate: suratForm.contractStart,
+      endDate: suratForm.contractEnd,
       /* Asal dokumen, supaya surat yang lahir dari(hasil cuti yang
          belum disetujui, atau mutasi) bisa ditelusuri balik ke
          baris asalnya tanpa menebak dari isi teks. */
@@ -1451,7 +1508,7 @@ const finishTraining = async (t: StoreItem) => {
               <Plus className="h-4 w-4" /> {S.btnJadwalkanTraining}
             </button>
           ) : (
-            <button className="btn-primary-gradient" onClick={() => setShowSurat(true)}>
+            <button className="btn-primary-gradient" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}>
               <Plus className="h-4 w-4" /> {S.btnBuatSurat}
             </button>
           )
@@ -1893,7 +1950,7 @@ const finishTraining = async (t: StoreItem) => {
                   <h3 className="text-sm font-semibold text-navy-900">{S.arsipT}</h3>
                   <div className="flex items-center gap-2">
                     <button className="btn-secondary text-xs" onClick={exportArsipSurat}>{S.btnExport}</button>
-                    <button className="btn-primary text-xs" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); setShowSurat(true); }}>{S.btnBuatSurat}</button>
+                    <button className="btn-primary text-xs" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}>{S.btnBuatSurat}</button>
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-steel-500">
@@ -1906,7 +1963,7 @@ const finishTraining = async (t: StoreItem) => {
                     <div key={s.id} className="flex items-start justify-between gap-2 rounded-lg bg-surface p-2.5 text-sm">
                       <div className="min-w-0">
                         <p className="font-medium text-navy-900">{s.jenis} · {s.nama}</p>
-                        <p className="font-mono text-xs text-steel-500">{s.id} · {fmtTanggal(String(s.tanggal))}</p>
+                        <p className="font-mono text-xs text-steel-500">{s.docNo ? `${String(s.docNo)} (${s.id})` : s.id} · {fmtTanggal(String(s.tanggal))}</p>
                         <p className="text-[11px] text-steel-400">
                           {s.fileUrl
                             ? (locale === "en" ? "scan attached" : "pindai terlampir")
@@ -2434,8 +2491,25 @@ const finishTraining = async (t: StoreItem) => {
                 {SURAT_JENIS.map((s) => <option key={s} value={s}>{E.jenis[s as keyof typeof E.jenis] ?? s}</option>)}
               </select>
             </Field>
-            <Field label={S.thTanggal}><input type="date" className="input" value={suratForm.tanggal} onChange={(e) => setSuratForm({ ...suratForm, tanggal: e.target.value })} /></Field>
+            <Field label={S.thTanggal}><input type="date" className="input font-mono" value={suratForm.tanggal} onChange={(e) => setSuratForm({ ...suratForm, tanggal: e.target.value })} /></Field>
+            <Field label={E.docNo}><input className="input font-mono" value={suratForm.docNo} onChange={(e) => setSuratForm({ ...suratForm, docNo: e.target.value })} placeholder="001/HRD-SP/SB-SMD/X/2026" /></Field>
           </FormGrid>
+          {suratForm.jenis === "Surat Pengalaman Kerja" && (
+            <FormGrid>
+              <Field label={E.workStart}><input type="date" className="input font-mono" value={suratForm.contractStart} onChange={(e) => setSuratForm({ ...suratForm, contractStart: e.target.value })} /></Field>
+              <Field label={E.workEnd}><input type="date" className="input font-mono" value={suratForm.contractEnd} onChange={(e) => setSuratForm({ ...suratForm, contractEnd: e.target.value })} /></Field>
+            </FormGrid>
+          )}
+          {suratForm.jenis === "Surat Keterangan Bekerja" && (
+            <FormGrid>
+              <Field label={E.workStart}><input type="date" className="input font-mono" value={suratForm.contractStart} onChange={(e) => setSuratForm({ ...suratForm, contractStart: e.target.value })} /></Field>
+            </FormGrid>
+          )}
+          {suratForm.jenis === "Pemutusan Hubungan Kerja (PHK)" && (
+            <FormGrid>
+              <Field label={E.termDate}><input type="date" className="input font-mono" value={suratForm.contractEnd} onChange={(e) => setSuratForm({ ...suratForm, contractEnd: e.target.value })} /></Field>
+            </FormGrid>
+          )}
           {isKontrak(suratForm.jenis) && (
             <FormGrid>
               <Field label={E.lastContractNo}><input className="input font-mono" value={suratForm.contractNo} onChange={(e) => setSuratForm({ ...suratForm, contractNo: e.target.value })} /></Field>

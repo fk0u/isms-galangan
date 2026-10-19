@@ -33,7 +33,7 @@ const statusTone: Record<string, "green" | "blue" | "amber" | "gray"> = {
    IMO, MMSI, tahun bangun, mesin utama, GT, DWT, NT, BHP, bendera, dan status
    tidak lagi diisi. Nilai lama tetap tersimpan karena edit hanya mengirim field
    form (patch), dan bendera kapal baru otomatis Indonesia. */
-const CLASS_OPTIONS = ["BKI", "RINA"];
+const CLASS_OPTIONS = ["BKI", "RINA", "BKI & RINA"];
 /** Kapal lama bisa ber-class lain (ABS, DNV, …): tetap jadi pilihan supaya tidak tertimpa diam-diam. */
 const classOptionsFor = (current: string): string[] =>
   current && !CLASS_OPTIONS.includes(current) ? [...CLASS_OPTIONS, current] : CLASS_OPTIONS;

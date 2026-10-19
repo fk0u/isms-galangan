@@ -11,7 +11,7 @@
 import { Document, type DocOptions } from "../document.js";
 import { keyValue, paragraph, table, signatures, spacer, callout } from "../blocks.js";
 import { COLOR } from "../theme.js";
-import { companyKop, docTitle, longDate, rupiah, money, L, type Locale } from "./shared.js";
+import { companyKop, docTitle, longDate, shortDate, rupiah, money, L, type Locale } from "./shared.js";
 
 export interface PoInput {
   no: string;
@@ -38,6 +38,8 @@ export interface PoInput {
    *  PO Kecil = Request by, Approved by, Driver, Logistic. Disusun recipe. */
   signers: Array<{ role: string; name: string }>;
   locale?: Locale;
+  /** Jenis PO: "Besar" (komersial lengkap) atau "Kecil" (bon/slip operasional lapangan). */
+  poType?: string;
 }
 
 export function po(input: PoInput, opts: DocOptions = {}): Document {
@@ -48,7 +50,74 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
     ...opts,
   });
 
+  const isPoKecil =
+    input.poType === "Kecil" ||
+    (input.signers.length === 4 && input.signers.some((s) => /driver/i.test(s.role)));
+
   d.add(companyKop());
+
+  if (isPoKecil) {
+    d.add(
+      docTitle({
+        title: L(locale, "PURCHASE ORDER", "PURCHASE ORDER"),
+        ref: `${L(locale, "NO REF", "REF NO")}: ${input.no}`,
+      }),
+    );
+
+    d.add(spacer(1));
+
+    d.add(
+      keyValue({
+        labelW: 32,
+        pairs: [
+          { label: L(locale, "NO REF", "REF NO"), value: input.no, bold: true },
+          { label: L(locale, "NAMA TOKO", "STORE / VENDOR"), value: input.vendorName + (input.vendorAddress && input.vendorAddress !== "-" ? `\n${input.vendorAddress}` : ""), bold: true },
+          { label: L(locale, "TANGGAL", "DATE"), value: shortDate(input.tanggal) },
+          { label: L(locale, "TUJUAN", "PURPOSE"), value: input.projectName || input.notes || "-" },
+        ],
+      }),
+    );
+
+    d.add(spacer(2));
+
+    const rows = input.items.map((item, idx) => [
+      String(idx + 1),
+      money(item.qty),
+      item.unit || "pcs",
+      item.description,
+    ]);
+
+    while (rows.length < 5) {
+      rows.push(["", "", "", ""]);
+    }
+
+    d.add(
+      table({
+        head: [
+          L(locale, "NO", "NO"),
+          L(locale, "JUMLAH", "AMOUNT"),
+          L(locale, "QTY", "UNIT"),
+          L(locale, "DESCRIPTION", "DESCRIPTION"),
+        ],
+        widths: [15, 25, 25, "auto"],
+        align: ["center", "center", "center", "left"],
+        rows,
+      }),
+    );
+
+    d.add(spacer(4));
+    d.add(
+      signatures(
+        input.signers.map((s) => ({
+          role: s.role.toUpperCase(),
+          name: s.name,
+          rows: 5,
+        })),
+      ),
+    );
+
+    return d;
+  }
   d.add(
     docTitle({
       title: L(locale, "PURCHASE ORDER", "PURCHASE ORDER"),

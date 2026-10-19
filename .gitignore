@@ -3,6 +3,10 @@ docs.zip
 screenshots.zip
 screenshots_galangan.zip
 summary-fitur-alur.pdf
+*.docx
+*.xlsx
+*.qlpreview/
+Register New Ship.pdf
 
 # Hanya apps/ yang ditrack; artifacts lokal
 *.local

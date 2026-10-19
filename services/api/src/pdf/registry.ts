@@ -374,6 +374,28 @@ const suratHr: Recipe<SuratHrInput> = {
        kejadian, dan tindakan. Field yang tidak ada tetap tercetak "-"
        supaya surat tidak pernah terlihat lebih lengkap dari isinya. */
     const isi = str(l, "isi");
+    const alamat = str(l, "alamat") !== "-" ? str(l, "alamat") : emp && str(emp, "address", "alamat") !== "-" ? str(emp, "address", "alamat") : undefined;
+    const pob = emp ? str(emp, "pob", "tempatLahir") : "-";
+    const dob = emp ? str(emp, "dob", "tanggalLahir") : "-";
+    const ttl = pob !== "-" || dob !== "-"
+      ? `${pob !== "-" ? pob : ""}${dob !== "-" ? `, ${longDate(dob)}` : ""}`
+      : undefined;
+    const genderRaw = emp ? str(emp, "gender") : "-";
+    const jenisKelamin = genderRaw === "L" ? "Laki-laki" : genderRaw === "P" ? "Perempuan" : genderRaw !== "-" ? genderRaw : undefined;
+    const agama = emp && str(emp, "religion", "agama") !== "-" ? str(emp, "religion", "agama") : "Islam";
+    const maritalRaw = emp ? str(emp, "marital") : "-";
+    const statusKawin = maritalRaw === "TK" ? "Belum Menikah" : maritalRaw === "K" ? "Menikah" : maritalRaw !== "-" ? maritalRaw : undefined;
+    const tanggalMulai = str(l, "startDate", "tanggalMulai") !== "-"
+      ? str(l, "startDate", "tanggalMulai")
+      : emp && str(emp, "join", "joinDate", "lastContractStart") !== "-"
+        ? str(emp, "join", "joinDate", "lastContractStart")
+        : undefined;
+    const tanggalSelesai = str(l, "endDate", "tanggalSelesai") !== "-"
+      ? str(l, "endDate", "tanggalSelesai")
+      : emp && str(emp, "contractEnd") !== "-"
+        ? str(emp, "contractEnd")
+        : undefined;
+
     return {
       no: docNumber(l, "id"),
       tanggal: str(l, "tanggal") !== "-" ? str(l, "tanggal") : today(),
@@ -387,7 +409,14 @@ const suratHr: Recipe<SuratHrInput> = {
       tindakan: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : "-",
       berlakuSampai: str(l, "berlakuSampai") !== "-" ? str(l, "berlakuSampai") : undefined,
       namaPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : SIGNER,
-      jabatanPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "Direktur",
+      jabatanPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "HRD",
+      alamat,
+      tempatTanggalLahir: ttl,
+      jenisKelamin,
+      agama,
+      statusKawin,
+      tanggalMulai,
+      tanggalSelesai,
       kontrak: str(l, "contractNo") !== "-"
         ? {
           nomor: str(l, "contractNo"),
@@ -683,6 +712,7 @@ const poRecipe: Recipe<PoInput> = {
       notes,
       signers: poSigners(p, vendorName, approvals, ctx.locale),
       locale: ctx.locale,
+      poType: str(p, "poType") !== "-" ? str(p, "poType") : undefined,
     };
   },
   assemble: (input) => po(input),
