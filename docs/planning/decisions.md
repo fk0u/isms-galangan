@@ -21,3 +21,17 @@ Bila klien memberi jawaban berbeda nanti, catat sebagai baris baru (jangan hapus
 | Q14 | Alat absensi | Endpoint ingest generik (API key per perangkat) + impor CSV; adapter spesifik merk menyusul. | F3-L-08 |
 | Q15 | Item lama todo5 di luar revisi baru | Tetap dikerjakan bila tidak bertentangan dengan revisi 5–6 Okt; prioritas P2. | `docs/product/requirements-2026-10.md` |
 | Q16 | Repo publik | Ya. Data riil & laporan audit tetap lokal (`.gitignore`). | ADR-0001 |
+
+## Jawaban klien atas catatan 17 Okt (diterima 19 Okt 2026)
+
+| # | Pertanyaan | Keputusan (19 Okt 2026) | Rujukan |
+|---|---|---|---|
+| Q17 | PO Kecil tanpa estimasi harga, padahal nilainya dipakai untuk batas Rp50 jt, cek anggaran, dan hutang otomatis | Field estimasi dihapus dari form PO Kecil. **Nilai diisi dari nota saat barang diterima**; alur pengadaan (batas, anggaran) dan pencatatan keuangan (hutang) tetap berjalan memakai nilai nota itu. | #181 K17-PROC-01 |
+| Q18 | "Estimasi nilai di detail stok" Procurement | Yang dimaksud: field **Estimasi Nilai di form Minta Barang (PR)** - dihapus. | #184 K17-PROC-04 |
+| Q19 | PPN 11% | **Perhitungan tetap efektif 11%** dari total (DPP Nilai Lain 11/12 × 12%); **yang ditampilkan "12%"** (tarif atas DPP). | #187 K17-FIN-02 |
+| Q20 | Urutan 8 tahap Progress | Urutan Quotation → Estimasi → Kontrak → Produksi → Bill → Invoice → Sea Trial + Dock Report → Pelunasan + Handover **diterapkan pada form proyek baru**. Riwayat progress lama tidak dihapus/diubah tanpa mekanisme migrasi yang aman (pemetaan, cadangan, bisa dibatalkan). | #173 K17-PM-10, #164 |
+| Q21 | Penanda tangan PDF PO | PO Besar 2 kolom: **Supplier** dan **Direktur**. PO Kecil 4 kolom: **Request by, Approved by, Driver, Logistic**. Nama penanda tangan **diisi saat akan ekspor PDF** (dinamis), untuk PO Besar maupun Kecil. | #182 K17-PROC-02 |
+| Q22 | Modul Fee Project | Fee untuk **pihak ketiga**; dasar hitung **persentase atau nominal dari nilai proyek**; **dibayar setelah proyek selesai**. | #178 K17-PM-15 |
+| Q23 | Pemicu invoice otomatis dari PO | **Saat PO disetujui.** | #185 K17-PROC-05 |
+| Q24 | Transaksi yang menerbitkan voucher jurnal | **Semua transaksi yang berdampak ke Keuangan & Billing.** | #193 K17-FIN-08 |
+| Q25 | Aturan potongan kasbon Rp500 rb / Rp1 jt | Dipotong otomatis lewat gaji bulanan; **nominal dipilih lewat dropdown (Rp500.000 / Rp1.000.000) saat mencatat kasbon** di Payroll. | #196 K17-HR-03 |
