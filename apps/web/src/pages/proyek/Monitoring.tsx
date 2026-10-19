@@ -17,7 +17,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import { fmtBulan, fmtMiliar, fmtRupiah, todayISO } from "../../utils/format";
 import { exportExcel } from "../../utils/export";
-import { TAHAP, tahapLabel, tahapOf, isOverdue } from "./Projects";
+import { tahapKolom, tahapLabel, tahapOf, isOverdue } from "./Projects";
 import { canonPrioritas } from "../../utils/scope";
 import { projectProgressOf } from "../../utils/projectProgress";
 import { useAuth, hasPermission } from "../../auth/auth";
@@ -82,7 +82,7 @@ export default function Monitoring() {
   const scrollKanbanBy = (dx: number) => {
     topScrollRef.current?.scrollBy({ left: dx, behavior: "smooth" });
   };
-  const kanbanWidth = TAHAP.length * 272;
+  
 
   /* Hanya SATU scrollbar kustom yang tampil pada satu waktu.
      Area kanban punya dua: bar atas (sticky top-14) dan bar bawah (sticky
@@ -171,6 +171,8 @@ export default function Monitoring() {
 
   const attentionPids = new Set(attention.map((a) => a.pid));
   const pipeline = mode === "Semua" ? filtered : filtered.filter((p) => attentionPids.has(p.id));
+  const kanbanCols = tahapKolom(pipeline);
+  const kanbanWidth = kanbanCols.length * 272;
 
   const delayDaysOf = (p: StoreItem): number | null =>
     delayDaysShared(p.end, todayISO(), isLate(p));
@@ -281,7 +283,7 @@ export default function Monitoring() {
           supaya tidak jadi baris ketiga; scrolling tetap jalan lewat roda,
           swipe, tombol, dan bar kustom. */}
       <div ref={topScrollRef} onScroll={() => syncScroll(topScrollRef.current, topBarRef.current, barScrollRef.current)} className="hide-native-bar flex gap-4 overflow-x-auto pb-2">
-        {TAHAP.map((t) => {
+        {kanbanCols.map((t) => {
           const cols = pipeline.filter((p) => tahapOf(p) === t);
           return (
             <div key={t} className="w-64 shrink-0 rounded-2xl border border-steel-200 bg-surface p-3">

@@ -62,7 +62,7 @@ import { PhotoUploader } from "../../components/PhotoUploader";
 import type { PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
 import { PRIORITAS } from "./Projects";
-import { TAHAP, tahapOf, hasContract, isOverdue, tahapLabel } from "./Projects";
+import { tahapListOf, tahapAkhirOf, tahapOf, hasContract, isOverdue, tahapLabel } from "./Projects";
 import {
   PLANNING_SUBCLASSES,
   getStageTransitionBlockers,
@@ -256,7 +256,7 @@ export default function ProjectDetail() {
     if (next === project.status) return;
     if (next === "Selesai" && project.status !== "Selesai") {
       // Aturan silang tahap×status: Selesai wajib tahap Handover.
-      if (tahapOf(project) !== "Handover") { toast("Proyek hanya bisa Selesai pada tahap Handover", "info"); return; }
+      if (tahapOf(project) !== tahapAkhirOf(project)) { toast(`Proyek hanya bisa Selesai pada tahap ${tahapLabel(tahapAkhirOf(project), locale)}`, "info"); return; }
       const block = closeBlockReason();
       if (block) { toast(`Tutup proyek ditolak: ${block}`, "info"); return; }
       const openNcr = (data.ncr ?? []).filter((n) => n.project === pid && n.status !== "Tertutup");
@@ -322,11 +322,11 @@ const confirmStatus = async () => {
   const confirmTahapMove = async () => {
     if (!tahapMove) return;
     if (!tahapReason.trim()) { toast(S.detToastReasonReq, "info"); return; }
-    const idx = TAHAP.indexOf(tahapOf(project));
-    const to = TAHAP[idx + tahapMove.dir];
+    const idx = tahapListOf(project).indexOf(tahapOf(project));
+    const to = tahapListOf(project)[idx + tahapMove.dir];
     if (!to) { setTahapMove(null); return; }
     if (tahapMove.dir === 1) {
-      const from = TAHAP[idx];
+      const from = tahapListOf(project)[idx];
       const blockers = getStageTransitionBlockers(from, to, project, data, locale);
       if (blockers.length > 0) {
         toast(`${blockers[0].name}: ${blockers[0].statusReason}`, "info");
@@ -1397,27 +1397,27 @@ const createWarranty = async (wbsTask?: string) => {
 
       {/* Stepper tahap kaku: posisi + geser via modal beralasan. */}
       <div className="mt-4 flex flex-wrap items-center gap-1.5" role="group" aria-label="Tahap proyek">
-        {TAHAP.map((t, i) => {
-          const cur = TAHAP.indexOf(tahapOf(project));
+        {tahapListOf(project).map((t, i) => {
+          const cur = tahapListOf(project).indexOf(tahapOf(project));
           const done = i < cur;
           const on = i === cur;
-          const label = t === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : t;
+          const label = tahapLabel(t, locale);
           return (
             <span key={t} className="flex items-center gap-1.5">
               <span className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${on ? "bg-navy-700 text-white" : done ? "bg-emerald-100 text-emerald-700" : "bg-steel-100 text-steel-500"}`}>
                 {i + 1}. {label}
               </span>
-              {i < TAHAP.length - 1 && <span aria-hidden className="text-steel-300">→</span>}
+              {i < tahapListOf(project).length - 1 && <span aria-hidden className="text-steel-300">→</span>}
             </span>
           );
         })}
         {canAutoWrite ? (
           <span className="ml-1 flex items-center gap-1.5">
-            <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) <= 0} onClick={() => { setTahapMove({ dir: -1 }); setTahapReason(""); }}>{S.detTahapBack}</button>
-            <button className="btn-secondary px-2 py-1 text-xs" disabled={TAHAP.indexOf(tahapOf(project)) >= TAHAP.length - 1} onClick={() => { setTahapMove({ dir: 1 }); setTahapReason(""); }}>{S.detTahapNext}</button>
+            <button className="btn-secondary px-2 py-1 text-xs" disabled={tahapListOf(project).indexOf(tahapOf(project)) <= 0} onClick={() => { setTahapMove({ dir: -1 }); setTahapReason(""); }}>{S.detTahapBack}</button>
+            <button className="btn-secondary px-2 py-1 text-xs" disabled={tahapListOf(project).indexOf(tahapOf(project)) >= tahapListOf(project).length - 1} onClick={() => { setTahapMove({ dir: 1 }); setTahapReason(""); }}>{S.detTahapNext}</button>
             {(() => {
-              const curIdx = TAHAP.indexOf(tahapOf(project));
-              const nextStage = curIdx < TAHAP.length - 1 ? TAHAP[curIdx + 1] : null;
+              const curIdx = tahapListOf(project).indexOf(tahapOf(project));
+              const nextStage = curIdx < tahapListOf(project).length - 1 ? tahapListOf(project)[curIdx + 1] : null;
               const nxtBlockers = nextStage ? getStageTransitionBlockers(tahapOf(project), nextStage, project, data, locale) : [];
               if (nxtBlockers.length === 0) return null;
               return (
@@ -1433,7 +1433,7 @@ const createWarranty = async (wbsTask?: string) => {
           </span>
         )}
         <span className="ml-2 text-xs font-medium text-steel-500">
-          Posisi tahap {TAHAP.indexOf(tahapOf(project)) + 1}/{TAHAP.length}: {tahapOf(project) === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : tahapOf(project)} · Status {project.status}
+          Posisi tahap {tahapListOf(project).indexOf(tahapOf(project)) + 1}/{tahapListOf(project).length}: {tahapLabel(tahapOf(project), locale)} · Status {project.status}
         </span>
         {project.quotationId && !hasContract(project, data.contracts ?? []) ? (
           <Badge tone="amber">Belum ada kontrak</Badge>
@@ -3104,7 +3104,7 @@ const createWarranty = async (wbsTask?: string) => {
 
       {/* Modal geser tahap (kaku: E1 gate + alasan wajib + rincian blocker) */}
       {(() => {
-        const destTahap = tahapMove ? TAHAP[TAHAP.indexOf(tahapOf(project)) + tahapMove.dir] : "";
+        const destTahap = tahapMove ? tahapListOf(project)[tahapListOf(project).indexOf(tahapOf(project)) + tahapMove.dir] : "";
         const moveBlockers = tahapMove && tahapMove.dir === 1 && destTahap
           ? getStageTransitionBlockers(tahapOf(project), destTahap, project, data, locale)
           : [];

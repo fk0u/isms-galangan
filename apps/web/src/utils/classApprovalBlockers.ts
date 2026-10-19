@@ -70,7 +70,8 @@ export function getStageTransitionBlockers(
   const stages = (project.designStages ?? []) as { name: string; status: string }[];
 
   // Gate Class Approval (Desain/Perencanaan -> Produksi)
-  if ((from === "Desain" || from === "Perencanaan") && to === "Produksi") {
+  // Skema tahap baru (K17-PM-10) masuk Produksi langsung dari Kontrak.
+  if ((from === "Desain" || from === "Perencanaan" || from === "Kontrak") && to === "Produksi") {
     const classApproved = isClassApprovalSatisfied(project, data);
 
     if (!classApproved) {
@@ -205,7 +206,7 @@ export function getStageTransitionBlockers(
   }
 
   // Gate Handover
-  if (to === "Handover") {
+  if (to === "Handover" || to === "Pelunasan + Handover") {
     const undoneWbs = wbs.filter((w) => Number(w.progress ?? 0) < 100);
     if (undoneWbs.length > 0) {
       blockers.push({
