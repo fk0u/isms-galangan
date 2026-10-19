@@ -381,7 +381,7 @@ export default function Procurement() {
 
   /* ---- PO Kecil ---- */
   const [showSmall, setShowSmall] = useState(false);
-  const [smallForm, setSmallForm] = useState({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", notaUrl: "", override: false, overrideReason: "" });
+  const [smallForm, setSmallForm] = useState({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", eta: "", project: "", vessel: "", nota: "", notaUrl: "" });
   const [smallProofUploading, setSmallProofUploading] = useState(false);
   const [smallProofError, setSmallProofError] = useState<string | null>(null);
   const [smallProofFailedFile, setSmallProofFailedFile] = useState<File | null>(null);
@@ -423,6 +423,9 @@ export default function Procurement() {
   const [recvNoFaktur, setRecvNoFaktur] = useState("");
   const [recvTglFaktur, setRecvTglFaktur] = useState("");
   const [recvDendaPct, setRecvDendaPct] = useState("0.1");
+  /* K17-PROC-01: nilai nota PO Kecil diisi saat terima barang. */
+  const [recvNotaAmount, setRecvNotaAmount] = useState("");
+  const [recvOverReason, setRecvOverReason] = useState("");
   const [inventoryLookupRows, setInventoryLookupRows] = useState<StoreItem[]>([]);
   const [retPo, setRetPo] = useState<StoreItem | null>(null);
   const [retQty, setRetQty] = useState("");
@@ -683,9 +686,6 @@ export default function Procurement() {
   const bigTotal = lineTotal(bigLines);
   const bigBudget = budgetInfo(bigForm.project, bigTotal);
   const bigOver = bigBudget !== null && bigBudget.aktif + bigTotal > bigBudget.sisa;
-  const smallAmount = Number(smallForm.qty || 0) * parseRupiah(smallForm.price || "0");
-  const smallBudget = budgetInfo(smallForm.project, smallAmount);
-  const smallOver = smallBudget !== null && smallBudget.aktif + smallAmount > smallBudget.sisa;
 
   /* Kas kecil workshop: alat bantu sesi (state lokal), bukan ledger permanen. */
   const bulanIni = todayISO().slice(0, 7);
@@ -814,18 +814,14 @@ export default function Procurement() {
     if (!smallForm.requester.trim()) { toast(S.tPeminta, "info"); return; }
     if (!smallForm.item.trim()) { toast(S.tItemButuh2, "info"); return; }
     const qty = Number(smallForm.qty);
-    const price = parseRupiah(smallForm.price);
     if (!qty || qty <= 0) { toast(S.tQtyPos, "info"); return; }
-    if (!price || price <= 0) { toast(S.tEstHarga, "info"); return; }
     if (!smallForm.unit.trim()) { toast(S.tSatuan, "info"); return; }
     if (!smallForm.eta) { toast(S.tEtaWajib, "info"); return; }
     if (smallForm.project && !smallForm.vessel.trim()) { toast(S.tProyekUtk, "info"); return; }
-    const amount = qty * price;
-    if (amount > PO_KECIL_LIMIT) { toast(S.tOverKecil, "info"); return; }
-    if (smallOver && (!smallForm.override || !smallForm.overrideReason.trim())) {
-      toast(S.tOverBudget, "info");
-      return;
-    }
+    /* K17-PROC-01 (Q17): PO Kecil diajukan tanpa harga. Nilai diambil dari
+       nota saat barang diterima (confirmRecv) - di sana batas PO Kecil, cek
+       anggaran proyek, harga stok, dan hutang otomatis memakai nilai nota. */
+    const amount = 0;
     await add("purchaseOrders", {
       poType: "Kecil", item: smallForm.item.trim(), workshop: smallForm.workshop.trim(),
       requester: smallForm.requester.trim(), vendor: "Workshop Internal",
@@ -835,12 +831,12 @@ export default function Procurement() {
       notaUrl: smallForm.notaUrl?.trim() || "",
       buktiUrl: smallForm.notaUrl?.trim() || "",
       docNo: sbPoNumber(nextPoSeq()),
-      lines: [{ name: smallForm.item.trim(), qty, unit: smallForm.unit.trim(), price, spec: smallForm.spec.trim(), need: smallForm.need.trim() }],
-      revisi: "", amendments: [], overrideReason: smallOver ? smallForm.overrideReason.trim() : "",
+      lines: [{ name: smallForm.item.trim(), qty, unit: smallForm.unit.trim(), price: 0, spec: smallForm.spec.trim(), need: smallForm.need.trim() }],
+      revisi: "", amendments: [], overrideReason: "",
     }, { action: "membuat PO Kecil", module: "Procurement" });
     toast(S.tSmallCreated);
     setShowSmall(false);
-    setSmallForm({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", price: "", eta: "", project: "", vessel: "", nota: "", notaUrl: "", override: false, overrideReason: "" });
+    setSmallForm({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", eta: "", project: "", vessel: "", nota: "", notaUrl: "" });
     setSmallProofUploading(false);
     setSmallProofError(null);
     setSmallProofFailedFile(null);
@@ -1178,6 +1174,8 @@ export default function Procurement() {
     setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
     setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : todayISO());
     setRecvDendaPct("0.1");
+    setRecvNotaAmount(Number(po.amount || 0) > 0 ? String(Number(po.amount)) : "");
+    setRecvOverReason("");
   };
 
   const recvLate = recvPo ? lateDaysOf(recvPo) : 0;
@@ -1219,6 +1217,20 @@ export default function Procurement() {
     if (isBig && (!recvNoFaktur.trim() || !recvTglFaktur)) { toast(S.tFakturWajib, "info"); return; }
     if (!isBig && !recvNoFaktur.trim()) { toast(S.tNotaWajib, "info"); return; }
     if (totalRecvQty <= 0) { toast(S.tMinOneItem, "info"); return; }
+    /* PO Kecil: nilai PO = nilai nota (Q17). Batas PO Kecil & anggaran proyek
+       dicek di sini karena saat pengajuan harga belum diketahui. */
+    const poAmount = isBig ? Number(recvPo.amount || 0) : parseRupiah(recvNotaAmount);
+    let overNote = "";
+    if (!isBig) {
+      if (!poAmount || poAmount <= 0) { toast(S.tNotaNilai, "info"); return; }
+      if (poAmount > PO_KECIL_LIMIT) { toast(S.tOverKecil, "info"); return; }
+      const proj = String(recvPo.project ?? "");
+      const bi = proj && proj !== "-" ? budgetInfo(proj, poAmount, String(recvPo.id)) : null;
+      if (bi && bi.aktif + poAmount > bi.sisa) {
+        if (!recvOverReason.trim()) { toast(S.tRecvOverBudget.replace("{n}", fmtRupiah(bi.sisa)), "info"); return; }
+        overNote = recvOverReason.trim();
+      }
+    }
 
     for (const rl of recvLines) {
       const q = Number(rl.qtyToReceive);
@@ -1234,7 +1246,7 @@ export default function Procurement() {
       let dendaRp = prevDenda;
       const pct = Math.min(5, Math.max(0, Number(recvDendaPct) || 0));
       if (prevDenda <= 0 && late > 0 && pct > 0) {
-        dendaRp = Math.round(Math.min(Number(recvPo.amount || 0) * 0.05, Number(recvPo.amount || 0) * (pct / 100) * late));
+        dendaRp = Math.round(Math.min(poAmount * 0.05, poAmount * (pct / 100) * late));
       }
       const dendaBaru = Math.max(0, dendaRp - prevDenda);
 
@@ -1246,6 +1258,18 @@ export default function Procurement() {
           if (!boundItemId) {
             const invItem = await ensureInventoryRow("", rl.name);
             boundItemId = invItem ? String(invItem.id) : "";
+            /* PO Kecil memakai "item bebas" yang sering belum ada di katalog;
+               server menolak penerimaan tanpa item inventori, jadi PO Kecil tak
+               pernah bisa diterima. Item dibuat di katalog (stok 0, harga nota)
+               lalu stok masuk lewat penerimaan ini - tetap tercatat & terlacak. */
+            if (!boundItemId && !isBig && rl.name.trim()) {
+              const created = await add("inventory", {
+                name: rl.name.trim(), category: "Lainnya", unit: rl.unit || "pcs", stock: 0, minStock: 0,
+                cost: Number(recvPo.qty || 0) > 0 ? Math.round(poAmount / Number(recvPo.qty)) : poAmount,
+                matType: "habis-pakai", sku: "", warehouse: "", rack: "", bin: "", batches: [], reserved: [],
+              }, { action: "menambah item katalog dari PO Kecil", target: String(recvPo.id), module: "Procurement" });
+              boundItemId = String(created.id);
+            }
           }
           finalLines.push({
             name: rl.name,
@@ -1255,6 +1279,16 @@ export default function Procurement() {
         }
       }
 
+      if (!isBig && poAmount !== Number(recvPo.amount || 0)) {
+        // Harga satuan baris ikut nota supaya nilai stok (avg cost) di server benar.
+        const q = Number(recvPo.qty || 0) > 0 ? Number(recvPo.qty) : 1;
+        const lines = (Array.isArray(recvPo.lines) ? (recvPo.lines as Record<string, unknown>[]) : []).map((l) => ({ ...l, price: Math.round((poAmount / q) * 100) / 100 }));
+        await update("purchaseOrders", String(recvPo.id), {
+          amount: poAmount, notaAmount: poAmount, lines,
+          ...(overNote ? { overrideReason: overNote } : {}),
+        });
+        log("nilai nota PO Kecil", `${recvPo.id}: ${fmtRupiah(poAmount)}${overNote ? ` (melebihi anggaran: ${overNote})` : ""}`, "Procurement");
+      }
       const outcome = await poActions.receive(recvPo, {
         qty: totalRecvQty,
         itemId: finalLines[0]?.itemId || String(recvPo.itemId || ""),
@@ -1268,8 +1302,7 @@ export default function Procurement() {
 
       const poKey = recvPo.docNo ? `${recvPo.id} / ${recvPo.docNo}` : String(recvPo.id);
       const apExists = (await freshPayables(data.payables ?? [])).some((a) => String(a.po ?? "") === poKey);
-      if (!apExists && Number(recvPo.amount || 0) > 0) {
-        const poAmount = Number(recvPo.amount || 0);
+      if (!apExists && poAmount > 0) {
         const orderedQty = Number(recvPo.qty || 0);
         const apAmt = orderedQty > 0 ? Math.round((poAmount * totalRecvQty) / orderedQty) : poAmount;
         const apTotal = apAmt + dendaBaru;
@@ -1828,7 +1861,7 @@ const sparkVendors = useMemo(() => {
                               <p className="truncate" title={String(po.vendor ?? "-")}>{po.vendor ?? "-"}</p>
                               {venCatOf(String(po.vendor ?? "")) !== "" && <p className="text-xs text-steel-400">{venCatOf(String(po.vendor ?? ""))}</p>}
                             </td>
-                            <td className="td font-semibold">{fmtRupiah(po.amount)}</td>
+                            <td className="td font-semibold">{Number(po.amount || 0) > 0 ? fmtRupiah(po.amount) : <span className="text-xs font-normal text-steel-500">{S.menungguNota}</span>}</td>
                             <td className="td">
                               <Badge tone="navy">{levelOf(Number(po.amount || 0), APPROVE_PO_LIMIT)}</Badge>
                               <p className="mt-0.5 text-xs text-steel-400">{S.tahap.replace("{a}", String(done.length)).replace("{b}", String(need.length))}</p>
@@ -2622,7 +2655,6 @@ const sparkVendors = useMemo(() => {
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.estHarga}><MoneyInput className="input" value={smallForm.price} onChange={(v) => setSmallForm({ ...smallForm, price: v })} /></Field>
 
           {/* No. Nota & Bukti Transaksi */}
           <div className="rounded-xl border border-steel-200 bg-steel-50/60 p-3 space-y-3">
@@ -2735,16 +2767,7 @@ const sparkVendors = useMemo(() => {
             </Field>
           </FormGrid>
           <Field label={S.fUtk} hint={S.hintWajibProyek}><input className="input" value={smallForm.vessel} onChange={(e) => setSmallForm({ ...smallForm, vessel: e.target.value })} placeholder={S.phUtkStok} /></Field>
-          <p className="text-sm font-semibold text-navy-900">{S.totalBatas.replace("{a}", fmtRupiah(smallAmount)).replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}</p>
-          {smallOver && smallBudget && (
-            <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-              {S.overSmall.replace("{n}", fmtRupiah(smallBudget.sisa))}
-              <label className="mt-2 flex items-center gap-2 font-medium">
-                <input type="checkbox" checked={smallForm.override} onChange={(e) => setSmallForm({ ...smallForm, override: e.target.checked })} /> {S.overrideAlasan}
-              </label>
-              <input className="input mt-2" placeholder={S.phOverride} value={smallForm.overrideReason} onChange={(e) => setSmallForm({ ...smallForm, overrideReason: e.target.value })} />
-            </div>
-          )}
+          <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">{S.smallValueHint.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}</p>
         </div>
       </Modal>
 
@@ -2892,13 +2915,32 @@ const sparkVendors = useMemo(() => {
 
           {/* 3. FAKTUR PAJAK / SURAT JALAN */}
           <FormGrid>
-            <Field label={S.noFaktur} hint={recvPo?.poType === "Kecil" ? S.hintOpsKecil : S.hintWajibBesar}>
+            <Field label={recvPo?.poType === "Kecil" ? S.nota : S.noFaktur} hint={recvPo?.poType === "Kecil" ? undefined : S.hintWajibBesar}>
               <input className="input font-mono" value={recvNoFaktur} onChange={(e) => setRecvNoFaktur(e.target.value)} placeholder={S.phFaktur} />
             </Field>
             <Field label={S.tglFaktur} hint={recvPo?.poType === "Kecil" ? S.hintOpsKecil : S.hintWajibBesar}>
               <input type="date" className="input" value={recvTglFaktur} onChange={(e) => setRecvTglFaktur(e.target.value)} />
             </Field>
           </FormGrid>
+          {recvPo?.poType === "Kecil" && (() => {
+            const val = parseRupiah(recvNotaAmount);
+            const proj = String(recvPo.project ?? "");
+            const bi = val > 0 && proj && proj !== "-" ? budgetInfo(proj, val, String(recvPo.id)) : null;
+            const over = bi !== null && bi.aktif + val > bi.sisa;
+            return (
+              <div className="space-y-2">
+                <Field label={S.notaNilai} hint={S.hintNotaNilai.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}>
+                  <MoneyInput className="input" value={recvNotaAmount} onChange={(v) => setRecvNotaAmount(v)} />
+                </Field>
+                {over && bi && (
+                  <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {S.overSmall.replace("{n}", fmtRupiah(bi.sisa))}
+                    <input className="input mt-2" placeholder={S.phOverride} value={recvOverReason} onChange={(e) => setRecvOverReason(e.target.value)} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {recvPo && recvLate > 0 && (
             <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">

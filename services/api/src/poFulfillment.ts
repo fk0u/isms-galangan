@@ -117,7 +117,12 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
     const row = await loadPo(id);
     const po = parse(row);
     const st = String(po.status ?? "");
-    if (!RECEIVABLE.has(st)) throw new PoError(409, `PO berstatus ${st}: belum/tidak bisa diterima`, "INVALID_TRANSITION");
+    /* PO Kecil tidak melewati tahap kirim (Diajukan → Disetujui → Diterima):
+       barang dibeli langsung oleh workshop, jadi "Disetujui" sudah bisa diterima.
+       Tanpa ini PO Kecil tidak pernah bisa diterima (dan nilai nota - K17-PROC-01 -
+       tidak pernah tercatat). */
+    const receivable = RECEIVABLE.has(st) || (String(po.poType ?? "") === "Kecil" && st === "Disetujui");
+    if (!receivable) throw new PoError(409, `PO berstatus ${st}: belum/tidak bisa diterima`, "INVALID_TRANSITION");
 
     const now = new Date().toISOString();
     const fulfilled: FulfillResult[] = [];
