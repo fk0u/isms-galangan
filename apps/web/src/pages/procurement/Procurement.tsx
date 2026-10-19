@@ -112,6 +112,12 @@ const RFQ_STAGE_COLOR: Record<string, string> = {
 
 const PR_PENDING = ["Draft", "Menunggu Approval", "RFQ", "Diajukan"];
 
+/* K17-PROC-04 (Q18): form Minta Barang tidak lagi meminta estimasi nilai.
+   Nilai PR dihitung dari harga katalog × qty - sama seperti PR otomatis dari
+   permintaan material proyek di server - agar pagu RFQ, konsolidasi PO, dan
+   cek anggaran tetap punya angka. Harga 0 bila katalog belum punya harga. */
+const catalogUnitCost = (item: StoreItem | null): number =>
+  Number(item?.cost ?? item?.price ?? item?.unitPrice ?? 0) || 0;
 const lineTotal = (lines: { qty: string | number; price: string | number }[]): number =>
   lines.reduce((s, l) => s + Number(l.qty || 0) * parseRupiah(String(l.price || 0)), 0);
 
@@ -391,7 +397,7 @@ export default function Procurement() {
 
   /* ---- PR ---- */
   const [showPr, setShowPr] = useState(false);
-  const [prForm, setPrForm] = useState({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+  const [prForm, setPrForm] = useState({ item: "", itemId: "", by: "", qty: "1", unit: "pcs", project: "" });
   const [prItemSearch, setPrItemSearch] = useState("");
   const [prSelectedItem, setPrSelectedItem] = useState<StoreItem | null>(null);
   const [konsIds, setKonsIds] = useState<string[]>([]);
@@ -453,8 +459,8 @@ export default function Procurement() {
   const [editProofError, setEditProofError] = useState<string | null>(null);
   const [editProofFailedFile, setEditProofFailedFile] = useState<File | null>(null);
   const [editPr, setEditPr] = useState<StoreItem | null>(null);
-  const [prEditForm, setPrEditForm] = useState<{ item: string; by: string; amount: string; need: string }>({
-    item: "", by: "", amount: "", need: "",
+  const [prEditForm, setPrEditForm] = useState<{ item: string; by: string; need: string }>({
+    item: "", by: "", need: "",
   });
 
   /* ---- Kontrak payung ---- */
@@ -472,7 +478,7 @@ export default function Procurement() {
   }, [invList, inventoryLookupRows, inBranch]);
 
   const openPrModal = useCallback(() => {
-    setPrForm({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" });
+    setPrForm({ item: "", itemId: "", by: "", qty: "1", unit: "pcs", project: "" });
     setPrSelectedItem(null);
     setPrItemSearch("");
     setShowPr(true);
@@ -1421,7 +1427,6 @@ export default function Procurement() {
     setPrEditForm({
       item: String(r.item ?? ""),
       by: String(r.by ?? ""),
-      amount: String(Number(r.amount || 0)),
       need: String(r.needDate ?? ""),
     });
   };
@@ -1432,16 +1437,10 @@ export default function Procurement() {
       toast(locale === "en" ? "Item is required" : "Nama barang wajib diisi", "info");
       return;
     }
-    const amount = parseRupiah(prEditForm.amount);
-    if (!Number.isFinite(amount) || amount < 0) {
-      toast(locale === "en" ? "Amount must be a valid number" : "Nilai harus angka valid", "info");
-      return;
-    }
     try {
       await update("requisitions", String(editPr.id), {
         item: prEditForm.item.trim(),
         by: prEditForm.by.trim(),
-        amount,
         ...(prEditForm.need !== "" ? { needDate: prEditForm.need } : {}),
       });
       log("mengubah PR", `${editPr.id} - ${prEditForm.item.trim()}`, "Procurement");
@@ -2348,9 +2347,6 @@ const sparkVendors = useMemo(() => {
             <Field label={S.peminta}>
               <input className="input" value={prEditForm.by} onChange={(e) => setPrEditForm({ ...prEditForm, by: e.target.value })} />
             </Field>
-            <Field label={`${S.nilai} ${locale === "en" ? "(estimated)" : "(estimasi)"}`}>
-              <MoneyInput className="input" value={prEditForm.amount} onChange={(v) => setPrEditForm({ ...prEditForm, amount: v })} />
-            </Field>
             <Field label={locale === "en" ? "Needed by" : "Dibutuhkan pada"}>
               <input type="date" className="input" value={prEditForm.need} onChange={(e) => setPrEditForm({ ...prEditForm, need: e.target.value })} />
             </Field>
@@ -3149,13 +3145,12 @@ const sparkVendors = useMemo(() => {
         footer={<><button className="btn-secondary" onClick={() => setShowPr(false)}>{S.btnBatal}</button><button className="btn-primary" onClick={async () => {
           try {
           if (!prForm.item.trim() || !prForm.itemId) { toast(S.hintPilihDariKatalog, "info"); return; }
-          if (!parseRupiah(prForm.amount) || parseRupiah(prForm.amount) <= 0) { toast(S.tEstPos, "info"); return; }
           const prQty = Number(prForm.qty || 0);
           if (!prQty || prQty <= 0) { toast(S.tQtyPos, "info"); return; }
           if (!prForm.unit.trim()) { toast(S.tSatuan, "info"); return; }
-          const created = await add("requisitions", { item: prForm.item.trim(), itemId: prForm.itemId, by: prForm.by.trim() || (user?.name || "Anda"), amount: parseRupiah(prForm.amount), qty: prQty, unit: prForm.unit.trim(), project: prForm.project || "-", vessel: prForm.project ? String(data.projects.find((p) => p.id === prForm.project)?.vessel || "") : "", status: "Menunggu Approval" },
+          const created = await add("requisitions", { item: prForm.item.trim(), itemId: prForm.itemId, by: prForm.by.trim() || (user?.name || "Anda"), amount: Math.round(catalogUnitCost(prSelectedItem) * prQty), qty: prQty, unit: prForm.unit.trim(), project: prForm.project || "-", vessel: prForm.project ? String(data.projects.find((p) => p.id === prForm.project)?.vessel || "") : "", status: "Menunggu Approval" },
             { action: "mengajukan PR", module: "Procurement" });
-          toast(S.tPrDiajukan.replace("{n}", created.id)); setShowPr(false); setPrForm({ item: "", itemId: "", by: "", amount: "", qty: "1", unit: "pcs", project: "" }); setPrSelectedItem(null); setPrItemSearch("");
+          toast(S.tPrDiajukan.replace("{n}", created.id)); setShowPr(false); setPrForm({ item: "", itemId: "", by: "", qty: "1", unit: "pcs", project: "" }); setPrSelectedItem(null); setPrItemSearch("");
           } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
         }}>{S.btnAjukan}</button></>}>
         <div className="space-y-3">
@@ -3209,7 +3204,6 @@ const sparkVendors = useMemo(() => {
                           item: String(item.name ?? ""),
                           itemId: String(item.id ?? ""),
                           unit: String(item.unit ?? prev.unit ?? "pcs"),
-                          ...(item.cost && !prev.amount ? { amount: String(item.cost) } : {}),
                         }));
                         setPrItemSearch("");
                       }}
@@ -3248,7 +3242,6 @@ const sparkVendors = useMemo(() => {
           )}
           <FormGrid>
             <Field label={S.pemohon}><input className="input" value={prForm.by} onChange={(e) => setPrForm({ ...prForm, by: e.target.value })} placeholder={S.phPeminta} /></Field>
-            <Field label={S.estNilai}><MoneyInput className="input" value={prForm.amount} onChange={(v) => setPrForm({ ...prForm, amount: v })} /></Field>
           </FormGrid>
           <FormGrid>
             <Field label={S.qty}><NumInput min={1} className="input" value={prForm.qty} onChange={(e) => setPrForm({ ...prForm, qty: e.target.value })} /></Field>
