@@ -56,7 +56,7 @@ import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { getSetting } from "../../utils/settings";
 import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
-import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT } from "../../utils/sb";
+import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets } from "../../utils/export";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
@@ -1558,11 +1558,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     const pphRate = getSetting(data, "PPH23_RATE", 2);
     // PPN Keluaran memakai ppnAmt HISTORIS per invoice (0 valid untuk SKDT/
     // retensi). Hanya baris lama tanpa ppnAmt yang dihitung ulang - ganti
-    // tarif di Pengaturan tidak menulis ulang riwayat.
+    // tarif di Pengaturan tidak menulis ulang riwayat. Baris lama itu dihitung
+    // dengan rumus invoice yang sama: tarif tampil 12% × DPP (11/12 total) =
+    // efektif 11% dari total (Q19), bukan 12% × total.
     const hasStored = (i: StoreItem): boolean =>
       i.ppnAmt !== undefined && i.ppnAmt !== null && String(i.ppnAmt) !== "";
     const ppnKeluar = invLunas.reduce(
-      (s, i) => s + (hasStored(i) ? Math.round(num(i.ppnAmt)) : Math.round((invNeto(i) * ppnRate) / 100)),
+      (s, i) => s + (hasStored(i) ? Math.round(num(i.ppnAmt)) : Math.round((invNeto(i) * DPP_FACTOR * ppnRate) / 100)),
       0,
     );
     return {
@@ -2964,7 +2966,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     const rows: unknown[][] = [
       ["SPT Ringkas", activeTax.period, `Status: ${activeTax.status}`],
       ["Jenis", "Dasar", "Tarif", "Nilai (Rp)"],
-      ["PPN Keluaran", taxCalc.invBase, `${taxCalc.ppnRate}%`, shown.ppnKeluar],
+      ["PPN Keluaran", taxCalc.invBase, `${taxCalc.ppnRate}% × DPP 11/12`, shown.ppnKeluar],
       ["PPN Masukan", taxCalc.apBase, `${taxCalc.ppnRate}%`, shown.ppnMasuk],
       ["PPh 23", taxCalc.apBase, `${taxCalc.pphRate}%`, shown.pph23],
       ["PPh 21", "Total payroll", "-", shown.pph21],
@@ -4479,7 +4481,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <div className="space-y-4">
               <CardHeader
                 title={S.taxTitle}
-                subtitle={S.taxSub.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", String(taxCalc.pphRate))}
+                subtitle={S.taxSub.replaceAll("{a}", String(taxCalc.ppnRate)).replaceAll("{b}", String(taxCalc.pphRate))}
               />
               <div className="flex flex-wrap items-end gap-2">
                 <Field label={S.colPeriode}>
@@ -4544,7 +4546,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {[
-                    { key: "ppnKeluar" as const, label: S.ppnOut, value: fmtRupiah(taxShown.ppnKeluar), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.invBase)) },
+                    { key: "ppnKeluar" as const, label: S.ppnOut, value: fmtRupiah(taxShown.ppnKeluar), hint: S.ppnOutDppHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.invBase)) },
                     { key: "ppnMasuk" as const, label: S.ppnIn, value: fmtRupiah(taxShown.ppnMasuk), hint: S.ppnOutHint.replace("{a}", String(taxCalc.ppnRate)).replace("{b}", fmtRupiah(taxCalc.apBase)) },
                     { key: "pph23" as const, label: S.pph23, value: fmtRupiah(taxShown.pph23), hint: S.pph23Hint.replace("{a}", String(taxCalc.pphRate)) },
                     { key: "pph21" as const, label: S.pph21, value: fmtRupiah(taxShown.pph21), hint: S.payrollHint.replace("{a}", activePeriod) },
@@ -4934,7 +4936,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             </div>
             <p className="mb-2 rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
               Jasa {fmtRupiah(sbPreview.jasa)} + Material {fmtRupiah(sbPreview.material)} = {fmtRupiah(sbPreview.total)}
-              {" · "}DPP (×11/12) {fmtRupiah(sbPreview.dpp)} · PPN {fmtRupiah(sbPreview.ppn)}{invForm.skdt ? " (SKDT)" : ""}
+              {" · "}DPP (×11/12) {fmtRupiah(sbPreview.dpp)} · PPN {getSetting(data, "PPN_INVOICE_RATE", PPN_INVOICE_DEFAULT)}% {fmtRupiah(sbPreview.ppn)}{invForm.skdt ? " (SKDT)" : ""}
               {" · "}PPh jasa {fmtRupiah(sbPreview.pph)}{num(invForm.dpApplied) > 0 ? ` · DP -${fmtRupiah(sbPreview.dpApplied)}` : ""}
               {" → "}<strong className="text-navy-900">Grand {fmtRupiah(sbPreview.grand)}</strong>
             </p>
@@ -5529,7 +5531,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTypeTerm}</dt><dd className="text-right font-medium text-navy-900">{String(invDetail.billingType ?? invDetail.paymentTerm ?? "-")}{invDetail.milestoneRef ? ` · ${String(invDetail.milestoneRef)}` : ""}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.dueLabel}</dt><dd className="text-right font-medium text-navy-900">{fmtTanggal(String(invDetail.due ?? ""))}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.colStatus}</dt><dd className="text-right"><StatusBadge status={String(invDetail.status ?? "")} /></dd></div>
-                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTax}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(num(invDetail.dpp))} / {fmtRupiah(num(invDetail.ppnAmt))} / {fmtRupiah(num(invDetail.pphAmt))}</dd></div>
+                <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTax}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(num(invDetail.dpp))} / {fmtRupiah(num(invDetail.ppnAmt))}{num(invDetail.ppnAmt) > 0 ? ` (${num(invDetail.ppnRate) || getSetting(data, "PPN_INVOICE_RATE", PPN_INVOICE_DEFAULT)}%)` : ""} / {fmtRupiah(num(invDetail.pphAmt))}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detGrand}</dt><dd className="text-right font-bold text-navy-900">{fmtRupiah(invNeto(invDetail))}</dd></div>
                 {(invDetail.paidAt || invDetail.paidRef) && (
                   <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detPaid}</dt><dd className="text-right font-medium text-navy-900">{invDetail.paidAt ? fmtTanggal(String(invDetail.paidAt)) : "-"} · {String(invDetail.paidMethod ?? "-")} · {String(invDetail.paidRef ?? "-")}</dd></div>
