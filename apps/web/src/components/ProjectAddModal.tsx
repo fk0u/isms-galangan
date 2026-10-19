@@ -12,8 +12,9 @@ import { useAuth } from "../auth/auth";
 import { parseRupiah, todayISO } from "../utils/format";
 import { isProjectManager } from "../utils/employeeOptions";
 import ClientModal from "./ClientModal";
+import { TAHAP_V2, tahapLabel } from "../utils/projectStages";
+import { useT } from "../i18n/LanguageContext";
 
-const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
 const PREFIX_TIPE: Record<string, string> = { "New Build": "NB", Repair: "RP", Retrofit: "RF" };
 
 const emptyForm = {
@@ -26,7 +27,7 @@ const emptyForm = {
   budget: "",
   manager: "",
   status: "Dalam Proses",
-  tahap: "Inquiry",
+  tahap: TAHAP_V2[0] as string,
   /* Field Prioritas dihapus dari form (catatan klien 17 Okt, K17-PM-11), tetapi
      daftar proyek, Monitoring, dan detail masih memakai prioritas - proyek baru
      tetap disimpan "Sedang" dan bisa diubah di detail proyek. */
@@ -59,6 +60,7 @@ export default function ProjectAddModal({
   add: (collection: any, item: any, meta?: any) => Promise<StoreItem>;
 }) {
   const { user } = useAuth();
+  const { locale } = useT();
   const { branch: storeBranch } = useStore();
   const activeBranch = (user?.branch && user.branch !== "SEMUA") ? user.branch : (storeBranch || "Samarinda");
 
@@ -167,6 +169,8 @@ export default function ProjectAddModal({
           status: "Dalam Proses",
           plannedDockId: form.plannedDockId || "",
           tahap: form.tahap,
+          // Proyek baru memakai urutan tahap Progress baru (K17-PM-10, Q20).
+          tahapVersi: 2,
           prioritas: form.prioritas,
           tahapLog: [{ from: "-", to: form.tahap, date: todayISO(), by: user?.name || "Anda", reason: "Proyek dibuat" }],
           branch: activeBranch,
@@ -268,7 +272,7 @@ export default function ProjectAddModal({
             </Field>
             <Field label={S.prjInitStage}>
               <select className="input" value={form.tahap} onChange={(e) => setF("tahap", e.target.value)}>
-                {TAHAP.map((t) => <option key={t} value={t}>{t === "Desain" ? S.prjStagePlanning : t}</option>)}
+                {TAHAP_V2.map((t) => <option key={t} value={t}>{tahapLabel(t, locale)}</option>)}
               </select>
             </Field>
             <Field label={S.prjPlannedDock}>

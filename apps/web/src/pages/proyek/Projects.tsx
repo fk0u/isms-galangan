@@ -40,17 +40,9 @@ import { rowHighlightClass } from "../../components/rowHighlight";
 import { StatusChips } from "../../components/StatusChips";
 import { projectProgressOf } from "../../utils/projectProgress";
 
-export const TAHAP = ["Inquiry", "Quotation", "Kontrak", "Desain", "Produksi", "Trial", "Handover"];
+export { TAHAP, TAHAP_V1, TAHAP_V2, tahapListOf, tahapAkhirOf, tahapKolom, tahapLabel, tahapOf } from "../../utils/projectStages";
+import { tahapKolom, tahapLabel, tahapOf } from "../../utils/projectStages";
 export const PRIORITAS = ["Rendah", "Sedang", "Tinggi"];
-
-/** #70: nilai data tetap "Desain"; yang tampil ke pengguna "Perencanaan" / "Planning". */
-export function tahapLabel(tahap: string, locale: string): string {
-  return tahap === "Desain" ? (locale === "en" ? "Planning" : "Perencanaan") : tahap;
-}
-
-export function tahapOf(p: StoreItem): string {
-  return TAHAP.includes(p.tahap) ? p.tahap : "Produksi";
-}
 
 // Kontrak wajib terisi sebelum proyek hasil konversi bisa jalan: tahap awal
 // (Inquiry/Quotation/Kontrak) dikunci bila belum ada kontrak untuk quotationId itu.
@@ -312,7 +304,7 @@ export default function Projects() {
           >
             <div className="mb-4 space-y-2 rounded-xl border border-steel-200 bg-white p-3">
               {([
-                [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...TAHAP].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : tahapLabel(v, locale) }))],
+                [S.prjFieldTahap, tahapFilter, setTahapFilter, ["Semua", ...tahapKolom(projects)].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTahap : tahapLabel(v, locale) }))],
                 [S.prjFieldTipe, filter, setFilter, filters.map((v) => ({ value: v, label: v === "Semua" ? S.prjAllTipe : TYPE_ID[v] ?? v }))],
                 [S.prjFieldPrioritas, prioritasFilter, setPrioritasFilter, ["Semua", ...PRIORITAS].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPrioritas : v }))],
                 [S.prjFieldPm, pmFilter, setPmFilter, ["Semua", ...pmOptions].map((v) => ({ value: v, label: v === "Semua" ? S.prjAllPm : v }))],
