@@ -569,8 +569,7 @@ const MODELS: Record<string, unknown> = {
     paymentTerms: "NET 30",
     deliveryTerms: "DAP Samarinda",
     notes: "Barang dikirim bertahap sesuai kebutuhan lapangan.",
-    nameOrderer: "H. Syarif Sarapping",
-    nameApprover: "H. Syarif Sarapping",
+    signers: [{ role: "Supplier", name: "PT Contoh Supplier" }, { role: "Direktur", name: "Direktur Contoh" }],
     locale: "id",
   },
   suratJalan: {

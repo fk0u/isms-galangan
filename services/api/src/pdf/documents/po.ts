@@ -34,8 +34,9 @@ export interface PoInput {
   paymentTerms: string;
   deliveryTerms?: string;
   notes?: string;
-  nameOrderer: string;
-  nameApprover: string;
+  /** Kolom tanda tangan (Q21): PO Besar = Supplier + Direktur,
+   *  PO Kecil = Request by, Approved by, Driver, Logistic. Disusun recipe. */
+  signers: Array<{ role: string; name: string }>;
   locale?: Locale;
 }
 
@@ -167,10 +168,7 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
 
   d.add(spacer(4));
   d.add(
-    signatures([
-      { role: L(locale, "Pemesan", "Orderer"), name: input.nameOrderer, rows: 5 },
-      { role: L(locale, "Menyetujui", "Approver"), name: input.nameApprover, rows: 5 },
-    ]),
+    signatures(input.signers.map((s) => ({ role: s.role, name: s.name, rows: 5 }))),
   );
 
   return d;

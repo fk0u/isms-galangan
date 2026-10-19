@@ -545,6 +545,27 @@ const garansiRecipe: Recipe<GaransiInput> = {
  * membaca `items`, `vendorId`, `taxRate`, dan `projectName` - tidak satu pun
  * ditulis modul Procurement, jadi PO yang tercetak tanpa item dan tanpa
  * nama vendor yang benar. */
+/* Kolom tanda tangan PO (jawaban klien Q21, K17-PROC-02). Nama diisi pengguna
+   sebelum ekspor dan disimpan di `signers` PO; kolom kosong memakai data yang
+   ada (vendor, peminta, penyetuju terakhir) supaya cetak ulang tetap sama. */
+function poSigners(p: Record<string, unknown>, vendorName: string, approvals: Array<Record<string, unknown>>, locale: Locale): Array<{ role: string; name: string }> {
+  const sg = (p.signers && typeof p.signers === "object" ? p.signers : {}) as Record<string, unknown>;
+  const pick = (key: string, fallback: string): string => String(sg[key] ?? "").trim().slice(0, 80) || fallback;
+  const lastApprover = approvals.length > 0 ? str(approvals[approvals.length - 1] as Record<string, unknown>, "by") : "-";
+  if (String(p.poType ?? "") === "Kecil") {
+    return [
+      { role: "Request by", name: pick("requestBy", str(p, "requester")) },
+      { role: "Approved by", name: pick("approvedBy", lastApprover) },
+      { role: "Driver", name: pick("driver", "-") },
+      { role: "Logistic", name: pick("logistic", "-") },
+    ];
+  }
+  return [
+    { role: "Supplier", name: pick("supplier", vendorName || "-") },
+    { role: L(locale, "Direktur", "Director"), name: pick("direktur", SIGNER) },
+  ];
+}
+
 const poRecipe: Recipe<PoInput> = {
   kind: "po",
   title: "Purchase Order",
@@ -622,8 +643,7 @@ const poRecipe: Recipe<PoInput> = {
       paymentTerms: str(p, "paymentTerms") !== "-" ? str(p, "paymentTerms") : "NET 30",
       deliveryTerms: str(p, "deliveryTerms") !== "-" ? str(p, "deliveryTerms") : eta !== "-" ? eta : undefined,
       notes,
-      nameOrderer: str(p, "ordererName", "requester") !== "-" ? str(p, "ordererName", "requester") : "-",
-      nameApprover: approvals.length > 0 ? str(approvals[approvals.length - 1], "by") : SIGNER,
+      signers: poSigners(p, vendorName, approvals, ctx.locale),
       locale: ctx.locale,
     };
   },
