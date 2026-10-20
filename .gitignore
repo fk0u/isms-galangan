@@ -43,6 +43,11 @@ ai-prompts/
 deploy/.env
 .env
 *.env
+# Cadangan .env di server (berisi rahasia, mis. MYSQL_URL) jangan sampai ter-commit.
+*.env.bak
+.env.*.bak
+# Data runtime server (SQLite, unggahan, cadangan) - di repo dir pada server produksi/dev.
+.isms-data/
 .claude/
 .ruas/
 RUAS_CONTEXT.md
