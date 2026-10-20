@@ -15,7 +15,8 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth, branchAllowed } from "../auth.js";
 import { ok } from "../envelope.js";
-import { findRecipe, DOC_KINDS, buildFromModel, type RenderContext } from "../pdf/registry.js";
+import { findRecipe, DOC_KINDS, buildFromModel, renderSuratHrDraft, type RenderContext } from "../pdf/registry.js";
+import { requireCollectionWrite } from "../policy.js";
 import { getDialect, q } from "../db.js";
 import { writeAudit, requestActor, requestIp } from "../audit.js";
 import { saveRenderModel, loadRenderModel } from "../pdf/renderStore.js";
@@ -45,6 +46,43 @@ async function applyKopSetting(): Promise<void> {
 export function registerPdfRoutes(app: FastifyInstance): void {
   /** Daftar jenis dokumen yang didukung - untuk FE. */
   app.get("/api/pdf/kinds", { preHandler: [requireAuth] }, async () => ok({ kinds: DOC_KINDS }));
+
+  /* Pratinjau surat HR dari isi form yang BELUM disimpan (catatan CTO 19 Okt:
+     pratinjau harus sama persis dengan output). Dirakit oleh resep yang sama
+     dengan cetak akhir, tetapi tidak disimpan sebagai snapshot / arsip. */
+  app.post("/api/pdf/draft/suratHr", { preHandler: [requireAuth, requireCollectionWrite("letters")] }, async (req, reply) => {
+    const body = (req.body ?? {}) as { data?: unknown; locale?: string };
+    const data = body.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return reply.status(400).send({ ok: false, error: { message: "data surat wajib berupa objek", code: "VALIDATION_ERROR" } });
+    }
+    const row: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+      if (typeof v === "string" && v.length > 4000) {
+        return reply.status(400).send({ ok: false, error: { message: `Field ${k} terlalu panjang`, code: "VALIDATION_ERROR" } });
+      }
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") row[k] = v;
+    }
+    // Data karyawan (alamat, TTL) ikut tercetak: karyawan harus dalam cakupan cabang akun.
+    const empId = String(row.employeeId ?? "").trim();
+    if (empId !== "") {
+      const own = await entityBranch("employees", empId);
+      if (own !== null && !branchAllowed(req.user, own)) {
+        return reply.status(403).send({ ok: false, error: { message: `Karyawan ini milik cabang ${own}, di luar cakupan akun Anda.`, code: "FORBIDDEN" } });
+      }
+    }
+    try {
+      await applyKopSetting();
+      const ctx: RenderContext = { locale: body.locale === "en" ? "en" : "id", branch: "SEMUA", filters: {} };
+      const res = await renderSuratHrDraft(row, ctx);
+      reply.header("Content-Type", "application/pdf");
+      reply.header("Content-Disposition", 'inline; filename="pratinjau-surat.pdf"');
+      reply.header("Cache-Control", "no-store");
+      return reply.send(Buffer.from(res.bytes));
+    } catch (err) {
+      return reply.status(500).send({ ok: false, error: { message: err instanceof Error ? err.message : String(err), code: "RENDER_FAILED" } });
+    }
+  });
 
   app.post("/api/pdf/render", { preHandler: [requireAuth] }, async (req, reply) => {
     const body = (req.body ?? {}) as RenderBody;

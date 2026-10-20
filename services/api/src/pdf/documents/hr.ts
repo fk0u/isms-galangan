@@ -13,8 +13,8 @@
  * tidak sinkron dengan rentang tanggal.
  */
 import { Document, type DocOptions } from "../document.js";
-import { keyValue, paragraph, table, signatures, divider, callout, spacer, type Block } from "../blocks.js";
-import { COLOR, TYPE } from "../theme.js";
+import { keyValue, paragraph, signatures, divider, callout } from "../blocks.js";
+import { TYPE } from "../theme.js";
 import { companyKop, docTitle, longDate, shortDate, L, type Locale } from "./shared.js";
 
 export interface CutiDocInput {
@@ -189,14 +189,6 @@ export interface SuratHrInput {
   locale?: Locale;
 }
 
-function hrCompanyFooter(): Block {
-  return paragraph({
-    text: "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda\nShipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)\nEmail: Syukurbersaudara@gmail.com · Web: www.syukurbersaudara.com",
-    size: TYPE.base - 2,
-    color: COLOR.steel,
-    align: "center",
-  });
-}
 
 /* Surat kontrak memakai badan surat sendiri: template SP berbicara tentang
    pelanggaran, dan mencetak kontrak dengan kalimat itu menyesatkan. */
@@ -243,276 +235,20 @@ function kontrakBody(d: Document, input: SuratHrInput, locale: Locale): void {
   );
 }
 
-function spBody(d: Document, input: SuratHrInput, locale: Locale): void {
-  const spNum = /1/.test(input.jenis) ? "1" : /2/.test(input.jenis) ? "2" : "3";
-  d.add(
-    paragraph({
-      text: L(locale, "Surat peringatan ini diberikan Kepada :", "This warning letter is issued to:"),
-      size: TYPE.base,
-      font: "bold",
-    }),
-  );
-  d.add(spacer(1));
-  d.add(
-    keyValue({
-      labelW: 30,
-      pairs: [
-        { label: L(locale, "Nama", "Name"), value: input.namaKaryawan, bold: true },
-        { label: L(locale, "Jabatan", "Position"), value: `${input.jabatan}${input.unit && input.unit !== "-" ? ` - ${input.unit}` : ""}` },
-      ],
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        `Sehubungan kinerja Saudara sebagai karyawan yang harus mematuhi dan melaksanakan semua kewajiban dan tata tertib serta disiplin dalam bekerja yang harus saudara laksanakan sepenuhnya. Maka, dengan ini kami memberikan Surat Peringatan Ke-${spNum} Kepada Saudara atas tindakan penyimpangan yang telah di lakukan oleh saudara sebagai berikut :`,
-        `Regarding your performance as an employee who must obey and carry out all obligations, rules, and work discipline. Therefore, we hereby issue Warning Letter No. ${spNum} to you for the following infraction:`,
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(1));
-  d.add(
-    callout([input.pelanggaran && input.pelanggaran !== "-" ? input.pelanggaran : "Pelanggaran tata tertib dan disiplin kerja"], {
-      fill: COLOR.softFill,
-      border: COLOR.hair,
-      bold: true,
-    }),
-  );
-  d.add(spacer(1));
-  const tind = spNum === "1"
-    ? L(locale, "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan Surat Peringatan yang kedua.", "If within 1 (one) month after this Warning Letter is issued you repeat the same violation, we will issue a Second Warning Letter.")
-    : spNum === "2"
-      ? L(locale, "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan Surat Peringatan yang Terakhir atau PHK.", "If within 1 (one) month after this Warning Letter is issued you repeat the same violation, we will issue a Final Warning Letter or Employment Termination (PHK).")
-      : L(locale, "Jika dalam jangka waktu 1 (Satu) Bulan kedepan sejak Surat Peringatan ini diterbitkan dan ternyata saudara kembali melakukan tindakan pelanggaran yang sama, maka kami akan mengeluarkan tindakan Pemutusan Hubungan Kerja (PHK).", "If within 1 (one) month after this Warning Letter is issued you repeat the same violation, we will proceed with Employment Termination (PHK).");
-  d.add(paragraph({ text: tind, size: TYPE.base }));
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        "Demikian surat ini kami sampaikan dan berlaku selama menjadi karyawan PT. SYUKUR BERSAUDARA. Kepada yang bersangkutan harap di perhatikan dan di perbaiki dengan segera.",
-        "Thus we convey this letter, effective as long as you are an employee of PT. SYUKUR BERSAUDARA. Please pay attention and improve immediately.",
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(4));
-  d.add(
-    signatures([
-      { role: L(locale, "Management", "Management"), name: input.namaPemberi || "Management", rows: 4 },
-    ]),
-  );
-  d.add(spacer(2));
-  d.add(hrCompanyFooter());
-}
 
-function phkBody(d: Document, input: SuratHrInput, locale: Locale): void {
-  d.add(
-    paragraph({
-      text: `${L(locale, "Kepada Yth,", "To,")}\n${L(locale, "Sdr.", "Mr./Ms.")} ${input.namaKaryawan}\n${L(locale, "Di-Tempat", "In place")}`,
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        `Dengan Hormat,\nSehubungan dengan Saudara masih melakukan pelanggaran disiplin berupa ${input.pelanggaran && input.pelanggaran !== "-" ? input.pelanggaran : "ketidakhadiran tanpa adanya konfirmasi"}.`,
-        `Respectfully,\nIn connection with your continued disciplinary violation in the form of ${input.pelanggaran && input.pelanggaran !== "-" ? input.pelanggaran : "unconfirmed absence"}.`,
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  const tglAkhir = longDate(input.berlakuSampai || input.tanggal);
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        `Dengan demikian, terhitung mulai tanggal ${tglAkhir} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${input.namaKaryawan} dinyatakan sudah berakhir. Dan atas nama lembaga, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`,
-        `Therefore, effective as of ${tglAkhir}, the employment relationship between PT. SYUKUR BERSAUDARA and ${input.namaKaryawan} is declared terminated. On behalf of the company, we express our gratitude for the performance you have provided.`,
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        "Demikian surat pemutusan hubungan kerja ini kami sampaikan, dan agar dapat dimaklumi, terima kasih.",
-        "Thus we convey this letter of employment termination, and thank you for your understanding.",
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(4));
-  d.add(
-    signatures([
-      { role: L(locale, "HR / HRD", "HR / HRD"), name: input.namaPemberi || "Suci Permata Sari", rows: 4 },
-    ]),
-  );
-  d.add(spacer(2));
-  d.add(hrCompanyFooter());
-}
 
-function pengalamanKerjaBody(d: Document, input: SuratHrInput, locale: Locale): void {
-  d.add(
-    paragraph({
-      text: L(locale, "Kepada yang berkepentingan,", "To whom it may concern,"),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(1));
-  d.add(
-    paragraph({
-      text: L(locale, "Dengan ini kami dari PT. SYUKUR BERSAUDARA menyatakan bahwa :", "We hereby from PT. SYUKUR BERSAUDARA certify that:"),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(1));
-  d.add(
-    keyValue({
-      labelW: 30,
-      pairs: [
-        { label: L(locale, "Nama", "Name"), value: input.namaKaryawan, bold: true },
-        { label: L(locale, "Alamat", "Address"), value: input.alamat || "-" },
-        { label: L(locale, "Jabatan", "Position"), value: `${input.jabatan}${input.unit && input.unit !== "-" ? ` - ${input.unit}` : ""}` },
-      ],
-    }),
-  );
-  d.add(spacer(2));
-  const tMulai = input.tanggalMulai ? longDate(input.tanggalMulai) : "-";
-  const tSelesai = input.tanggalSelesai ? longDate(input.tanggalSelesai) : longDate(input.tanggal);
-  const periode = `${tMulai} ${L(locale, "sampai dengan", "to")} ${tSelesai}`;
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        `Telah benar-benar bekerja pada perusahaan kami dalam kurun waktu :\n${periode}`,
-        `Has truly worked at our company during the period:\n${periode}`,
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        "Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.",
-        "The person concerned has made a good contribution to the company and during employment has never taken any actions detrimental to our company.",
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        "Kami berterima kasih atas segala kerjasama, kontribusi dan segala upaya yang telah diberikan guna perkembangan perusahaan yang lebih baik.",
-        "We thank you for all the cooperation, contribution, and efforts given for the better development of the company.",
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(4));
-  d.add(
-    signatures([
-      { role: L(locale, "PT. Syukur Bersaudara (HR)", "PT. Syukur Bersaudara (HR)"), name: input.namaPemberi || "Suci Permata Sari", rows: 4 },
-    ]),
-  );
-  d.add(spacer(2));
-  d.add(hrCompanyFooter());
-}
 
-function keteranganBekerjaBody(d: Document, input: SuratHrInput, locale: Locale): void {
-  d.add(
-    paragraph({
-      text: L(locale, "Bersama ini kami menyatakan bahwa :", "We hereby certify that:"),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(1));
-  d.add(
-    keyValue({
-      labelW: 42,
-      pairs: [
-        { label: L(locale, "Nama", "Name"), value: input.namaKaryawan, bold: true },
-        { label: L(locale, "Tempat/Tgl Lahir", "Place/Date of Birth"), value: input.tempatTanggalLahir || "-" },
-        { label: L(locale, "Jenis Kelamin", "Gender"), value: input.jenisKelamin || "-" },
-        { label: L(locale, "Alamat", "Address"), value: input.alamat || "-" },
-        { label: L(locale, "Agama", "Religion"), value: input.agama || "Islam" },
-        { label: L(locale, "Status", "Marital Status"), value: input.statusKawin || "Belum Menikah" },
-      ],
-    }),
-  );
-  d.add(spacer(2));
-  const sejak = input.tanggalMulai ? longDate(input.tanggalMulai) : longDate(input.tanggal);
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        `Benar bekerja sebagai karyawan di PT. SYUKUR BERSAUDARA sejak ${sejak} sampai dengan sekarang, dengan jabatan ${input.jabatan}.`,
-        `Is currently an active employee at PT. SYUKUR BERSAUDARA since ${sejak} until now, with the position of ${input.jabatan}.`,
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(
-        locale,
-        "Demikian surat keterangan ini kami buat agar dipergunakan sebagaimana mestinya.",
-        "This certificate is issued to be used appropriately.",
-      ),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(4));
-  d.add(
-    signatures([
-      { role: L(locale, "PT. Syukur Bersaudara (HRD)", "PT. Syukur Bersaudara (HRD)"), name: input.namaPemberi || "Suci Permata Sari", rows: 4 },
-    ]),
-  );
-  d.add(spacer(2));
-  d.add(hrCompanyFooter());
-}
 
 export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document {
   const locale = input.locale ?? "id";
-  const jenis = input.jenis.trim();
-  const isSp = /^SP\s*[123]$/i.test(jenis) || /peringatan/i.test(jenis);
-  const isPhk = /pemutusan|phk/i.test(jenis);
-  const isPengalaman = /pengalaman/i.test(jenis);
-  const isKeterangan = /keterangan/i.test(jenis);
-
+  /* SP, PHK, Pengalaman Kerja, dan Surat Keterangan dicetak lewat hrLetter.ts
+     (format template Word klien). Fungsi ini menangani kontrak & surat lain. */
   let docJudul = input.jenis.toUpperCase();
-  let refLabel = `${L(locale, "No", "No")}. ${input.no}`;
-
+  const refLabel = `${L(locale, "No", "No")}. ${input.no}`;
   if (input.kontrak) {
     docJudul = input.kontrak.sebelumnya
       ? L(locale, "SURAT PERPANJANGAN KONTRAK KERJA", "EMPLOYMENT CONTRACT EXTENSION")
       : L(locale, "SURAT PERJANJIAN KERJA", "EMPLOYMENT AGREEMENT");
-  } else if (isSp) {
-    const spNum = /1/.test(jenis) ? "1" : /2/.test(jenis) ? "2" : "3";
-    docJudul = `SURAT PERINGATAN ${spNum}`;
-    refLabel = `No: ${input.no}`;
-  } else if (isPhk) {
-    docJudul = "SURAT PEMUTUSAN HUBUNGAN KERJA";
-    refLabel = `Nomor : ${input.no}   Perihal : Surat Pemutusan Hubungan Kerja`;
-  } else if (isPengalaman) {
-    docJudul = "SURAT PENGALAMAN KERJA";
-    refLabel = `No: ${input.no}   Hal: Surat Pengalaman Kerja`;
-  } else if (isKeterangan) {
-    docJudul = "SURAT KETERANGAN";
-    refLabel = `Nomor : ${input.no}`;
   }
 
   const d = new Document({
@@ -533,23 +269,6 @@ export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document
     kontrakBody(d, input, locale);
     return d;
   }
-  if (isKeterangan) {
-    keteranganBekerjaBody(d, input, locale);
-    return d;
-  }
-  if (isPengalaman) {
-    pengalamanKerjaBody(d, input, locale);
-    return d;
-  }
-  if (isPhk) {
-    phkBody(d, input, locale);
-    return d;
-  }
-  if (isSp) {
-    spBody(d, input, locale);
-    return d;
-  }
-
   d.add(
     paragraph({
       text: L(locale, "Kepada Yth,", "To,"),
@@ -627,7 +346,7 @@ export function suratHrDoc(input: SuratHrInput, opts: DocOptions = {}): Document
 
   d.add(
     paragraph({
-      text: `${input.namaPemberi}\n${input.jabatanPemberi}`,
+      text: `${input.namaPemberi}\n${input.jabatanPemberi || "HRD"}`,
       size: TYPE.base - 1,
       align: "right",
     }),

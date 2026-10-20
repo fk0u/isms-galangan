@@ -236,3 +236,30 @@ export function downloadBlobUrl(url: string, filename: string): void {
   a.click();
   a.remove();
 }
+/**
+ * Pratinjau surat HR dari isi form yang BELUM disimpan. Dirakit server dengan
+ * resep yang sama dengan cetak akhir, jadi yang tampil = yang tercetak.
+ * Mengembalikan object URL (pemanggil wajib URL.revokeObjectURL).
+ */
+export async function renderSuratDraft(data: Record<string, unknown>, locale: string, signal?: AbortSignal): Promise<string> {
+  if (!isBackendConfigured()) throw new PdfRenderError("Server PDF belum aktif.", 0);
+  const jwt = getJwt();
+  const res = await fetch(`${BASE}/api/pdf/draft/suratHr`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}) },
+    body: JSON.stringify({ data, locale }),
+    signal,
+  });
+  if (!res.ok) {
+    let message = `Pratinjau ditolak (HTTP ${res.status})`;
+    try {
+      const body = (await res.json()) as { error?: { message?: string } };
+      if (body?.error?.message) message = body.error.message;
+    } catch { /* badan bukan JSON */ }
+    throw new PdfRenderError(message, res.status);
+  }
+  const blob = await res.blob();
+  const head = new Uint8Array(await blob.slice(0, PDF_MAGIC.length).arrayBuffer());
+  if (!isPdfHead(head)) throw new PdfRenderError("Respons server bukan berkas PDF.", res.status);
+  return URL.createObjectURL(blob);
+}

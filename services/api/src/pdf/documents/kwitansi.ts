@@ -126,7 +126,7 @@ export function ribu(n: number): string {
   return `${terbilangAngka(v)} rupiah`;
 }
 
-function terbilangAngka(v: number): string {
+export function terbilangAngka(v: number): string {
   if (v < 12) return SATUAN[v] ?? "";
   if (v < 20) return `${BELASAN[v - 10]} belas`;
   if (v < 100) {
