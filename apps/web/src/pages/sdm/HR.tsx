@@ -43,7 +43,7 @@ import { rowHighlightClass } from "../../components/rowHighlight";
 import { getSetting } from "../../utils/settings";
 import { useAuth } from "../../auth/auth";
 import { exportExcel } from "../../utils/export";
-import { pdfServerReady } from "../../services/pdfClient";
+import { pdfServerReady, renderSuratDraft } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { SB_KOP } from "../../utils/sb";
 import { apiFetch, isBackendConfigured } from "../../services/http";
@@ -1368,6 +1368,28 @@ const finishTraining = async (t: StoreItem) => {
       approvedBy: suratForm.approvedBy,
     })
     : "";
+
+  /* Pratinjau form = PDF dari server dengan resep yang sama dengan cetak akhir
+     (catatan CTO 19 Okt: pratinjau harus sama persis dengan dokumen). Teks
+     `suratPreview` tetap dipakai bila server PDF tidak aktif. */
+  const [draftPdf, setDraftPdf] = useState<{ url: string; error: string }>({ url: "", error: "" });
+  const draftKey = suratEmp && showSurat ? JSON.stringify([suratEmp.id, suratForm.jenis, suratForm.tanggal, suratForm.isi, suratForm.docNo, suratForm.contractStart, suratForm.contractEnd, suratForm.approvedBy, suratNomor, locale]) : "";
+  useEffect(() => {
+    if (!draftKey || !pdfServerReady() || !suratEmp) return;
+    const ctl = new AbortController();
+    const t = window.setTimeout(() => {
+      void renderSuratDraft({
+        employeeId: String(suratEmp.id), nama: String(suratEmp.name ?? ""), jenis: suratForm.jenis, tanggal: suratForm.tanggal,
+        isi: suratForm.isi, docNo: suratForm.docNo || suratNomor, startDate: suratForm.contractStart, endDate: suratForm.contractEnd,
+        approvedBy: suratForm.approvedBy,
+      }, locale, ctl.signal)
+        .then((url) => setDraftPdf((prev) => { if (prev.url) URL.revokeObjectURL(prev.url); return { url, error: "" }; }))
+        .catch((e: unknown) => { if (!ctl.signal.aborted) setDraftPdf((prev) => ({ ...prev, error: e instanceof Error ? e.message : String(e) })); });
+    }, 600);
+    return () => { window.clearTimeout(t); ctl.abort(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  useEffect(() => () => { if (draftPdf.url) URL.revokeObjectURL(draftPdf.url); }, [draftPdf.url]);
 
   /** Buka form UBAH surat yang sudah tersimpan. */
   const openSuratEdit = (s: StoreItem) => {
@@ -2724,7 +2746,12 @@ const finishTraining = async (t: StoreItem) => {
           {suratPreview && (
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.lblPratinjau}</p>
-              <pre className="whitespace-pre-wrap rounded-xl bg-surface p-3 text-sm text-navy-900">{suratPreview}</pre>
+              {pdfServerReady() && draftPdf.url ? (
+                <iframe title={S.lblPratinjau} src={draftPdf.url} className="h-[36rem] w-full rounded-xl border border-steel-200" />
+              ) : (
+                <pre className="whitespace-pre-wrap rounded-xl bg-surface p-3 text-sm text-navy-900">{suratPreview}</pre>
+              )}
+              {draftPdf.error && <p className="mt-1 text-xs text-rose-600">{draftPdf.error}</p>}
             </div>
           )}
           {/* Preview pindai langsung di form lewat DocumentPreviewPanel

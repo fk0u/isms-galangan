@@ -24,6 +24,7 @@ import type { Document } from "./document.js";
 import { kwitansi, type KwitansiInput } from "./documents/kwitansi.js";
 import { voucher, type VoucherInput } from "./documents/voucher.js";
 import { suratPersetujuanCutiDoc, suratHrDoc, type CutiDocInput, type SuratHrInput } from "./documents/hr.js";
+import { hrLetterDoc, hrLetterKindOf } from "./documents/hrLetter.js";
 import { bast, type BastInput } from "./documents/bast.js";
 import { spk, type SpkInput } from "./documents/spk.js";
 import { boqDoc, garansiDoc, type BoqDocInput, type GaransiInput } from "./documents/boq.js";
@@ -360,6 +361,12 @@ const suratCutiRecipe: Recipe<CutiDocInput> = {
 };
 
 /* ---- Surat teguran / HR (SP1/SP2/SP3) ---- */
+/** Pratinjau surat dari isi form (belum disimpan). Tidak membuat snapshot. */
+export async function renderSuratHrDraft(row: Record<string, unknown>, ctx: RenderContext): Promise<ReturnType<Document["render"]>> {
+  const model = await suratHrModel({ ...row, id: String(row.docNo ?? "") || "DRAFT" }, ctx);
+  return assembleSuratHr(model).render();
+}
+
 const suratHr: Recipe<SuratHrInput> = {
   kind: "suratHr",
   title: "Surat HR (SP1/SP2/SP3)",
@@ -368,6 +375,14 @@ const suratHr: Recipe<SuratHrInput> = {
   async prepare(id, ctx) {
     const l = await loadEntity({ field: "letters", prefix: "SRT" }, id);
     if (!l) throw new Error(`Surat ${id} tidak ditemukan`);
+    return suratHrModel(l, ctx);
+  },
+  assemble: (input) => assembleSuratHr(input),
+};
+
+/** Model surat HR dari satu baris `letters` (tersimpan, atau draf form yang
+ *  belum disimpan - pratinjau memakai jalur yang sama dengan cetak akhir). */
+async function suratHrModel(l: Record<string, unknown>, ctx: RenderContext): Promise<SuratHrInput> {
     const emp = await loadEntity({ field: "employees", prefix: "EMP" }, str(l, "employeeId"));
     /* Isi surat disimpan bebas oleh user (bukan field terpisah), jadi tiga
        elemen SP dipetakan ke label yang dipakai arsip: jenis SP, tanggal
@@ -382,7 +397,8 @@ const suratHr: Recipe<SuratHrInput> = {
       : undefined;
     const genderRaw = emp ? str(emp, "gender") : "-";
     const jenisKelamin = genderRaw === "L" ? "Laki-laki" : genderRaw === "P" ? "Perempuan" : genderRaw !== "-" ? genderRaw : undefined;
-    const agama = emp && str(emp, "religion", "agama") !== "-" ? str(emp, "religion", "agama") : "Islam";
+    // Agama tidak boleh ditebak: kosong tercetak "-", bukan "Islam".
+    const agama = emp && str(emp, "religion", "agama") !== "-" ? str(emp, "religion", "agama") : undefined;
     const maritalRaw = emp ? str(emp, "marital") : "-";
     const statusKawin = maritalRaw === "TK" ? "Belum Menikah" : maritalRaw === "K" ? "Menikah" : maritalRaw !== "-" ? maritalRaw : undefined;
     const tanggalMulai = str(l, "startDate", "tanggalMulai") !== "-"
@@ -409,7 +425,8 @@ const suratHr: Recipe<SuratHrInput> = {
       tindakan: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : "-",
       berlakuSampai: str(l, "berlakuSampai") !== "-" ? str(l, "berlakuSampai") : undefined,
       namaPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : SIGNER,
-      jabatanPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "HRD",
+      // Kosong = jabatan bawaan template (HR / HRD); surat umum memakai "HRD".
+      jabatanPemberi: str(l, "approvedRole", "jabatanPemberi") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "",
       alamat,
       tempatTanggalLahir: ttl,
       jenisKelamin,
@@ -428,15 +445,39 @@ const suratHr: Recipe<SuratHrInput> = {
         : undefined,
       locale: ctx.locale,
     };
-  },
-  assemble: (input) => {
+}
+
+function assembleSuratHr(input: SuratHrInput): Document {
+    /* SP1/SP2, PHK (= SP3), Pengalaman Kerja, Surat Keterangan: format persis
+       template Word klien (hrLetter.ts). Kontrak & jenis lain: format umum. */
+    const kind = input.kontrak ? null : hrLetterKindOf(input.jenis);
+    if (kind) {
+      const items = input.pelanggaran.split(/\r?\n/).map((x) => x.trim()).filter((x) => x !== "" && x !== "-");
+      return hrLetterDoc({
+        kind,
+        no: input.no,
+        tanggal: input.tanggal,
+        nama: input.namaKaryawan,
+        jabatan: input.jabatan,
+        pelanggaran: items,
+        tanggalEfektif: kind === "phk" ? input.tanggalSelesai || input.berlakuSampai : undefined,
+        alamat: input.alamat,
+        tempatTanggalLahir: input.tempatTanggalLahir,
+        jenisKelamin: input.jenisKelamin,
+        agama: input.agama,
+        statusKawin: input.statusKawin,
+        tanggalMulai: input.tanggalMulai,
+        tanggalSelesai: input.tanggalSelesai,
+        penandaTangan: input.namaPemberi,
+        jabatanPenandaTangan: input.jabatanPemberi || undefined,
+      });
+    }
     const d = suratHrDoc(input);
     /* Isi surat mentah tetap ikut dicetak sebagai lampiran. Field SP di atas
        diambil dari arsip, tapi isi yang diketik user adalah bukti yang
        ditandatangani - tidak boleh hilang hanya karena dipetakan ulang. */
     return d;
-  },
-};
+}
 
 /* ---- BAST ---- */
 const bastRecipe: Recipe<BastInput> = {
