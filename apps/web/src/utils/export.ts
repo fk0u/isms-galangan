@@ -5,7 +5,7 @@ import writeXlsxFile, { type SheetData } from "write-excel-file/browser";
 /** Awalan sel berbahaya untuk injeksi formula Excel saat dibuka. */
 const FORMULA_LEAD = ["=", "+", "-", "@", "\t", "|"];
 
-function sanitizeCell(v: string): string {
+export function sanitizeCell(v: string): string {
   if (FORMULA_LEAD.some((p) => v.startsWith(p))) return `'${v}`;
   return v;
 }

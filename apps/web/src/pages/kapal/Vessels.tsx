@@ -33,19 +33,10 @@ const statusTone: Record<string, "green" | "blue" | "amber" | "gray"> = {
    IMO, MMSI, tahun bangun, mesin utama, GT, DWT, NT, BHP, bendera, dan status
    tidak lagi diisi. Nilai lama tetap tersimpan karena edit hanya mengirim field
    form (patch), dan bendera kapal baru otomatis Indonesia. */
-const CLASS_OPTIONS = ["BKI", "BKI & RINA", "RINA", "ABS", "BV", "GL", "DNV", "LR", "NK", "IRS", "Lainnya"];
-const FLAG_OPTIONS = ["Indonesia", "Panama", "Singapura", "Malaysia", "Liberia", "Marshall Islands", "Lainnya"];
-const STATUS_OPTIONS = ["Dalam Operasi", "Dalam Docking", "Dalam Pembangunan", "Nonaktif"];
-
+const CLASS_OPTIONS = ["BKI", "RINA", "BKI & RINA"];
 /** Kapal lama bisa ber-class lain (ABS, DNV, …): tetap jadi pilihan supaya tidak tertimpa diam-diam. */
 const classOptionsFor = (current: string): string[] =>
   current && !CLASS_OPTIONS.includes(current) ? [...CLASS_OPTIONS, current] : CLASS_OPTIONS;
-
-const flagOptionsFor = (current: string): string[] =>
-  current && !FLAG_OPTIONS.includes(current) ? [...FLAG_OPTIONS, current] : FLAG_OPTIONS;
-
-const statusOptionsFor = (current: string): string[] =>
-  current && !STATUS_OPTIONS.includes(current) ? [...STATUS_OPTIONS, current] : STATUS_OPTIONS;
 
 export const COMPLIANCE_ITEMS = ["SOLAS", "MARPOL", "ISM Code", "Flag State", "PSC Readiness", "ISPS Code"];
 
@@ -90,26 +81,8 @@ export function complianceSummary(v: StoreItem): { total: number; valid: number;
 }
 
 const emptyForm = {
-  name: "",
-  imo: "",
-  mmsi: "",
-  type: "",
-  owner: "",
-  built: "",
-  mainEngine: "",
-  loa: "",
-  beam: "",
-  draft: "",
-  bollard: "",
-  gt: "",
-  dwt: "",
-  nt: "",
-  bhp: "",
-  class: "BKI",
-  flag: "Indonesia",
-  status: "Dalam Operasi",
-  lbp: "",
-  depth: "",
+  name: "", type: "", owner: "", loa: "", lbp: "", beam: "", depth: "", draft: "",
+  class: "BKI", status: "Dalam Operasi",
 };
 
 type VesselForm = typeof emptyForm;
@@ -119,7 +92,9 @@ function validateForm(form: VesselForm, S: (typeof n_eqp)["id"]): string | null 
   if (!form.type.trim()) return S.vsTypeReq;
   const dims = { loa: Number(form.loa), beam: Number(form.beam), draft: Number(form.draft) };
   if (Object.values(dims).some((n) => !Number.isFinite(n))) return S.vsDimsNum;
+  // "Dalam Pembangunan" hanya ada pada kapal lama (status tidak lagi diisi di form).
   if (form.status !== "Dalam Pembangunan" && Object.values(dims).some((n) => n <= 0)) return S.vsDimsPos;
+  /* LBP & Depth baru ditambahkan: opsional supaya kapal lama tetap bisa diedit. */
   for (const v of [form.lbp, form.depth]) {
     if (v.trim() !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0)) return S.vsDimsOptMin;
   }
@@ -130,28 +105,19 @@ const optNum = (v: string): number | null => (v.trim() === "" ? null : Number(v)
 /** "31.5m" atau "-" (tanpa satuan) bila ukuran belum diisi. */
 const meters = (x: unknown): string => (x === undefined || x === null || x === "" ? "-" : `${String(x)}m`);
 
+/** Hanya field form. Saat edit dipakai sebagai patch, jadi field lama yang sudah
+ *  tidak ada di form (IMO, GT, …) tidak ikut tertimpa. */
 function formToPayload(form: VesselForm) {
   return {
     name: form.name.trim(),
-    imo: form.imo.trim(),
-    mmsi: form.mmsi.trim(),
     type: form.type.trim(),
-    owner: form.owner.trim(),
-    built: form.built.trim() !== "" ? Number(form.built) : null,
-    mainEngine: form.mainEngine.trim(),
-    loa: Number(form.loa) || 0,
-    beam: Number(form.beam) || 0,
-    draft: Number(form.draft) || 0,
-    bollard: optNum(form.bollard),
-    gt: optNum(form.gt),
-    dwt: optNum(form.dwt),
-    nt: optNum(form.nt),
-    bhp: optNum(form.bhp),
     class: form.class,
-    flag: form.flag,
-    status: form.status,
+    owner: form.owner.trim(),
+    loa: Number(form.loa),
     lbp: optNum(form.lbp),
+    beam: Number(form.beam),
     depth: optNum(form.depth),
+    draft: Number(form.draft),
   };
 }
 
@@ -159,25 +125,15 @@ function vesselToForm(v: StoreItem): VesselForm {
   const str = (x: unknown): string => (x === undefined || x === null ? "" : String(x));
   return {
     name: str(v.name),
-    imo: str(v.imo),
-    mmsi: str(v.mmsi),
     type: str(v.type),
     owner: str(v.owner),
-    built: str(v.built),
-    mainEngine: str(v.mainEngine),
     loa: str(v.loa),
-    beam: str(v.beam),
-    draft: str(v.draft),
-    bollard: str(v.bollard),
-    gt: str(v.gt),
-    dwt: str(v.dwt),
-    nt: str(v.nt),
-    bhp: str(v.bhp),
-    class: String(v.class ?? "BKI"),
-    flag: String(v.flag ?? "Indonesia"),
-    status: String(v.status ?? "Dalam Operasi"),
     lbp: str(v.lbp),
+    beam: str(v.beam),
     depth: str(v.depth),
+    draft: str(v.draft),
+    class: String(v.class ?? "BKI"),
+    status: String(v.status ?? "Dalam Operasi"),
   };
 }
 
@@ -308,6 +264,8 @@ export default function Vessels() {
     const warnZero = form.status === "Dalam Pembangunan" && dimsZero;
     const created = await add("vessels", {
       ...formToPayload(form),
+      flag: "Indonesia",
+      status: "Dalam Operasi",
       certificates: [],
       history: [{ date: todayISO(), event: "Kapal didaftarkan", type: "Registrasi" }],
     }, { action: "mendaftarkan kapal", module: "Kapal" });
@@ -361,208 +319,31 @@ export default function Vessels() {
 
   const renderFormFields = (f: VesselForm, setF: (v: VesselForm) => void) => (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-        {/* Row 1 */}
-        <Field label={locale === "en" ? "Vessel name" : "Nama kapal"}>
-          <input
-            className="input"
-            value={f.name}
-            onChange={(e) => setF({ ...f, name: e.target.value })}
-            placeholder="cth: TB Samudra Jaya 08"
-          />
-        </Field>
-        <Field label={locale === "en" ? "IMO number" : "Nomor IMO"}>
-          <input
-            className="input"
-            value={f.imo}
-            onChange={(e) => setF({ ...f, imo: e.target.value })}
-            placeholder="cth: IMO 9934567"
-          />
-        </Field>
-
-        {/* Row 2 */}
-        <Field label={locale === "en" ? "MMSI (9 digits)" : "MMSI (9 digit)"}>
-          <input
-            className="input"
-            value={f.mmsi}
-            onChange={(e) => setF({ ...f, mmsi: e.target.value })}
-            placeholder="cth: 525003456"
-          />
-        </Field>
-        <Field label={locale === "en" ? "Type" : "Tipe"}>
-          <input
-            className="input"
-            value={f.type}
-            onChange={(e) => setF({ ...f, type: e.target.value })}
-            placeholder="cth: Tugboat ASD 2×1600 HP"
-          />
-        </Field>
-
-        {/* Row 3 */}
-        <Field label={locale === "en" ? "Owner (client)" : "Pemilik (klien)"}>
+      <FormGrid>
+        <Field label={S.vsNameField}><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={S.vsNamePh} /></Field>
+        <Field label={S.typeLabel}><input className="input" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })} placeholder={S.vsTypePh} /></Field>
+        <Field label={S.vsOwnerField}>
           <SearchSelect
             value={f.owner}
             onChange={(owner) => setF({ ...f, owner })}
             options={clientOptionsFor(f.owner)}
-            placeholder="cth: PT Samudra Jaya Perkasa"
-            ariaLabel={locale === "en" ? "Owner (client)" : "Pemilik (klien)"}
+            placeholder={S.vsOwnerPh}
+            ariaLabel={S.vsOwnerField}
             emptyText={S.vsNoClient}
-            allowCustom
+            required
           />
         </Field>
-        <Field label={locale === "en" ? "Year built" : "Tahun bangun"}>
-          <input
-            className="input"
-            value={f.built}
-            onChange={(e) => setF({ ...f, built: e.target.value })}
-            placeholder="cth: 2018"
-          />
-        </Field>
-
-        {/* Row 4 */}
-        <Field label={locale === "en" ? "Main engine type" : "Tipe mesin utama"}>
-          <input
-            className="input"
-            value={f.mainEngine}
-            onChange={(e) => setF({ ...f, mainEngine: e.target.value })}
-            placeholder="cth: MAN 6L27/38"
-          />
-        </Field>
-        <Field label="LOA (m)">
-          <NumInput
-            min={0}
-            step={0.1}
-            className="input"
-            value={f.loa}
-            onChange={(e) => setF({ ...f, loa: e.target.value })}
-            placeholder="cth: 30"
-          />
-        </Field>
-
-        {/* Row 5 */}
-        <Field label="Beam (m)">
-          <NumInput
-            min={0}
-            step={0.1}
-            className="input"
-            value={f.beam}
-            onChange={(e) => setF({ ...f, beam: e.target.value })}
-            placeholder="cth: 9,5"
-          />
-        </Field>
-        <Field label="Draft (m)">
-          <NumInput
-            min={0}
-            step={0.1}
-            className="input"
-            value={f.draft}
-            onChange={(e) => setF({ ...f, draft: e.target.value })}
-            placeholder="cth: 4"
-          />
-        </Field>
-
-        {/* Row 6 */}
-        <Field label="Bollard (T)">
-          <NumInput
-            min={0}
-            step={0.1}
-            className="input"
-            value={f.bollard}
-            onChange={(e) => setF({ ...f, bollard: e.target.value })}
-            placeholder="cth: 40"
-          />
-        </Field>
-        <Field label="GT">
-          <NumInput
-            min={0}
-            step={1}
-            className="input"
-            value={f.gt}
-            onChange={(e) => setF({ ...f, gt: e.target.value })}
-            placeholder="cth: 495"
-          />
-        </Field>
-
-        {/* Row 7 */}
-        <Field label="DWT (ton)">
-          <NumInput
-            min={0}
-            step={1}
-            className="input"
-            value={f.dwt}
-            onChange={(e) => setF({ ...f, dwt: e.target.value })}
-            placeholder="cth: 2500"
-          />
-        </Field>
-        <Field label="NT">
-          <NumInput
-            min={0}
-            step={1}
-            className="input"
-            value={f.nt}
-            onChange={(e) => setF({ ...f, nt: e.target.value })}
-            placeholder="cth: 148"
-          />
-        </Field>
-
-        {/* Row 8 */}
-        <Field label={locale === "en" ? "Main engine BHP" : "BHP mesin utama"}>
-          <NumInput
-            min={0}
-            step={1}
-            className="input"
-            value={f.bhp}
-            onChange={(e) => setF({ ...f, bhp: e.target.value })}
-            placeholder="cth: 3200"
-          />
-        </Field>
-        <Field label="Class">
-          <select
-            className="input"
-            value={f.class}
-            onChange={(e) => setF({ ...f, class: e.target.value })}
-          >
-            {classOptionsFor(f.class).map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+        <Field label={S.vsClassField}>
+          <select className="input" value={f.class} onChange={(e) => setF({ ...f, class: e.target.value })}>
+            {classOptionsFor(f.class).map((c) => <option key={c}>{c}</option>)}
           </select>
         </Field>
-
-        {/* Row 9 */}
-        <Field label={locale === "en" ? "Flag" : "Bendera"}>
-          <select
-            className="input"
-            value={f.flag}
-            onChange={(e) => setF({ ...f, flag: e.target.value })}
-          >
-            {flagOptionsFor(f.flag).map((fl) => (
-              <option key={fl} value={fl}>
-                {fl}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="hidden sm:block" />
-
-        {/* Row 10: Status */}
-        <div className="sm:col-span-2">
-          <Field label="Status">
-            <select
-              className="input w-full"
-              value={f.status}
-              onChange={(e) => setF({ ...f, status: e.target.value })}
-            >
-              {statusOptionsFor(f.status).map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      </div>
+        <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={f.loa} onChange={(e) => setF({ ...f, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
+        <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={f.lbp} onChange={(e) => setF({ ...f, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
+        <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={f.beam} onChange={(e) => setF({ ...f, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
+        <Field label={S.vsDepthField}><NumInput min={0} step={0.1} className="input" value={f.depth} onChange={(e) => setF({ ...f, depth: e.target.value })} placeholder={S.vsDepthPh} /></Field>
+        <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={f.draft} onChange={(e) => setF({ ...f, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
+      </FormGrid>
     </div>
   );
 
@@ -738,7 +519,7 @@ export default function Vessels() {
       </div>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={S.vsAddTitle}
-        wide footer={<><button className="btn-secondary" onClick={() => setShowAdd(false)}>{S.cancelBtn}</button><AsyncButton className="rounded-lg bg-red-600 px-5 py-2 font-medium text-white hover:bg-red-700 transition" onAction={save}>{S.vsAddBtn}</AsyncButton></>}>
+        wide footer={<><button className="btn-secondary" onClick={() => setShowAdd(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={save}>{S.vsAddBtn}</AsyncButton></>}>
         {renderFormFields(form, setForm)}
       </Modal>
 

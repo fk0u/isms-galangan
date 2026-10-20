@@ -1,8 +1,10 @@
 /* Pembaca spreadsheet untuk fitur impor (catatan klien 17 Okt: impor Excel
    ruang lingkup & BoQ). Tanpa dependensi baru: .xlsx adalah zip berisi XML,
    dibuka dengan DecompressionStream("deflate-raw") bawaan browser/Node dan XML
-   sheet dibaca dengan regex (strukturnya sederhana dan tetap). Hanya sheet
-   PERTAMA yang dibaca; .csv juga diterima (pemisah koma atau titik koma). */
+   sheet dibaca dengan regex (strukturnya sederhana dan tetap). Yang dibaca sheet
+   pertama, atau sheet yang namanya cocok dengan `sheet` (mis. buku "Warehouse
+   Report" klien berisi IN dan OUT sekaligus); .csv juga diterima (pemisah koma
+   atau titik koma). */
 
 const td = new TextDecoder();
 
@@ -61,17 +63,19 @@ function colIndex(ref: string): number {
   return n - 1;
 }
 
-export async function readXlsxRows(buf: ArrayBuffer): Promise<string[][]> {
+export async function readXlsxRows(buf: ArrayBuffer, sheet?: RegExp): Promise<string[][]> {
   const files = await unzip(buf, (n) => n === "xl/workbook.xml" || n === "xl/_rels/workbook.xml.rels" || n === "xl/sharedStrings.xml" || /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
-  // Sheet pertama menurut urutan workbook, bukan nama berkas.
-  const firstRid = /<sheet\b[^>]*\br:id="([^"]+)"/.exec(files.get("xl/workbook.xml") ?? "")?.[1];
+  // Urutan workbook, bukan nama berkas: sheet bernama cocok, kalau tidak ada sheet pertama.
+  const tags = [...(files.get("xl/workbook.xml") ?? "").matchAll(/<sheet\b[^>]*>/g)].map((m) => m[0]);
+  const tag = (sheet ? tags.find((t) => sheet.test(decodeXml(/\bname="([^"]*)"/.exec(t)?.[1] ?? ""))) : undefined) ?? tags[0];
+  const firstRid = tag ? /\br:id="([^"]+)"/.exec(tag)?.[1] : undefined;
   const target = firstRid ? new RegExp(`<Relationship\\b[^>]*Id="${firstRid}"[^>]*Target="([^"]+)"`).exec(files.get("xl/_rels/workbook.xml.rels") ?? "")?.[1] : undefined;
   const sheetName = target ? `xl/${target.replace(/^\/?xl\//, "").replace(/^\//, "")}` : "xl/worksheets/sheet1.xml";
-  const sheet = files.get(sheetName) ?? [...files.entries()].find(([n]) => n.startsWith("xl/worksheets/"))?.[1];
-  if (!sheet) throw new Error("Sheet tidak ditemukan di berkas .xlsx");
+  const xml = files.get(sheetName) ?? [...files.entries()].find(([n]) => n.startsWith("xl/worksheets/"))?.[1];
+  if (!xml) throw new Error("Sheet tidak ditemukan di berkas .xlsx");
   const shared = [...(files.get("xl/sharedStrings.xml") ?? "").matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => textOf(m[1] ?? ""));
   const rows: string[][] = [];
-  for (const rm of sheet.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+  for (const rm of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
     const row: string[] = [];
     for (const cm of (rm[1] ?? "").matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
       const attrs = cm[1] ?? "";
@@ -117,9 +121,9 @@ export function readCsvRows(text: string): string[][] {
 }
 
 /** Baris-baris sel dari berkas .xlsx atau .csv (semua sel sebagai teks, sudah di-trim). */
-export async function readSheetRows(file: File): Promise<string[][]> {
+export async function readSheetRows(file: File, sheet?: RegExp): Promise<string[][]> {
   const isCsv = /\.csv$/i.test(file.name);
-  const rows = isCsv ? readCsvRows(await file.text()) : await readXlsxRows(await file.arrayBuffer());
+  const rows = isCsv ? readCsvRows(await file.text()) : await readXlsxRows(await file.arrayBuffer(), sheet);
   return rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ""));
 }
 
@@ -130,4 +134,15 @@ export function sheetNumber(cell: string): number {
   // Format Indonesia: titik ribuan + koma desimal.
   if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return Number(s.replace(/\./g, "").replace(",", "."));
   return Number(s.replace(",", "."));
+}
+
+/** Tanggal ISO dari sel: "2026-01-02", nomor seri Excel (46024) atau "02/01/2026"
+ *  (hari/bulan/tahun). "" bila tidak dikenali. */
+export function sheetDate(cell: string): string {
+  const s = cell.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // Excel menyimpan tanggal sebagai jumlah hari sejak 30 Des 1899.
+  if (/^\d{5}(\.\d+)?$/.test(s)) return new Date(Date.UTC(1899, 11, 30) + Math.floor(Number(s)) * 86_400_000).toISOString().slice(0, 10);
+  const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s);
+  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
 }
