@@ -70,7 +70,9 @@ import { apiFetch, isBackendConfigured } from "../../services/http";
 import { uploadFile } from "../../services/upload";
 import { fmtJumlah, fmtRupiah, fmtMiliar, fmtPersen, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
-import { exportExcel, exportExcelSheets } from "../../utils/export";
+import { exportExcel } from "../../utils/export";
+import { exportWarehouseReport, exportWarehouseTemplate } from "../../utils/warehouseReport";
+import { readSheetRows, sheetDate, sheetNumber } from "../../utils/readSheet";
 import { sbTonasePlat, sbSjNumber, sbTtNumber, maxSeq, parseSjSeq, SB_KOP } from "../../utils/sb";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -384,7 +386,7 @@ export default function Inventory() {
   const INV_COLS: CollectionKey[] = [
     "inventory", "movements", "projects", "requisitions",
     "documents", "settings", "purchaseOrders", "payables", "warehouses", "materialRequests", "spareparts",
-    "bomItems",
+    "bomItems", "vendors",
     "employees",
 ];
   useModuleSync(INV_COLS);
@@ -1666,96 +1668,24 @@ if (k === "mattype") return matTypeOf(i);
 
 
   const downloadTemplateIN = () => {
-    void exportExcel([
-      ["TANGGAL", "KODE BARANG", "NAMA BARANG", "KODE SUPPLIER", "NAMA SUPPLIER", "JUMLAH BARANG MASUK", "QTY", "HARGA (NON PPN 11%)", "PAJAK (JIKA ADA)", "TOTAL"],
-      ["2026-01-05", "DX0000GEN5", "OXYGEN ISI", "C0011", "CV SUMBER GAS ABADI", 10, "TBG", 1600000, 176000, 16176000],
-      ["2026-01-05", "EZ0000BAR14", "ROUNDBAR 125MMX6MTR S-45C/5\"", "P0011", "PT KALTIM LESTARI UNGGUL", 1, "BTG", 13176000, 0, 13176000],
-    ], "Template-Warehouse-IN", "IN JAN-DES")
+    void exportWarehouseTemplate("IN", "Template-Warehouse-IN")
       .then(() => toast(S.tplDone.replace("{n}", "Template-Warehouse-IN")))
       .catch(() => toast(S.saveFail, "info"));
   };
 
   const downloadTemplateOUT = () => {
-    void exportExcel([
-      ["TANGGAL", "PURPOSE", "KODE BARANG", "NAMA BARANG", "JUMLAH BARANG KELUAR", "QTY", "PIC"],
-      ["2026-01-05", "PT SAHA AGROMANDIRI/KEBUN SAWIT", "M0000AS 1", "AS BRONZE HOLLOW 5X5 GALVANIS", 3, "BTG", "AMIRUL"],
-      ["2026-01-05", "CRANE AMERICAN", "AC0000OLT4", "BOLT CON ROD DETROID", 6, "PCS", "GAZALI"],
-    ], "Template-Warehouse-OUT", "OUT JAN-DES")
+    void exportWarehouseTemplate("OUT", "Template-Warehouse-OUT")
       .then(() => toast(S.tplDone.replace("{n}", "Template-Warehouse-OUT")))
       .catch(() => toast(S.saveFail, "info"));
   };
 
-  const downloadWarehouseReport = async () => {
-    try {
-      const inHeaders = [
-        "TANGGAL", "KODE BARANG", "NAMA BARANG", "KODE SUPPLIER", "NAMA SUPPLIER",
-        "JUMLAH BARANG MASUK", "QTY", "HARGA (NON PPN 11%)", "PAJAK (JIKA ADA)", "TOTAL",
-      ];
-      const inRows = movements
-        .filter((m) => m.tone === "in" || String(m.type) === "Penerimaan")
-        .map((m) => {
-          const item = inventory.find((i) => i.id === m.itemId || i.name === m.item);
-          const qty = Number(m.qty || 0);
-          const price = Number(m.priceExcl || item?.cost || 0);
-          const tax = Number(m.tax || 0);
-          const total = Number(m.total || (qty * price + tax));
-          return [
-            String(m.date || todayISO()),
-            String(item?.sku || m.itemId || ""),
-            String(m.item || item?.name || ""),
-            String(m.supplierCode || "-"),
-            String(m.supplier || "-"),
-            qty,
-            String(item?.unit || "PCS"),
-            price,
-            tax,
-            total,
-          ];
-        });
-
-      const outHeaders = [
-        "TANGGAL", "PURPOSE", "KODE BARANG", "NAMA BARANG", "JUMLAH BARANG KELUAR", "QTY", "PIC",
-      ];
-      const outRows = movements
-        .filter((m) => m.tone === "out" || String(m.type) === "Pengeluaran")
-        .map((m) => {
-          const item = inventory.find((i) => i.id === m.itemId || i.name === m.item);
-          return [
-            String(m.date || todayISO()),
-            String(m.purpose || m.to || m.project || "Pemakaian Galangan"),
-            String(item?.sku || m.itemId || ""),
-            String(m.item || item?.name || ""),
-            Number(m.qty || 0),
-            String(item?.unit || "PCS"),
-            String(m.pic || m.by || "Gudang"),
-          ];
-        });
-
-      const stockHeaders = [
-        "KODE BARANG", "NAMA BARANG", "KATEGORI", "GUDANG", "STOK SAAT INI", "MIN STOK", "SATUAN", "HARGA SATUAN", "TOTAL NILAI",
-      ];
-      const stockRows = inventory.map((i) => [
-        String(i.sku || i.id),
-        String(i.name),
-        String(i.category || "-"),
-        String(i.warehouse || "-"),
-        Number(i.stock || 0),
-        Number(i.minStock || 0),
-        String(i.unit || "PCS"),
-        Number(i.cost || 0),
-        Number(i.stock || 0) * Number(i.cost || 0),
-      ]);
-
-      await exportExcelSheets([
-        { name: "IN JAN-DES", rows: [inHeaders, ...inRows] },
-        { name: "OUT JAN-DES", rows: [outHeaders, ...outRows] },
-        { name: "LOGISTIK", rows: [stockHeaders, ...stockRows] },
-      ], "Warehouse Report 2026");
-
-      toast(locale === "en" ? "Warehouse Report 2026 exported successfully" : "Warehouse Report 2026 berhasil diunduh");
-    } catch (e) {
-      toast(e instanceof Error ? e.message : S.saveFail, "info");
-    }
+  const downloadWarehouseReport = () => {
+    const year = todayISO().slice(0, 4);
+    // Satu buku per tahun seperti berkas klien ("IN JAN-DES" = Januari-Desember).
+    const inYear = movements.filter((m) => String(m.date ?? "").startsWith(year));
+    void exportWarehouseReport({ inventory, movements: inYear, vendors: data.vendors ?? [] }, `Warehouse Report ${year}`)
+      .then(() => toast(S.whReportDone.replace("{n}", year)))
+      .catch((e) => toast(e instanceof Error ? e.message : S.saveFail, "info"));
   };
 
   const normHeader = (h: string): string =>
@@ -1770,25 +1700,21 @@ if (k === "mattype") return matTypeOf(i);
     return -1;
   };
 
-  const splitCsvLine = (line: string): string[] =>
-    line.split(/[,;\t]/).map((s) => s.trim().replace(/^"|"$/g, "").trim());
-
   const findItemByKode = (kode: string): StoreItem | undefined => {
     const k = kode.trim().toLowerCase();
     return inventory.find((i) => String(i.sku).toLowerCase() === k || String(i.id).toLowerCase() === k);
   };
 
   const validDateOrToday = (v: string): string | null => {
-    const t = v.trim();
-    if (!t) return todayISO();
-    return /^\d{4}-\d{2}-\d{2}$/.test(t) && !Number.isNaN(Date.parse(t)) ? t : null;
+    if (!v.trim()) return todayISO();
+    const t = sheetDate(v);
+    return t && !Number.isNaN(Date.parse(t)) ? t : null;
   };
 
   const handleImportINFile = (file: File) => {
-    void file.text().then(async (text) => {
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
+    void readSheetRows(file, /^IN\b/i).then(async (lines) => {
       if (lines.length === 0) { setImportReport([S.fileEmpty]); return; }
-      const firstCells = splitCsvLine(lines[0]);
+      const firstCells = lines[0];
       const hasHeader = firstCells.some((c) => {
         const nh = normHeader(c);
         return nh === "kode" || nh === "sku" || nh === "kodebarang" || nh === "tanggal" || nh === "tangggal";
@@ -1812,21 +1738,21 @@ if (k === "mattype") return matTypeOf(i);
       let ok = 0;
       for (const [idx, line] of lines.slice(start).entries()) {
         const rowNo = idx + start + 1;
-        const c = splitCsvLine(line);
-        const kode = (c[idxKode] ?? "").trim();
-        const item = kode ? findItemByKode(kode) : undefined;
-        if (!item) { fails.push(S.rowUnknownCode.replace("{a}", String(rowNo)).replace("{b}", kode || S.emptyParen)); continue; }
-        const qty = Number(c[idxQty] ?? "");
+        const c = line;
+        const kode = idxKode >= 0 ? (c[idxKode] ?? "").trim() : "";
+        const item = kode ? findItemByKode(kode) : (idxNama >= 0 ? inventory.find((i) => String(i.name).toLowerCase() === (c[idxNama] ?? "").trim().toLowerCase()) : undefined);
+        if (!item) { fails.push(S.rowUnknownCode.replace("{a}", String(rowNo)).replace("{b}", kode || (idxNama >= 0 ? (c[idxNama] ?? "") : "") || S.emptyParen)); continue; }
+        const qty = sheetNumber(c[idxQty] ?? "");
         if (!Number.isFinite(qty) || qty <= 0) { fails.push(S.rowQty.replace("{a}", String(rowNo))); continue; }
-        const price = idxHarga >= 0 && (c[idxHarga] ?? "") !== "" ? Number(c[idxHarga]) : 0;
+        const price = idxHarga >= 0 && (c[idxHarga] ?? "") !== "" ? sheetNumber(c[idxHarga] ?? "") : 0;
         if (!Number.isFinite(price) || price < 0) { fails.push(S.rowPrice.replace("{a}", String(rowNo))); continue; }
-        const tax = idxPajak >= 0 && (c[idxPajak] ?? "") !== "" ? Number(c[idxPajak]) : 0;
+        const tax = idxPajak >= 0 && (c[idxPajak] ?? "") !== "" ? sheetNumber(c[idxPajak] ?? "") : 0;
         if (!Number.isFinite(tax) || tax < 0) { fails.push(S.rowTax.replace("{a}", String(rowNo))); continue; }
         const date = validDateOrToday(idxTanggal >= 0 ? (c[idxTanggal] ?? "") : "");
         if (!date) { fails.push(S.rowDate.replace("{a}", String(rowNo))); continue; }
         const supplier = idxSupplier >= 0 ? (c[idxSupplier] ?? "").trim() : "";
         const rawTotal = idxTotal >= 0 ? (c[idxTotal] ?? "").trim() : "";
-        const total = rawTotal !== "" ? Number(rawTotal) : Math.round(qty * price) + tax;
+        const total = rawTotal !== "" ? sheetNumber(rawTotal) : Math.round(qty * price) + tax;
         if (!Number.isFinite(total) || total < 0) { fails.push(S.rowTotal.replace("{a}", String(rowNo))); continue; }
         const purpose = idxPurpose >= 0 ? (c[idxPurpose] ?? "").trim() : "";
         const pic = idxPic >= 0 ? (c[idxPic] ?? "").trim() : "";
@@ -1860,10 +1786,9 @@ if (k === "mattype") return matTypeOf(i);
   };
 
   const handleImportOUTFile = (file: File) => {
-    void file.text().then(async (text) => {
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
+    void readSheetRows(file, /^OUT\b/i).then(async (lines) => {
       if (lines.length === 0) { setImportReport([S.fileEmpty]); return; }
-      const firstCells = splitCsvLine(lines[0]);
+      const firstCells = lines[0];
       const hasHeader = firstCells.some((c) => {
         const nh = normHeader(c);
         return nh === "kode" || nh === "sku" || nh === "kodebarang" || nh === "purpose" || nh === "tanggal";
@@ -1889,11 +1814,11 @@ if (k === "mattype") return matTypeOf(i);
       let ok = 0;
       for (const [idx, line] of lines.slice(start).entries()) {
         const rowNo = idx + start + 1;
-        const c = splitCsvLine(line);
+        const c = line;
         const kode = idxKode >= 0 ? (c[idxKode] ?? "").trim() : "";
         const item = kode ? findItemByKode(kode) : (idxNama >= 0 ? inventory.find((i) => String(i.name).toLowerCase() === (c[idxNama] ?? "").trim().toLowerCase()) : undefined);
         if (!item) { fails.push(S.rowUnknownCode.replace("{a}", String(rowNo)).replace("{b}", kode || (idxNama >= 0 ? (c[idxNama] ?? "") : "") || S.emptyParen)); continue; }
-        const qty = Number(c[idxQty] ?? "");
+        const qty = sheetNumber(c[idxQty] ?? "");
         if (!Number.isFinite(qty) || qty <= 0) { fails.push(S.rowQty.replace("{a}", String(rowNo))); continue; }
         const purpose = (idxPurpose >= 0 ? (c[idxPurpose] ?? "").trim() : "") || "Pemakaian Galangan";
         const pic = (idxPic >= 0 ? (c[idxPic] ?? "").trim() : "") || "Gudang";
@@ -1947,17 +1872,16 @@ if (k === "mattype") return matTypeOf(i);
     }).catch((e) => toast(e instanceof Error ? e.message : S.saveFail, "info"));
   };
 
-  /* Impor CSV manual: parse koma, validasi SKU unik, laporan gagal per baris. */
+  /* Impor Excel/CSV manual: validasi SKU unik, laporan gagal per baris. */
   const handleImportFile = (file: File) => {
-    void file.text().then(async (text) => {
-      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== "");
+    void readSheetRows(file).then(async (lines) => {
       if (lines.length === 0) { setImportReport([S.fileEmpty]); return; }
-      const start = /^nama\s*,/i.test(lines[0]) ? 1 : 0;
+      const start = (lines[0][0] ?? "").toLowerCase() === "nama" ? 1 : 0;
       const skuSeen = new Set(inventory.map((i) => String(i.sku).toLowerCase()));
       const fails: string[] = [];
       let ok = 0;
       for (const [idx, line] of lines.slice(start).entries()) {
-        const c = line.split(",").map((s) => s.trim());
+        const c = line;
         const rowNo = idx + start + 1;
         const nama = c[0] ?? "";
         const sku = c[1] ?? "";
@@ -2628,17 +2552,17 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 )}
                 <label className="btn-secondary cursor-pointer text-xs" title={importMode === "Katalog" ? S.hintCols : importMode === "IN" ? S.hintColsIn : S.hintColsOut}>
                   <Upload className="h-3.5 w-3.5" /> {S.btnImport}
-                  <input type="file" accept=".csv" className="hidden" aria-label={importMode === "Katalog" ? S.impAriaKatalog : importMode === "IN" ? S.impAriaIn : S.impAriaOut}
+                  <input type="file" accept=".xlsx,.csv" className="hidden" aria-label={importMode === "Katalog" ? S.impAriaKatalog : importMode === "IN" ? S.impAriaIn : S.impAriaOut}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) { if (importMode === "IN") handleImportINFile(f); else if (importMode === "OUT") handleImportOUTFile(f); else handleImportFile(f); } e.target.value = ""; }} />
                 </label>
                 <button
                   type="button"
                   className="btn-secondary text-xs"
-                  onClick={() => void downloadWarehouseReport()}
-                  title={locale === "en" ? "Export Warehouse Report 2026 (.xlsx) matching client template" : "Unduh Warehouse Report 2026 (.xlsx) sesuai template galangan"}
+                  onClick={downloadWarehouseReport}
+                  title={S.whReportTitle}
                 >
                   <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  {locale === "en" ? "Warehouse Report (.xlsx)" : "Laporan Gudang (.xlsx)"}
+                  {S.btnWhReport}
                 </button>
               </div>
               {importReport.length > 0 && (
