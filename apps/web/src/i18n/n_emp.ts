@@ -3,7 +3,7 @@ export const n_emp = {
   id: {
     kopTitle: "Kop surat PDF",
     kopHint: "Dipakai di semua dokumen PDF. Kolom yang dikosongkan memakai kop bawaan.",
-    kopFields: { name: "Nama perusahaan", line1: "Baris keterangan", hq: "Kantor pusat", addr1: "Alamat kantor", addr2: "Alamat galangan", hp: "Telepon" },
+    kopFields: { name: "Nama perusahaan", line1: "Baris keterangan", hq: "Kantor pusat", addr1: "Alamat kantor", addr2: "Alamat galangan", hp: "Telepon", director: "Nama direktur (penanda tangan)" },
     kopSave: "Simpan kop",
     kopSaved: "Kop surat disimpan",
     kopFail: "Kop surat gagal disimpan",
@@ -124,7 +124,7 @@ export const n_emp = {
   en: {
     kopTitle: "PDF letterhead",
     kopHint: "Used on every PDF document. Empty fields fall back to the built-in letterhead.",
-    kopFields: { name: "Company name", line1: "Tagline", hq: "Head office", addr1: "Office address", addr2: "Shipyard address", hp: "Phone" },
+    kopFields: { name: "Company name", line1: "Tagline", hq: "Head office", addr1: "Office address", addr2: "Shipyard address", hp: "Phone", director: "Director name (signatory)" },
     kopSave: "Save letterhead",
     kopSaved: "Letterhead saved",
     kopFail: "Could not save the letterhead",

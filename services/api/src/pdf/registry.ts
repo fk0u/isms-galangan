@@ -61,7 +61,7 @@ import {
   type Collections,
 } from "./reports.js";
 import { q } from "../db.js";
-import { loadEntity, loadMany, num, str, text, longDate, money, rupiah, qty, arr, itemRows, L, type Locale } from "./documents/shared.js";
+import { kopDirector, loadEntity, loadMany, num, str, text, longDate, money, rupiah, qty, arr, itemRows, L, type Locale } from "./documents/shared.js";
 
 /** Filter laporan dari klien; klien memilih periode, bukan isi angka. */
 function filterText(ctx: RenderContext, key: string, fallback = ""): string {
@@ -124,9 +124,6 @@ function docNumber(entity: Record<string, unknown>, ...keys: string[]): string {
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
-
-/** Nama sparing bercabang pada dokumen - satu sumber, bukan tiga konstanta. */
-const SIGNER = "H. Syarif Sarapping";
 
 /** Tarif PPN default. NilaiFinal ada di baris PO/Invoice; ini cuma dipakai
  *  saat baris tidak menyimpannya, jadi harus sama dengan `PPN_RATE` FE. */
@@ -209,7 +206,7 @@ const invoiceRecipe: Recipe<InvoiceInput> = {
       skdt: inv.skdt === true,
       paidAt: str(inv, "paidAt"),
       paidRef: str(inv, "paidRef"),
-      signer: SIGNER,
+      signer: kopDirector(),
       locale: ctx.locale,
     };
   },
@@ -351,7 +348,7 @@ const suratCutiRecipe: Recipe<CutiDocInput> = {
       alasan: str(leave, "note", "reason"),
       /* Persetujuan harus bernama. Surat tanpa nama pemberi persetujuan tidak
        * berlaku - jadi ketika tidak ada, nama itu diisi dengan direksi, bukan "-". */
-      approverNama: approver === "-" ? SIGNER : approver,
+      approverNama: approver === "-" ? kopDirector() : approver,
       approverJabatan: approver === "-" ? "Direktur" : str(leave, "approverRole", "approverPosition"),
       tanggalPersetujuan: str(leave, "approvedAt") !== "-" ? str(leave, "approvedAt") : today(),
       locale: ctx.locale,
@@ -424,7 +421,7 @@ async function suratHrModel(l: Record<string, unknown>, ctx: RenderContext): Pro
       tanggalPelanggaran: str(l, "tanggal"),
       tindakan: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : "-",
       berlakuSampai: str(l, "berlakuSampai") !== "-" ? str(l, "berlakuSampai") : undefined,
-      namaPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : SIGNER,
+      namaPemberi: str(l, "approvedBy") !== "-" ? str(l, "approvedBy") : kopDirector(),
       // Kosong = jabatan bawaan template (HR / HRD); surat umum memakai "HRD".
       jabatanPemberi: str(l, "approvedRole", "jabatanPemberi") !== "-" ? str(l, "approvedRole", "jabatanPemberi") : "",
       alamat,
@@ -530,7 +527,7 @@ const bastRecipe: Recipe<BastInput> = {
         status: String(r.status ?? status),
       })),
       notes: str(b, "notes") !== "-" ? str(b, "notes") : str(b, "lampiran"),
-      nameReceiver: str(b, "receiverName") !== "-" ? str(b, "receiverName") : str(b, "penandatangan") !== "-" ? str(b, "penandatangan") : SIGNER,
+      nameReceiver: str(b, "receiverName") !== "-" ? str(b, "receiverName") : str(b, "penandatangan") !== "-" ? str(b, "penandatangan") : kopDirector(),
       nameGiver: sub && str(sub, "name") !== "-" ? str(sub, "name") : "Tim Proyek",
       locale: ctx.locale,
     };
@@ -579,7 +576,7 @@ const spkRecipe: Recipe<SpkInput> = {
          disimpan per WO, jadi klausul standar perusahaan yang dicetak -
          bukan tanda hubung kosong yang terlihat seperti kelalaian. */
       k3Requirements: str(wo, "k3Requirements") !== "-" ? str(wo, "k3Requirements") : K3_CLAUSE,
-      nameDirector: SIGNER,
+      nameDirector: kopDirector(),
       nameSubcontractor: sub ? str(sub, "name") : str(wo, "subName"),
       locale: ctx.locale,
     };
@@ -613,7 +610,7 @@ const boqRecipe: Recipe<BoqDocInput> = {
       approvedAt: str(doc, "approvedAt") !== "-" ? str(doc, "approvedAt") : undefined,
       note: str(doc, "note") !== "-" ? str(doc, "note") : undefined,
       items: rows, total: rows.reduce((t, r) => t + r.total, 0),
-      signer: SIGNER, locale: ctx.locale,
+      signer: kopDirector(), locale: ctx.locale,
     };
   },
   assemble: (input) => boqDoc(input),
@@ -639,7 +636,7 @@ const garansiRecipe: Recipe<GaransiInput> = {
       client: proj ? str(proj, "client") : "-",
       wbsTask: str(w, "wbsTask") !== "-" ? str(w, "wbsTask") : undefined,
       start, months, end: Number.isNaN(d.getTime()) ? start : d.toISOString().slice(0, 10),
-      status: str(w, "status"), signer: SIGNER, locale: ctx.locale,
+      status: str(w, "status"), signer: kopDirector(), locale: ctx.locale,
     };
   },
   assemble: (input) => garansiDoc(input),
@@ -670,7 +667,7 @@ function poSigners(p: Record<string, unknown>, vendorName: string, approvals: Ar
   }
   return [
     { role: "Supplier", name: pick("supplier", vendorName || "-") },
-    { role: L(locale, "Direktur", "Director"), name: pick("direktur", SIGNER) },
+    { role: L(locale, "Direktur", "Director"), name: pick("direktur", kopDirector()) },
   ];
 }
 
@@ -863,7 +860,7 @@ const kopPenawaranRecipe: Recipe<KopPenawaranInput> = {
       totalValue: num(qrow, "totalValue"),
       validUntil: str(qrow, "validUntil"),
       notes: str(qrow, "notes"),
-      nameSigner: SIGNER,
+      nameSigner: kopDirector(),
       locale: ctx.locale,
     };
   },
@@ -958,7 +955,7 @@ const transmittalRecipe: Recipe<TransmittalInput> = {
         status: String(r.status ?? "-"),
       })),
       notes: str(t, "trNotes"),
-      sender: str(t, "trSender") !== "-" ? str(t, "trSender") : SIGNER,
+      sender: str(t, "trSender") !== "-" ? str(t, "trSender") : kopDirector(),
       locale: ctx.locale,
     };
   },
@@ -1023,7 +1020,7 @@ const sptRecipe: Recipe<SptInput> = {
       formulir: str(t, "nomorFormulir") !== "-" ? str(t, "nomorFormulir") : undefined,
       bank: str(t, "bank") !== "-" ? str(t, "bank") : undefined,
       teller: str(t, "teller") !== "-" ? str(t, "teller") : undefined,
-      namaPenandatangan: SIGNER,
+      namaPenandatangan: kopDirector(),
       jabatanPenandatangan: "Direktur",
       locale: ctx.locale,
     };

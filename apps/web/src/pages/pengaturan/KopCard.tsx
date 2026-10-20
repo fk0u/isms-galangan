@@ -6,9 +6,9 @@ import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
 
-const FIELDS = ["name", "line1", "hq", "addr1", "addr2", "hp"] as const;
+const FIELDS = ["name", "line1", "hq", "addr1", "addr2", "hp", "director"] as const;
 type KopField = (typeof FIELDS)[number];
-const EMPTY: Record<KopField, string> = { name: "", line1: "", hq: "", addr1: "", addr2: "", hp: "" };
+const EMPTY: Record<KopField, string> = { name: "", line1: "", hq: "", addr1: "", addr2: "", hp: "", director: "" };
 
 function parseKop(raw: unknown): Record<KopField, string> {
   let obj: unknown = raw;

@@ -26,10 +26,10 @@ const sampleModel: AnalyticModel = {
     wonContractCount: 6,
   },
   activeProjectsList: [
-    { id: "PRJ-2026-001", vessel: "TB. Berau Coal 01", client: "PT Berau Coal", type: "Repair", budget: 6_500_000_000, progress: 85, status: "Sedang Berjalan" },
+    { id: "PRJ-2026-001", vessel: "TB. Batubara Contoh 01", client: "PT Batubara Contoh", type: "Repair", budget: 6_500_000_000, progress: 85, status: "Sedang Berjalan" },
     { id: "PRJ-2026-002", vessel: "TB. Mahakam 01", client: "PT Pelayaran Mahakam", type: "New Build", budget: 14_000_000_000, progress: 92, status: "Dalam Proses" },
     { id: "PRJ-2026-003", vessel: "BG. Nusantara 300", client: "PT Nusantara Lines", type: "Retrofit", budget: 4_200_000_000, progress: 45, status: "Sedang Berjalan" },
-    { id: "PRJ-2026-009", vessel: "Km. Sepinggan", client: "PT Pelni", type: "Repair", budget: 8_500_000_000, progress: 30, status: "Terlambat" },
+    { id: "PRJ-2026-009", vessel: "Km. Sepinggan", client: "PT Pelayaran Contoh Negara", type: "Repair", budget: 8_500_000_000, progress: 30, status: "Terlambat" },
   ],
   series: [
     { key: "2026-08", label: "Agu 2026", revenue: 900, cost: 700, margin: 22, projects: 4 },

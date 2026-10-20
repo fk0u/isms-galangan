@@ -11,7 +11,8 @@ export const SB_KOP = {
   hp: "0811 552 4456",
   web: "www.syukurbersaudara.com",
   email: "syukurbersaudara@gmail.com",
-  director: "H. Syarif Sarapping",
+  // Sintetis; nama riil diisi di Pengaturan > Kop (setting COMPANY_KOP).
+  director: "Direktur Contoh",
 };
 
 export const DPP_FACTOR = 11 / 12;

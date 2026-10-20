@@ -30,7 +30,9 @@ export const KOP = {
   addr1: "Jl. Mulawarman No.23 Telp. (0541) 6246750, Admin 08115524456",
   addr2: "Shipyard: Jl. Olah Bebaya Kampung Tengah Pulau Atas (Samarinda Ilir)",
   hp: "0811 552 4456",
-  director: "H. Syarif Sarapping",
+  // Sintetis: nama direktur riil diisi di Pengaturan > Kop (COMPANY_KOP.director)
+  // di server, bukan di repo publik.
+  director: "Direktur Contoh",
 } as const;
 
 /** Baris yang harus sama persis dengan KOP di atas - dipakai probe. */
@@ -47,8 +49,8 @@ export const KOP_LINES: Record<keyof typeof KOP, string> = {
 /* F3-L-05: kop bisa diganti dari Pengaturan (setting COMPANY_KOP) tanpa
    mengubah kode. Route PDF memanggil setKopOverride() sebelum merakit; kunci
    yang kosong tetap memakai kop bawaan di atas. */
-type KopText = "name" | "line1" | "hq" | "addr1" | "addr2" | "hp";
-const KOP_TEXT: KopText[] = ["name", "line1", "hq", "addr1", "addr2", "hp"];
+type KopText = "name" | "line1" | "hq" | "addr1" | "addr2" | "hp" | "director";
+const KOP_TEXT: KopText[] = ["name", "line1", "hq", "addr1", "addr2", "hp", "director"];
 let kopOverride: Partial<Record<KopText, string>> = {};
 
 /** Terima nilai setting apa adanya (string JSON / objek / kosong). */
@@ -63,6 +65,11 @@ export function setKopOverride(raw: unknown): void {
     }
   }
   kopOverride = next;
+}
+
+/** Penanda tangan bawaan (direktur) bila baris dokumen tidak menyimpan nama. */
+export function kopDirector(): string {
+  return kopOverride.director ?? KOP.director;
 }
 
 /** Kop perusahaan. Semua dokumen resmi memakai ini tanpa variasi. */

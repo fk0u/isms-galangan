@@ -68,9 +68,9 @@ export const seedWorkOrders: StoreItem[] = [
     scope: "Instalasi panel & cabling", status: "Dalam Proses",
     milestones: WO_MS(["Panel delivery & setting", 40, "2026-09-20"], ["Cable pulling & termination", 35, "2026-10-15"], ["Load test & certification", 25, "2026-11-05"]).map((m, i) => (i === 0 ? { ...m, doneAt: seedDoneAt(m.due) } : m)),
   },
-  // RawData INVOICE SUBKONTRAKTOR (Pak Yusuf, BG RMN 3324).
+  // RawData INVOICE SUBKONTRAKTOR (Pak Mandor Contoh, BG RMN 3324).
   {
-    id: "WO-SB-001", sub: "Pak Yusuf", project: "RP-2026-006",
+    id: "WO-SB-001", sub: "Pak Mandor Contoh", project: "RP-2026-006",
     scope: "Outfitting Deck BG RMN 3324 (Ban Daprah, Tanda Selar, pressure test tank)", status: "Selesai", date: "2026-08-20",
     milestones: WO_MS(["Tanda selar & ban daprah", 60, "2026-08-05"], ["Pressure test tank", 40, "2026-08-20"]).map((m) => ({ ...m, doneAt: seedDoneAt(m.due) })),
   },
@@ -88,13 +88,13 @@ export const seedTermins: StoreItem[] = [
   { id: "TRM-003", sub: "CV Scaffold Aman", woId: "WO-2026-044", milestone: "Pen dismantled", amount: 450000000, pph23: "2%", retention: "5%", status: "Lunas" },
   { id: "TRM-004", sub: "CV Pengecatan Marine", woId: "WO-2026-042", milestone: "Surface preparation", amount: 940000000, pph23: "2%", retention: "5%", status: "Belum Dibayar" },
   // RawData: subtotal 300.000 - PPh 0,5% (1.500) = 298.500 lunas.
-  { id: "TRM-SB-001", sub: "Pak Yusuf", woId: "WO-SB-001", milestone: "Pressure test tank", amount: 300000, pphPct: 0.5, pphAmt: 1500, retPct: 0, retAmt: 0, status: "Lunas", date: "2026-09-01", paidAt: "2026-09-01", paidMethod: "Transfer BRI SB" },
+  { id: "TRM-SB-001", sub: "Pak Mandor Contoh", woId: "WO-SB-001", milestone: "Pressure test tank", amount: 300000, pphPct: 0.5, pphAmt: 1500, retPct: 0, retAmt: 0, status: "Lunas", date: "2026-09-01", paidAt: "2026-09-01", paidMethod: "Transfer BRI SB" },
 ];
 
 export const seedVendors: StoreItem[] = [
   { id: "VND-001", name: "PT Bahana Baja", cat: "Baja & Struktur", onTime: 92, quality: 95, po: 12, status: "Aktif" },
   { id: "VND-002", name: "PT Indo Diesel", cat: "Mesin & Engine", onTime: 96, quality: 90, po: 5, status: "Aktif" },
-  { id: "VND-003", name: "PT Jotun Indonesia", cat: "Cat & Coating", onTime: 88, quality: 93, po: 8, status: "Aktif" },
+  { id: "VND-003", name: "PT Cat Contoh Marine", cat: "Cat & Coating", onTime: 88, quality: 93, po: 8, status: "Aktif" },
   { id: "VND-004", name: "PT Steel Rig", cat: "Rigging & Wire", onTime: 84, quality: 87, po: 6, status: "Aktif" },
   { id: "VND-005", name: "PT Primabaja", cat: "Baja & Struktur", onTime: 81, quality: 86, po: 3, status: "Kualifikasi" },
   // RawData: vendor subkontraktor WO (nama = sub di workOrders).
@@ -104,7 +104,7 @@ export const seedVendors: StoreItem[] = [
   { id: "VND-044", name: "CV Scaffold Aman", cat: "Perancah & Staging", onTime: 92, quality: 92, po: 2, status: "Aktif" },
   { id: "VND-045", name: "PT Kelistrikan Bahari", cat: "Elektrikal & Panel", onTime: 76, quality: 76, po: 1, status: "Kualifikasi" },
   // RawData CONTOH HUTANG + FORMAT PO MATERIAL.
-  { id: "VND-SB-001", name: "PT KALTIM LESTARI UNGGUL", cat: "Baja & Pipa", onTime: 90, quality: 91, po: 9, status: "Aktif" },
+  { id: "VND-SB-001", name: "PT MITRA CONTOH EKASA", cat: "Baja & Pipa", onTime: 90, quality: 91, po: 9, status: "Aktif" },
 ];
 
 export const seedRequisitions: StoreItem[] = [
@@ -173,10 +173,10 @@ const HIST_MONTHS = [
 /* Invoice lunas per bulan. Amount bervariasi supaya grafik tidak terlihat
    datar, dan tetap konsisten dengan besarannya yang wajar. */
 const HIST_INVOICES = [
-  { client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", project: "NB-2025-012", amount: 4_200_000_000 },
-  { client: "PT MUTIARA EXPRESS LINES", project: "RP-2026-003", amount: 1_850_000_000 },
-  { client: "PT TIRTA MAHAKAM RESOURCES TBK", project: "NB-2025-014", amount: 2_640_000_000 },
-  { client: "PT KALIMANTAN MARITIM LINE", project: "U/STOCK", amount: 960_000_000 },
+  { client: "PT PELAYARAN CONTOH ELANG", project: "NB-2025-012", amount: 4_200_000_000 },
+  { client: "PT PELAYARAN CONTOH HARAPAN", project: "RP-2026-003", amount: 1_850_000_000 },
+  { client: "PT PELAYARAN CONTOH KARYA", project: "NB-2025-014", amount: 2_640_000_000 },
+  { client: "PT PELAYARAN CONTOH SENTOSA 2", project: "U/STOCK", amount: 960_000_000 },
 ];
 
 export const seedInvoicesHistory: StoreItem[] = HIST_MONTHS.flatMap((ym, mi) =>
@@ -334,85 +334,85 @@ export const seedJournals: StoreItem[] = JU_PENYESUAIAN_EXCEL.map((j, i) => ({
 // Seed dari docs/RawData/DataPencatatanFinance.xlsx - sheet Hutang, Agustus 2026.
 // amt = saldo akhir (outstanding), openAwal = saldo awal bulan, po OPEN-0826 = saldo awal (tanpa PO).
 export const seedPayables: StoreItem[] = [
-  { id: "AP-EX-001", v: "CV BERLIAN JAYA GAS", po: "OPEN-0826", amt: 502116000.32999945, openAwal: 701808000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-002", v: "CV KALINDO MITRA BERSAMA", po: "OPEN-0826", amt: 119319450, openAwal: 162109950, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-003", v: "PT MURNI GAS RAYA", po: "OPEN-0826", amt: 1665000, openAwal: 14985000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-004", v: "PT SAPTA SUMBER LANCAR", po: "OPEN-0826", amt: 174796000, openAwal: 355575999, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-006", v: "PT MANDALIKA VARUNA PERKASA", po: "OPEN-0826", amt: 73267500, openAwal: 73267500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-007", v: "DW SAMARINDA", po: "OPEN-0826", amt: 425000, openAwal: 850000, due: "2026-08-31", pph: "Non-PPn", st: "Belum Dibayar" },
-  { id: "AP-EX-008", v: "CV SUMBER GAS ABADI", po: "OPEN-0826", amt: 19719150, openAwal: 53779500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-009", v: "CV MASEBA TEKNIK", po: "OPEN-0826", amt: 21654399.48, openAwal: 0, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-010", v: "PT SEMERU TEKNIK", po: "OPEN-0826", amt: 140000000, openAwal: 190000000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-012", v: "PT PRASETYA UTAMA ENERGI", po: "OPEN-0826", amt: 218670000, openAwal: 189810000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-013", v: "PT SURYA BIRU MURNI", po: "OPEN-0826", amt: 24975000, openAwal: 23310000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-014", v: "PT CITRA MUSI LESTARI", po: "OPEN-0826", amt: 143500000.38, openAwal: 200900000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-016", v: "PT BUKIT PUTRI INDAH PERMAI", po: "OPEN-0826", amt: 7520705, openAwal: 23869035, due: "2026-08-31", pph: "Non-PPn", st: "Belum Dibayar" },
-  { id: "AP-EX-017", v: "PT SANJAYA PUTRA KENCANA", po: "OPEN-0826", amt: 4225770, openAwal: 4225770, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-018", v: "CV SANGA SANGA INTERIOR", po: "OPEN-0826", amt: 20000000, openAwal: 35000000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-019", v: "THAMRIN ELEKTRICAL", po: "OPEN-0826", amt: 22925000, openAwal: 37925000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-020", v: "PT SAMUDRA MITRA SERVICE", po: "OPEN-0826", amt: 24034500, openAwal: 24034500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-022", v: "CV MAKKADAE ABADI", po: "OPEN-0826", amt: 618048000, openAwal: 753246000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-024", v: "PT WAHYU MANDIRI AMARA CIPTA", po: "OPEN-0826", amt: 66137130, openAwal: 0, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-025", v: "BFI Finance - Sany Rough Crane", po: "OPEN-0826", amt: 85336000, openAwal: 85336000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-026", v: "BFI Finance - Loader", po: "OPEN-0826", amt: 716950000, openAwal: 745628000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  { id: "AP-EX-027", v: "BFI Finance - Truck", po: "OPEN-0826", amt: 129471000, openAwal: 151049500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
-  // RawData CONTOH HUTANG (PT KALTIM LESTARI UNGGUL): bayar 2 tahap, No PO-SB, ref U/TK kapal.
-  { id: "AP-SB-001", v: "PT KALTIM LESTARI UNGGUL", po: "PO-SB-2026-004 / 04/PO-SB/SMD/I/2026", amt: 36341622, openAwal: 36341622, due: "2026-04-30", pph: "2%", st: "Lunas", vessel: "U/TK. RMN 3317", item: "PLAT 14MM 2 lbr", pay1: 36341622, pay1date: "2026-04-17", pay2: 0, pay2date: "", paidAt: "2026-04-17" },
-  { id: "AP-SB-002", v: "PT KALTIM LESTARI UNGGUL", po: "PO-SB-2026-012 / 12/PO-SB/SMD/I/2026", amt: 409492875, openAwal: 409492875, due: "2026-06-30", pph: "2%", st: "Lunas", vessel: "U/BG. KBT 26, BG. MEGA POWER 8, TB. KARYA STAR 35", item: "SIKU PRESS + ROUNDBAR", pay1: 309906340, pay1date: "2026-06-02", pay2: 99586535, pay2date: "2026-07-22", paidAt: "2026-07-22" },
-  { id: "AP-SB-003", v: "PT KALTIM LESTARI UNGGUL", po: "PO-SB-2026-036 / 36/PO-SB/SMD/IV/2026", amt: 982905000, openAwal: 982905000, due: "2026-09-30", pph: "2%", st: "Belum Dibayar", vessel: "U/TK. ARTHA SARANA XI & U/TK. MHKL 35", item: "PLAT 12MM/8MM", pay1: 432000, pay1date: "2026-09-09", pay2: 0, pay2date: "" },
+  { id: "AP-EX-001", v: "CV MITRA CONTOH INTAN", po: "OPEN-0826", amt: 502116000.32999945, openAwal: 701808000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-002", v: "CV MITRA CONTOH JINGGA", po: "OPEN-0826", amt: 119319450, openAwal: 162109950, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-003", v: "PT MITRA CONTOH KIRANA", po: "OPEN-0826", amt: 1665000, openAwal: 14985000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-004", v: "PT MITRA CONTOH LAKSANA", po: "OPEN-0826", amt: 174796000, openAwal: 355575999, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-006", v: "PT MITRA CONTOH OASE", po: "OPEN-0826", amt: 73267500, openAwal: 73267500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-007", v: "PERORANGAN CONTOH PUSPA", po: "OPEN-0826", amt: 425000, openAwal: 850000, due: "2026-08-31", pph: "Non-PPn", st: "Belum Dibayar" },
+  { id: "AP-EX-008", v: "CV MITRA CONTOH RIMBA", po: "OPEN-0826", amt: 19719150, openAwal: 53779500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-009", v: "CV MITRA CONTOH SWARA", po: "OPEN-0826", amt: 21654399.48, openAwal: 0, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-010", v: "PT MITRA CONTOH TEGAR", po: "OPEN-0826", amt: 140000000, openAwal: 190000000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-012", v: "PT MITRA CONTOH YASA", po: "OPEN-0826", amt: 218670000, openAwal: 189810000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-013", v: "PT MITRA CONTOH ASA", po: "OPEN-0826", amt: 24975000, openAwal: 23310000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-014", v: "PT MITRA CONTOH BENING", po: "OPEN-0826", amt: 143500000.38, openAwal: 200900000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-016", v: "PT MITRA CONTOH JAGAT", po: "OPEN-0826", amt: 7520705, openAwal: 23869035, due: "2026-08-31", pph: "Non-PPn", st: "Belum Dibayar" },
+  { id: "AP-EX-017", v: "PT MITRA CONTOH KARTIKA", po: "OPEN-0826", amt: 4225770, openAwal: 4225770, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-018", v: "CV MITRA CONTOH ABADI 2", po: "OPEN-0826", amt: 20000000, openAwal: 35000000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-019", v: "PERORANGAN CONTOH DAMAI 2", po: "OPEN-0826", amt: 22925000, openAwal: 37925000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-020", v: "PT MITRA CONTOH FAJAR 2", po: "OPEN-0826", amt: 24034500, openAwal: 24034500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-022", v: "CV MITRA CONTOH JAYA 2", po: "OPEN-0826", amt: 618048000, openAwal: 753246000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-024", v: "PT MITRA CONTOH NUSA 2", po: "OPEN-0826", amt: 66137130, openAwal: 0, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-025", v: "Leasing Contoh Satu - Sany Rough Crane", po: "OPEN-0826", amt: 85336000, openAwal: 85336000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-026", v: "Leasing Contoh Satu - Loader", po: "OPEN-0826", amt: 716950000, openAwal: 745628000, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  { id: "AP-EX-027", v: "Leasing Contoh Satu - Truck", po: "OPEN-0826", amt: 129471000, openAwal: 151049500, due: "2026-08-31", pph: "2%", st: "Belum Dibayar" },
+  // RawData CONTOH HUTANG (PT MITRA CONTOH EKASA): bayar 2 tahap, No PO-SB, ref U/TK kapal.
+  { id: "AP-SB-001", v: "PT MITRA CONTOH EKASA", po: "PO-SB-2026-004 / 04/PO-SB/SMD/I/2026", amt: 36341622, openAwal: 36341622, due: "2026-04-30", pph: "2%", st: "Lunas", vessel: "U/TK. RMN 3317", item: "PLAT 14MM 2 lbr", pay1: 36341622, pay1date: "2026-04-17", pay2: 0, pay2date: "", paidAt: "2026-04-17" },
+  { id: "AP-SB-002", v: "PT MITRA CONTOH EKASA", po: "PO-SB-2026-012 / 12/PO-SB/SMD/I/2026", amt: 409492875, openAwal: 409492875, due: "2026-06-30", pph: "2%", st: "Lunas", vessel: "U/BG. KBT 26, BG. MEGA POWER 8, TB. KARYA STAR 35", item: "SIKU PRESS + ROUNDBAR", pay1: 309906340, pay1date: "2026-06-02", pay2: 99586535, pay2date: "2026-07-22", paidAt: "2026-07-22" },
+  { id: "AP-SB-003", v: "PT MITRA CONTOH EKASA", po: "PO-SB-2026-036 / 36/PO-SB/SMD/IV/2026", amt: 982905000, openAwal: 982905000, due: "2026-09-30", pph: "2%", st: "Belum Dibayar", vessel: "U/TK. ARTHA SARANA XI & U/TK. MHKL 35", item: "PLAT 12MM/8MM", pay1: 432000, pay1date: "2026-09-09", pay2: 0, pay2date: "" },
   // Hutang dari GR runtime (PO-2026-116/117 → M-0902/M-0905).
-  { id: "AP-2026-116", v: "PT Jotun Indonesia", po: "PO-2026-116", amt: 480000000, openAwal: 480000000, due: "2026-08-28", pph: "2%", st: "Belum Dibayar", vessel: "-", item: "Cat Epoxy", pay1: 0, pay1date: "", pay2: 0, pay2date: "" },
+  { id: "AP-2026-116", v: "PT Cat Contoh Marine", po: "PO-2026-116", amt: 480000000, openAwal: 480000000, due: "2026-08-28", pph: "2%", st: "Belum Dibayar", vessel: "-", item: "Cat Epoxy", pay1: 0, pay1date: "", pay2: 0, pay2date: "" },
   { id: "AP-2026-117", v: "PT Steel Rig", po: "PO-2026-117", amt: 210000000, openAwal: 210000000, due: "2026-08-29", pph: "2%", st: "Belum Dibayar", vessel: "-", item: "Wire Rope", pay1: 0, pay1date: "", pay2: 0, pay2date: "" },
-  // Hutang neto termin Pak Yusuf (TRM-SB-001 lunas 298.500).
-  { id: "AP-SB-T1", v: "Pak Yusuf", po: "TERM-TRM-SB-001", amt: 298500, openAwal: 298500, due: "2026-09-15", pph: "Non-PPn", st: "Lunas", vessel: "BG RMN 3324", item: "Outfitting Deck BG RMN 3324", pay1: 298500, pay1date: "2026-09-01", pay2: 0, pay2date: "", paidAt: "2026-09-01" },
+  // Hutang neto termin Pak Mandor Contoh (TRM-SB-001 lunas 298.500).
+  { id: "AP-SB-T1", v: "Pak Mandor Contoh", po: "TERM-TRM-SB-001", amt: 298500, openAwal: 298500, due: "2026-09-15", pph: "Non-PPn", st: "Lunas", vessel: "BG RMN 3324", item: "Outfitting Deck BG RMN 3324", pay1: 298500, pay1date: "2026-09-01", pay2: 0, pay2date: "", paidAt: "2026-09-01" },
 ];
 
 // Seed dari docs/RawData/DataPencatatanFinance.xlsx - sheet Piutang, Agustus 2026.
 // Satu baris per customer bersaldo akhir > 0; amount = saldo akhir, openAwal = saldo awal bulan.
 export const seedInvoices: StoreItem[] = [
-  { id: "INV/OPEN-2026-001", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", project: "", amount: 2512091953.9700003, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-002", client: "PT MUTIARA EXPRESS LINES", project: "", amount: 717806058, openAwal: 717806058, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-003", client: "PT TIRTA MAHAKAM RESOURCES TBK", project: "", amount: 1323312036.67, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-004", client: "PT MITRA KEMAKMURAN LINE", project: "", amount: 725000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-005", client: "PT PELAYARAN PELANGI SINDUMULIA", project: "", amount: 50000000, openAwal: 100000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-006", client: "PT PELAYARAN GLOBAL LINTAS", project: "", amount: 882081202.6199999, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-007", client: "IBU LILI KANTIN", project: "", amount: 15000000, openAwal: 15000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-008", client: "NORIS", project: "", amount: 6000000, openAwal: 7000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-009", client: "SABRAN", project: "", amount: 2000000, openAwal: 3000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-010", client: "AHMAD JAYADI", project: "", amount: 8000000, openAwal: 9000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-011", client: "ADILLA", project: "", amount: 9000000, openAwal: 9000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-012", client: "BUDIANSYAH", project: "", amount: 10000000, openAwal: 11000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-013", client: "ASEP", project: "", amount: 500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-014", client: "DONY", project: "", amount: 500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-015", client: "TARMAN", project: "", amount: 2500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-016", client: "JESI", project: "", amount: 1000000, openAwal: 1500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-017", client: "AGUS RIONO", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-018", client: "SUKARMAN", project: "", amount: 2000000, openAwal: 3000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-019", client: "PASHA", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-020", client: "SAFARUDIN", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-021", client: "ALUS", project: "", amount: 5000000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-022", client: "HAIRUDIN", project: "", amount: 2000000, openAwal: 2500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-023", client: "RAHMAD", project: "", amount: 2000000, openAwal: 2500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-024", client: "SUPIAN AGUS", project: "", amount: 2000000, openAwal: 4000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-025", client: "AKBAR", project: "", amount: 1000000, openAwal: 1500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-026", client: "IHSAN", project: "", amount: 2500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-027", client: "AULIA", project: "", amount: 3500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-028", client: "AGUSRIYANTO", project: "", amount: 3000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-029", client: "SUNARJI", project: "", amount: 3000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-030", client: "BUDI", project: "", amount: 2500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-031", client: "GORDON", project: "", amount: 750000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-032", client: "ALI HUSNI", project: "", amount: 500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-033", client: "SUGIHARTO", project: "", amount: 5000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-034", client: "FENY", project: "", amount: 3500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
-  { id: "INV/OPEN-2026-035", client: "PT BUNGA TERATAI", project: "", amount: 7322331403, openAwal: 7322331403, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-036", client: "PT Teratai Sejahtera Line.", project: "", amount: 135000000, openAwal: 135000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
-  { id: "INV/OPEN-2026-037", client: "PT Saha Agropalm Mandiri", project: "", amount: 812692000, openAwal: 841370000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-001", client: "PT PELAYARAN CONTOH ELANG", project: "", amount: 2512091953.9700003, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-002", client: "PT PELAYARAN CONTOH HARAPAN", project: "", amount: 717806058, openAwal: 717806058, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-003", client: "PT PELAYARAN CONTOH KARYA", project: "", amount: 1323312036.67, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-004", client: "PT PELAYARAN CONTOH RAJAWALI", project: "", amount: 725000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-005", client: "PT PELAYARAN CONTOH MANDIRI", project: "", amount: 50000000, openAwal: 100000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-006", client: "PT PELAYARAN CONTOH MULIA", project: "", amount: 882081202.6199999, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-007", client: "PERORANGAN CONTOH SINAR", project: "", amount: 15000000, openAwal: 15000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-008", client: "PERORANGAN CONTOH TEGUH", project: "", amount: 6000000, openAwal: 7000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-009", client: "PERORANGAN CONTOH CEMERLANG", project: "", amount: 2000000, openAwal: 3000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-010", client: "PERORANGAN CONTOH DIRGANTARA", project: "", amount: 8000000, openAwal: 9000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-011", client: "PERORANGAN CONTOH KENCANA", project: "", amount: 9000000, openAwal: 9000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-012", client: "PERORANGAN CONTOH MEGAH", project: "", amount: 10000000, openAwal: 11000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-013", client: "PERORANGAN CONTOH NIRWANA", project: "", amount: 500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-014", client: "PERORANGAN CONTOH PERKASA", project: "", amount: 500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-015", client: "PERORANGAN CONTOH RAYA", project: "", amount: 2500000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-016", client: "PERORANGAN CONTOH TIRTA", project: "", amount: 1000000, openAwal: 1500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-017", client: "PERORANGAN CONTOH UNGGUL", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-018", client: "PERORANGAN CONTOH WIBAWA", project: "", amount: 2000000, openAwal: 3000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-019", client: "PERORANGAN CONTOH ANUGERAH", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-020", client: "PERORANGAN CONTOH CITRA", project: "", amount: 1500000, openAwal: 2000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-021", client: "PERORANGAN CONTOH DELTA", project: "", amount: 5000000, openAwal: 1000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-022", client: "PERORANGAN CONTOH GITA", project: "", amount: 2000000, openAwal: 2500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-023", client: "PERORANGAN CONTOH INSAN", project: "", amount: 2000000, openAwal: 2500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-024", client: "PERORANGAN CONTOH JATI", project: "", amount: 2000000, openAwal: 4000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-025", client: "PERORANGAN CONTOH KURNIA", project: "", amount: 1000000, openAwal: 1500000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-026", client: "PERORANGAN CONTOH LINTAS", project: "", amount: 2500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-027", client: "PERORANGAN CONTOH MITRA", project: "", amount: 3500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-028", client: "PERORANGAN CONTOH NAYAKA", project: "", amount: 3000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-029", client: "PERORANGAN CONTOH PRATAMA", project: "", amount: 3000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-030", client: "PERORANGAN CONTOH SABDA", project: "", amount: 2500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-031", client: "PERORANGAN CONTOH TUNAS", project: "", amount: 750000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-032", client: "PERORANGAN CONTOH WAHANA", project: "", amount: 500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-033", client: "PERORANGAN CONTOH ZAMRUD", project: "", amount: 5000000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-034", client: "PERORANGAN CONTOH ARUNIKA", project: "", amount: 3500000, openAwal: 0, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: true },
+  { id: "INV/OPEN-2026-035", client: "PT PELAYARAN CONTOH BAYU", project: "", amount: 7322331403, openAwal: 7322331403, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-036", client: "PT Pelayaran Contoh Candra", project: "", amount: 135000000, openAwal: 135000000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
+  { id: "INV/OPEN-2026-037", client: "PT Pelayaran Contoh Dharma", project: "", amount: 812692000, openAwal: 841370000, due: "2026-08-31", status: "Belum Dibayar", paymentTerm: "Saldo Awal Agu-2026", billingType: "Saldo Awal", dunning: "Belum Ditagih", nonPpn: false },
   // RawData Invoice/CONTOH INVOICE.xlsx - 4 pola Jasa+Material. Rumus: TOTAL=J+M,
   // DPP=TOTAL×11/12, PPN=12%×DPP, PPh=2%×Jasa, Grand=TOTAL+PPN-PPh-DP.
-  { id: "INV-SB-2026-058", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", project: "RP-2026-006", noInv: "058/INV-SB/SMD/IX/2026", vessel: "BG RMN 3324", jasaTotal: 808550650, matTotal: 711613605, amount: 1520164255, dpp: 1393483900, ppnAmt: 167218068, pphAmt: 16171013, dpApplied: 0, grandTotal: 1671211310, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-09-30", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan Docking & Repair BG RMN 3324", dunning: "Ditagih", nonPpn: false, date: "2026-09-01" },
-  { id: "INV-SB-2026-049", client: "PT PELAYARAN ROYLEA MARINE LINE", project: "RP-2026-007", noInv: "049/INV-SB/SMD/VII/2026", vessel: "AWB SEA HAVEN 2", jasaTotal: 1501469657, matTotal: 1357158023, amount: 2858627680, dpp: 2620408707, ppnAmt: 314449045, pphAmt: 30029393, dpApplied: 1098000000, dpRef: "045/INV-SB/SMD/VI/2026", grandTotal: 2045047332, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-08-13", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan V2 (potong DP-1)", dunning: "Ditagih", nonPpn: false, date: "2026-07-13" },
-  { id: "INV-SB-2026-037", client: "PT ALVI CIPTA SENTOSA", project: "RP-2026-008", noInv: "037/INV-SB/SMD/V/2026", vessel: "BG MHKL 35", jasaTotal: 184349645, matTotal: 543356806, amount: 727706451, dpp: 667064247, ppnAmt: 0, pphAmt: 3686993, dpApplied: 0, grandTotal: 724019458, skdt: true, ppnRate: 12, pphRate: 2, due: "2026-06-08", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan BG MHKL 35 (SKDT, tanpa PPN)", dunning: "Ditagih", nonPpn: false, date: "2026-05-08" },
-  { id: "INV-SB-2026-045", client: "PT PELAYARAN ROYLEA MARINE LINE", project: "RP-2026-007", noInv: "045/INV-SB/SMD/VI/2026", vessel: "AWB SEA HAVEN 2", jasaTotal: 600000000, matTotal: 400000000, amount: 1000000000, dpp: 916666667, ppnAmt: 110000000, pphAmt: 12000000, dpApplied: 0, grandTotal: 1098000000, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-07-25", status: "Lunas", paymentTerm: "NET 30", billingType: "Uang Muka", milestoneRef: "DP-1 AWB SEA HAVEN 2", dunning: "Ditagih", nonPpn: false, date: "2026-06-25", paidAt: "2026-07-10" },
+  { id: "INV-SB-2026-058", client: "PT PELAYARAN CONTOH ELANG", project: "RP-2026-006", noInv: "058/INV-SB/SMD/IX/2026", vessel: "BG RMN 3324", jasaTotal: 808550650, matTotal: 711613605, amount: 1520164255, dpp: 1393483900, ppnAmt: 167218068, pphAmt: 16171013, dpApplied: 0, grandTotal: 1671211310, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-09-30", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan Docking & Repair BG RMN 3324", dunning: "Ditagih", nonPpn: false, date: "2026-09-01" },
+  { id: "INV-SB-2026-049", client: "PT PELAYARAN CONTOH SEJAHTERA", project: "RP-2026-007", noInv: "049/INV-SB/SMD/VII/2026", vessel: "AWB SEA HAVEN 2", jasaTotal: 1501469657, matTotal: 1357158023, amount: 2858627680, dpp: 2620408707, ppnAmt: 314449045, pphAmt: 30029393, dpApplied: 1098000000, dpRef: "045/INV-SB/SMD/VI/2026", grandTotal: 2045047332, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-08-13", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan V2 (potong DP-1)", dunning: "Ditagih", nonPpn: false, date: "2026-07-13" },
+  { id: "INV-SB-2026-037", client: "PT PELAYARAN CONTOH MAKMUR", project: "RP-2026-008", noInv: "037/INV-SB/SMD/V/2026", vessel: "BG MHKL 35", jasaTotal: 184349645, matTotal: 543356806, amount: 727706451, dpp: 667064247, ppnAmt: 0, pphAmt: 3686993, dpApplied: 0, grandTotal: 724019458, skdt: true, ppnRate: 12, pphRate: 2, due: "2026-06-08", status: "Belum Dibayar", paymentTerm: "NET 30", billingType: "Milestone", milestoneRef: "Pelunasan BG MHKL 35 (SKDT, tanpa PPN)", dunning: "Ditagih", nonPpn: false, date: "2026-05-08" },
+  { id: "INV-SB-2026-045", client: "PT PELAYARAN CONTOH SEJAHTERA", project: "RP-2026-007", noInv: "045/INV-SB/SMD/VI/2026", vessel: "AWB SEA HAVEN 2", jasaTotal: 600000000, matTotal: 400000000, amount: 1000000000, dpp: 916666667, ppnAmt: 110000000, pphAmt: 12000000, dpApplied: 0, grandTotal: 1098000000, skdt: false, ppnRate: 12, pphRate: 2, due: "2026-07-25", status: "Lunas", paymentTerm: "NET 30", billingType: "Uang Muka", milestoneRef: "DP-1 AWB SEA HAVEN 2", dunning: "Ditagih", nonPpn: false, date: "2026-06-25", paidAt: "2026-07-10" },
 ];
 
 export const seedDocuments: StoreItem[] = [
@@ -550,7 +550,7 @@ export const seedTaxPeriods: StoreItem[] = [
 ];
 
 export const seedRfqs: StoreItem[] = [
-  { id: "RFQ-2026-031", prId: "PR-2026-207", item: "Cat Epoxy", vendors: ["PT Jotun Indonesia", "PT Bahana Baja", "PT Steel Rig"], quotes: [{ vendor: "PT Jotun Indonesia", price: 480000000, eta: "2026-08-12" }, { vendor: "PT Bahana Baja", price: 495000000, eta: "2026-08-10" }], status: "Evaluasi", winner: "" },
+  { id: "RFQ-2026-031", prId: "PR-2026-207", item: "Cat Epoxy", vendors: ["PT Cat Contoh Marine", "PT Bahana Baja", "PT Steel Rig"], quotes: [{ vendor: "PT Cat Contoh Marine", price: 480000000, eta: "2026-08-12" }, { vendor: "PT Bahana Baja", price: 495000000, eta: "2026-08-10" }], status: "Evaluasi", winner: "" },
   { id: "RFQ-2026-032", prId: "PR-2026-209", item: "Wire Rope", vendors: ["PT Steel Rig", "PT Primabaja", "PT Bahana Baja"], quotes: [], status: "Terkirim", winner: "" },
 ];
 
@@ -602,7 +602,7 @@ export const seedCommunications: StoreItem[] = [
 
 export const seedContracts: StoreItem[] = [
   { id: "KTR-2026-009", quotationId: "QT-2026-054", projectId: "RP-2026-002", client: "PT Mitra Samudra Raya", value: 3100000000, signedAt: "2026-07-12", status: "Aktif" },
-  { id: "KTR-SB-001", quotationId: "QT-SB-001", projectId: "RP-2026-006", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", value: 1671211310, signedAt: "2026-08-01", status: "Aktif" },
+  { id: "KTR-SB-001", quotationId: "QT-SB-001", projectId: "RP-2026-006", client: "PT PELAYARAN CONTOH ELANG", value: 1671211310, signedAt: "2026-08-01", status: "Aktif" },
 ];
 
 export const seedBast: StoreItem[] = [
@@ -617,8 +617,8 @@ export const seedTrials: StoreItem[] = [
 ];
 export const seedRequests: StoreItem[] = [
   { id: "REQ-2026-001", vessel: "TB Karya Bahari 12", client: "PT Karya Bahari Sejahtera", kind: "Repair Request", scope: "Overhaul main engine + coating lambung", value: 4200000000, status: "Baru", date: "2026-08-01" },
-  { id: "REQ-SB-001", vessel: "AWB SEA HAVEN 2", client: "PT PELAYARAN ROYLEA MARINE LINE", kind: "Repair Request", scope: "Docking + repair (DP-1 → pelunasan V2)", value: 3143047332, status: "Disetujui", date: "2026-06-20" },
-  { id: "REQ-SB-002", vessel: "BG RMN 3324", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", kind: "Repair Request", scope: "Docking/Undocking & Repair BG RMN 3324", value: 1671211310, status: "Disetujui", date: "2026-07-20" },
+  { id: "REQ-SB-001", vessel: "AWB SEA HAVEN 2", client: "PT PELAYARAN CONTOH SEJAHTERA", kind: "Repair Request", scope: "Docking + repair (DP-1 → pelunasan V2)", value: 3143047332, status: "Disetujui", date: "2026-06-20" },
+  { id: "REQ-SB-002", vessel: "BG RMN 3324", client: "PT PELAYARAN CONTOH ELANG", kind: "Repair Request", scope: "Docking/Undocking & Repair BG RMN 3324", value: 1671211310, status: "Disetujui", date: "2026-07-20" },
 ];
 export const seedClientPos: StoreItem[] = [
   { id: "CPO-SB-001", contractId: "KTR-SB-001", projectId: "RP-2026-006", no: "PO-KTR-001/SB/VIII/2026", amount: 1671211310, date: "2026-08-01" },

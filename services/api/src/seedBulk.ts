@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     const sisa = Number(h.jumlah || 0) - Number(h.pay1 || 0) - Number(h.pay2 || 0);
     await put("payables", id, "", {
       id,
-      v: "PT KALTIM LESTARI UNGGUL",
+      v: "PT MITRA CONTOH EKASA",
       po: h.noPo,
       noInvoice: h.noInvoice,
       amt: h.jumlah,
@@ -316,7 +316,7 @@ async function main(): Promise<void> {
     id: "RAW_SUBKON_PAK_YUSUF",
     key: "RAW_SUBKON_PAK_YUSUF",
     value: subkon,
-    label: "Rincian subkon Pak Yusuf (RawData)",
+    label: "Rincian subkon Pak Mandor Contoh (RawData)",
     group: "rawdata",
   }, now, ctr);
   const tonase = load<Record<string, unknown>>("tonase.json");
