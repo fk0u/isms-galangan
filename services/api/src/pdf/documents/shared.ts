@@ -90,7 +90,8 @@ export function companyKop(): Block {
   const src = kopImageSrc();
   if (src) {
     return {
-      spaceAfter: 3,
+      // Jarak lega antara kop dan judul dokumen (sebelumnya 3 mm, terlalu mepet).
+      spaceAfter: 7,
       plan: (_ctx, width) => ({
         splittable: false,
         segments: [{

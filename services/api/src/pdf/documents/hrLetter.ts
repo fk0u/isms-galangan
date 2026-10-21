@@ -147,13 +147,21 @@ class Pen {
       this.y += lh;
     });
   }
+  /** Pindah ke posisi footer: blok `lines` baris berakhir 12 mm dari tepi
+   *  bawah kertas, tetapi tidak pernah naik menimpa isi di atasnya. */
+  toFooter(lines: number, size: number): void {
+    this.y = Math.max(this.y + 2, this.pdf.internal.pageSize.getHeight() - 12 - lines * single(size));
+  }
   image(dataUrl: string, x: number, y: number, w: number, h: number): void {
     this.pdf.addImage(dataUrl, "JPEG", x, y, w, h);
     this.rec.push({ page: this.page(), x, y: y + h, w, h, kind: "image" });
   }
 }
 
-const BLUE: [number, number, number] = [5, 99, 193];
+/* Permintaan user 21 Okt: tanpa biru; tautan/aksen memakai merah kop SB. */
+const ACCENT: [number, number, number] = [200, 32, 46];
+/** Jarak antara tepi bawah kop dan teks pertama (judul) - sebelumnya terlalu mepet. */
+const KOP_GAP = 6;
 
 /** "26 (Dua Puluh Enam) bulan Juni tahun 2026" - kalimat tanggal PHK. */
 export function tanggalTerbilang(iso: string): string {
@@ -172,7 +180,7 @@ function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
   const S = 11;
   /* Dua paragraf kosong (kop + spasi) sebelum judul. Di Word judul sedikit
      tertutup tepi bawah kop; di sini judul tidak boleh tertutup. */
-  p.y = Math.max(1440 * TWIP + 2 * single(S), 1440 * TWIP - 647700 * EMU + 1089025 * EMU + 0.3);
+  p.y = 1440 * TWIP - 647700 * EMU + 1089025 * EMU + KOP_GAP;
   const ke = inp.kind === "sp1" ? "1" : "2";
   p.line([{ text: `SURAT PERINGATAN ${ke}`, style: "bold", underline: true }], { size: S, align: "center" });
   p.line([{ text: `No ${inp.no}` }], { size: S, align: "center" });
@@ -210,7 +218,6 @@ function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
   p.line([{ text: "PT SYUKUR BERSAUDARA", style: "bold" }], { size: S, spacing: 1.5, align: "center", indent: ind });
   p.blank(S, 1.5); p.blank(S, 1.5); p.blank(S, 1.5);
   p.line([{ text: "Management", style: "bold", underline: true }], { size: S, spacing: 1.5, align: "center", indent: ind });
-  p.blank(S, 1.5); p.blank(S, 1.5);
   spFooter(p);
 }
 
@@ -219,9 +226,10 @@ function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
    ini juga, bukan footer berkotak dari template lamanya. */
 function spFooter(p: Pen): void {
   const F = 10;
+  p.toFooter(4, F);
   p.line([{ text: "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
   p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)" }], { size: F, align: "center" });
-  p.line([{ text: "Email: " }, { text: "Syukurbersaudara@gmail.com", color: BLUE, underline: true }], { size: F, align: "center" });
+  p.line([{ text: "Email: " }, { text: "Syukurbersaudara@gmail.com", color: ACCENT, underline: true }], { size: F, align: "center" });
   p.line([{ text: "Web: www.syukurbersaudara.com" }], { size: F, align: "center" });
 }
 
@@ -231,7 +239,7 @@ function phkLetter(p: Pen, inp: HrLetterInput): void {
   if (kop) p.image(kop, 1440 * TWIP - 318053 * EMU, 720 * TWIP - 290223 * EMU, 6591631 * EMU, 628153 * EMU);
   const S = 12;
   const after = 10; // spasi setelah paragraf bawaan dokumen (200 twip)
-  p.y = 1440 * TWIP - 3.2;
+  p.y = 720 * TWIP - 290223 * EMU + 628153 * EMU + KOP_GAP;
   p.line([{ text: `Nomor : ${inp.no}` }], { size: S, spacing: 1.5 });
   p.line([{ text: "Perihal : Surat Pemutusan Hubungan Kerja" }], { size: S, spacing: 1.5, after });
   p.line([{ text: "Kepada Yth," }], { size: S, spacing: 1.5, after });
@@ -246,8 +254,8 @@ function phkLetter(p: Pen, inp: HrLetterInput): void {
   p.blank(S); p.blank(S); p.blank(S);
   p.line([{ text: inp.penandaTangan, underline: true }], { size: S });
   p.line([{ text: inp.jabatanPenandaTangan || "HR" }], { size: S });
-  p.blank(S); p.blank(S); p.blank(S);
   const F = 10;
+  p.toFooter(4, F);
   p.line([{ text: "Kantor : Jl. Mulawarman  no. 23  tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
   p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir) tlp. (0541) 6246750" }], { size: F, align: "center" });
   p.line([{ text: "Email : " }, { text: "syukurbersaudara@gmail.com", underline: true }], { size: F, align: "center" });
@@ -259,9 +267,7 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   const kop = kopDataUrl();
   if (kop) p.image(kop, 1440 * TWIP - 66675 * EMU, 1440 * TWIP - 742950 * EMU, 5924550 * EMU, 1114425 * EMU);
   const S = 12;
-  p.y = 1440 * TWIP;
-  p.blank(11, 1.15); // paragraf gambar (11 pt bawaan)
-  p.blank(11, 1.15);
+  p.y = 1440 * TWIP - 742950 * EMU + 1114425 * EMU + KOP_GAP;
   p.line([{ text: "SURAT  PENGALAMAN  KERJA", style: "bold", underline: true }], { size: 16, align: "center" });
   p.blank(11); p.blank(11); p.blank(11);
   const auto = 14 * PT; // afterAutospacing ~ 14 pt
@@ -289,7 +295,6 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: 12.7 });
   p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: 12.7 });
-  for (let i = 0; i < 7; i++) p.blank(S, 1.15);
   spFooter(p);
 }
 
@@ -299,7 +304,7 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   const m = 1134 * TWIP;
   if (kop) p.image(kop, m + 53340 * EMU, 7.2, 6305550 * EMU, 1112520 * EMU);
   const S = 12;
-  p.y = 7.2 + 1112520 * EMU + 0.2;
+  p.y = 7.2 + 1112520 * EMU + KOP_GAP;
   p.line([{ text: "SURAT KETERANGAN", style: "bold", underline: true }], { size: S, align: "center" });
   p.line([{ text: `Nomor : ${inp.no}`, style: "bold" }], { size: S, align: "center" });
   p.blank(S, 1.15);
@@ -326,7 +331,6 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, align: "center", indent: ind });
   p.line([{ text: inp.jabatanPenandaTangan || "HRD", style: "bold" }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  for (let i = 0; i < 8; i++) p.blank(S, 1.15);
   spFooter(p);
 }
 
@@ -371,6 +375,7 @@ export function hrLetterDoc(inp: HrLetterInput, opts: DocOptions = {}): Document
     title: `${TITLES[inp.kind]} ${inp.no}`,
     subject: `${TITLES[inp.kind]} - ${inp.nama}`,
     footer: () => "",
+    addressFooter: false,
     ...opts,
   });
   d.add(letterBlock(inp, left, pageW - marginRight));
