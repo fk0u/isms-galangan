@@ -315,7 +315,7 @@ export function sectionBlock(text: string, sub?: string): Block {
                 });
                 cy += p.lh;
               }
-              drawLine(c, rec, x, cy + 1, x + width, cy + 1, COLOR.hair, STROKE.thin);
+              drawLine(c, rec, x, cy + 1, x + width, cy + 1, COLOR.accent, STROKE.thin);
             },
           },
         ],
