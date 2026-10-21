@@ -167,22 +167,17 @@ class Pen {
     this.pdf.addImage(dataUrl, "JPEG", x, y, w, h);
     this.rec.push({ page: this.page(), x, y: y + h, w, h, kind: "image" });
   }
-  /** Tabel footer bergaris satu kolom (Pengalaman / Keterangan), meniru tabel
-   *  Word: baris setinggi isinya (minimal `minH` pt dari trHeight), teks rata
-   *  atas di sel, margin sel kiri/kanan 108 twip. `padTop` = tinggi paragraf
-   *  di atas teks dalam sel yang sama (pt). */
-  boxedLines(rows: Array<{ text: string; align: "left" | "center"; color?: [number, number, number]; underline?: boolean; padTop?: number }>, o: { x: number; w: number; size: number; minH: number }): void {
+  /** Footer satu kolom (Pengalaman / Keterangan) dengan tata letak tabel Word:
+   *  baris setinggi isinya (minimal `minH` pt dari trHeight), teks rata atas
+   *  di sel, margin sel kiri/kanan 108 twip. `padTop` = tinggi paragraf di atas
+   *  teks dalam sel yang sama (pt). Tanpa garis tepi: permintaan klien 21 Okt. */
+  footerLines(rows: Array<{ text: string; align: "left" | "center"; color?: [number, number, number]; underline?: boolean; padTop?: number }>, o: { x: number; w: number; size: number; minH: number }): void {
     const cell = 108 * TWIP;
     const top = this.y;
     const heights = rows.map((r) => Math.max(o.minH * PT, (r.padTop ?? 0) * PT + single(o.size)));
     const h = heights.reduce((s, v) => s + v, 0);
-    this.pdf.setDrawColor(0, 0, 0);
-    this.pdf.setLineWidth(0.25);
-    this.pdf.rect(o.x, top, o.w, h);
-    this.rec.push({ page: this.page(), x: o.x, y: top + h, w: o.w, h, kind: "rect" });
     let y = top;
     rows.forEach((r, i) => {
-      if (i > 0) this.pdf.line(o.x, y, o.x + o.w, y);
       const base = y + (r.padTop ?? 0) * PT + single(o.size) - single(o.size) * 0.22;
       this.font("normal", o.size);
       const tw = this.pdf.getTextWidth(r.text);
@@ -336,7 +331,7 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: dateX });
   p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: dateX });
   for (let i = 0; i < 7; i++) p.blank(S, 1.15);
-  p.boxedLines([
+  p.footerLines([
     { text: "Kantor : Jl. Mulawarman  no. 23 tlp. (0541) 742529 Fax. (0541) 731034 Samarinda", align: "center" },
     { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
     { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
@@ -386,7 +381,7 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   /* Sel pertama berisi baris 5 tab 14 pt tebal + dua paragraf kosong 8 pt
      di atas teks Kantor; itulah ruang kosong di atas kotak. */
   const F = 8;
-  p.boxedLines([
+  p.footerLines([
     { text: "Kantor : Jl. Mulawarman No. 23 Tlp Adm. (08115524456)  Tlp. (0541) 6246750 Samarinda", align: "center", padTop: 14 * 1.15 + 2 * F * 1.15 },
     { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
     { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
