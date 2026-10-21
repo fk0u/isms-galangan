@@ -167,24 +167,28 @@ class Pen {
     this.pdf.addImage(dataUrl, "JPEG", x, y, w, h);
     this.rec.push({ page: this.page(), x, y: y + h, w, h, kind: "image" });
   }
-  /** Tabel footer bergaris (Pengalaman / Keterangan). */
-  boxedLines(rows: Array<{ text: string; align: "left" | "center"; color?: [number, number, number]; underline?: boolean }>, o: { x: number; w: number; size: number; topPad?: number }): void {
-    const rowH = single(o.size) + 0.6;
+  /** Tabel footer bergaris satu kolom (Pengalaman / Keterangan), meniru tabel
+   *  Word: baris setinggi isinya (minimal `minH` pt dari trHeight), teks rata
+   *  atas di sel, margin sel kiri/kanan 108 twip. `padTop` = tinggi paragraf
+   *  di atas teks dalam sel yang sama (pt). */
+  boxedLines(rows: Array<{ text: string; align: "left" | "center"; color?: [number, number, number]; underline?: boolean; padTop?: number }>, o: { x: number; w: number; size: number; minH: number }): void {
+    const cell = 108 * TWIP;
     const top = this.y;
-    const h = (o.topPad ?? 0) + rows.length * rowH;
+    const heights = rows.map((r) => Math.max(o.minH * PT, (r.padTop ?? 0) * PT + single(o.size)));
+    const h = heights.reduce((s, v) => s + v, 0);
     this.pdf.setDrawColor(0, 0, 0);
     this.pdf.setLineWidth(0.25);
     this.pdf.rect(o.x, top, o.w, h);
     this.rec.push({ page: this.page(), x: o.x, y: top + h, w: o.w, h, kind: "rect" });
-    let y = top + (o.topPad ?? 0);
+    let y = top;
     rows.forEach((r, i) => {
-      if (i > 0 || (o.topPad ?? 0) > 0) this.pdf.line(o.x, y, o.x + o.w, y);
-      const base = y + rowH - single(o.size) * 0.3;
+      if (i > 0) this.pdf.line(o.x, y, o.x + o.w, y);
+      const base = y + (r.padTop ?? 0) * PT + single(o.size) - single(o.size) * 0.22;
       this.font("normal", o.size);
       const tw = this.pdf.getTextWidth(r.text);
-      const x = r.align === "center" ? o.x + (o.w - tw) / 2 : o.x + 0.6;
+      const x = r.align === "center" ? o.x + cell + (o.w - 2 * cell - tw) / 2 : o.x + cell;
       this.put({ text: r.text, color: r.color, underline: r.underline }, x, base, o.size);
-      y += rowH;
+      y += heights[i]!;
     });
     this.y = top + h;
   }
@@ -263,22 +267,28 @@ function phkLetter(p: Pen, inp: HrLetterInput): void {
   const after = 10; // spasi setelah paragraf bawaan dokumen (200 twip)
   p.y = 1440 * TWIP - 3.2;
   p.line([{ text: `Nomor : ${inp.no}` }], { size: S, spacing: 1.5 });
-  p.line([{ text: "Perihal : Surat Pemutusan Hubungan Kerja" }], { size: S, spacing: 1.5, after });
+  p.line([{ text: "Perihal : Surat Pemutusan Hubungan Kerja" }], { size: S, spacing: 1.5 });
+  p.blank(S, 1.5); // paragraf diakhiri <br>: satu baris kosong sebelum spasi paragraf
+  p.y += after * PT;
   p.line([{ text: "Kepada Yth," }], { size: S, spacing: 1.5, after });
   p.line([{ text: `Sdr. ${inp.nama}` }], { size: S, spacing: 1.5 });
   p.line([{ text: "Di-Tempat" }], { size: S, spacing: 1.5 });
   p.blank(S, 1.5);
   const alasan = inp.pelanggaran.join(", ").trim() || "ketidakhadiran tanpa adanya konfirmasi";
-  p.para(`Dengan Hormat, Sehubungan dengan Saudara masih melakukan pelanggaran disiplin berupa ${alasan}.`, { size: S, spacing: 1.5, justify: true, after });
+  p.para(`Dengan Hormat, Sehubungan dengan Saudara masih melakukan pelanggaran disiplin berupa ${alasan}.`, { size: S, spacing: 1.5, justify: true });
   p.para(`Dengan demikian, terhitung mulai tanggal ${tanggalTerbilang(inp.tanggalEfektif || inp.tanggal)} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${inp.nama} dinyatakan sudah berakhir. Dan atas nama lembaga, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`, { size: S, spacing: 1.5, justify: true, after });
   p.para("Demikian surat pemutusan hubungan kerja ini kami sampaikan, dan agar dapat dimaklumi, terima kasih.", { size: S, spacing: 1.5, justify: true, after });
   p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.5, after });
   p.blank(S); p.blank(S); p.blank(S);
   p.line([{ text: inp.penandaTangan, underline: true }], { size: S });
   p.line([{ text: inp.jabatanPenandaTangan || "HR" }], { size: S });
-  p.blank(S); p.blank(S); p.blank(S);
+  /* Footer template ada di footer halaman (footer1.xml), bukan di badan surat:
+     baris terakhirnya berakhir 720 twip dari tepi bawah kertas. Isinya: Kantor
+     (spasi 1,15), Shipyard/Email/Web (spasi 1), lalu dua paragraf kosong 11 pt. */
   const F = 10;
-  p.line([{ text: "Kantor : Jl. Mulawarman  no. 23  tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
+  const footerH = single(F) * 1.15 + 3 * single(F) + 2 * single(11);
+  p.y = 279.4 - 720 * TWIP - footerH;
+  p.line([{ text: "Kantor : Jl. Mulawarman  no. 23  tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, spacing: 1.15, align: "center" });
   p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir) tlp. (0541) 6246750" }], { size: F, align: "center" });
   p.line([{ text: "Email : " }, { text: "syukurbersaudara@gmail.com", underline: true }], { size: F, align: "center" });
   p.line([{ text: "Web : " }, { text: "www.syukurbersaudara.com", underline: true }], { size: F, align: "center" });
@@ -290,7 +300,8 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   if (kop) p.image(kop, 1440 * TWIP - 66675 * EMU, 1440 * TWIP - 742950 * EMU, 5924550 * EMU, 1114425 * EMU);
   const S = 12;
   p.y = 1440 * TWIP;
-  p.blank(11, 1.15); // paragraf gambar (11 pt bawaan)
+  p.blank(11, 1.15); // paragraf gambar (11 pt bawaan + spasi setelah 10 pt)
+  p.y += 10 * PT;
   p.blank(11, 1.15);
   p.line([{ text: "SURAT  PENGALAMAN  KERJA", style: "bold", underline: true }], { size: 16, align: "center" });
   p.blank(11); p.blank(11); p.blank(11);
@@ -299,6 +310,7 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   const tab = 567 * TWIP; // tab kustom template
   p.field("No", inp.no, { size: S, spacing: 1.15, tab });
   p.field("Hal", "Surat Pengalaman Kerja", { size: S, spacing: 1.15, tab });
+  p.blank(S); // paragraf kosong (spasi 1) + spasi setelah otomatis
   p.y += auto;
   p.line([{ text: "Dengan ini kami dari " }, { text: "PT. SYUKUR BERSAUDARA", style: "bold" }, { text: " menyatakan bahwa :" }], { size: S, after: 14 });
   const tab2 = 1134 * TWIP;
@@ -313,30 +325,38 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   p.para("Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.", { size: S, spacing: 1.15, after: 14 });
   p.para("Kami berterima kasih atas segala kerjasama, konstribusi dan segala upaya yang telah diberikan guna perkembangan perusahaan yang lebih baik.", { size: S, spacing: 1.15, justify: true, after: 14 });
   p.blank(S, 1.15);
-  const dateX = 7 * 12.7; // 7 tab bawaan (0,5")
+  p.y += auto;
+  /* Tab kustom 1965 twip menghapus tab bawaan di kirinya, jadi tujuh tab
+     berhenti di 1965, 2160, 2880, ..., 5760 twip. Nama penanda tangan memakai
+     satu tab ke tab kustom 5760 twip: sejajar dengan "Samarinda". */
+  const dateX = 5760 * TWIP;
   p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.15, indent: dateX });
   p.line([{ text: "PT. Syukur Bersaudara", style: "bold" }], { size: S, spacing: 1.15, indent: dateX });
   p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
-  p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: 12.7 });
-  p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: 12.7 });
+  p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: dateX });
+  p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: dateX });
   for (let i = 0; i < 7; i++) p.blank(S, 1.15);
   p.boxedLines([
     { text: "Kantor : Jl. Mulawarman  no. 23 tlp. (0541) 742529 Fax. (0541) 731034 Samarinda", align: "center" },
     { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
     { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
     { text: "www.syukurbersaudara.com", align: "left", color: BLUE, underline: true },
-  ], { x: 1440 * TWIP, w: 119.4, size: 10 });
+  ], { x: (1440 + 93 - 108) * TWIP, w: 9160 * TWIP, size: 10, minH: 11.1 });
 }
 
 function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   // Template: A4, margin 20 mm, Times 12 pt, footer 8 pt dalam kotak.
   const kop = kopDataUrl();
   const m = 1134 * TWIP;
-  if (kop) p.image(kop, m + 53340 * EMU, 7.2, 6305550 * EMU, 1112520 * EMU);
+  /* Dua paragraf kosong 10 pt (spasi 1,15 + 10 pt setelah); kop menempel
+     pada paragraf kedua, naik 644797 EMU. Lalu paragraf kosong 14 pt. */
+  const para10 = single(10) * 1.15 + 10 * PT;
+  if (kop) p.image(kop, m + 53340 * EMU, m + para10 - 644797 * EMU, 6305550 * EMU, 1112520 * EMU);
   const S = 12;
-  p.y = 7.2 + 1112520 * EMU + 0.2;
-  p.line([{ text: "SURAT KETERANGAN", style: "bold", underline: true }], { size: S, align: "center" });
-  p.line([{ text: `Nomor : ${inp.no}`, style: "bold" }], { size: S, align: "center" });
+  p.y = m + 2 * para10;
+  p.blank(14, 1.15);
+  p.line([{ text: "SURAT KETERANGAN", style: "bold", underline: true }], { size: S, spacing: 1.15, align: "center" });
+  p.line([{ text: `Nomor : ${inp.no}`, style: "bold" }], { size: S, spacing: 1.15, align: "center" });
   p.blank(S, 1.15);
   p.line([{ text: "Bersama ini kami menyatakan bahwa :" }], { size: S, spacing: 1.15 });
   p.blank(S, 1.15);
@@ -361,13 +381,17 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, align: "center", indent: ind });
   p.line([{ text: inp.jabatanPenandaTangan || "HRD", style: "bold" }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  for (let i = 0; i < 8; i++) p.blank(S, 1.15);
+  p.blank(S, 1.15);
+  for (let i = 0; i < 7; i++) p.blank(14, 1.15);
+  /* Sel pertama berisi baris 5 tab 14 pt tebal + dua paragraf kosong 8 pt
+     di atas teks Kantor; itulah ruang kosong di atas kotak. */
+  const F = 8;
   p.boxedLines([
-    { text: "Kantor : Jl. Mulawarman No. 23 Tlp Adm. (08115524456)  Tlp. (0541) 6246750 Samarinda", align: "center" },
+    { text: "Kantor : Jl. Mulawarman No. 23 Tlp Adm. (08115524456)  Tlp. (0541) 6246750 Samarinda", align: "center", padTop: 14 * 1.15 + 2 * F * 1.15 },
     { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
     { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
     { text: "Web : www.syukurbersaudara.com", align: "center" },
-  ], { x: m, w: 104.6, size: 8, topPad: 16 });
+  ], { x: m + (93 - 108) * TWIP, w: 8900 * TWIP, size: F, minH: 11.1 });
 }
 
 /** Satu halaman surat sebagai satu blok tak terpecah. */
