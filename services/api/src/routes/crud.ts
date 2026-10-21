@@ -9,12 +9,12 @@ import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate }
 import { exec, getDialect, q, withTx } from "../db.js";
 import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
 import { fail, ok } from "../envelope.js";
-import { ensurePayableOnApproval } from "../poPayable.js";
+import { ensurePayableOnApproval, syncPayableFromNota } from "../poPayable.js";
 import { withVoucherNo } from "../voucher.js";
 import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments, withBoqLineTotal } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
-import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError, projectFeeError } from "../domainGuards.js";
+import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError, projectFeeError, payableApprovalError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -694,6 +694,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     }
     const rulePatch = (whChanged ? transferError(table, merged as Record<string, unknown>) : null)
       ?? projectFeeError(table, oldData, merged as Record<string, unknown>)
+      ?? payableApprovalError(table, oldData, merged as Record<string, unknown>)
       ?? await projectManagerError(table, oldData, merged as Record<string, unknown>)
       ?? await bomItemError(table, id, merged as Record<string, unknown>);
     if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));
@@ -777,7 +778,10 @@ export function registerCrud(app: FastifyInstance, table: string): void {
        Baris yang dipindah ke surat lain menyinkronkan surat lama dan baru. */
     if (table === "boqDocs") await resyncBoqDocument(id, requestActor(req));
     // K17-PROC-05: PO Besar yang baru Disetujui langsung punya hutang (AP).
-    if (table === "purchaseOrders") await ensurePayableOnApproval(id, oldData, merged as Record<string, unknown>, requestActor(req), requestIp(req));
+    if (table === "purchaseOrders") {
+      await ensurePayableOnApproval(id, oldData, merged as Record<string, unknown>, requestActor(req), requestIp(req));
+      await syncPayableFromNota(id, oldData, merged as Record<string, unknown>, requestActor(req));
+    }
     if (table === "boq") {
       for (const docId of new Set([String(oldData.boqDocId ?? ""), String((merged as Record<string, unknown>).boqDocId ?? "")])) {
         await resyncBoqDocument(docId, requestActor(req));

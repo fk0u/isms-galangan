@@ -195,3 +195,13 @@ export function projectFeeError(table: string, before: Data | null, after: Data)
   }
   return null;
 }
+
+/** Persetujuan invoice PO (Q27): hanya dari Menunggu ke Disetujui, dan nilainya
+ *  harus sudah ada (PO Kecil menunggu nilai nota). */
+export function payableApprovalError(table: string, before: Data, after: Data): string | null {
+  if (table !== "payables" || before.persetujuan === after.persetujuan) return null;
+  if (before.persetujuan === "Disetujui") return "Invoice yang sudah disetujui tidak bisa dikembalikan ke Menunggu";
+  if (after.persetujuan === "Disetujui" && !(Number(after.amt) > 0)) return "Invoice bernilai 0 belum bisa disetujui: lengkapi nilai nota/PO dulu";
+  if (after.persetujuan !== "Disetujui") return "Status persetujuan invoice tidak dikenal";
+  return null;
+}

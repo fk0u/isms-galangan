@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import { exec, getDialect, q, withTx } from "./db.js";
 import { DEFAULT_BRANCH } from "./routes/crud.js";
 import { fulfillMaterialRequest, type FulfillResult } from "./materialRequests.js";
-import { shrinkPayableOnCancel } from "./poPayable.js";
+import { receiveBlocker, shrinkPayableOnCancel } from "./poPayable.js";
 
 type Data = Record<string, unknown>;
 interface Row { id: string; branch: string; data: string; updated_at: string }
@@ -124,6 +124,8 @@ export async function receivePo(id: string, input: ReceiveInput, actor: string):
        tidak pernah tercatat). */
     const receivable = RECEIVABLE.has(st) || (String(po.poType ?? "") === "Kecil" && st === "Disetujui");
     if (!receivable) throw new PoError(409, `PO berstatus ${st}: belum/tidak bisa diterima`, "INVALID_TRANSITION");
+    const blocker = await receiveBlocker(id, po);
+    if (blocker) throw new PoError(409, blocker, "INVOICE_PENDING");
 
     const now = new Date().toISOString();
     const fulfilled: FulfillResult[] = [];

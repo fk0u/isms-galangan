@@ -501,10 +501,9 @@ export default function Laporan() {
       </div>
 
       <div id="laporan-konten">
-        <div style={{ textAlign: "center", borderBottom: "3px solid #0A0A0A", paddingBottom: 12, marginBottom: 16, breakInside: "avoid", pageBreakInside: "avoid" }}>
-          <p style={{ fontWeight: 800, fontSize: 18, color: "#0A0A0A", margin: 0 }}>{SB_KOP.name}</p>
-          <p style={{ fontSize: 11, color: "#33475B", margin: 0 }}>{SB_KOP.line1}</p>
-          <p style={{ fontSize: 10, color: "#474747", margin: 0 }}>{SB_KOP.hq} · {SB_KOP.addr1}</p>
+        <div style={{ textAlign: "center", paddingBottom: 12, marginBottom: 16, breakInside: "avoid", pageBreakInside: "avoid" }}>
+          {/* Q28: kop gambar yang sama dengan semua dokumen PDF. */}
+          <img src="/kop-sb.jpg" alt={SB_KOP.name} style={{ width: "100%", height: "auto", display: "block" }} />
           <p style={{ fontSize: 12, fontWeight: 700, color: "#0A0A0A", marginTop: 8 }}>{pdfName}</p>
         </div>
         {mode === "Mingguan" && (
