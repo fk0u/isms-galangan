@@ -2355,8 +2355,10 @@ const sparkVendors = useMemo(() => {
         </>}
       >
         <div className="space-y-3">
+          {/* PO Kecil: barang dari katalog & tujuan tetap seperti saat dibuat
+              (catatan CTO 20 Okt); yang dilengkapi di sini nota & nilainya. */}
           <Field label={S.item}>
-            <input className="input" value={poEditForm.item} onChange={(e) => setPoEditForm({ ...poEditForm, item: e.target.value })} />
+            <input className="input" value={poEditForm.item} disabled={editPo?.poType === "Kecil"} onChange={(e) => setPoEditForm({ ...poEditForm, item: e.target.value })} />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={S.qty}>
@@ -2371,12 +2373,20 @@ const sparkVendors = useMemo(() => {
             <Field label={S.peminta}>
               <input className="input" value={poEditForm.requester} onChange={(e) => setPoEditForm({ ...poEditForm, requester: e.target.value })} />
             </Field>
+            {editPo?.poType === "Kecil" ? (
+              <Field label={S.tujuanPenerimaan}>
+                <div className="input bg-steel-100 text-navy-900 flex items-center">
+                  {editPo.warehouse ? S.tujuanStokFmt.replace("{a}", String(editPo.warehouse)) : S.tujuanProyekFmt.replace("{a}", String(editPo.project ?? "-")).replace("{b}", String(editPo.vessel ?? "-"))}
+                </div>
+              </Field>
+            ) : (
             <Field label={S.proyek}>
               <select className="input" value={poEditForm.project} onChange={(e) => setPoEditForm({ ...poEditForm, project: e.target.value })}>
                 <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {String(p.vessel ?? "")}</option>)}
               </select>
             </Field>
+            )}
           </div>
           {editPo?.poType === "Kecil" && (
             <div className="space-y-3 rounded-xl border border-steel-200 bg-surface p-3">
