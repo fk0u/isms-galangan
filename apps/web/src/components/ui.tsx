@@ -942,20 +942,29 @@ export function ConfirmModal({
   );
 }
 
+/** Field form. `required` menandai label dengan *, `error` (validasi saat
+ *  simpan) memberi garis merah pada input di dalamnya + pesan di bawahnya,
+ *  menggantikan hint selama ada error. */
 export function Field({
   label,
   children,
   hint,
+  required,
+  error,
 }: {
   label: string;
   children: ReactNode;
   hint?: string;
+  required?: boolean;
+  error?: string | null;
 }) {
   return (
-    <label className="block">
-      <span className="label">{label}</span>
+    <label className={`block ${error ? "[&_.input]:!border-rose-500 [&_.input]:!ring-rose-200" : ""}`} aria-invalid={error ? true : undefined}>
+      <span className="label">{label}{required && <span className="text-rose-600" aria-hidden> *</span>}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-steel-400">{hint}</span>}
+      {error
+        ? <span role="alert" className="mt-1 block text-[11px] font-medium text-rose-600">{error}</span>
+        : hint && <span className="mt-1 block text-[11px] text-steel-400">{hint}</span>}
     </label>
   );
 }

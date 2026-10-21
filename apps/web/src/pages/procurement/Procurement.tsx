@@ -383,9 +383,12 @@ export default function Procurement() {
   const [showSmall, setShowSmall] = useState(false);
   /* Catatan CTO 20 Okt: barang wajib dari katalog Inventori, tujuan Proyek/Stok
      seperti PO Besar; nota & bukti dilengkapi lewat Ubah PO setelah disetujui. */
-  const EMPTY_SMALL = { workshop: "", requester: "", item: "", itemId: "", qty: "1", unit: "pcs", eta: "", tujuan: "kapal" as "kapal" | "stok", project: "", vessel: "", warehouse: "" };
+  const EMPTY_SMALL = { requester: "", item: "", itemId: "", qty: "1", unit: "pcs", eta: "", tujuan: "kapal" as "kapal" | "stok", project: "", vessel: "", warehouse: "" };
   const [smallForm, setSmallForm] = useState(EMPTY_SMALL);
   const [smallItem, setSmallItem] = useState<StoreItem | null>(null);
+  /* Validasi form (catatan CTO 21 Okt): semua field bermasalah ditandai sekaligus. */
+  const [smallErr, setSmallErr] = useState<Record<string, string>>({});
+  const [bigErr, setBigErr] = useState<Record<string, string>>({});
   const [smallSearch, setSmallSearch] = useState("");
   const [kasAwal, setKasAwal] = useState("");
 
@@ -724,7 +727,7 @@ export default function Procurement() {
 
   /* Pemilih barang dari katalog Inventori (PR & PO Kecil). Barang yang belum
      ada diarahkan ke modul Inventori untuk dibuat katalognya dulu. */
-  const renderCatalogPicker = (o: { selected: StoreItem | null; search: string; setSearch: (v: string) => void; onPick: (item: StoreItem) => void; onClear: () => void; onLeave: () => void }) => {
+  const renderCatalogPicker = (o: { selected: StoreItem | null; search: string; setSearch: (v: string) => void; onPick: (item: StoreItem) => void; onClear: () => void; onLeave: () => void; error?: string }) => {
     if (o.selected) {
       const it = o.selected;
       return (
@@ -748,7 +751,7 @@ export default function Procurement() {
     const results = catalogMatches(o.search);
     return (
       <div className="space-y-2">
-        <Field label={S.itemButuh} hint={S.hintPilihDariKatalog}>
+        <Field label={S.itemButuh} hint={S.hintPilihDariKatalog} required error={o.error}>
           <input className="input" placeholder={S.cariKatalogInv} value={o.search} onChange={(e) => o.setSearch(e.target.value)} autoFocus />
         </Field>
         <div className="max-h-48 overflow-y-auto rounded-lg border border-steel-200 bg-white divide-y divide-steel-100 shadow-inner">
@@ -786,21 +789,18 @@ export default function Procurement() {
   /* ============ PO BESAR ============ */
   const saveBig = async () => {
     try {
-    if (!bigForm.prId) { toast(S.tPrWajib, "info"); return; }
-    if (!bigForm.vendor) { toast(S.tVendorWajib, "info"); return; }
+    const err: Record<string, string> = {};
     if (bigForm.tujuan === "kapal") {
-      if (!bigForm.project) { toast(S.tKapalProyek, "info"); return; }
-      if (!bigForm.vessel.trim()) { toast(S.tKapalUtk, "info"); return; }
-    } else {
-      if (!bigForm.warehouse.trim()) { toast(S.tGudangWajib, "info"); return; }
-    }
-    if (!bigForm.eta) { toast(S.tEtaWajib, "info"); return; }
-    if (bigLines.length === 0) { toast(S.tMinBaris, "info"); return; }
-    for (const l of bigLines) {
-      if (!l.name.trim()) { toast(S.tNamaBaris, "info"); return; }
-      if (!Number(l.qty) || Number(l.qty) <= 0) { toast(S.tQtyBaris, "info"); return; }
-      if (!Number(l.price) || Number(l.price) <= 0) { toast(S.tHargaBaris, "info"); return; }
-    }
+      if (!bigForm.project) err.project = S.tKapalProyek;
+      if (!bigForm.vessel.trim()) err.vessel = S.tKapalUtk;
+    } else if (!bigForm.warehouse.trim()) err.warehouse = S.tGudangWajib;
+    if (!bigForm.prId) err.prId = S.tPrWajib;
+    if (!bigForm.vendor) err.vendor = S.tVendorWajib;
+    if (!bigForm.eta) err.eta = S.tEtaWajib;
+    if (bigLines.length === 0) err.lines = S.tMinBaris;
+    else if (bigLines.some((l) => !l.name.trim() || !(Number(l.qty) > 0) || !(parseRupiah(l.price) > 0))) err.lines = S.tBarisInvalid;
+    setBigErr(err);
+    if (Object.keys(err).length > 0) { toast(S.tFormInvalid, "info"); return; }
     if (bigOver && (!bigForm.override || !bigForm.overrideReason.trim())) {
       toast(S.tOverBudget, "info");
       return;
@@ -884,21 +884,23 @@ export default function Procurement() {
   /* ============ PO KECIL ============ */
   const saveSmall = async () => {
     try {
-    if (!smallForm.workshop.trim()) { toast(S.tWorkshop, "info"); return; }
-    if (!smallForm.requester.trim()) { toast(S.tPeminta, "info"); return; }
-    if (!smallForm.itemId) { toast(S.hintPilihDariKatalog, "info"); return; }
     const qty = Number(smallForm.qty);
-    if (!qty || qty <= 0) { toast(S.tQtyPos, "info"); return; }
-    if (!smallForm.unit.trim()) { toast(S.tSatuan, "info"); return; }
-    if (!smallForm.eta) { toast(S.tEtaWajib, "info"); return; }
     const isStok = smallForm.tujuan === "stok";
-    if (isStok && !smallForm.warehouse) { toast(S.tGudangWajib, "info"); return; }
-    if (!isStok && !smallForm.project) { toast(S.tKapalProyek, "info"); return; }
-    if (!isStok && !smallForm.vessel.trim()) { toast(S.tKapalUtk, "info"); return; }
+    const err: Record<string, string> = {};
+    if (isStok && !smallForm.warehouse) err.warehouse = S.tGudangWajib;
+    if (!isStok && !smallForm.project) err.project = S.tKapalProyek;
+    if (!isStok && !smallForm.vessel.trim()) err.vessel = S.tKapalUtk;
+    if (!smallForm.requester.trim()) err.requester = S.tPeminta;
+    if (!smallForm.eta) err.eta = S.tEtaWajib;
+    if (!smallForm.itemId) err.item = S.hintPilihDariKatalog;
+    if (!qty || qty <= 0) err.qty = S.tQtyPos;
+    if (!smallForm.unit.trim()) err.unit = S.tSatuan;
+    setSmallErr(err);
+    if (Object.keys(err).length > 0) { toast(S.tFormInvalid, "info"); return; }
     /* K17-PROC-01 (Q17): PO Kecil diajukan tanpa harga. Nilai diambil dari
        nota yang dilengkapi lewat Ubah PO setelah disetujui (Q27). */
     await add("purchaseOrders", {
-      poType: "Kecil", item: smallForm.item, itemId: smallForm.itemId, workshop: smallForm.workshop.trim(),
+      poType: "Kecil", item: smallForm.item, itemId: smallForm.itemId,
       requester: smallForm.requester.trim(), vendor: "Workshop Internal",
       req: "-", amount: 0, qty, unit: smallForm.unit.trim(), receivedQty: 0, returnedQty: 0, status: "Diajukan",
       date: todayISO(), eta: smallForm.eta, tujuan: smallForm.tujuan,
@@ -2364,9 +2366,11 @@ const sparkVendors = useMemo(() => {
             <Field label={S.satuan}>
               <input className="input" value={poEditForm.unit} onChange={(e) => setPoEditForm({ ...poEditForm, unit: e.target.value })} />
             </Field>
-            <Field label={S.workshop}>
-              <input className="input" value={poEditForm.workshop} onChange={(e) => setPoEditForm({ ...poEditForm, workshop: e.target.value })} />
-            </Field>
+            {editPo?.poType !== "Kecil" && (
+              <Field label={S.workshop}>
+                <input className="input" value={poEditForm.workshop} onChange={(e) => setPoEditForm({ ...poEditForm, workshop: e.target.value })} />
+              </Field>
+            )}
             <Field label={S.peminta}>
               <input className="input" value={poEditForm.requester} onChange={(e) => setPoEditForm({ ...poEditForm, requester: e.target.value })} />
             </Field>
@@ -2632,7 +2636,7 @@ const sparkVendors = useMemo(() => {
       </Modal>
 
       {/* Modal PO Besar */}
-      <Modal open={showBig} onClose={() => setShowBig(false)} title={S.mBigT} subtitle={S.mBigS}
+      <Modal open={showBig} onClose={() => { setShowBig(false); setBigErr({}); }} title={S.mBigT} subtitle={S.mBigS}
         wide footer={<><button className="btn-secondary" onClick={() => setShowBig(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveBig}>{S.btnSimpanBig}</AsyncButton></>}>
         <div className="space-y-4">
           {renderTujuanTabs(bigForm.tujuan, (t) => setBigForm((prev) => ({
@@ -2643,19 +2647,19 @@ const sparkVendors = useMemo(() => {
           <FormGrid>
             {bigForm.tujuan === "kapal" ? (
               <>
-                <Field label={S.proyekBudget} hint={S.hintWajibKapal}>
-                  <select className="input" value={bigForm.project} onChange={(e) => setBigForm({ ...bigForm, project: e.target.value })}>
-                    <option value="">{S.optTanpaProyek}</option>
+                <Field label={S.proyekBudget} required error={bigErr.project}>
+                  <select className="input" value={bigForm.project} onChange={(e) => { setBigErr((x) => ({ ...x, project: "" })); setBigForm({ ...bigForm, project: e.target.value }); }}>
+                    <option value="">{S.optPilihProyek}</option>
                     {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
                   </select>
                 </Field>
-                <Field label={S.fUtk} hint={S.hintUtkContoh}>
-                  <input className="input" value={bigForm.vessel} onChange={(e) => setBigForm({ ...bigForm, vessel: e.target.value })} placeholder={S.phUtk} />
+                <Field label={S.fUtk} hint={S.hintUtkContoh} required error={bigErr.vessel}>
+                  <input className="input" value={bigForm.vessel} onChange={(e) => { setBigErr((x) => ({ ...x, vessel: "" })); setBigForm({ ...bigForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
                 </Field>
               </>
             ) : (
-              <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
-                <select className="input" value={bigForm.warehouse} onChange={(e) => setBigForm({ ...bigForm, warehouse: e.target.value })}>
+              <Field label={S.fGudangTujuan} required error={bigErr.warehouse}>
+                <select className="input" value={bigForm.warehouse} onChange={(e) => { setBigErr((x) => ({ ...x, warehouse: "" })); setBigForm({ ...bigForm, warehouse: e.target.value }); }}>
                   <option value="">{S.optPilihGudang}</option>
                   {warehouseNames(data.warehouses ?? []).map((w) => (
                     <option key={w} value={w}>{w}</option>
@@ -2663,8 +2667,8 @@ const sparkVendors = useMemo(() => {
                 </select>
               </Field>
             )}
-            <Field label={S.fPrDisetujui} hint={S.hintPrWajib}>
-              <select className="input" value={bigForm.prId} onChange={(e) => setBigForm({ ...bigForm, prId: e.target.value })}>
+            <Field label={S.fPrDisetujui} hint={S.hintPrWajib} required error={bigErr.prId}>
+              <select className="input" value={bigForm.prId} onChange={(e) => { setBigErr((x) => ({ ...x, prId: "" })); setBigForm({ ...bigForm, prId: e.target.value }); }}>
                 <option value="">{S.optPilihPr}</option>
                 {approvedPRs.map((r) => <option key={r.id} value={r.id}>{r.id} - {r.item} · {fmtRupiah(r.amount)}</option>)}
               </select>
@@ -2673,7 +2677,8 @@ const sparkVendors = useMemo(() => {
 
           {/* Editor baris item di BAGIAN ATAS form */}
           <div className="rounded-xl border border-steel-200 bg-steel-50/50 p-3">
-            <p className="label !mb-2">{S.barisMin}</p>
+            <p className="label !mb-2">{S.barisMin}<span className="text-rose-600" aria-hidden> *</span></p>
+            {bigErr.lines && <p role="alert" className="mb-2 text-[11px] font-medium text-rose-600">{bigErr.lines}</p>}
             <datalist id="inv-item-catalog-list">
               {(data.inventory ?? []).map((inv) => (
                 <option key={inv.id} value={inv.name}>{inv.name} · stok {fmtJumlah(Number(inv.stock))} {inv.unit}</option>
@@ -2735,13 +2740,13 @@ const sparkVendors = useMemo(() => {
           </div>
 
           <FormGrid>
-            <Field label={S.vendor}>
-              <select className="input" value={bigForm.vendor} onChange={(e) => setBigForm({ ...bigForm, vendor: e.target.value })}>
+            <Field label={S.vendor} required error={bigErr.vendor}>
+              <select className="input" value={bigForm.vendor} onChange={(e) => { setBigErr((x) => ({ ...x, vendor: "" })); setBigForm({ ...bigForm, vendor: e.target.value }); }}>
                 <option value="">{S.optPilihVendor}</option>
                 {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}{payungOf(v) ? ` (Payung: ${fmtRupiah(payungOf(v)!.plafon)})` : ""}</option>)}
               </select>
             </Field>
-            <Field label={S.etaWajib}><input type="date" className="input" value={bigForm.eta} onChange={(e) => setBigForm({ ...bigForm, eta: e.target.value })} /></Field>
+            <Field label={S.eta} required error={bigErr.eta}><input type="date" className="input" value={bigForm.eta} onChange={(e) => { setBigErr((x) => ({ ...x, eta: "" })); setBigForm({ ...bigForm, eta: e.target.value }); }} /></Field>
           </FormGrid>
 
           <FormGrid>
@@ -2779,12 +2784,37 @@ const sparkVendors = useMemo(() => {
       </Modal>
 
       {/* Modal PO Kecil */}
-      <Modal open={showSmall} onClose={() => setShowSmall(false)} title={S.mSmallT} subtitle={S.mSmallS}
+      <Modal open={showSmall} onClose={() => { setShowSmall(false); setSmallErr({}); }} title={S.mSmallT} subtitle={S.mSmallS}
         footer={<><button className="btn-secondary" onClick={() => setShowSmall(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveSmall}>{S.btnSimpanSmall}</AsyncButton></>}>
         <div className="space-y-3">
+          {/* Catatan CTO 21 Okt: pilihan tujuan paling atas; Workshop diganti Proyek. */}
+          {renderTujuanTabs(smallForm.tujuan, (t) => { setSmallErr({}); setSmallForm((prev) => ({
+            ...prev, tujuan: t,
+            ...(t === "stok" ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") } : { warehouse: "" }),
+          })); }, "tujuan-po-kecil")}
           <FormGrid>
-            <Field label={S.workshop}><input className="input" value={smallForm.workshop} onChange={(e) => setSmallForm({ ...smallForm, workshop: e.target.value })} placeholder={S.phWorkshop} /></Field>
-            <Field label={S.peminta}><input className="input" value={smallForm.requester} onChange={(e) => setSmallForm({ ...smallForm, requester: e.target.value })} placeholder={S.phPeminta} /></Field>
+            {smallForm.tujuan === "kapal" ? (
+              <>
+                <Field label={S.proyekBudget} required error={smallErr.project}>
+                  <select className="input" value={smallForm.project} onChange={(e) => { setSmallErr((x) => ({ ...x, project: "", vessel: "" })); setSmallForm({ ...smallForm, project: e.target.value, vessel: smallForm.vessel || String(data.projects.find((p) => p.id === e.target.value)?.vessel ?? "") }); }}>
+                    <option value="">{S.optPilihProyek}</option>
+                    {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
+                  </select>
+                </Field>
+                <Field label={S.fUtk} hint={S.hintUtkContoh} required error={smallErr.vessel}>
+                  <input className="input" value={smallForm.vessel} onChange={(e) => { setSmallErr((e) => ({ ...e, vessel: "" })); setSmallForm({ ...smallForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
+                </Field>
+              </>
+            ) : (
+              <Field label={S.fGudangTujuan} required error={smallErr.warehouse}>
+                <select className="input" value={smallForm.warehouse} onChange={(e) => { setSmallErr((e) => ({ ...e, warehouse: "" })); setSmallForm({ ...smallForm, warehouse: e.target.value }); }}>
+                  <option value="">{S.optPilihGudang}</option>
+                  {warehouseNames(data.warehouses ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label={S.peminta} required error={smallErr.requester}><input className="input" value={smallForm.requester} onChange={(e) => { setSmallErr((e) => ({ ...e, requester: "" })); setSmallForm({ ...smallForm, requester: e.target.value }); }} placeholder={S.phPeminta} /></Field>
+            <Field label={S.eta} required error={smallErr.eta}><input type="date" className="input" value={smallForm.eta} onChange={(e) => { setSmallErr((e) => ({ ...e, eta: "" })); setSmallForm({ ...smallForm, eta: e.target.value }); }} /></Field>
           </FormGrid>
           {renderCatalogPicker({
             selected: smallItem,
@@ -2792,45 +2822,20 @@ const sparkVendors = useMemo(() => {
             setSearch: setSmallSearch,
             onPick: (item) => {
               setSmallItem(item);
+              setSmallErr((x) => ({ ...x, item: "" }));
               setSmallForm((prev) => ({ ...prev, item: String(item.name ?? ""), itemId: String(item.id ?? ""), unit: String(item.unit ?? prev.unit ?? "pcs") }));
             },
             onClear: () => { setSmallItem(null); setSmallForm((prev) => ({ ...prev, item: "", itemId: "" })); },
             onLeave: () => setShowSmall(false),
+            error: smallErr.item,
           })}
           <FormGrid>
-            <Field label={S.qty}><NumInput min={1} className="input" value={smallForm.qty} onChange={(e) => setSmallForm({ ...smallForm, qty: e.target.value })} /></Field>
-            <Field label={S.satuan}>
+            <Field label={S.qty} required error={smallErr.qty}><NumInput min={1} className="input" value={smallForm.qty} onChange={(e) => { setSmallErr((e) => ({ ...e, qty: "" })); setSmallForm({ ...smallForm, qty: e.target.value }); }} /></Field>
+            <Field label={S.satuan} required error={smallErr.unit}>
               <select className="input" value={smallForm.unit} onChange={(e) => setSmallForm({ ...smallForm, unit: e.target.value })}>
                 {[...new Set([smallForm.unit, "pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"])].map((u) => <option key={u}>{u}</option>)}
               </select>
             </Field>
-          </FormGrid>
-          {renderTujuanTabs(smallForm.tujuan, (t) => setSmallForm((prev) => ({
-            ...prev, tujuan: t,
-            ...(t === "stok" ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") } : { warehouse: "" }),
-          })), "tujuan-po-kecil")}
-          <FormGrid>
-            {smallForm.tujuan === "kapal" ? (
-              <>
-                <Field label={S.proyekBudget} hint={S.hintWajibKapal}>
-                  <select className="input" value={smallForm.project} onChange={(e) => setSmallForm({ ...smallForm, project: e.target.value, vessel: smallForm.vessel || String(data.projects.find((p) => p.id === e.target.value)?.vessel ?? "") })}>
-                    <option value="">{S.optTanpaProyek}</option>
-                    {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                  </select>
-                </Field>
-                <Field label={S.fUtk} hint={S.hintUtkContoh}>
-                  <input className="input" value={smallForm.vessel} onChange={(e) => setSmallForm({ ...smallForm, vessel: e.target.value })} placeholder={S.phUtk} />
-                </Field>
-              </>
-            ) : (
-              <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
-                <select className="input" value={smallForm.warehouse} onChange={(e) => setSmallForm({ ...smallForm, warehouse: e.target.value })}>
-                  <option value="">{S.optPilihGudang}</option>
-                  {warehouseNames(data.warehouses ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
-                </select>
-              </Field>
-            )}
-            <Field label={S.etaWajib}><input type="date" className="input" value={smallForm.eta} onChange={(e) => setSmallForm({ ...smallForm, eta: e.target.value })} /></Field>
           </FormGrid>
           <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">{S.smallValueHint.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}</p>
         </div>

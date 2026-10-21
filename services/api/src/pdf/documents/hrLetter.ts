@@ -151,27 +151,6 @@ class Pen {
     this.pdf.addImage(dataUrl, "JPEG", x, y, w, h);
     this.rec.push({ page: this.page(), x, y: y + h, w, h, kind: "image" });
   }
-  /** Tabel footer bergaris (Pengalaman / Keterangan). */
-  boxedLines(rows: Array<{ text: string; align: "left" | "center"; color?: [number, number, number]; underline?: boolean }>, o: { x: number; w: number; size: number; topPad?: number }): void {
-    const rowH = single(o.size) + 0.6;
-    const top = this.y;
-    const h = (o.topPad ?? 0) + rows.length * rowH;
-    this.pdf.setDrawColor(0, 0, 0);
-    this.pdf.setLineWidth(0.25);
-    this.pdf.rect(o.x, top, o.w, h);
-    this.rec.push({ page: this.page(), x: o.x, y: top + h, w: o.w, h, kind: "rect" });
-    let y = top + (o.topPad ?? 0);
-    rows.forEach((r, i) => {
-      if (i > 0 || (o.topPad ?? 0) > 0) this.pdf.line(o.x, y, o.x + o.w, y);
-      const base = y + rowH - single(o.size) * 0.3;
-      this.font("normal", o.size);
-      const tw = this.pdf.getTextWidth(r.text);
-      const x = r.align === "center" ? o.x + (o.w - tw) / 2 : o.x + 0.6;
-      this.put({ text: r.text, color: r.color, underline: r.underline }, x, base, o.size);
-      y += rowH;
-    });
-    this.y = top + h;
-  }
 }
 
 const BLUE: [number, number, number] = [5, 99, 193];
@@ -232,6 +211,13 @@ function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
   p.blank(S, 1.5); p.blank(S, 1.5); p.blank(S, 1.5);
   p.line([{ text: "Management", style: "bold", underline: true }], { size: S, spacing: 1.5, align: "center", indent: ind });
   p.blank(S, 1.5); p.blank(S, 1.5);
+  spFooter(p);
+}
+
+/* Footer alamat gaya Surat Peringatan (10 pt, rata tengah, tanpa garis). Catatan
+   CTO 21 Okt: Surat Pengalaman Kerja & Surat Keterangan Bekerja memakai footer
+   ini juga, bukan footer berkotak dari template lamanya. */
+function spFooter(p: Pen): void {
   const F = 10;
   p.line([{ text: "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
   p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)" }], { size: F, align: "center" });
@@ -304,16 +290,11 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: 12.7 });
   p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: 12.7 });
   for (let i = 0; i < 7; i++) p.blank(S, 1.15);
-  p.boxedLines([
-    { text: "Kantor : Jl. Mulawarman  no. 23 tlp. (0541) 742529 Fax. (0541) 731034 Samarinda", align: "center" },
-    { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
-    { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
-    { text: "www.syukurbersaudara.com", align: "left", color: BLUE, underline: true },
-  ], { x: 1440 * TWIP, w: 119.4, size: 10 });
+  spFooter(p);
 }
 
 function keteranganLetter(p: Pen, inp: HrLetterInput): void {
-  // Template: A4, margin 20 mm, Times 12 pt, footer 8 pt dalam kotak.
+  // Template: A4, margin 20 mm, Times 12 pt; footer mengikuti Surat Peringatan.
   const kop = kopDataUrl();
   const m = 1134 * TWIP;
   if (kop) p.image(kop, m + 53340 * EMU, 7.2, 6305550 * EMU, 1112520 * EMU);
@@ -346,12 +327,7 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, align: "center", indent: ind });
   p.line([{ text: inp.jabatanPenandaTangan || "HRD", style: "bold" }], { size: S, spacing: 1.15, align: "center", indent: ind });
   for (let i = 0; i < 8; i++) p.blank(S, 1.15);
-  p.boxedLines([
-    { text: "Kantor : Jl. Mulawarman No. 23 Tlp Adm. (08115524456)  Tlp. (0541) 6246750 Samarinda", align: "center" },
-    { text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)", align: "center" },
-    { text: "Email: Syukurbersaudara@gmail.com", align: "center" },
-    { text: "Web : www.syukurbersaudara.com", align: "center" },
-  ], { x: m, w: 104.6, size: 8, topPad: 16 });
+  spFooter(p);
 }
 
 /** Satu halaman surat sebagai satu blok tak terpecah. */
