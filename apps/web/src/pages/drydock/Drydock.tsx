@@ -1503,7 +1503,7 @@ export default function Drydock() {
             <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={maintForm.startDate} onChange={(startDate) => setMaintForm((f) => ({ ...f, startDate }))} /></Field>
             <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={maintForm.endDate} onChange={(endDate) => setMaintForm((f) => ({ ...f, endDate }))} /></Field>
           </FormGrid>
-          <Field label={S.lblReason}><textarea className="input" rows={2} value={maintForm.reason} onChange={(e) => setMaintForm({ ...maintForm, reason: e.target.value })} placeholder={S.phReason} /></Field>
+          <Field label={S.lblReason} required><textarea className="input" rows={2} value={maintForm.reason} onChange={(e) => setMaintForm({ ...maintForm, reason: e.target.value })} placeholder={S.phReason} /></Field>
         </div>
       </Modal>
 

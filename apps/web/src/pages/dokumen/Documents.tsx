@@ -27,7 +27,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { monthAxis, monthKeyOf } from "../../utils/monthAxis";
 import { DOC_TYPES, NEEDS_QC_LINK, qcCertCandidates, subTypesOf } from "../../utils/docTypes";
 import { BoqDetailModal } from "./BoqDetailModal";
-import { printBoqHtml } from "../../utils/printBoqHtml";
+import { usePdfDoc } from "../../components/usePdfDoc";
 
 const TYPES: readonly string[] = DOC_TYPES;
 const FILTERS = ["Semua", ...TYPES, "Arsip"];
@@ -159,6 +159,7 @@ export default function Documents() {
   const sessionName = user?.name || "Pengguna";
   const { locale } = useT();
   const S = n_dry[locale];
+  const boqPdf = usePdfDoc();
   const modAlert = useModuleAlert("dokumen");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -997,39 +998,12 @@ const doExport = () => {
                             title={S.boqPrintEnterprise}
                             aria-label={S.boqPrintEnterprise}
                             onClick={() => {
+                              /* Q28: cetak lewat PDF server (template kop + footer yang sama
+                                 dengan semua dokumen) - hanya baris milik surat ini. */
                               const cleanId = String(d.boqDocId ?? d.id).replace(/^DOC-/, "");
                               const bDoc = (data.boqDocs ?? []).find((b) => b.id === d.boqDocId || b.id === cleanId || b.id === d.id);
-                              const pId = String(bDoc?.projectId ?? d.project ?? "");
-                              const prj = (data.projects ?? []).find((p) => p.id === pId);
-                              const bItems = (data.boq ?? []).filter((it) => String(it.projectId ?? "") === pId);
-                              const cItems = bItems.map((it, idx) => ({
-                                no: idx + 1,
-                                name: String(it.name ?? it.task ?? "Pekerjaan"),
-                                description: it.description ? String(it.description) : undefined,
-                                category: it.category ? String(it.category) : undefined,
-                                qty: Number(it.quantity ?? 1),
-                                unit: String(it.unit ?? "ls"),
-                                unitPrice: Number(it.unitPrice ?? 0),
-                                totalPrice: Number(it.totalPrice) || (Number(it.quantity ?? 1) * Number(it.unitPrice ?? 0)),
-                              }));
-                              const tot = cItems.length > 0
-                                ? cItems.reduce((acc, it) => acc + it.totalPrice, 0)
-                                : Number(bDoc?.total ?? 0);
-                              printBoqHtml({
-                                number: String(bDoc?.number ?? d.title ?? "BQ/PRJ/001"),
-                                revision: Number(bDoc?.revision ?? 0),
-                                status: String(bDoc?.status ?? d.status ?? "Draft"),
-                                issuedAt: String(bDoc?.issuedAt ?? d.updated ?? ""),
-                                projectId: pId,
-                                vesselName: String(prj?.vessel ?? d.vessel ?? "-"),
-                                clientName: String(prj?.client ?? "-"),
-                                approvedBy: bDoc?.approvedBy ? String(bDoc.approvedBy) : undefined,
-                                approvedAt: bDoc?.approvedAt ? String(bDoc.approvedAt) : undefined,
-                                note: String(bDoc?.note ?? ""),
-                                items: cItems,
-                                total: tot,
-                                locale,
-                              });
+                              if (!bDoc) { toast(S.saveFail, "info"); return; }
+                              void boqPdf.request({ kind: "boq", id: String(bDoc.id), locale }, `BoQ-${String(bDoc.number ?? bDoc.id).replace(/[/\\]/g, "-")}`, false);
                             }}
                           >
                             <Printer className="h-4 w-4" />
@@ -1136,11 +1110,11 @@ const doExport = () => {
               <span className="block text-xs text-steel-400">{S.autoNoHint.replace("{a}", PREFIX[form.type] ?? "DOC")}</span>
             </p>
           )}
-          <Field label={S.lblDocTitle}>
+          <Field label={S.lblDocTitle} required>
             <input className="input" placeholder={S.phDocTitle} value={form.title} onChange={(e) => setF("title", e.target.value)} />
           </Field>
           <FormGrid>
-            <Field label={S.colType}>
+            <Field label={S.colType} required>
               <select className="input" value={form.type} onChange={(e) => { setF("type", e.target.value); setForm({ ...form, type: e.target.value, subType: "" }); }}>
                 {TYPES.map((t) => <option key={t}>{t}</option>)}
               </select>
@@ -1153,7 +1127,7 @@ const doExport = () => {
                 </select>
               </Field>
             )}
-            <Field label={S.lblRelProject}>
+            <Field label={S.lblRelProject} required>
               <select className="input" value={form.project} onChange={(e) => setF("project", e.target.value)}>
                 <option value="">{S.optPickProject}</option>
                 <option value="-">{S.optGeneral}</option>
@@ -1167,7 +1141,7 @@ const doExport = () => {
                 {data.vessels.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
               </select>
             </Field>
-<Field label={S.lblOwner} hint={S.hintOwnerPick}>
+<Field label={S.lblOwner} hint={S.hintOwnerPick} required>
 {/* Item 15 revisi 2 Oktober. Sebelumnya ini input teks bebas dengan
               cek `e.name.toLowerCase() === owner.trim().toLowerCase()`, jadi
               nama harus diketik persis - termasuk kapitalisasi dan spasi.

@@ -2860,7 +2860,7 @@ const sparkVendors = useMemo(() => {
       <Modal open={quoteRfq !== null} onClose={() => setQuoteRfq(null)} title={S.mQuoteT.replace("{n}", quoteRfq?.id ?? "")} subtitle={S.mQuoteS}
         footer={<><button className="btn-secondary" onClick={() => setQuoteRfq(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveQuote}>{S.btnSimpanQuote}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.vendor}>
+          <Field label={S.vendor} required>
             <select className="input" value={quoteForm.vendor} onChange={(e) => setQuoteForm({ ...quoteForm, vendor: e.target.value })}>
               <option value="">{S.optPilihVendor}</option>
               {((quoteRfq?.vendors as string[]) ?? []).map((v) => <option key={v} value={v}>{v}{venCatOf(v) ? ` · ${venCatOf(v)}` : ""}</option>)}
@@ -2868,7 +2868,7 @@ const sparkVendors = useMemo(() => {
           </Field>
           <FormGrid>
             <Field label={S.hargaRp}><MoneyInput className="input" value={quoteForm.price} onChange={(v) => setQuoteForm({ ...quoteForm, price: v })} /></Field>
-            <Field label={S.eta}><input type="date" className="input" value={quoteForm.eta} onChange={(e) => setQuoteForm({ ...quoteForm, eta: e.target.value })} /></Field>
+            <Field label={S.eta} required><input type="date" className="input" value={quoteForm.eta} onChange={(e) => setQuoteForm({ ...quoteForm, eta: e.target.value })} /></Field>
           </FormGrid>
         </div>
       </Modal>
@@ -3096,7 +3096,7 @@ const sparkVendors = useMemo(() => {
         footer={<><button className="btn-secondary" onClick={() => setAmendPo(null)}>{S.btnBatal}</button><button className="btn-primary" onClick={() => setConfirmAmend(true)}>{S.btnLanjutKonfirm}</button></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.barisTambahan}><input className="input" value={amendForm.name} onChange={(e) => setAmendForm({ ...amendForm, name: e.target.value })} /></Field>
+            <Field label={S.barisTambahan} required><input className="input" value={amendForm.name} onChange={(e) => setAmendForm({ ...amendForm, name: e.target.value })} /></Field>
             <Field label={S.satuan}>
               <select className="input" value={amendForm.unit} onChange={(e) => setAmendForm({ ...amendForm, unit: e.target.value })}>
                 {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
@@ -3107,7 +3107,7 @@ const sparkVendors = useMemo(() => {
             <Field label={S.qty}><NumInput min={1} className="input" value={amendForm.qty} onChange={(e) => setAmendForm({ ...amendForm, qty: e.target.value })} /></Field>
             <Field label={S.hargaSatuan}><MoneyInput className="input" value={amendForm.price} onChange={(v) => setAmendForm({ ...amendForm, price: v })} /></Field>
           </FormGrid>
-          <Field label={S.catatanAmd}><input className="input" value={amendForm.note} onChange={(e) => setAmendForm({ ...amendForm, note: e.target.value })} placeholder={S.phCatatanAmd} /></Field>
+          <Field label={S.catatanAmd} required><input className="input" value={amendForm.note} onChange={(e) => setAmendForm({ ...amendForm, note: e.target.value })} placeholder={S.phCatatanAmd} /></Field>
         </div>
       </Modal>
       <ConfirmModal
@@ -3286,7 +3286,7 @@ const sparkVendors = useMemo(() => {
           </FormGrid>
           <FormGrid>
             <Field label={S.qty}><NumInput min={1} className="input" value={prForm.qty} onChange={(e) => setPrForm({ ...prForm, qty: e.target.value })} /></Field>
-            <Field label={S.satuan}>
+            <Field label={S.satuan} required>
               <select className="input" value={prForm.unit} onChange={(e) => setPrForm({ ...prForm, unit: e.target.value })}>
                 {["pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"].map((u) => <option key={u}>{u}</option>)}
               </select>
@@ -3312,7 +3312,7 @@ const sparkVendors = useMemo(() => {
           } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
         }}>{S.btnSimpan}</button></>}>
         <div className="space-y-3">
-          <Field label={S.namaVendor}><input className="input" value={vForm.name} onChange={(e) => setVForm({ ...vForm, name: e.target.value })} /></Field>
+          <Field label={S.namaVendor} required><input className="input" value={vForm.name} onChange={(e) => setVForm({ ...vForm, name: e.target.value })} /></Field>
           <Field label={S.kategori}>
             <select className="input" value={vForm.cat} onChange={(e) => setVForm({ ...vForm, cat: e.target.value })}>
               {["Baja & Struktur", "Mesin & Engine", "Cat & Coating", "Rigging & Wire", "Listrik", "Jasa"].map((c) => <option key={c}>{c}</option>)}

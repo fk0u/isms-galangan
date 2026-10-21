@@ -2946,13 +2946,13 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 footer={<><button className="btn-secondary" onClick={() => setBomForm(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveBom}>{S.saveBtn}</AsyncButton></>}>
                 {bomForm && (
                   <FormGrid>
-                    <Field label={S.thProyek}>
+                    <Field label={S.thProyek} required>
                       <select className="input" value={bomForm.projectId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, projectId: e.target.value })}>
                         <option value="">{S.bomPickProject}</option>
                         {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
                       </select>
                     </Field>
-                    <Field label={S.bomThMat} hint={S.bomItemHint}>
+                    <Field label={S.bomThMat} hint={S.bomItemHint} required>
                       <select className="input" value={bomForm.itemId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, itemId: e.target.value })}>
                         <option value="">{S.bomPickItem}</option>
                         {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
@@ -4655,7 +4655,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         footer={<><button className="btn-secondary" onClick={() => setMoveEdit(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveMoveEdit}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.dateLbl}><input type="date" className="input" value={moveEditForm.date} onChange={(e) => setMoveEditForm((f) => ({ ...f, date: e.target.value }))} /></Field>
+            <Field label={S.dateLbl} required><input type="date" className="input" value={moveEditForm.date} onChange={(e) => setMoveEditForm((f) => ({ ...f, date: e.target.value }))} /></Field>
             <Field label={S.refLbl}><input className="input font-mono" value={moveEditForm.by} onChange={(e) => setMoveEditForm((f) => ({ ...f, by: e.target.value }))} /></Field>
             <Field label={S.supplierLbl}><input className="input" value={moveEditForm.supplier} onChange={(e) => setMoveEditForm((f) => ({ ...f, supplier: e.target.value }))} /></Field>
             <Field label={S.picLbl}><EntityPicker value={moveEditForm.pic} onChange={(v) => setMoveEditForm((f) => ({ ...f, pic: v }))} options={picOptions} ariaLabel={S.picLbl} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={moveEditForm.pic.trim() !== "" && !isKnownEmployee(data.employees, moveEditForm.pic)} /></Field>
@@ -4696,7 +4696,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.dateLbl}><input type="date" className="input" value={doEditForm.date} onChange={(e) => setDoEditForm((f) => ({ ...f, date: e.target.value }))} /></Field>
-            <Field label={S.fDest}><input className="input" value={doEditForm.to} onChange={(e) => setDoEditForm((f) => ({ ...f, to: e.target.value }))} /></Field>
+            <Field label={S.fDest} required><input className="input" value={doEditForm.to} onChange={(e) => setDoEditForm((f) => ({ ...f, to: e.target.value }))} /></Field>
             <Field label={S.driverLbl}><input className="input" value={doEditForm.driver} onChange={(e) => setDoEditForm((f) => ({ ...f, driver: e.target.value }))} /></Field>
             <Field label={S.linkedSjLbl}><select className="input" value={doEditForm.sjId} onChange={(e) => setDoEditForm((f) => ({ ...f, sjId: e.target.value }))}>
               <option value="">{S.noSj}</option>

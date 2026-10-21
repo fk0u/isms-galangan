@@ -1049,7 +1049,7 @@ export default function CRM() {
               <Card className="p-4">
                 <CardHeader title={S.addCommTitle} />
                 <div className="space-y-3 px-1 pb-1">
-                  <Field label={S.quotationLabel}>
+                  <Field label={S.quotationLabel} required>
                     <select className="input" value={commForm.quotationId} onChange={(e) => setCommForm({ ...commForm, quotationId: e.target.value })}>
                       <option value="">{S.pickOpt}</option>
                       {quotations.map((q) => <option key={q.id} value={q.id}>{q.id} · {String(q.vessel)}</option>)}
@@ -1061,9 +1061,9 @@ export default function CRM() {
                         {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
                       </select>
                     </Field>
-                    <Field label={S.dateLabel}><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
+                    <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
                   </FormGrid>
-                  <Field label={S.summaryLabel}><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} placeholder={S.commSummaryPh} /></Field>
+                  <Field label={S.summaryLabel} required><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} placeholder={S.commSummaryPh} /></Field>
                   <Field label={S.byLabel}><input className="input" value={commForm.by} onChange={(e) => setCommForm({ ...commForm, by: e.target.value })} placeholder={S.byPh} /></Field>
                   <button className="btn-primary w-full justify-center" onClick={saveComm}>{S.saveLogBtn}</button>
                 </div>
@@ -1153,7 +1153,7 @@ export default function CRM() {
                     </select>
                   </Field>
                   <Field label={S.contractValueLabel}><NumInput min={0} className="input" value={contractForm.value} onChange={(e) => setContractForm({ ...contractForm, value: e.target.value })} /></Field>
-                  <Field label={S.signDateLabel}><input type="date" className="input" value={contractForm.signedAt} onChange={(e) => setContractForm({ ...contractForm, signedAt: e.target.value })} /></Field>
+                  <Field label={S.signDateLabel} required><input type="date" className="input" value={contractForm.signedAt} onChange={(e) => setContractForm({ ...contractForm, signedAt: e.target.value })} /></Field>
                   <Field label={S.linkProjectLabel}>
                     <select className="input" value={contractForm.projectId} onChange={(e) => setContractForm({ ...contractForm, projectId: e.target.value })}>
                       <option value="">{S.noLinkOpt}</option>
@@ -1193,21 +1193,21 @@ export default function CRM() {
                 </div>
               )}
               <div className="mt-3 grid grid-cols-1 gap-2 border-t border-steel-100 pt-3 sm:grid-cols-5">
-                <Field label={S.contractLabel}>
+                <Field label={S.contractLabel} required>
                   <select className="input" value={poForm.contractId} onChange={(e) => setPoForm({ ...poForm, contractId: e.target.value })}>
                     <option value="">{S.pickOpt}</option>
                     {contracts.map((c) => <option key={c.id} value={c.id}>{c.id} · {String(c.client ?? "")}</option>)}
                   </select>
                 </Field>
-                <Field label={S.projectOptLabel}>
+                <Field label={S.projectOptLabel} required>
                   <select className="input" value={poForm.projectId} onChange={(e) => setPoForm({ ...poForm, projectId: e.target.value })}>
                     <option value="">{S.noLinkOpt}</option>
                     {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id}</option>)}
                   </select>
                 </Field>
-                <Field label={S.poNoLabel}><input className="input font-mono" value={poForm.no} onChange={(e) => setPoForm({ ...poForm, no: e.target.value })} placeholder={S.poNoPh} /></Field>
+                <Field label={S.poNoLabel} required><input className="input font-mono" value={poForm.no} onChange={(e) => setPoForm({ ...poForm, no: e.target.value })} placeholder={S.poNoPh} /></Field>
                 <Field label={S.amountLabel}><MoneyInput className="input" value={poForm.amount} onChange={(v) => setPoForm({ ...poForm, amount: v })} /></Field>
-                <Field label={S.dateLabel}><input type="date" className="input" value={poForm.date} onChange={(e) => setPoForm({ ...poForm, date: e.target.value })} /></Field>
+                <Field label={S.dateLabel} required><input type="date" className="input" value={poForm.date} onChange={(e) => setPoForm({ ...poForm, date: e.target.value })} /></Field>
               </div>
               <button className="btn-secondary mt-2 text-xs" onClick={() => { setClientPoEditId(null); setPoForm({ contractId: "", projectId: "", no: "", amount: "", date: todayISO() }); void saveClientPo(); }}><Plus className="h-3.5 w-3.5" /> {clientPoEditId ? (locale === "en" ? "Update PO" : "Perbarui PO") : S.logPoBtn}</button>
               {clientPoEditId && (
@@ -1269,7 +1269,7 @@ export default function CRM() {
               <Card className="p-4">
                 <CardHeader title={S.addSurveyTitle} subtitle={S.addSurveySub} />
                 <div className="space-y-3 px-1 pb-1">
-                  <Field label={S.clientLabel}>
+                  <Field label={S.clientLabel} required>
                     <select className="input" value={surveyForm.clientId} onChange={(e) => setSurveyForm({ ...surveyForm, clientId: e.target.value })}>
                       <option value="">{S.pickOpt}</option>
                       {clients.map((c) => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
@@ -1310,13 +1310,13 @@ export default function CRM() {
         wide footer={<><button className="btn-secondary" onClick={() => setShowQ(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveQuotation}>{S.saveQuoteBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.clientLabel}>
+            <Field label={S.clientLabel} required>
               <select className="input" value={qForm.client} onChange={(e) => setQForm({ ...qForm, client: e.target.value })}>
                 <option value="">{S.pickClientOpt}</option>
                 {clients.map((c) => <option key={c.id} value={c.name}>{String(c.name)}</option>)}
               </select>
             </Field>
-            <Field label={S.vesselJobLabel}><input className="input" value={qForm.vessel} onChange={(e) => setQForm({ ...qForm, vessel: e.target.value })} placeholder={S.vesselJobPh} /></Field>
+            <Field label={S.vesselJobLabel} required><input className="input" value={qForm.vessel} onChange={(e) => setQForm({ ...qForm, vessel: e.target.value })} placeholder={S.vesselJobPh} /></Field>
             <Field label={S.typeLabel}>
               <select className="input" value={qForm.type} onChange={(e) => setQForm({ ...qForm, type: e.target.value })}>
                 <option value="New Build">{dispType("New Build")}</option><option value="Repair">{dispType("Repair")}</option><option value="Retrofit">{dispType("Retrofit")}</option>
@@ -1330,7 +1330,7 @@ export default function CRM() {
           </FormGrid>
           <FormGrid>
             <Field label={S.quoteValueField} hint={S.positiveHint}><NumInput min={1} className="input" value={qForm.value} onChange={(e) => setQForm({ ...qForm, value: e.target.value })} /></Field>
-            <Field label={S.quoteDateLabel}><input type="date" className="input" value={qForm.date} onChange={(e) => setQForm({ ...qForm, date: e.target.value })} /></Field>
+            <Field label={S.quoteDateLabel} required><input type="date" className="input" value={qForm.date} onChange={(e) => setQForm({ ...qForm, date: e.target.value })} /></Field>
           </FormGrid>
         </div>
       </Modal>
@@ -1341,21 +1341,21 @@ export default function CRM() {
         footer={<><button className="btn-secondary" onClick={() => setShowReq(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveRequest}>{S.saveReqBtn}</button></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.clientLabel}>
+            <Field label={S.clientLabel} required>
               <select className="input" value={reqForm.client} onChange={(e) => setReqForm({ ...reqForm, client: e.target.value })}>
                 <option value="">{S.pickClientOpt}</option>
                 {clients.map((c) => <option key={c.id} value={c.name}>{String(c.name)}</option>)}
               </select>
             </Field>
-            <Field label={S.reqVesselLabel}><input className="input" value={reqForm.vessel} onChange={(e) => setReqForm({ ...reqForm, vessel: e.target.value })} placeholder={S.reqVesselPh} /></Field>
+            <Field label={S.reqVesselLabel} required><input className="input" value={reqForm.vessel} onChange={(e) => setReqForm({ ...reqForm, vessel: e.target.value })} placeholder={S.reqVesselPh} /></Field>
             <Field label={S.typeLabel}>
               <select className="input" value={reqForm.kind} onChange={(e) => setReqForm({ ...reqForm, kind: e.target.value })}>
                 {REQ_KIND.map((k) => <option key={k} value={k}>{dispReqKind(k)}</option>)}
               </select>
             </Field>
-            <Field label={S.dateLabel}><input type="date" className="input" value={reqForm.date} onChange={(e) => setReqForm({ ...reqForm, date: e.target.value })} /></Field>
+            <Field label={S.dateLabel} required><input type="date" className="input" value={reqForm.date} onChange={(e) => setReqForm({ ...reqForm, date: e.target.value })} /></Field>
           </FormGrid>
-          <Field label={S.scopeLabel}><textarea className="input" rows={3} value={reqForm.scope} onChange={(e) => setReqForm({ ...reqForm, scope: e.target.value })} placeholder={S.scopePh} /></Field>
+          <Field label={S.scopeLabel} required><textarea className="input" rows={3} value={reqForm.scope} onChange={(e) => setReqForm({ ...reqForm, scope: e.target.value })} placeholder={S.scopePh} /></Field>
           <Field label={S.estValueLabel}><NumInput min={0} className="input" value={reqForm.value} onChange={(e) => setReqForm({ ...reqForm, value: e.target.value })} placeholder={S.estValuePh} /></Field>
         </div>
       </Modal>

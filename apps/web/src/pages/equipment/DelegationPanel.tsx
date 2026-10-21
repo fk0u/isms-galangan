@@ -107,7 +107,7 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
           </div>
           {type === "loan" ? (
             <>
-              <Field label={T.borrower}>
+              <Field label={T.borrower} required>
                 {employees.length > 0
                   ? <SearchSelect value={loan.borrower} onChange={(v) => setLoan({ ...loan, borrower: v })} options={employees} placeholder={T.borrowerPh} ariaLabel={T.borrower} />
                   : <input className="input" value={loan.borrower} onChange={(e) => setLoan({ ...loan, borrower: e.target.value })} placeholder={T.borrowerPh} />}
@@ -119,8 +119,8 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                 </select>
               </Field>
               <FormGrid>
-                <Field label={T.start}><input type="date" className="input" value={loan.start} onChange={(e) => setLoan({ ...loan, start: e.target.value })} /></Field>
-                <Field label={T.end}><input type="date" className="input" value={loan.end} min={loan.start} onChange={(e) => setLoan({ ...loan, end: e.target.value })} /></Field>
+                <Field label={T.start} required><input type="date" className="input" value={loan.start} onChange={(e) => setLoan({ ...loan, start: e.target.value })} /></Field>
+                <Field label={T.end} required><input type="date" className="input" value={loan.end} min={loan.start} onChange={(e) => setLoan({ ...loan, end: e.target.value })} /></Field>
               </FormGrid>
               <Field label={T.condOut}><input className="input" value={loan.condOut} onChange={(e) => setLoan({ ...loan, condOut: e.target.value })} placeholder={T.condPh} /></Field>
               <AsyncButton className="btn-primary text-xs" onAction={saveLoan}>{T.save}</AsyncButton>
@@ -134,9 +134,9 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                     <option value="Kalibrasi">{T.kindCal}</option>
                   </select>
                 </Field>
-                <Field label={T.date}><input type="date" className="input" value={maint.date} onChange={(e) => setMaint({ ...maint, date: e.target.value })} /></Field>
+                <Field label={T.date} required><input type="date" className="input" value={maint.date} onChange={(e) => setMaint({ ...maint, date: e.target.value })} /></Field>
               </FormGrid>
-              <Field label={T.tech}><input className="input" value={maint.tech} onChange={(e) => setMaint({ ...maint, tech: e.target.value })} /></Field>
+              <Field label={T.tech} required><input className="input" value={maint.tech} onChange={(e) => setMaint({ ...maint, tech: e.target.value })} /></Field>
               <FormGrid>
                 <Field label={T.cost}><MoneyInput className="input" value={maint.cost} onChange={(v) => setMaint({ ...maint, cost: v })} /></Field>
                 <Field label={T.project}>

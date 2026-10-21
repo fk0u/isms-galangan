@@ -4871,7 +4871,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         <div className="space-y-3">
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">{S.previewNo} <strong className="font-mono text-navy-900">{invPreview}</strong> {S.previewType.replace("{a}", invForm.billingType)}{invTotal > approveThreshold ? <span className="ml-2"><Badge tone="amber">{S.needDirectorApprove}</Badge></span> : ""}</p>
           <FormGrid>
-            <Field label={S.colProyek}>
+            <Field label={S.colProyek} required>
               <select className="input" value={invForm.project} onChange={(e) => setInv("project", e.target.value)}>
                 <option value="">{S.selectProject}</option>
                 {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel} · {p.client}</option>)}
@@ -4887,7 +4887,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fMilestone} hint={S.milestoneHint}>
               <input className="input" value={invForm.milestoneRef} onChange={(e) => setInv("milestoneRef", e.target.value)} placeholder="Milestone 3" />
             </Field>
-            <Field label={S.dueLabel}>
+            <Field label={S.dueLabel} required>
               <input type="date" required className="input" value={invForm.due} onChange={(e) => setInv("due", e.target.value)} />
             </Field>
           </FormGrid>
@@ -4931,7 +4931,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <Field label={S.fRetentionPct}>
                 <NumInput min={0} max={100} className="input" value={invForm.retentionPct} onChange={(e) => setInv("retentionPct", e.target.value)} />
               </Field>
-              <Field label={S.fTermLabel}>
+              <Field label={S.fTermLabel} required>
                 <select className="input" value={invForm.paymentTerm} onChange={(e) => setInv("paymentTerm", e.target.value)}>
                   {["Termin 1", "Termin 2", "Termin 3", "Milestone 1", "Milestone 2", "Milestone 3", "Progress", "Final"].map((t) => <option key={t}>{t}</option>)}
                 </select>
@@ -5001,14 +5001,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => { setPayTarget(null); setProofImg(""); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={confirmBuktiInv}>{S.saveProofPaid}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fPayDate}><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
+            <Field label={S.fPayDate} required><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
             <Field label={S.colMetode}>
               <select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.fRefNo} hint={S.refProofHint}>
+          <Field label={S.fRefNo} hint={S.refProofHint} required>
             <input className="input font-mono" value={proof.ref} onChange={(e) => setProofField("ref", e.target.value)} placeholder={S.refProofPh} />
           </Field>
           <Field label={S.proofImgLabel} hint={S.proofImgHint}>
@@ -5126,14 +5126,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <MoneyInput className="input" value={apPayAmt} onChange={(v) => setApPayAmt(v)} placeholder={S.stagePh} />
           </Field>
           <FormGrid>
-            <Field label={S.fPayDate}><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
+            <Field label={S.fPayDate} required><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
             <Field label={S.colMetode}>
               <select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.fRefNo} hint={S.refGiroHint}>
+          <Field label={S.fRefNo} hint={S.refGiroHint} required>
             <input className="input font-mono" value={proof.ref} onChange={(e) => setProofField("ref", e.target.value)} placeholder={S.refGiroPh} />
           </Field>
           <Field label={S.apProofLabel} hint={S.apProofHint}>
@@ -5154,14 +5154,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setShowAp(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveAp}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.colVendor}><input className="input" value={apForm.v} onChange={(e) => setApForm({ ...apForm, v: e.target.value })} /></Field>
+            <Field label={S.colVendor} required><input className="input" value={apForm.v} onChange={(e) => setApForm({ ...apForm, v: e.target.value })} /></Field>
             <Field label={S.fKodePembantu} hint={S.vendorDefaultHint}><input className="input font-mono" value={apForm.kodePembantu} onChange={(e) => setApForm({ ...apForm, kodePembantu: e.target.value })} /></Field>
             <Field label={S.fPoRef} hint={S.poFormatHint}><input className="input font-mono" value={apForm.po} onChange={(e) => setApForm({ ...apForm, po: e.target.value })} placeholder={S.poPh} /></Field>
             <Field label={S.fVessel} hint={S.vesselHint}><input className="input" value={apForm.vessel} onChange={(e) => setApForm({ ...apForm, vessel: e.target.value })} /></Field>
             <Field label={S.fItem}><input className="input" value={apForm.item} onChange={(e) => setApForm({ ...apForm, item: e.target.value })} placeholder={S.itemPh} /></Field>
             <Field label={S.fOpenBal}><MoneyInput className="input" value={apForm.openAwal} onChange={(v) => setApForm({ ...apForm, openAwal: v })} /></Field>
             <Field label={S.fCloseBal}><MoneyInput className="input" value={apForm.amt} onChange={(v) => setApForm({ ...apForm, amt: v })} /></Field>
-            <Field label={S.dueLabel}><input type="date" required className="input" value={apForm.due} onChange={(e) => setApForm({ ...apForm, due: e.target.value })} /></Field>
+            <Field label={S.dueLabel} required><input type="date" required className="input" value={apForm.due} onChange={(e) => setApForm({ ...apForm, due: e.target.value })} /></Field>
           </FormGrid>
           <label className="flex items-center gap-2 text-sm text-steel-600">
             <input type="checkbox" checked={apForm.nonPpn} onChange={(e) => setApForm({ ...apForm, nonPpn: e.target.checked })} />
@@ -5174,7 +5174,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setApEdit(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveApEdit}>{S.saveChanges}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.colVendor}><input className="input" value={apEditForm.v} onChange={(e) => setApEditForm({ ...apEditForm, v: e.target.value })} /></Field>
+            <Field label={S.colVendor} required><input className="input" value={apEditForm.v} onChange={(e) => setApEditForm({ ...apEditForm, v: e.target.value })} /></Field>
             <Field label={S.fKodePembantu}><input className="input font-mono" value={apEditForm.kodePembantu} onChange={(e) => setApEditForm({ ...apEditForm, kodePembantu: e.target.value })} /></Field>
             <Field label={S.fVessel}><input className="input" value={apEditForm.vessel} onChange={(e) => setApEditForm({ ...apEditForm, vessel: e.target.value })} /></Field>
             <Field label={S.fItem}><input className="input" value={apEditForm.item} onChange={(e) => setApEditForm({ ...apEditForm, item: e.target.value })} /></Field>
@@ -5193,8 +5193,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setReleaseTarget(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={confirmRelease}>{S.releaseRetensiBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fReleaseDate}><input type="date" required className="input" value={releaseForm.date} onChange={(e) => setReleaseForm({ ...releaseForm, date: e.target.value })} /></Field>
-            <Field label={S.fBaNo}><input className="input font-mono" value={releaseForm.ba} onChange={(e) => setReleaseForm({ ...releaseForm, ba: e.target.value })} placeholder={S.baPh} /></Field>
+            <Field label={S.fReleaseDate} required><input type="date" required className="input" value={releaseForm.date} onChange={(e) => setReleaseForm({ ...releaseForm, date: e.target.value })} /></Field>
+            <Field label={S.fBaNo} required><input className="input font-mono" value={releaseForm.ba} onChange={(e) => setReleaseForm({ ...releaseForm, ba: e.target.value })} placeholder={S.baPh} /></Field>
           </FormGrid>
           <Field label={S.fWarranty} hint={S.warrantyHint}>
             <select className="input" value={releaseForm.warrantyId} onChange={(e) => setReleaseForm({ ...releaseForm, warrantyId: e.target.value })}>
@@ -5211,14 +5211,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => { setShowBatch(false); setBatchImg(""); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={confirmBatch}>{S.settleAll}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fPayDate}><input type="date" required className="input" value={batchProof.date} onChange={(e) => setBatchProof({ ...batchProof, date: e.target.value })} /></Field>
+            <Field label={S.fPayDate} required><input type="date" required className="input" value={batchProof.date} onChange={(e) => setBatchProof({ ...batchProof, date: e.target.value })} /></Field>
             <Field label={S.colMetode}>
               <select className="input" value={batchProof.method} onChange={(e) => setBatchProof({ ...batchProof, method: e.target.value })}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.fRefNo} hint={S.batchRefHint}>
+          <Field label={S.fRefNo} hint={S.batchRefHint} required>
             <input className="input font-mono" value={batchProof.ref} onChange={(e) => setBatchProof({ ...batchProof, ref: e.target.value })} placeholder={S.batchRefPh} />
           </Field>
           <Field label={S.batchProofLabel} hint={S.batchProofHint}>
@@ -5255,7 +5255,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             );
           })()}
           <FormGrid>
-            <Field label={S.colProyek}>
+            <Field label={S.colProyek} required>
               <select className="input" value={allocForm.project} onChange={(e) => setAllocForm({ ...allocForm, project: e.target.value })}>
                 <option value="">{S.selectProject}</option>
                 {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
@@ -5286,7 +5286,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fCoaNo} hint={S.coaNoHint}>
               <input className="input font-mono" value={coaForm.kode} disabled={coaTarget !== null} onChange={(e) => setCoaForm({ ...coaForm, kode: e.target.value })} placeholder="1-125" />
             </Field>
-            <Field label={S.fCoaName}><input className="input" value={coaForm.nama} onChange={(e) => setCoaForm({ ...coaForm, nama: e.target.value })} placeholder={S.coaNamePh} /></Field>
+            <Field label={S.fCoaName} required><input className="input" value={coaForm.nama} onChange={(e) => setCoaForm({ ...coaForm, nama: e.target.value })} placeholder={S.coaNamePh} /></Field>
             <Field label={S.fCoaDK} hint={coaTarget && String(coaTarget.dk) === "-" ? S.lockedHeader : undefined}>
               <select className="input" value={coaForm.dk} disabled={coaTarget !== null && String(coaTarget.dk) === "-"} onChange={(e) => setCoaForm({ ...coaForm, dk: e.target.value })}>
                 <option value="D">D - Debit</option>
@@ -5307,7 +5307,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setShowJu(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveJu}>{S.juSave}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.colTanggal}><input type="date" required className="input" value={juForm.date} onChange={(e) => setJuForm({ ...juForm, date: e.target.value })} /></Field>
+            <Field label={S.colTanggal} required><input type="date" required className="input" value={juForm.date} onChange={(e) => setJuForm({ ...juForm, date: e.target.value })} /></Field>
             <Field label={S.fKodePembantu}><input className="input font-mono" value={juForm.kodePembantu} onChange={(e) => setJuForm({ ...juForm, kodePembantu: e.target.value })} placeholder="vendor / customer" /></Field>
             <Field label={S.fVoucher} hint={S.voucherHint}><input className="input font-mono" value={juForm.dokumen} onChange={(e) => setJuForm({ ...juForm, dokumen: e.target.value })} /></Field>
             <Field label={S.colSumber}>
@@ -5316,7 +5316,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.colUraian}><input className="input" value={juForm.uraian} onChange={(e) => setJuForm({ ...juForm, uraian: e.target.value })} placeholder={S.juDescPh} /></Field>
+          <Field label={S.colUraian} required><input className="input" value={juForm.uraian} onChange={(e) => setJuForm({ ...juForm, uraian: e.target.value })} placeholder={S.juDescPh} /></Field>
           <Field label={S.juAttachLabel} hint={S.juAttachHint}>
             <div className="flex flex-wrap items-center gap-2">
               <FileUploadButton accept=".png,.jpg,.jpeg" label={juImg ? S.imgReplace : S.imgUpload} onUploaded={setJuImg} />
@@ -5339,7 +5339,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               {juLines.map((l, idx) => (
                 <div key={idx} className="grid grid-cols-12 items-end gap-2 rounded-xl bg-surface p-2">
                   <div className="col-span-12 sm:col-span-4">
-                    <Field label={S.dbLine.replace("{n}", String(idx + 1))}>
+                    <Field label={S.dbLine.replace("{n}", String(idx + 1))} required>
                       <select className="input font-mono" value={l.db} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, db: e.target.value } : x)))}>
                         <option value="">{S.selectAccount}</option>
                         {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
@@ -5347,7 +5347,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     </Field>
                   </div>
                   <div className="col-span-12 sm:col-span-4">
-                    <Field label={S.krLine.replace("{n}", String(idx + 1))}>
+                    <Field label={S.krLine.replace("{n}", String(idx + 1))} required>
                       <select className="input font-mono" value={l.kr} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, kr: e.target.value } : x)))}>
                         <option value="">{S.selectAccount}</option>
                         {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
@@ -5371,8 +5371,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setShowMut(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveMut}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.colTanggal}><input type="date" required className="input" value={mutForm.date} onChange={(e) => setMutForm({ ...mutForm, date: e.target.value })} /></Field>
-            <Field label={S.colRekening}>
+            <Field label={S.colTanggal} required><input type="date" required className="input" value={mutForm.date} onChange={(e) => setMutForm({ ...mutForm, date: e.target.value })} /></Field>
+            <Field label={S.colRekening} required>
               <select className="input font-mono" value={mutForm.rekening} onChange={(e) => setMutForm({ ...mutForm, rekening: e.target.value })}>
                 {KAS_REKENING.map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
               </select>
@@ -5383,7 +5383,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <option>Keluar</option>
               </select>
             </Field>
-            <Field label={S.fLawan}>
+            <Field label={S.fLawan} required>
               <select className="input font-mono" value={mutForm.lawan} onChange={(e) => setMutForm({ ...mutForm, lawan: e.target.value })}>
                 <option value="">{S.selectAccount}</option>
                 {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
@@ -5394,7 +5394,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fKodePembantu}><input className="input font-mono" value={mutForm.kodePembantu} onChange={(e) => setMutForm({ ...mutForm, kodePembantu: e.target.value })} /></Field>
             <Field label={S.fNoDoc} hint={S.noDocHint}><input className="input font-mono" value={mutForm.dokumen} onChange={(e) => setMutForm({ ...mutForm, dokumen: e.target.value })} /></Field>
           </FormGrid>
-          <Field label={S.colUraian}><input className="input" value={mutForm.uraian} onChange={(e) => setMutForm({ ...mutForm, uraian: e.target.value })} placeholder={S.mutDescPh} /></Field>
+          <Field label={S.colUraian} required><input className="input" value={mutForm.uraian} onChange={(e) => setMutForm({ ...mutForm, uraian: e.target.value })} placeholder={S.mutDescPh} /></Field>
           <Field label={S.fNominal}><MoneyInput className="input" value={mutForm.amount} onChange={(v) => setMutForm({ ...mutForm, amount: v })} /></Field>
         </div>
       </Modal>
@@ -5403,9 +5403,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={() => setInvEdit(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveInvEdit}>{S.saveChanges}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.colCustomer}><input className="input" value={invEditForm.client} onChange={(e) => setInvEditForm({ ...invEditForm, client: e.target.value })} /></Field>
+            <Field label={S.colCustomer} required><input className="input" value={invEditForm.client} onChange={(e) => setInvEditForm({ ...invEditForm, client: e.target.value })} /></Field>
             <Field label={S.fKodePembantu}><input className="input font-mono" value={invEditForm.kodePembantu} onChange={(e) => setInvEditForm({ ...invEditForm, kodePembantu: e.target.value })} /></Field>
-            <Field label={S.dueLabel}><input type="date" required className="input" value={invEditForm.due} onChange={(e) => setInvEditForm({ ...invEditForm, due: e.target.value })} /></Field>
+            <Field label={S.dueLabel} required><input type="date" required className="input" value={invEditForm.due} onChange={(e) => setInvEditForm({ ...invEditForm, due: e.target.value })} /></Field>
             <Field label={S.fTermin}><input className="input" value={invEditForm.paymentTerm} onChange={(e) => setInvEditForm({ ...invEditForm, paymentTerm: e.target.value })} /></Field>
             <Field label={S.fMilestone}><input className="input" value={invEditForm.milestoneRef} onChange={(e) => setInvEditForm({ ...invEditForm, milestoneRef: e.target.value })} /></Field>
             <Field label={S.noFakturShort}><input className="input font-mono" value={invEditForm.noFaktur} onChange={(e) => setInvEditForm({ ...invEditForm, noFaktur: e.target.value })} /></Field>
@@ -5417,7 +5417,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         footer={<><button className="btn-secondary" onClick={closeAst}>{S.cancelBtn}</button><button className="btn-primary" onClick={() => void busy.run(`saveAst-${astEdit?.id ?? "new"}`, astEdit ? saveAstEdit : saveAst)} disabled={busy.isBusy(`saveAst-${astEdit?.id ?? "new"}`)}>{S.saveBtn}</button></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fAssetName}><input className="input" value={astForm.nama} onChange={(e) => setAstForm({ ...astForm, nama: e.target.value })} placeholder={S.assetNamePh} /></Field>
+            <Field label={S.fAssetName} required><input className="input" value={astForm.nama} onChange={(e) => setAstForm({ ...astForm, nama: e.target.value })} placeholder={S.assetNamePh} /></Field>
             <Field label={S.fAssetGroup}>
               <select className="input" value={astForm.kelompok} onChange={(e) => setAstForm({ ...astForm, kelompok: e.target.value })}>
                 <option value="BP">BP - Bangunan Permanen (5%)</option>

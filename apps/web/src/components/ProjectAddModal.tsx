@@ -230,7 +230,7 @@ export default function ProjectAddModal({
             {S.prjCodeAuto}<span className="font-mono font-semibold text-navy-900">{codePreview}</span>
           </p>
           <FormGrid>
-            <Field label={S.prjVesselName}>
+            <Field label={S.prjVesselName} required>
               <SearchSelect
                 value={form.vessel}
                 onChange={(v) => setF("vessel", v)}
@@ -241,7 +241,7 @@ export default function ProjectAddModal({
                 emptyText={S.prjVesselEmpty}
               />
             </Field>
-            <Field label={S.colClient}>
+            <Field label={S.colClient} required>
               <div className="flex gap-2 items-center">
                 <div className="flex-1">
                   <SearchSelect
@@ -285,7 +285,7 @@ export default function ProjectAddModal({
                 emptyText={S.prjDockEmpty}
               />
             </Field>
-            <Field label={S.prjFieldPm}>
+            <Field label={S.prjFieldPm} required>
               <SearchSelect
                 value={form.manager}
                 onChange={(v) => setF("manager", v)}
@@ -295,15 +295,15 @@ export default function ProjectAddModal({
                 emptyText={S.prjPmEmpty}
               />
             </Field>
-            <Field label={S.prjStart}><input type="date" className="input" value={form.start} onChange={(e) => setF("start", e.target.value)} /></Field>
-            <Field label={S.prjEnd}><input type="date" className="input" value={form.end} onChange={(e) => setF("end", e.target.value)} /></Field>
+            <Field label={S.prjStart} required><input type="date" className="input" value={form.start} onChange={(e) => setF("start", e.target.value)} /></Field>
+            <Field label={S.prjEnd} required><input type="date" className="input" value={form.end} onChange={(e) => setF("end", e.target.value)} /></Field>
           </FormGrid>
           {!vesselExists && form.vessel.trim() && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
               <p className="mb-2 text-xs font-semibold text-amber-800">{S.prjNewVesselNote}</p>
               <FormGrid>
                 <Field label={S.prjLoa}><NumInput min={0} step={0.1} className="input" value={form.vesselLoa} onChange={(e) => setF("vesselLoa", e.target.value)} placeholder={S.prjLoaPh} /></Field>
-                <Field label={S.prjVesselType}><input className="input" value={form.vesselType} onChange={(e) => setF("vesselType", e.target.value)} placeholder={S.prjVesselTypePh} /></Field>
+                <Field label={S.prjVesselType} required><input className="input" value={form.vesselType} onChange={(e) => setF("vesselType", e.target.value)} placeholder={S.prjVesselTypePh} /></Field>
               </FormGrid>
             </div>
           )}

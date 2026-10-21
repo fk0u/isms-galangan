@@ -22,7 +22,7 @@ import { fmtTanggal, todayISO } from "../../utils/format";
 import BoQSection from "./BoQSection";
 import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
-import { printBoqHtml } from "../../utils/printBoqHtml";
+import { usePdfDoc } from "../../components/usePdfDoc";
 import { terbilangRupiah, spelledOutCurrency } from "../../utils/terbilang";
 
 type DocStatus = "Draft" | "Diajukan" | "Disetujui" | "Ditolak" | "Digantikan";
@@ -61,6 +61,7 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
   const { locale } = useT();
   const S = n_prj[locale];
   const { data, add, update, resyncCollections, log } = useStore();
+  const boqPdf = usePdfDoc();
   const { user } = useAuth();
   const canWrite = hasPermission(user?.permissions, "boq", "w");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -286,37 +287,9 @@ export default function BoqDocsSection({ projectId }: { projectId: string }) {
     if (open.status === "Ditolak") actions.push({ to: "Draft", label: S.bqdBackToDraft, icon: RotateCcw, primary: true });
     if (open.status === "Disetujui") actions.push({ to: "revise", label: S.bqdMakeRevision, icon: GitBranch, primary: true });
 
+    // Q28: cetak lewat PDF server (template kop + footer yang sama dengan semua dokumen).
     const handleEnterprisePrint = (openDoc: DocRow) => {
-      const rawItems = itemsOf(openDoc.id);
-      const prj = data.projects.find((p) => p.id === projectId);
-      const computedItems = rawItems.map((it, idx) => ({
-        no: idx + 1,
-        name: it.name,
-        description: it.description,
-        category: it.category,
-        qty: it.quantity,
-        unit: it.unit,
-        unitPrice: it.unitPrice,
-        totalPrice: it.totalPrice,
-      }));
-      const totalAmount = totalOf(openDoc.id);
-      printBoqHtml({
-        number: openDoc.number,
-        revision: openDoc.revision,
-        status: openDoc.status,
-        issuedAt: openDoc.issuedAt || todayISO(),
-        projectId,
-        vesselName: prj?.vessel || "-",
-        clientName: prj?.client || "-",
-        approvedBy: openDoc.approvedBy,
-        approvedAt: openDoc.approvedAt,
-        note: openDoc.note,
-        items: computedItems,
-        total: totalAmount,
-        signerName: openDoc.approvedBy || "Commercial Estimator",
-        locale,
-      });
-      toast(locale === "en" ? "Opening Enterprise Print preview..." : "Membuka pratinjau cetak Enterprise...", "info");
+      void boqPdf.request({ kind: "boq", id: openDoc.id, locale }, `BoQ-${openDoc.number.replace(/[/\\]/g, "-")}`, false);
     };
 
     const handleExportExcel = async (openDoc: DocRow) => {

@@ -747,14 +747,14 @@ export default function VesselDetail() {
                     {bunkerRows.length === 0 && <p className="text-xs text-steel-400">{S.vdNoBunker}</p>}
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 border-t border-steel-100 pt-3">
-                    <Field label={S.dateLabel}><input type="date" className="input" value={bunkerForm.date} onChange={(e) => setBunkerForm({ ...bunkerForm, date: e.target.value })} /></Field>
+                    <Field label={S.dateLabel} required><input type="date" className="input" value={bunkerForm.date} onChange={(e) => setBunkerForm({ ...bunkerForm, date: e.target.value })} /></Field>
                     <Field label={S.vdJenisField}>
                       <select className="input" value={bunkerForm.jenis} onChange={(e) => setBunkerForm({ ...bunkerForm, jenis: e.target.value })}>
                         {BUNKER_JENIS.map((j) => <option key={j}>{j}</option>)}
                       </select>
                     </Field>
                     <Field label={S.vdQtyField}><NumInput min={0} className="input" value={bunkerForm.qty} onChange={(e) => setBunkerForm({ ...bunkerForm, qty: e.target.value })} placeholder={S.vdQtyPh} /></Field>
-                    <Field label={S.vdUnitField}><input className="input" value={bunkerForm.satuan} onChange={(e) => setBunkerForm({ ...bunkerForm, satuan: e.target.value })} placeholder={S.vdUnitPh} /></Field>
+                    <Field label={S.vdUnitField} required><input className="input" value={bunkerForm.satuan} onChange={(e) => setBunkerForm({ ...bunkerForm, satuan: e.target.value })} placeholder={S.vdUnitPh} /></Field>
                   </div>
                   <AsyncButton className="btn-secondary mt-2 text-xs" onAction={saveBunker}><Plus className="h-3.5 w-3.5" /> {S.vdAddBunker}</AsyncButton>
                 </Card>
@@ -775,8 +775,8 @@ export default function VesselDetail() {
                       {crewRows.length === 0 && <p className="text-xs text-steel-400">{S.vdNoCrew}</p>}
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2 border-t border-steel-100 pt-3">
-                      <Field label={S.vdCrewName}><input className="input" value={crewForm.name} onChange={(e) => setCrewForm({ ...crewForm, name: e.target.value })} placeholder={S.vdCrewNamePh} /></Field>
-                      <Field label={S.vdCrewRole}><input className="input" value={crewForm.role} onChange={(e) => setCrewForm({ ...crewForm, role: e.target.value })} placeholder={S.vdCrewRolePh} /></Field>
+                      <Field label={S.vdCrewName} required><input className="input" value={crewForm.name} onChange={(e) => setCrewForm({ ...crewForm, name: e.target.value })} placeholder={S.vdCrewNamePh} /></Field>
+                      <Field label={S.vdCrewRole} required><input className="input" value={crewForm.role} onChange={(e) => setCrewForm({ ...crewForm, role: e.target.value })} placeholder={S.vdCrewRolePh} /></Field>
                     </div>
                     <AsyncButton className="btn-secondary mt-2 text-xs" onAction={saveCrew}><Plus className="h-3.5 w-3.5" /> {S.vdAddCrew}</AsyncButton>
                   </Card>
@@ -810,10 +810,10 @@ export default function VesselDetail() {
       <Modal open={showCert} onClose={() => setShowCert(false)} title={S.vdAddCertTitle.replace("{a}", v.name)}
         footer={<><button className="btn-secondary" onClick={() => setShowCert(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveCert}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.vdCertName}><input className="input" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} placeholder={S.vdCertNamePh} /></Field>
+          <Field label={S.vdCertName} required><input className="input" value={certForm.name} onChange={(e) => setCertForm({ ...certForm, name: e.target.value })} placeholder={S.vdCertNamePh} /></Field>
           <FormGrid>
-            <Field label={S.vdIssued}><input type="date" className="input" value={certForm.issued} onChange={(e) => setCertForm({ ...certForm, issued: e.target.value })} /></Field>
-            <Field label={S.vdValidUntil}><input type="date" className="input" value={certForm.expires} onChange={(e) => setCertForm({ ...certForm, expires: e.target.value })} /></Field>
+            <Field label={S.vdIssued} required><input type="date" className="input" value={certForm.issued} onChange={(e) => setCertForm({ ...certForm, issued: e.target.value })} /></Field>
+            <Field label={S.vdValidUntil} required><input type="date" className="input" value={certForm.expires} onChange={(e) => setCertForm({ ...certForm, expires: e.target.value })} /></Field>
           </FormGrid>
         </div>
       </Modal>
@@ -833,7 +833,7 @@ export default function VesselDetail() {
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.dateLabel}><input type="date" className="input" value={surveyForm.date} onChange={(e) => setSurveyForm({ ...surveyForm, date: e.target.value })} /></Field>
+          <Field label={S.dateLabel} required><input type="date" className="input" value={surveyForm.date} onChange={(e) => setSurveyForm({ ...surveyForm, date: e.target.value })} /></Field>
           <Field label={S.vdTrialLink} hint={S.vdTrialHint}>
             <select className="input" value={surveyForm.linkedTrial} onChange={(e) => setSurveyForm({ ...surveyForm, linkedTrial: e.target.value })}>
               <option value="">{S.vdNoTrial}</option>
@@ -846,10 +846,10 @@ export default function VesselDetail() {
       <Modal open={showSpec} onClose={() => setShowSpec(false)} title={S.vdSpecModalTitle.replace("{a}", v.name)} wide
         footer={<><button className="btn-secondary" onClick={() => setShowSpec(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveSpec}>{S.saveBtn}</AsyncButton></>}>
         <FormGrid>
-          <Field label={S.vsOwnerField}>
+          <Field label={S.vsOwnerField} required>
             <SearchSelect value={specForm.owner} onChange={(owner) => setSpecForm({ ...specForm, owner })} options={clientOptionsFor(specForm.owner)} placeholder={S.vsOwnerPh} ariaLabel={S.vsOwnerField} emptyText={S.vsNoClient} required />
           </Field>
-          <Field label={S.typeLabel}><input className="input" value={specForm.type} onChange={(e) => setSpecForm({ ...specForm, type: e.target.value })} /></Field>
+          <Field label={S.typeLabel} required><input className="input" value={specForm.type} onChange={(e) => setSpecForm({ ...specForm, type: e.target.value })} /></Field>
           <Field label={S.vsClassField}>
             <select className="input" value={specForm.class} onChange={(e) => setSpecForm({ ...specForm, class: e.target.value })}>
               {(specForm.class && !["BKI", "RINA"].includes(specForm.class) ? ["BKI", "RINA", specForm.class] : ["BKI", "RINA"]).map((c) => <option key={c}>{c}</option>)}
@@ -867,8 +867,8 @@ export default function VesselDetail() {
         footer={<><button className="btn-secondary" onClick={() => setShowPsc(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={savePsc}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.dateLabel}><input type="date" className="input" value={pscForm.date} onChange={(e) => setPscForm({ ...pscForm, date: e.target.value })} /></Field>
-            <Field label={S.vdPortField}><input className="input" value={pscForm.port} onChange={(e) => setPscForm({ ...pscForm, port: e.target.value })} placeholder={S.vdPortPh} /></Field>
+            <Field label={S.dateLabel} required><input type="date" className="input" value={pscForm.date} onChange={(e) => setPscForm({ ...pscForm, date: e.target.value })} /></Field>
+            <Field label={S.vdPortField} required><input className="input" value={pscForm.port} onChange={(e) => setPscForm({ ...pscForm, port: e.target.value })} placeholder={S.vdPortPh} /></Field>
             <Field label={S.vdDefField}><NumInput min={0} className="input" value={pscForm.deficiencies} onChange={(e) => setPscForm({ ...pscForm, deficiencies: e.target.value })} /></Field>
             <Field label={S.thStatus}>
               <select className="input" value={pscForm.status} onChange={(e) => setPscForm({ ...pscForm, status: e.target.value })}>
@@ -883,10 +883,10 @@ export default function VesselDetail() {
         footer={<><button className="btn-secondary" onClick={() => setShowDock(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveDock}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.dateLabel}><input type="date" className="input" value={dockForm.date} onChange={(e) => setDockForm({ ...dockForm, date: e.target.value })} /></Field>
-            <Field label={S.vdNextDueField}><input type="date" className="input" value={dockForm.nextDue} onChange={(e) => setDockForm({ ...dockForm, nextDue: e.target.value })} /></Field>
+            <Field label={S.dateLabel} required><input type="date" className="input" value={dockForm.date} onChange={(e) => setDockForm({ ...dockForm, date: e.target.value })} /></Field>
+            <Field label={S.vdNextDueField} required><input type="date" className="input" value={dockForm.nextDue} onChange={(e) => setDockForm({ ...dockForm, nextDue: e.target.value })} /></Field>
           </FormGrid>
-          <Field label={S.vdDockField}><input className="input" value={dockForm.dock} onChange={(e) => setDockForm({ ...dockForm, dock: e.target.value })} placeholder={S.vdDockPh} /></Field>
+          <Field label={S.vdDockField} required><input className="input" value={dockForm.dock} onChange={(e) => setDockForm({ ...dockForm, dock: e.target.value })} placeholder={S.vdDockPh} /></Field>
           <Field label={S.vdScopeField}><input className="input" value={dockForm.scope} onChange={(e) => setDockForm({ ...dockForm, scope: e.target.value })} placeholder={S.vdScopePh} /></Field>
           <Field label={S.vdResultField}><input className="input" value={dockForm.result} onChange={(e) => setDockForm({ ...dockForm, result: e.target.value })} placeholder={S.vdResultPh} /></Field>
         </div>
@@ -895,10 +895,10 @@ export default function VesselDetail() {
       <Modal open={showIns} onClose={() => setShowIns(false)} title={S.vdInsModalTitle.replace("{a}", v.name)} subtitle={S.vdInsSub}
         footer={<><button className="btn-secondary" onClick={() => setShowIns(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveIns}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.vdPolisNo}><input className="input font-mono" value={insForm.polis} onChange={(e) => setInsForm({ ...insForm, polis: e.target.value })} placeholder={S.vdPolisPh} /></Field>
+          <Field label={S.vdPolisNo} required><input className="input font-mono" value={insForm.polis} onChange={(e) => setInsForm({ ...insForm, polis: e.target.value })} placeholder={S.vdPolisPh} /></Field>
           <FormGrid>
             <Field label={S.vdPremiRp}><MoneyInput className="input" value={insForm.premi} onChange={(v) => setInsForm({ ...insForm, premi: v })} placeholder={S.vdPremiPh} /></Field>
-            <Field label={S.vdExpiryField}><input type="date" className="input" value={insForm.expiry} onChange={(e) => setInsForm({ ...insForm, expiry: e.target.value })} /></Field>
+            <Field label={S.vdExpiryField} required><input type="date" className="input" value={insForm.expiry} onChange={(e) => setInsForm({ ...insForm, expiry: e.target.value })} /></Field>
           </FormGrid>
         </div>
       </Modal>

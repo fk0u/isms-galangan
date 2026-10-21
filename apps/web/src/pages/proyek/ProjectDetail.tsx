@@ -2913,8 +2913,8 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showTrial} onClose={() => setShowTrial(false)} title={S.detCreateTrial} subtitle={`${pid} · ${nextTrialId(trialForm.tanggal || todayISO())}`}
         footer={<><button className="btn-secondary" onClick={() => setShowTrial(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveTrial}>{S.saveBtn}</button></>}>
         <div className="space-y-3">
-          <Field label={S.dateField}><input type="date" className="input" value={trialForm.tanggal} onChange={(e) => setTrialForm({ ...trialForm, tanggal: e.target.value })} /></Field>
-          <Field label={S.detParamField}><input className="input" value={trialForm.parameter} onChange={(e) => setTrialForm({ ...trialForm, parameter: e.target.value })} placeholder={S.detParamPh} /></Field>
+          <Field label={S.dateField} required><input type="date" className="input" value={trialForm.tanggal} onChange={(e) => setTrialForm({ ...trialForm, tanggal: e.target.value })} /></Field>
+          <Field label={S.detParamField} required><input className="input" value={trialForm.parameter} onChange={(e) => setTrialForm({ ...trialForm, parameter: e.target.value })} placeholder={S.detParamPh} /></Field>
           <Field label={S.detPunchField}><input className="input" value={trialForm.punchList} onChange={(e) => setTrialForm({ ...trialForm, punchList: e.target.value })} placeholder={S.detPunchPh} /></Field>
           <Field label={S.detBaField}><input className="input" value={trialForm.baRef} onChange={(e) => setTrialForm({ ...trialForm, baRef: e.target.value })} placeholder={S.detBaPh} /></Field>
           <Field label={S.detTrialKondisi}>
@@ -3026,19 +3026,19 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showBast} onClose={() => setShowBast(false)} title={S.detCreateBast} subtitle={`${pid} · ${nextBastId(bastForm.tanggal || todayISO())}`}
         footer={<><button className="btn-secondary" onClick={() => setShowBast(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveBast}>{S.detSaveDraft}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.detMileField} hint={S.detMileHint}>
+          <Field label={S.detMileField} hint={S.detMileHint} required>
             <select className="input" value={bastForm.milestone} onChange={(e) => setBastForm({ ...bastForm, milestone: e.target.value })}>
               <option value="">{S.detPickMile}</option>
               {wbs.map((t) => <option key={t.task} value={t.task}>{t.task} · {t.progress}%</option>)}
             </select>
           </Field>
           <FormGrid>
-            <Field label={S.dateField}><input type="date" className="input" value={bastForm.tanggal} onChange={(e) => setBastForm({ ...bastForm, tanggal: e.target.value })} /></Field>
+            <Field label={S.dateField} required><input type="date" className="input" value={bastForm.tanggal} onChange={(e) => setBastForm({ ...bastForm, tanggal: e.target.value })} /></Field>
             <Field label={S.detAmountField} hint={contractValue > 0 ? `Sisa kontrak ${fmtRupiah(sisaKontrak)}` : (boqTotal > 0 ? S.detAmountHintBoq.replace("{a}", fmtRupiah(boqTotal)) : S.detAmountHintPlain)}>
               <MoneyInput className="input" value={bastForm.amount} onChange={(v) => setBastForm({ ...bastForm, amount: v })} placeholder={contractValue > 0 ? String(sisaKontrak) : (boqTotal > 0 ? String(boqTotal) : S.detAmountPh)} />
             </Field>
           </FormGrid>
-          <Field label={S.detSignerField}><input className="input" value={bastForm.signer} onChange={(e) => setBastForm({ ...bastForm, signer: e.target.value })} placeholder={S.detSignerPh} /></Field>
+          <Field label={S.detSignerField} required><input className="input" value={bastForm.signer} onChange={(e) => setBastForm({ ...bastForm, signer: e.target.value })} placeholder={S.detSignerPh} /></Field>
           <Field label={S.detAttachField}><input className="input" value={bastForm.lampiran} onChange={(e) => setBastForm({ ...bastForm, lampiran: e.target.value })} placeholder={S.detAttachPh} /></Field>
           <FileUploadButton label={S.detAttachUpload} onUploaded={(url) => setBastForm((v) => ({ ...v, lampiran: url }))} />
         </div>
@@ -3048,12 +3048,12 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showCo} onClose={() => setShowCo(false)} title={S.detCoModal} subtitle={pid}
         footer={<><button className="btn-secondary" onClick={() => setShowCo(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveCo}>{S.detProposeCo}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.detCoTitleField}><input className="input" value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })} placeholder={S.detCoTitlePh} /></Field>
+          <Field label={S.detCoTitleField} required><input className="input" value={coForm.title} onChange={(e) => setCoForm({ ...coForm, title: e.target.value })} placeholder={S.detCoTitlePh} /></Field>
           <FormGrid>
             <Field label={S.detCoImpactField} hint={S.detCoImpactHint}><MoneyInput className="input" value={coForm.impact} onChange={(v) => setCoForm({ ...coForm, impact: v })} placeholder={S.detCoImpactPh} /></Field>
             <Field label={S.dateField}><input type="date" className="input" value={coForm.date} onChange={(e) => setCoForm({ ...coForm, date: e.target.value })} /></Field>
           </FormGrid>
-          <Field label={S.detRequester}><input className="input" value={coForm.requestedBy} onChange={(e) => setCoForm({ ...coForm, requestedBy: e.target.value })} placeholder={S.detRequesterPh} /></Field>
+          <Field label={S.detRequester} required><input className="input" value={coForm.requestedBy} onChange={(e) => setCoForm({ ...coForm, requestedBy: e.target.value })} placeholder={S.detRequesterPh} /></Field>
           {/* F3-C-05: perubahan item pada surat BoQ aktif */}
           {coDocs.length > 0 && (
             <Field label={S.detCoDoc} hint={S.detCoDocHint}>
@@ -3305,13 +3305,13 @@ const createWarranty = async (wbsTask?: string) => {
           }
         }}>{S.detSendBtn}</button></>}>
         <FormGrid>
-          <Field label={S.detDocField}>
+          <Field label={S.detDocField} required>
             <select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
               <option value="">{S.detPickDoc}</option>
               {docs.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
             </select>
           </Field>
-          <Field label={S.detShareTo}><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.detShareToPh} /></Field>
+          <Field label={S.detShareTo} required><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.detShareToPh} /></Field>
         </FormGrid>
       </Modal>
 
@@ -3319,7 +3319,7 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={wbsTaskUpdate !== null} onClose={() => setWbsTaskUpdate(null)} title={S.detWbsUpdateTitle.replace("{a}", wbsTaskUpdate ?? "")}
         footer={<><button className="btn-secondary" onClick={() => setWbsTaskUpdate(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveWbsTask}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.detProgField} hint={S.detProgHint}><NumInput min={0} max={100} className="input" value={wbsUpdateForm.progress} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, progress: e.target.value })} placeholder={S.detProgPh} /></Field>
+          <Field label={S.detProgField} hint={S.detProgHint} required><NumInput min={0} max={100} className="input" value={wbsUpdateForm.progress} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, progress: e.target.value })} placeholder={S.detProgPh} /></Field>
           <FormGrid>
             <Field label={S.detHours}><NumInput className="input" value={wbsUpdateForm.hours} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, hours: e.target.value })} placeholder={S.detHoursPh} /></Field>
             <Field label={S.detDft} hint={S.detDftHint}><NumInput min={0} className="input" value={wbsUpdateForm.dft} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, dft: e.target.value })} placeholder={S.detDftPh} /></Field>
@@ -3530,7 +3530,7 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showWbs} onClose={() => setShowWbs(false)} title={S.detWbsModal}
         footer={<><button className="btn-secondary" onClick={() => setShowWbs(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWbs}>{S.addBtn}</button></>}>
         <div className="space-y-3">
-          <Field label={S.detStageName}><input className="input" value={wbsForm.task} onChange={(e) => setWbsForm({ ...wbsForm, task: e.target.value })} /></Field>
+          <Field label={S.detStageName} required><input className="input" value={wbsForm.task} onChange={(e) => setWbsForm({ ...wbsForm, task: e.target.value })} /></Field>
           <FormGrid>
             <Field label={S.detStart}><input type="date" className="input" placeholder={S.detWbsStartPh} value={wbsForm.start === "-" ? "" : wbsForm.start} onChange={(e) => setWbsForm({ ...wbsForm, start: e.target.value })} /></Field>
             <Field label={S.detEnd}><input type="date" className="input" placeholder={S.detWbsEndPh} value={wbsForm.end === "-" ? "" : wbsForm.end} onChange={(e) => setWbsForm({ ...wbsForm, end: e.target.value })} /></Field>
@@ -3761,7 +3761,7 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showScope} onClose={() => setShowScope(false)} title={S.detScopeModal}
         footer={<><button className="btn-secondary" onClick={() => setShowScope(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveScope}>{S.addBtn}</button></>}>
         <div className="grid gap-3">
-          <Field label={S.prjScopeType}>
+          <Field label={S.prjScopeType} required>
             <input className="input" placeholder={S.detScopeTypePh2} value={scopeVal.service} onChange={(e) => setScopeVal((v) => ({ ...v, service: e.target.value }))} />
           </Field>
           <Field label={S.prjScopeLoc}>

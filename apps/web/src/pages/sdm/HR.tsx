@@ -2378,7 +2378,7 @@ const finishTraining = async (t: StoreItem) => {
         }
       >
         <div className="space-y-3">
-          <Field label={S.fKaryawan}>
+          <Field label={S.fKaryawan} required>
             <select
               className="input"
               value={leaveForm.employeeId}
@@ -2553,8 +2553,8 @@ const finishTraining = async (t: StoreItem) => {
       >
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fJudul}><input className="input" value={trainingForm.title} onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })} placeholder={S.phTrain} /></Field>
-            <Field label={S.thTanggal}><input type="date" className="input" value={trainingForm.date} onChange={(e) => setTrainingForm({ ...trainingForm, date: e.target.value })} /></Field>
+            <Field label={S.fJudul} required><input className="input" value={trainingForm.title} onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })} placeholder={S.phTrain} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={trainingForm.date} onChange={(e) => setTrainingForm({ ...trainingForm, date: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.fProvider}><input className="input" value={trainingForm.provider} onChange={(e) => setTrainingForm({ ...trainingForm, provider: e.target.value })} placeholder={S.phProvider} /></Field>
           <Field label={S.fPesertaN.replace("{n}", String(trainingForm.participants.length))}>

@@ -328,7 +328,7 @@ export default function BomDetail() {
         footer={<><button className="btn-secondary" onClick={() => setMoveEdit(null)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveMoveEdit}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.dateLbl}><input type="date" className="input" value={moveEditForm.date} onChange={(e) => setMoveEditForm({ ...moveEditForm, date: e.target.value })} /></Field>
+            <Field label={S.dateLbl} required><input type="date" className="input" value={moveEditForm.date} onChange={(e) => setMoveEditForm({ ...moveEditForm, date: e.target.value })} /></Field>
             <Field label={S.thRef}><input className="input font-mono" value={moveEditForm.by} onChange={(e) => setMoveEditForm({ ...moveEditForm, by: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.purposeLbl ?? (locale === "en" ? "Purpose" : "Keperluan")}><input className="input" value={moveEditForm.purpose} onChange={(e) => setMoveEditForm({ ...moveEditForm, purpose: e.target.value })} /></Field>

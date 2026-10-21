@@ -296,13 +296,13 @@ export default function ReportSection({ projectId }: Props) {
       <Modal open={showShare} onClose={() => setShowShare(false)} title={S.detShareModal}
         footer={<><button className="btn-secondary" onClick={() => setShowShare(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={submitShare}>{S.detSendBtn}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.detDocField}>
+          <Field label={S.detDocField} required>
             <select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
               <option value="">{S.detPickDocFull}</option>
               {docs.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
             </select>
           </Field>
-          <Field label={S.detShareTo}><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.repShareToPh} /></Field>
+          <Field label={S.detShareTo} required><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.repShareToPh} /></Field>
         </div>
       </Modal>
     </div>
