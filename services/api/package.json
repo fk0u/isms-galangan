@@ -69,7 +69,8 @@
     "probe:read-models": "tsx --env-file-if-exists=.env scripts/read-models-probe.ts",
     "probe:cache": "tsx --env-file-if-exists=.env scripts/cache-probe.ts",
     "migrate:project-stages": "tsx --env-file-if-exists=.env scripts/migrate-project-stages.ts",
-    "probe:project-stages": "tsx scripts/project-stages-probe.ts"
+    "probe:project-stages": "tsx scripts/project-stages-probe.ts",
+    "sync:po-invoices": "tsx --env-file-if-exists=.env scripts/sync-po-invoices.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
