@@ -73,7 +73,7 @@ import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { exportExcel } from "../../utils/export";
 import { exportWarehouseReport, exportWarehouseTemplate } from "../../utils/warehouseReport";
 import { readSheetRows, sheetDate, sheetNumber } from "../../utils/readSheet";
-import { sbTonasePlat, sbSjNumber, sbTtNumber, maxSeq, parseSjSeq, SB_KOP } from "../../utils/sb";
+import { sbTonasePlat, sbSjNumber, sbTtNumber, maxSeq, parseSjSeq } from "../../utils/sb";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { FilterPopover } from "../../components/FilterPopover";
@@ -585,12 +585,11 @@ export default function Inventory() {
   const printDo = (d: StoreItem) => {
     const items = (Array.isArray(d.doItems) ? d.doItems : []) as { name: string; qty: string }[];
     void exportExcel([
-      [SB_KOP.line1, SB_KOP.name], [SB_KOP.hq, `HP ${SB_KOP.hp}`], [],
-      ["DELIVERY ORDER", `NO: ${String(d.sbRef ?? d.id)}`], ["Tanggal", String(d.doDate ?? d.updated ?? "")],
+            ["DELIVERY ORDER", `NO: ${String(d.sbRef ?? d.id)}`], ["Tanggal", String(d.doDate ?? d.updated ?? "")],
       ["Tujuan", String(d.doTo ?? d.vessel ?? "-")], ["Driver", String(d.doDriver ?? "-")],
       ["Surat Jalan", String(d.doSjRef ?? d.doSjId ?? "-")], [],
       ["No", "Nama Barang", "Jumlah"], ...items.map((x, i) => [i + 1, String(x.name ?? ""), String(x.qty ?? "")]),
-    ], `DO-${String(d.sbRef ?? d.id).replaceAll("/", "-")}`, "Delivery Order").catch(() => toast(S.saveFail, "info"));
+    ], `DO-${String(d.sbRef ?? d.id).replaceAll("/", "-")}`, "Delivery Order", { kop: true }).catch(() => toast(S.saveFail, "info"));
     toast(locale === "en" ? `DO ${String(d.sbRef ?? d.id)} printed` : `DO ${String(d.sbRef ?? d.id)} dicetak`);
   };
 
@@ -3787,12 +3786,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       const done = await pdfDoc.request({ kind: "suratJalan", id: sjDocId, locale }, `SJ-${no.replaceAll("/", "-")}`, false);
                       if (!done) return;
                       void exportExcel([
-                        [SB_KOP.line1, SB_KOP.name], [SB_KOP.hq, `HP ${SB_KOP.hp}`], [],
-                        ["SURAT JALAN", `NO REF: ${no}`], ["Tanggal", sjDate], ["Tujuan", sjTo.trim()],
+                                                ["SURAT JALAN", `NO REF: ${no}`], ["Tanggal", sjDate], ["Tujuan", sjTo.trim()],
                         ["Kendaraan", sjVehicle.trim()], ["No. Polisi", sjPlate.trim()], ["Driver", sjDriver.trim()], [],
                         ["No", "Nama Barang", "Jumlah"], ...items.map((x, i) => [i + 1, x.name.trim(), x.qty.trim()]), [],
                         ["Yang Menerima", "Yang Menyerahkan"], [sjReceiver.trim(), sjGiver.trim()],
-                      ], `SJ-${no.replaceAll("/", "-")}`, "Surat Jalan").catch(() => toast(S.saveFail, "info"));
+                      ], `SJ-${no.replaceAll("/", "-")}`, "Surat Jalan", { kop: true }).catch(() => toast(S.saveFail, "info"));
                       toast(S.sjIssued.replace("{n}", no));
                       setSjTo(""); setSjVehicle(""); setSjPlate(""); setSjDriver("");
                       setSjItems([{ name: "", qty: "" }]); setSjReceiver(""); setSjGiver("");
@@ -3853,12 +3851,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       const done = await pdfDoc.request({ kind: "tandaTerima", id: ttDocId, locale }, `TT-${no.replaceAll("/", "-")}`, false);
                       if (!done) return;
                       void exportExcel([
-                        [SB_KOP.line1, SB_KOP.name], [SB_KOP.hq, `HP ${SB_KOP.hp}`], [],
-                        ["TANDA TERIMA", `NO REF: ${no}`], ["Tanggal", ttDate],
+                                                ["TANDA TERIMA", `NO REF: ${no}`], ["Tanggal", ttDate],
                         ["Surat Jalan", sj ? String(sj.sbRef || sj.id) : "-"], [],
                         ["No", "Nama Barang", "Jumlah"], ...items.map((x, i) => [i + 1, x.name.trim(), x.qty.trim()]), [],
                         ["Yang Menerima", "Yang Menyerahkan"], [ttReceiver.trim(), ttGiver.trim()],
-                      ], `TT-${no.replaceAll("/", "-")}`, "Tanda Terima").catch(() => toast(S.saveFail, "info"));
+                      ], `TT-${no.replaceAll("/", "-")}`, "Tanda Terima", { kop: true }).catch(() => toast(S.saveFail, "info"));
                       toast(S.ttIssued.replace("{n}", no));
                       setTtDate(todayISO()); setTtSjId("");
                       setTtItems([{ name: "", qty: "" }]); setTtReceiver(""); setTtGiver("");
