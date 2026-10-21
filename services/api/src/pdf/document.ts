@@ -114,7 +114,8 @@ export class Document {
 
   /** Batas bawah area isi: di atas zona footer alamat (atau 8 mm tanpa itu). */
   private bottom(): number {
-    return this.pageH - this.margin - (this.opts.addressFooter === false ? 8 : FOOTER_ZONE_MM);
+    // Zona footer alamat diukur dari margin standar supaya posisinya sama di semua dokumen.
+    return this.opts.addressFooter === false ? this.pageH - this.margin - 8 : Math.min(this.pageH - this.margin - 8, this.pageH - MARGIN_MM - FOOTER_ZONE_MM);
   }
 
   private ctx(): Ctx {
@@ -160,10 +161,10 @@ export class Document {
       /* Footer alamat selalu di dasar halaman, bukan mengikuti isi: garis
          aksen merah lalu tiga baris alamat, di dalam zona yang tidak boleh
          dipakai isi (lihat bottom()). */
-      const top = this.pageH - this.margin - FOOTER_ZONE_MM + 2.5;
+      const top = this.pageH - MARGIN_MM - FOOTER_ZONE_MM + 2.5;
       this.pdf.setDrawColor(COLOR.accent[0], COLOR.accent[1], COLOR.accent[2]);
       this.pdf.setLineWidth(STROKE.thin);
-      this.pdf.line(this.margin, top, this.pageW - this.margin, top);
+      this.pdf.line(MARGIN_MM, top, this.pageW - MARGIN_MM, top);
       this.pdf.setFont(fontName("regular"), "normal");
       this.pdf.setFontSize(TYPE.footer);
       this.pdf.setTextColor(60, 60, 60);
@@ -175,7 +176,7 @@ export class Document {
       this.pdf.setFont(fontName("regular"), "normal");
       this.pdf.setFontSize(TYPE.footer);
       this.pdf.setTextColor(140, 150, 160);
-      this.pdf.text(label, this.pageW / 2, this.pageH - this.margin / 2 + 1, { align: "center" });
+      this.pdf.text(label, this.pageW / 2, this.pageH - MARGIN_MM / 2 + 1, { align: "center" });
       this.pdf.setTextColor(0, 0, 0);
     }
   }

@@ -20,6 +20,7 @@
 import type { jsPDF } from "jspdf";
 import { Document, type DocOptions } from "../document.js";
 import type { Block, DrawRecord } from "../blocks.js";
+import { MARGIN_MM } from "../theme.js";
 import { kopImageSrc as kopDataUrl, longDate } from "./shared.js";
 import { terbilangAngka } from "./kwitansi.js";
 
@@ -52,7 +53,6 @@ export interface HrLetterInput {
 
 const PT = 25.4 / 72; // 1 pt dalam mm
 const TWIP = 25.4 / 1440; // 1 twip dalam mm
-const EMU = 1 / 36000; // 1 EMU dalam mm
 /* Tinggi baris "single" Word untuk Times New Roman = 1,15 x ukuran huruf. */
 const single = (size: number): number => size * 1.15 * PT;
 
@@ -147,10 +147,25 @@ class Pen {
       this.y += lh;
     });
   }
-  /** Pindah ke posisi footer: blok `lines` baris berakhir 12 mm dari tepi
-   *  bawah kertas, tetapi tidak pernah naik menimpa isi di atasnya. */
-  toFooter(lines: number, size: number): void {
-    this.y = Math.max(this.y + 2, this.pdf.internal.pageSize.getHeight() - 12 - lines * single(size));
+  /** Kop seragam dengan dokumen lain (companyKop): di margin 15 mm, selebar
+   *  kertas dikurangi margin, rasio asli gambar (tidak dipipihkan). Lalu y
+   *  pindah ke bawah kop + jarak yang sama dengan dokumen lain. */
+  kop(): void {
+    const src = kopDataUrl();
+    const w = this.pdf.internal.pageSize.getWidth() - 2 * MARGIN_MM;
+    const h = w * KOP_RATIO;
+    if (src) this.image(src, MARGIN_MM, MARGIN_MM, w, h);
+    this.y = MARGIN_MM + h + KOP_GAP;
+  }
+  /** Blok tanda tangan seragam semua surat: di separuh kanan, rata tengah. */
+  ttd(o: { size: number; spacing: number; tanggal: string; nama: string; jabatan?: string }): void {
+    const ind = (this.right - this.left) / 2;
+    const at = { size: o.size, spacing: o.spacing, align: "center" as const, indent: ind };
+    this.line([{ text: `Samarinda, ${longDate(o.tanggal)}` }], at);
+    this.line([{ text: "PT. SYUKUR BERSAUDARA", style: "bold" }], at);
+    this.blank(o.size, o.spacing); this.blank(o.size, o.spacing); this.blank(o.size, o.spacing);
+    this.line([{ text: o.nama, style: "bold", underline: true }], at);
+    if (o.jabatan) this.line([{ text: o.jabatan, style: "bold" }], at);
   }
   image(dataUrl: string, x: number, y: number, w: number, h: number): void {
     this.pdf.addImage(dataUrl, "JPEG", x, y, w, h);
@@ -158,10 +173,10 @@ class Pen {
   }
 }
 
-/* Permintaan user 21 Okt: tanpa biru; tautan/aksen memakai merah kop SB. */
-const ACCENT: [number, number, number] = [200, 32, 46];
-/** Jarak antara tepi bawah kop dan teks pertama (judul) - sebelumnya terlalu mepet. */
-const KOP_GAP = 6;
+/* Layout seragam dengan semua dokumen (permintaan user 21 Okt): kop, jarak
+   kop → judul, dan footer alamat sama dengan dokumen lain. */
+const KOP_RATIO = 214 / 1142;
+const KOP_GAP = 7;
 
 /** "26 (Dua Puluh Enam) bulan Juni tahun 2026" - kalimat tanggal PHK. */
 export function tanggalTerbilang(iso: string): string {
@@ -175,12 +190,8 @@ export function tanggalTerbilang(iso: string): string {
 
 function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
   // Template: A4, kiri 25,4 mm, kanan 20 mm, Times 11 pt, spasi 1,5.
-  const kop = kopDataUrl();
-  if (kop) p.image(kop, 1440 * TWIP, 1440 * TWIP - 647700 * EMU, 5895975 * EMU, 1089025 * EMU);
+  p.kop();
   const S = 11;
-  /* Dua paragraf kosong (kop + spasi) sebelum judul. Di Word judul sedikit
-     tertutup tepi bawah kop; di sini judul tidak boleh tertutup. */
-  p.y = 1440 * TWIP - 647700 * EMU + 1089025 * EMU + KOP_GAP;
   const ke = inp.kind === "sp1" ? "1" : "2";
   p.line([{ text: `SURAT PERINGATAN ${ke}`, style: "bold", underline: true }], { size: S, align: "center" });
   p.line([{ text: `No ${inp.no}` }], { size: S, align: "center" });
@@ -212,34 +223,16 @@ function spLetter(p: Pen, pdf: jsPDF, inp: HrLetterInput): void {
   { size: S, spacing: 1.5, justify: true });
   p.blank(S, 1.5);
   p.para("Demikian surat ini kami sampaikan dan berlaku selama menjadi karyawan PT. SYUKUR BERSAUDARA Kepada yang bersangkutan harap di perhatikan dan di perbaiki dengan segera.", { size: S, spacing: 1.5, justify: true });
-  p.blank(S, 1.5); p.blank(S, 1.5);
-  const ind = 5103 * TWIP;
-  p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.5, align: "center", indent: ind });
-  p.line([{ text: "PT SYUKUR BERSAUDARA", style: "bold" }], { size: S, spacing: 1.5, align: "center", indent: ind });
-  p.blank(S, 1.5); p.blank(S, 1.5); p.blank(S, 1.5);
-  p.line([{ text: "Management", style: "bold", underline: true }], { size: S, spacing: 1.5, align: "center", indent: ind });
-  spFooter(p);
+  p.blank(S, 1.5);
+  p.ttd({ size: S, spacing: 1.5, tanggal: inp.tanggal, nama: "Management" });
 }
 
-/* Footer alamat gaya Surat Peringatan (10 pt, rata tengah, tanpa garis). Catatan
-   CTO 21 Okt: Surat Pengalaman Kerja & Surat Keterangan Bekerja memakai footer
-   ini juga, bukan footer berkotak dari template lamanya. */
-function spFooter(p: Pen): void {
-  const F = 10;
-  p.toFooter(4, F);
-  p.line([{ text: "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
-  p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)" }], { size: F, align: "center" });
-  p.line([{ text: "Email: " }, { text: "Syukurbersaudara@gmail.com", color: ACCENT, underline: true }], { size: F, align: "center" });
-  p.line([{ text: "Web: www.syukurbersaudara.com" }], { size: F, align: "center" });
-}
 
 function phkLetter(p: Pen, inp: HrLetterInput): void {
   // Template: Letter, margin 25,4 mm, Times 12 pt; kop di header (dipipihkan).
-  const kop = kopDataUrl();
-  if (kop) p.image(kop, 1440 * TWIP - 318053 * EMU, 720 * TWIP - 290223 * EMU, 6591631 * EMU, 628153 * EMU);
+  p.kop();
   const S = 12;
   const after = 10; // spasi setelah paragraf bawaan dokumen (200 twip)
-  p.y = 720 * TWIP - 290223 * EMU + 628153 * EMU + KOP_GAP;
   p.line([{ text: `Nomor : ${inp.no}` }], { size: S, spacing: 1.5 });
   p.line([{ text: "Perihal : Surat Pemutusan Hubungan Kerja" }], { size: S, spacing: 1.5, after });
   p.line([{ text: "Kepada Yth," }], { size: S, spacing: 1.5, after });
@@ -250,24 +243,13 @@ function phkLetter(p: Pen, inp: HrLetterInput): void {
   p.para(`Dengan Hormat, Sehubungan dengan Saudara masih melakukan pelanggaran disiplin berupa ${alasan}.`, { size: S, spacing: 1.5, justify: true, after });
   p.para(`Dengan demikian, terhitung mulai tanggal ${tanggalTerbilang(inp.tanggalEfektif || inp.tanggal)} hubungan kerja antara PT. SYUKUR BERSAUDARA dengan Sdr. ${inp.nama} dinyatakan sudah berakhir. Dan atas nama lembaga, kami menyampaikan banyak terima kasih atas kinerja yang Saudara berikan selama ini.`, { size: S, spacing: 1.5, justify: true, after });
   p.para("Demikian surat pemutusan hubungan kerja ini kami sampaikan, dan agar dapat dimaklumi, terima kasih.", { size: S, spacing: 1.5, justify: true, after });
-  p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.5, after });
-  p.blank(S); p.blank(S); p.blank(S);
-  p.line([{ text: inp.penandaTangan, underline: true }], { size: S });
-  p.line([{ text: inp.jabatanPenandaTangan || "HR" }], { size: S });
-  const F = 10;
-  p.toFooter(4, F);
-  p.line([{ text: "Kantor : Jl. Mulawarman  no. 23  tlp. (0541) 742529 Fax. (0541) 731034 Samarinda" }], { size: F, align: "center" });
-  p.line([{ text: "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir) tlp. (0541) 6246750" }], { size: F, align: "center" });
-  p.line([{ text: "Email : " }, { text: "syukurbersaudara@gmail.com", underline: true }], { size: F, align: "center" });
-  p.line([{ text: "Web : " }, { text: "www.syukurbersaudara.com", underline: true }], { size: F, align: "center" });
+  p.ttd({ size: S, spacing: 1.15, tanggal: inp.tanggal, nama: inp.penandaTangan, jabatan: inp.jabatanPenandaTangan || "HR" });
 }
 
 function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   // Template: A4, margin 25,4 mm, Times 12 pt, judul 16 pt.
-  const kop = kopDataUrl();
-  if (kop) p.image(kop, 1440 * TWIP - 66675 * EMU, 1440 * TWIP - 742950 * EMU, 5924550 * EMU, 1114425 * EMU);
+  p.kop();
   const S = 12;
-  p.y = 1440 * TWIP - 742950 * EMU + 1114425 * EMU + KOP_GAP;
   p.line([{ text: "SURAT  PENGALAMAN  KERJA", style: "bold", underline: true }], { size: 16, align: "center" });
   p.blank(11); p.blank(11); p.blank(11);
   const auto = 14 * PT; // afterAutospacing ~ 14 pt
@@ -289,22 +271,13 @@ function pengalamanLetter(p: Pen, inp: HrLetterInput): void {
   p.para("Yang bersangkutan telah memberikan konstribusi yang baik bagi perusahaan dan selama bergabung tidak pernah melakukan tindakan yang merugikan perusahaan kami.", { size: S, spacing: 1.15, after: 14 });
   p.para("Kami berterima kasih atas segala kerjasama, konstribusi dan segala upaya yang telah diberikan guna perkembangan perusahaan yang lebih baik.", { size: S, spacing: 1.15, justify: true, after: 14 });
   p.blank(S, 1.15);
-  const dateX = 7 * 12.7; // 7 tab bawaan (0,5")
-  p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.15, indent: dateX });
-  p.line([{ text: "PT. Syukur Bersaudara", style: "bold" }], { size: S, spacing: 1.15, indent: dateX });
-  p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
-  p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, indent: 12.7 });
-  p.line([{ text: inp.jabatanPenandaTangan || "HR", style: "bold" }], { size: S, spacing: 1.15, indent: 12.7 });
-  spFooter(p);
+  p.ttd({ size: S, spacing: 1.15, tanggal: inp.tanggal, nama: inp.penandaTangan, jabatan: inp.jabatanPenandaTangan || "HR" });
 }
 
 function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   // Template: A4, margin 20 mm, Times 12 pt; footer mengikuti Surat Peringatan.
-  const kop = kopDataUrl();
-  const m = 1134 * TWIP;
-  if (kop) p.image(kop, m + 53340 * EMU, 7.2, 6305550 * EMU, 1112520 * EMU);
+  p.kop();
   const S = 12;
-  p.y = 7.2 + 1112520 * EMU + KOP_GAP;
   p.line([{ text: "SURAT KETERANGAN", style: "bold", underline: true }], { size: S, align: "center" });
   p.line([{ text: `Nomor : ${inp.no}`, style: "bold" }], { size: S, align: "center" });
   p.blank(S, 1.15);
@@ -325,13 +298,7 @@ function keteranganLetter(p: Pen, inp: HrLetterInput): void {
   p.line([{ text: `sampai dengan sekarang, dengan jabatan ${inp.jabatan}.` }], { size: S, spacing: 1.5 });
   p.para("Demikian surat keterangan ini kami buat agar dipergunakan sebagaimana mestinya.", { size: S, spacing: 1.15 });
   p.blank(S, 1.15); p.blank(S, 1.15);
-  const ind = 5760 * TWIP;
-  p.line([{ text: `Samarinda, ${longDate(inp.tanggal)}` }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  p.line([{ text: "PT. Syukur Bersaudara", style: "bold" }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  p.blank(S, 1.15); p.blank(S, 1.15); p.blank(S, 1.15);
-  p.line([{ text: inp.penandaTangan, style: "bold", underline: true }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  p.line([{ text: inp.jabatanPenandaTangan || "HRD", style: "bold" }], { size: S, spacing: 1.15, align: "center", indent: ind });
-  spFooter(p);
+  p.ttd({ size: S, spacing: 1.15, tanggal: inp.tanggal, nama: inp.penandaTangan, jabatan: inp.jabatanPenandaTangan || "HRD" });
 }
 
 /** Satu halaman surat sebagai satu blok tak terpecah. */
@@ -374,8 +341,6 @@ export function hrLetterDoc(inp: HrLetterInput, opts: DocOptions = {}): Document
     marginMm: 6,
     title: `${TITLES[inp.kind]} ${inp.no}`,
     subject: `${TITLES[inp.kind]} - ${inp.nama}`,
-    footer: () => "",
-    addressFooter: false,
     ...opts,
   });
   d.add(letterBlock(inp, left, pageW - marginRight));
