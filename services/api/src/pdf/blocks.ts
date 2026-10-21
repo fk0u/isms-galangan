@@ -764,8 +764,8 @@ export function signatures(sigs: SignatureSpec[]): Block {
             draw: (c, rec, x, y) => {
               sigs.forEach((s, i) => {
                 const cx = x + colW * (i + 0.5);
-                /* Role dan nama dibungkus: nama panjang (PT BANGUNAN PERMANEN
-                   NUSANTARA) di luar lebar kolom akan menimpa blok tetangga,
+                /* Role dan nama dibungkus: nama panjang (PT BAJA CONTOH ABADI
+                   SEJAHTERA) di luar lebar kolom akan menimpa blok tetangga,
                    dan mesin lama tidak pernah mengeceknya. */
                 for (const [k, text, size, bold] of [
                   [0, s.role, TYPE.label, true],

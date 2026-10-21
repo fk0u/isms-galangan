@@ -42,9 +42,9 @@ export const clients = [
   { id: "C-004", name: "PT Laut Timur Mandiri", fleet: 6, rating: 78, since: 2019 },
   { id: "C-005", name: "PT Mitra Samudra Raya", fleet: 10, rating: 85, since: 2016 },
   // RawData CONTOH INVOICE.xlsx - customer pada 4 pola invoice SB.
-  { id: "C-SB-001", name: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", fleet: 6, rating: 90, since: 2024 },
-  { id: "C-SB-002", name: "PT PELAYARAN ROYLEA MARINE LINE", fleet: 9, rating: 87, since: 2023 },
-  { id: "C-SB-003", name: "PT ALVI CIPTA SENTOSA", fleet: 4, rating: 89, since: 2024 },
+  { id: "C-SB-001", name: "PT PELAYARAN CONTOH ELANG", fleet: 6, rating: 90, since: 2024 },
+  { id: "C-SB-002", name: "PT PELAYARAN CONTOH SEJAHTERA", fleet: 9, rating: 87, since: 2023 },
+  { id: "C-SB-003", name: "PT PELAYARAN CONTOH MAKMUR", fleet: 4, rating: 89, since: 2024 },
 ];
 
 export const projects: Project[] = [
@@ -164,7 +164,7 @@ export const projects: Project[] = [
     id: "RP-2026-006",
     vessel: "BG RMN 3324",
     type: "Repair",
-    client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+    client: "PT PELAYARAN CONTOH ELANG",
     status: "Dalam Proses",
     branch: "Samarinda",
     start: "2026-08-01",
@@ -179,7 +179,7 @@ export const projects: Project[] = [
     id: "RP-2026-007",
     vessel: "AWB SEA HAVEN 2",
     type: "Repair",
-    client: "PT PELAYARAN ROYLEA MARINE LINE",
+    client: "PT PELAYARAN CONTOH SEJAHTERA",
     status: "Dalam Proses",
     branch: "Samarinda",
     start: "2026-06-15",
@@ -194,7 +194,7 @@ export const projects: Project[] = [
     id: "RP-2026-008",
     vessel: "BG MHKL 35",
     type: "Repair",
-    client: "PT ALVI CIPTA SENTOSA",
+    client: "PT PELAYARAN CONTOH MAKMUR",
     status: "Selesai",
     branch: "Samarinda",
     start: "2026-04-10",
@@ -286,7 +286,7 @@ export const vessels = [
     class: "BKI",
     flag: "Indonesia",
     built: 2018,
-    owner: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+    owner: "PT PELAYARAN CONTOH ELANG",
     loa: 28.5,
     beam: 8.0,
     draft: 3.8,
@@ -305,7 +305,7 @@ export const vessels = [
     class: "BKI",
     flag: "Indonesia",
     built: 2020,
-    owner: "PT PELAYARAN ROYLEA MARINE LINE",
+    owner: "PT PELAYARAN CONTOH SEJAHTERA",
     loa: 30.0,
     beam: 9.0,
     draft: 4.0,
@@ -324,7 +324,7 @@ export const vessels = [
     class: "BKI",
     flag: "Indonesia",
     built: 2019,
-    owner: "PT ALVI CIPTA SENTOSA",
+    owner: "PT PELAYARAN CONTOH MAKMUR",
     loa: 27.0,
     beam: 8.0,
     draft: 3.5,
@@ -530,8 +530,8 @@ export const subcontractors = [
   { id: "SUB-003", name: "PT Mesinindo Perkasa", services: "Overhaul Mesin", rating: 88, active: 3, contract: 9800000000, status: "Aktif", k3: "A" },
   { id: "SUB-004", name: "PT Kelistrikan Bahari", services: "Elektrikal & Panel", rating: 76, active: 1, contract: 3400000000, status: "Kualifikasi", k3: "B+" },
   { id: "SUB-005", name: "CV Scaffold Aman", services: "Perancah & Staging", rating: 92, active: 2, contract: 1800000000, status: "Aktif", k3: "A+" },
-  // RawData INVOICE SUBKONTRAKTOR (Pak Yusuf, BG RMN 3324, PPh 0,5%).
-  { id: "SUB-SB-001", name: "Pak Yusuf", services: "Outfitting Deck (Borongan)", rating: 85, active: 1, contract: 300000, status: "Aktif", k3: "B" },
+  // RawData INVOICE SUBKONTRAKTOR (Pak Mandor Contoh, BG RMN 3324, PPh 0,5%).
+  { id: "SUB-SB-001", name: "Pak Mandor Contoh", services: "Outfitting Deck (Borongan)", rating: 85, active: 1, contract: 300000, status: "Aktif", k3: "B" },
 ];
 
 export const employees = [
@@ -692,26 +692,26 @@ export const incidents = [
 export const purchaseOrders = [
   { id: "PO-2026-114", item: "Pelat Baja AH36", vendor: "PT Bahana Baja", req: "PR-2026-203", amount: 4120000000, status: "Dalam Pengiriman", date: "2026-07-15" },
   { id: "PO-2026-115", item: "Aux Engine MAK", vendor: "PT Indo Diesel", req: "PR-2026-201", amount: 1700000000, status: "Diterima", date: "2026-07-05" },
-  { id: "PO-2026-116", item: "Cat Epoxy", vendor: "PT Jotun Indonesia", req: "PR-2026-207", amount: 480000000, status: "Menunggu Persetujuan", date: "2026-07-28" },
+  { id: "PO-2026-116", item: "Cat Epoxy", vendor: "PT Cat Contoh Marine", req: "PR-2026-207", amount: 480000000, status: "Menunggu Persetujuan", date: "2026-07-28" },
   { id: "PO-2026-117", item: "Wire Rope", vendor: "PT Steel Rig", req: "PR-2026-209", amount: 210000000, status: "Dikirim", date: "2026-07-30" },
   /* F3-J-03 demo: riwayat harga untuk panel perbandingan di RFQ (data sintetis). */
-  { id: "PO-2025-141", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Jotun Indonesia", req: "-", qty: 400, amount: 76000000, receivedQty: 400, status: "Diterima", date: "2025-11-12" },
+  { id: "PO-2025-141", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Cat Contoh Marine", req: "-", qty: 400, amount: 76000000, receivedQty: 400, status: "Diterima", date: "2025-11-12" },
   { id: "PO-2026-032", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Bahana Baja", req: "-", qty: 600, amount: 111000000, receivedQty: 600, status: "Diterima", date: "2026-02-20" },
-  { id: "PO-2026-077", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Jotun Indonesia", req: "-", qty: 500, amount: 97500000, receivedQty: 500, status: "Diterima", date: "2026-05-18" },
+  { id: "PO-2026-077", poType: "Besar", item: "Cat Epoxy Primer", vendor: "PT Cat Contoh Marine", req: "-", qty: 500, amount: 97500000, receivedQty: 500, status: "Diterima", date: "2026-05-18" },
   { id: "PO-2026-059", poType: "Besar", item: "Wire Rope 22mm", vendor: "PT Steel Rig", req: "-", qty: 300, amount: 61500000, receivedQty: 300, status: "Diterima", date: "2026-04-03" },
   { id: "PO-2025-166", poType: "Besar", item: "Wire Rope 22mm", vendor: "PT Primabaja", req: "-", qty: 250, amount: 53750000, receivedQty: 250, status: "Diterima", date: "2025-12-09" },
   /* F3-J-02 demo: PO Anoda Zink untuk MR-2026-002 (PR-2026-211) sedang dikirim —
      peragakan terima sebagian, vendor tidak sanggup, lalu alihkan ke vendor lain.
      PO-2026-098 = riwayat harga vendor lain untuk item yang sama. */
-  { id: "PO-2026-118", poType: "Besar", item: "Anoda Zink", itemId: "INV-005", vendor: "PT Jotun Indonesia", req: "PR-2026-211", qty: 20, amount: 4200000, receivedQty: 0, returnedQty: 0, status: "Dikirim", date: "2026-10-06", eta: "2026-10-14", project: "RP-2026-003", lines: [{ name: "Anoda Zink", qty: 20, unit: "pcs", price: 210000 }] },
+  { id: "PO-2026-118", poType: "Besar", item: "Anoda Zink", itemId: "INV-005", vendor: "PT Cat Contoh Marine", req: "PR-2026-211", qty: 20, amount: 4200000, receivedQty: 0, returnedQty: 0, status: "Dikirim", date: "2026-10-06", eta: "2026-10-14", project: "RP-2026-003", lines: [{ name: "Anoda Zink", qty: 20, unit: "pcs", price: 210000 }] },
   { id: "PO-2026-098", poType: "Besar", item: "Anoda Zink", itemId: "INV-005", vendor: "PT Steel Rig", req: "-", qty: 30, amount: 6000000, receivedQty: 30, returnedQty: 0, status: "Diterima", date: "2026-05-12", project: "-", lines: [{ name: "Anoda Zink", qty: 30, unit: "pcs", price: 200000 }] },
   // RawData FORMAT PO MATERIAL: 06/PO-SB/SMD/I/2024, WF 250/150/200,
   // subtotal 25.055.000 + PPN 11% = 27.811.050 (include).
-  { id: "PO-SB-2024-006", item: "Besi WF (250/150/200)", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2024-006", amount: 27811050, qty: 23, unit: "btg", status: "Diterima", date: "2024-01-26", docNo: "06/PO-SB/SMD/I/2024", vessel: "U/STOCK", includePpn: true, tujuan: "stok", receivedQty: 23, lines: [{ name: "Besi WF 250", qty: 10, unit: "btg", price: 1150000 }, { name: "Besi WF 150", qty: 8, unit: "btg", price: 850000 }, { name: "Besi WF 200", qty: 5, unit: "btg", price: 1351000 }] },
+  { id: "PO-SB-2024-006", item: "Besi WF (250/150/200)", vendor: "PT MITRA CONTOH EKASA", req: "PR-SB-2024-006", amount: 27811050, qty: 23, unit: "btg", status: "Diterima", date: "2024-01-26", docNo: "06/PO-SB/SMD/I/2024", vessel: "U/STOCK", includePpn: true, tujuan: "stok", receivedQty: 23, lines: [{ name: "Besi WF 250", qty: 10, unit: "btg", price: 1150000 }, { name: "Besi WF 150", qty: 8, unit: "btg", price: 850000 }, { name: "Besi WF 200", qty: 5, unit: "btg", price: 1351000 }] },
   // RawData CONTOH HUTANG - PO yang menjadi hutang AP-SB (docNo = po di hutang).
-  { id: "PO-SB-2026-004", item: "PLAT 14MM", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-004", amount: 36341622, qty: 2, unit: "lbr", status: "Diterima", date: "2026-01-07", docNo: "04/PO-SB/SMD/I/2026", vessel: "U/TK. RMN 3317", includePpn: true, tujuan: "kapal", receivedQty: 2 },
-  { id: "PO-SB-2026-012", item: "SIKU PRESS + ROUNDBAR", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-012", amount: 409492875, qty: 130, unit: "btg", status: "Diterima", date: "2026-01-29", docNo: "12/PO-SB/SMD/I/2026", vessel: "U/BG. KBT 26", includePpn: true, tujuan: "kapal", receivedQty: 130 },
-  { id: "PO-SB-2026-036", item: "PLAT 12MM/8MM", vendor: "PT KALTIM LESTARI UNGGUL", req: "PR-SB-2026-036", amount: 982905000, qty: 75, unit: "lbr", status: "Diterima", date: "2026-04-15", docNo: "36/PO-SB/SMD/IV/2026", vessel: "U/TK. ARTHA SARANA XI", includePpn: true, tujuan: "kapal", receivedQty: 75 },
+  { id: "PO-SB-2026-004", item: "PLAT 14MM", vendor: "PT MITRA CONTOH EKASA", req: "PR-SB-2026-004", amount: 36341622, qty: 2, unit: "lbr", status: "Diterima", date: "2026-01-07", docNo: "04/PO-SB/SMD/I/2026", vessel: "U/TK. RMN 3317", includePpn: true, tujuan: "kapal", receivedQty: 2 },
+  { id: "PO-SB-2026-012", item: "SIKU PRESS + ROUNDBAR", vendor: "PT MITRA CONTOH EKASA", req: "PR-SB-2026-012", amount: 409492875, qty: 130, unit: "btg", status: "Diterima", date: "2026-01-29", docNo: "12/PO-SB/SMD/I/2026", vessel: "U/BG. KBT 26", includePpn: true, tujuan: "kapal", receivedQty: 130 },
+  { id: "PO-SB-2026-036", item: "PLAT 12MM/8MM", vendor: "PT MITRA CONTOH EKASA", req: "PR-SB-2026-036", amount: 982905000, qty: 75, unit: "lbr", status: "Diterima", date: "2026-04-15", docNo: "36/PO-SB/SMD/IV/2026", vessel: "U/TK. ARTHA SARANA XI", includePpn: true, tujuan: "kapal", receivedQty: 75 },
 ];
 
 export const quotations = [
@@ -720,7 +720,7 @@ export const quotations = [
   { id: "QT-2026-054", client: "PT Mitra Samudra Raya", vessel: "Repair MR-02", type: "Repair", value: 3100000000, stage: "Menang", date: "2026-07-12" },
   { id: "QT-2026-055", client: "PT Pelayaran Nusantara Abadi", vessel: "TB PN-05 Retrofit", type: "Retrofit", value: 8200000000, stage: "Lead", date: "2026-07-25" },
   // RawData: penawaran BG RMN 3324 â†’ menang â†’ KTR-SB-001 â†’ RP-2026-006.
-  { id: "QT-SB-001", client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA", vessel: "BG RMN 3324", type: "Repair", value: 1671211310, stage: "Menang", date: "2026-07-28", requestId: "REQ-SB-002" },
+  { id: "QT-SB-001", client: "PT PELAYARAN CONTOH ELANG", vessel: "BG RMN 3324", type: "Repair", value: 1671211310, stage: "Menang", date: "2026-07-28", requestId: "REQ-SB-002" },
 ];
 
 
@@ -900,7 +900,7 @@ export const inventoryMovement = [
   { id: "M-0906", item: "Anoda Zink", type: "Pengeluaran", qty: 14, by: "RP-2026-005", date: "2026-07-29", tone: "out" },
   { id: "M-0907", item: "Mesin Bantu (Aux Engine)", type: "Penerimaan", qty: 1, by: "PO-2026-115", date: "2026-07-28", tone: "in" },
   // RawData REPORT WAREHOUSE 2024 (sheet IN/OUT JAN-DES).
-  { id: "M-SB-IN-001", item: "PLAT 8MM 5x20", itemId: "INV-SB-003", type: "Penerimaan", qty: 6, by: "UD TIGA BERLIAN", date: "2024-01-02", tone: "in", supplier: "UD TIGA BERLIAN", purpose: "TB SYUKUR 75", pic: "SANTI" },
+  { id: "M-SB-IN-001", item: "PLAT 8MM 5x20", itemId: "INV-SB-003", type: "Penerimaan", qty: 6, by: "UD MITRA CONTOH UTAMA 2", date: "2024-01-02", tone: "in", supplier: "UD MITRA CONTOH UTAMA 2", purpose: "TB SYUKUR 75", pic: "PERORANGAN CONTOH GADING" },
   { id: "M-SB-OUT-001", item: "HEMPALIN ENAMEL GREEN 40640 @5LTR", itemId: "INV-SB-002", type: "Pengeluaran", qty: 2, by: "TB SYUKUR 72", date: "2024-01-02", tone: "out", purpose: "TB SYUKUR 72", pic: "ABK" },
 ];
 

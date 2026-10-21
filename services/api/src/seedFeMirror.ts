@@ -22,7 +22,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Material & marking",
           "pct": 30,
           "due": "2026-08-15",
-          "doneAt": "2026-08-08"
+          "doneAt": "2026-08-07"
         },
         {
           "title": "Fabrikasi section 4-6",
@@ -51,7 +51,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Surface preparation",
           "pct": 25,
           "due": "2026-08-20",
-          "doneAt": "2026-08-13"
+          "doneAt": "2026-08-12"
         },
         {
           "title": "Primer coating",
@@ -80,7 +80,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Bearing overhaul",
           "pct": 45,
           "due": "2026-09-10",
-          "doneAt": "2026-09-03"
+          "doneAt": "2026-09-02"
         },
         {
           "title": "Alignment & trial run",
@@ -109,13 +109,13 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Ereksi perancah",
           "pct": 50,
           "due": "2026-06-30",
-          "doneAt": "2026-06-23"
+          "doneAt": "2026-06-22"
         },
         {
           "title": "Pen dismantled",
           "pct": 50,
           "due": "2026-07-20",
-          "doneAt": "2026-07-13"
+          "doneAt": "2026-07-12"
         }
       ]
     }
@@ -134,7 +134,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Panel delivery & setting",
           "pct": 40,
           "due": "2026-09-20",
-          "doneAt": "2026-09-13"
+          "doneAt": "2026-09-12"
         },
         {
           "title": "Cable pulling & termination",
@@ -154,7 +154,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "WO-SB-001",
     "branch": "",
     "data": {
-      "sub": "Pak Yusuf",
+      "sub": "Pak Mandor Contoh",
       "project": "RP-2026-006",
       "scope": "Outfitting Deck BG RMN 3324 (Ban Daprah, Tanda Selar, pressure test tank)",
       "status": "Selesai",
@@ -164,13 +164,13 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
           "title": "Tanda selar & ban daprah",
           "pct": 60,
           "due": "2026-08-05",
-          "doneAt": "2026-07-29"
+          "doneAt": "2026-07-28"
         },
         {
           "title": "Pressure test tank",
           "pct": 40,
           "due": "2026-08-20",
-          "doneAt": "2026-08-13"
+          "doneAt": "2026-08-12"
         }
       ]
     }
@@ -3330,7 +3330,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "TRM-SB-001",
     "branch": "",
     "data": {
-      "sub": "Pak Yusuf",
+      "sub": "Pak Mandor Contoh",
       "woId": "WO-SB-001",
       "milestone": "Pressure test tank",
       "amount": 300000,
@@ -3375,7 +3375,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "VND-003",
     "branch": "",
     "data": {
-      "name": "PT Jotun Indonesia",
+      "name": "PT Cat Contoh Marine",
       "cat": "Cat & Coating",
       "onTime": 88,
       "quality": 93,
@@ -3479,7 +3479,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "VND-SB-001",
     "branch": "",
     "data": {
-      "name": "PT KALTIM LESTARI UNGGUL",
+      "name": "PT MITRA CONTOH EKASA",
       "cat": "Baja & Pipa",
       "onTime": 90,
       "quality": 91,
@@ -3722,7 +3722,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-001",
     "branch": "",
     "data": {
-      "v": "CV BERLIAN JAYA GAS",
+      "v": "CV MITRA CONTOH INTAN",
       "po": "OPEN-0826",
       "amt": 502116000.32999945,
       "openAwal": 701808000,
@@ -3736,7 +3736,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-002",
     "branch": "",
     "data": {
-      "v": "CV KALINDO MITRA BERSAMA",
+      "v": "CV MITRA CONTOH JINGGA",
       "po": "OPEN-0826",
       "amt": 119319450,
       "openAwal": 162109950,
@@ -3750,7 +3750,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-003",
     "branch": "",
     "data": {
-      "v": "PT MURNI GAS RAYA",
+      "v": "PT MITRA CONTOH KIRANA",
       "po": "OPEN-0826",
       "amt": 1665000,
       "openAwal": 14985000,
@@ -3764,7 +3764,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-004",
     "branch": "",
     "data": {
-      "v": "PT SAPTA SUMBER LANCAR",
+      "v": "PT MITRA CONTOH LAKSANA",
       "po": "OPEN-0826",
       "amt": 174796000,
       "openAwal": 355575999,
@@ -3778,7 +3778,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-006",
     "branch": "",
     "data": {
-      "v": "PT MANDALIKA VARUNA PERKASA",
+      "v": "PT MITRA CONTOH OASE",
       "po": "OPEN-0826",
       "amt": 73267500,
       "openAwal": 73267500,
@@ -3792,7 +3792,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-007",
     "branch": "",
     "data": {
-      "v": "DW SAMARINDA",
+      "v": "PERORANGAN CONTOH PUSPA",
       "po": "OPEN-0826",
       "amt": 425000,
       "openAwal": 850000,
@@ -3806,7 +3806,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-008",
     "branch": "",
     "data": {
-      "v": "CV SUMBER GAS ABADI",
+      "v": "CV MITRA CONTOH RIMBA",
       "po": "OPEN-0826",
       "amt": 19719150,
       "openAwal": 53779500,
@@ -3820,7 +3820,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-009",
     "branch": "",
     "data": {
-      "v": "CV MASEBA TEKNIK",
+      "v": "CV MITRA CONTOH SWARA",
       "po": "OPEN-0826",
       "amt": 21654399.48,
       "openAwal": 0,
@@ -3834,7 +3834,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-010",
     "branch": "",
     "data": {
-      "v": "PT SEMERU TEKNIK",
+      "v": "PT MITRA CONTOH TEGAR",
       "po": "OPEN-0826",
       "amt": 140000000,
       "openAwal": 190000000,
@@ -3848,7 +3848,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-012",
     "branch": "",
     "data": {
-      "v": "PT PRASETYA UTAMA ENERGI",
+      "v": "PT MITRA CONTOH YASA",
       "po": "OPEN-0826",
       "amt": 218670000,
       "openAwal": 189810000,
@@ -3862,7 +3862,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-013",
     "branch": "",
     "data": {
-      "v": "PT SURYA BIRU MURNI",
+      "v": "PT MITRA CONTOH ASA",
       "po": "OPEN-0826",
       "amt": 24975000,
       "openAwal": 23310000,
@@ -3876,7 +3876,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-014",
     "branch": "",
     "data": {
-      "v": "PT CITRA MUSI LESTARI",
+      "v": "PT MITRA CONTOH BENING",
       "po": "OPEN-0826",
       "amt": 143500000.38,
       "openAwal": 200900000,
@@ -3890,7 +3890,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-016",
     "branch": "",
     "data": {
-      "v": "PT BUKIT PUTRI INDAH PERMAI",
+      "v": "PT MITRA CONTOH JAGAT",
       "po": "OPEN-0826",
       "amt": 7520705,
       "openAwal": 23869035,
@@ -3904,7 +3904,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-017",
     "branch": "",
     "data": {
-      "v": "PT SANJAYA PUTRA KENCANA",
+      "v": "PT MITRA CONTOH KARTIKA",
       "po": "OPEN-0826",
       "amt": 4225770,
       "openAwal": 4225770,
@@ -3918,7 +3918,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-018",
     "branch": "",
     "data": {
-      "v": "CV SANGA SANGA INTERIOR",
+      "v": "CV MITRA CONTOH ABADI 2",
       "po": "OPEN-0826",
       "amt": 20000000,
       "openAwal": 35000000,
@@ -3932,7 +3932,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-019",
     "branch": "",
     "data": {
-      "v": "THAMRIN ELEKTRICAL",
+      "v": "PERORANGAN CONTOH DAMAI 2",
       "po": "OPEN-0826",
       "amt": 22925000,
       "openAwal": 37925000,
@@ -3946,7 +3946,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-020",
     "branch": "",
     "data": {
-      "v": "PT SAMUDRA MITRA SERVICE",
+      "v": "PT MITRA CONTOH FAJAR 2",
       "po": "OPEN-0826",
       "amt": 24034500,
       "openAwal": 24034500,
@@ -3960,7 +3960,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-022",
     "branch": "",
     "data": {
-      "v": "CV MAKKADAE ABADI",
+      "v": "CV MITRA CONTOH JAYA 2",
       "po": "OPEN-0826",
       "amt": 618048000,
       "openAwal": 753246000,
@@ -3974,7 +3974,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-024",
     "branch": "",
     "data": {
-      "v": "PT WAHYU MANDIRI AMARA CIPTA",
+      "v": "PT MITRA CONTOH NUSA 2",
       "po": "OPEN-0826",
       "amt": 66137130,
       "openAwal": 0,
@@ -3988,7 +3988,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-025",
     "branch": "",
     "data": {
-      "v": "BFI Finance - Sany Rough Crane",
+      "v": "Leasing Contoh Satu - Sany Rough Crane",
       "po": "OPEN-0826",
       "amt": 85336000,
       "openAwal": 85336000,
@@ -4002,7 +4002,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-026",
     "branch": "",
     "data": {
-      "v": "BFI Finance - Loader",
+      "v": "Leasing Contoh Satu - Loader",
       "po": "OPEN-0826",
       "amt": 716950000,
       "openAwal": 745628000,
@@ -4016,7 +4016,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-EX-027",
     "branch": "",
     "data": {
-      "v": "BFI Finance - Truck",
+      "v": "Leasing Contoh Satu - Truck",
       "po": "OPEN-0826",
       "amt": 129471000,
       "openAwal": 151049500,
@@ -4030,7 +4030,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-SB-001",
     "branch": "",
     "data": {
-      "v": "PT KALTIM LESTARI UNGGUL",
+      "v": "PT MITRA CONTOH EKASA",
       "po": "PO-SB-2026-004 / 04/PO-SB/SMD/I/2026",
       "amt": 36341622,
       "openAwal": 36341622,
@@ -4051,7 +4051,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-SB-002",
     "branch": "",
     "data": {
-      "v": "PT KALTIM LESTARI UNGGUL",
+      "v": "PT MITRA CONTOH EKASA",
       "po": "PO-SB-2026-012 / 12/PO-SB/SMD/I/2026",
       "amt": 409492875,
       "openAwal": 409492875,
@@ -4072,7 +4072,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-SB-003",
     "branch": "",
     "data": {
-      "v": "PT KALTIM LESTARI UNGGUL",
+      "v": "PT MITRA CONTOH EKASA",
       "po": "PO-SB-2026-036 / 36/PO-SB/SMD/IV/2026",
       "amt": 982905000,
       "openAwal": 982905000,
@@ -4092,7 +4092,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-2026-116",
     "branch": "",
     "data": {
-      "v": "PT Jotun Indonesia",
+      "v": "PT Cat Contoh Marine",
       "po": "PO-2026-116",
       "amt": 480000000,
       "openAwal": 480000000,
@@ -4132,7 +4132,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "AP-SB-T1",
     "branch": "",
     "data": {
-      "v": "Pak Yusuf",
+      "v": "Pak Mandor Contoh",
       "po": "TERM-TRM-SB-001",
       "amt": 298500,
       "openAwal": 298500,
@@ -4153,7 +4153,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-001",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "",
       "amount": 2512091953.9700003,
       "openAwal": 0,
@@ -4170,7 +4170,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-002",
     "branch": "",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "",
       "amount": 717806058,
       "openAwal": 717806058,
@@ -4187,7 +4187,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-003",
     "branch": "",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "",
       "amount": 1323312036.67,
       "openAwal": 0,
@@ -4204,7 +4204,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-004",
     "branch": "",
     "data": {
-      "client": "PT MITRA KEMAKMURAN LINE",
+      "client": "PT PELAYARAN CONTOH RAJAWALI",
       "project": "",
       "amount": 725000000,
       "openAwal": 0,
@@ -4221,7 +4221,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-005",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN PELANGI SINDUMULIA",
+      "client": "PT PELAYARAN CONTOH MANDIRI",
       "project": "",
       "amount": 50000000,
       "openAwal": 100000000,
@@ -4238,7 +4238,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-006",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN GLOBAL LINTAS",
+      "client": "PT PELAYARAN CONTOH MULIA",
       "project": "",
       "amount": 882081202.6199999,
       "openAwal": 0,
@@ -4255,7 +4255,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-007",
     "branch": "",
     "data": {
-      "client": "IBU LILI KANTIN",
+      "client": "PERORANGAN CONTOH SINAR",
       "project": "",
       "amount": 15000000,
       "openAwal": 15000000,
@@ -4272,7 +4272,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-008",
     "branch": "",
     "data": {
-      "client": "NORIS",
+      "client": "PERORANGAN CONTOH TEGUH",
       "project": "",
       "amount": 6000000,
       "openAwal": 7000000,
@@ -4289,7 +4289,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-009",
     "branch": "",
     "data": {
-      "client": "SABRAN",
+      "client": "PERORANGAN CONTOH CEMERLANG",
       "project": "",
       "amount": 2000000,
       "openAwal": 3000000,
@@ -4306,7 +4306,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-010",
     "branch": "",
     "data": {
-      "client": "AHMAD JAYADI",
+      "client": "PERORANGAN CONTOH DIRGANTARA",
       "project": "",
       "amount": 8000000,
       "openAwal": 9000000,
@@ -4323,7 +4323,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-011",
     "branch": "",
     "data": {
-      "client": "ADILLA",
+      "client": "PERORANGAN CONTOH KENCANA",
       "project": "",
       "amount": 9000000,
       "openAwal": 9000000,
@@ -4340,7 +4340,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-012",
     "branch": "",
     "data": {
-      "client": "BUDIANSYAH",
+      "client": "PERORANGAN CONTOH MEGAH",
       "project": "",
       "amount": 10000000,
       "openAwal": 11000000,
@@ -4357,7 +4357,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-013",
     "branch": "",
     "data": {
-      "client": "ASEP",
+      "client": "PERORANGAN CONTOH NIRWANA",
       "project": "",
       "amount": 500000,
       "openAwal": 1000000,
@@ -4374,7 +4374,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-014",
     "branch": "",
     "data": {
-      "client": "DONY",
+      "client": "PERORANGAN CONTOH PERKASA",
       "project": "",
       "amount": 500000,
       "openAwal": 1000000,
@@ -4391,7 +4391,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-015",
     "branch": "",
     "data": {
-      "client": "TARMAN",
+      "client": "PERORANGAN CONTOH RAYA",
       "project": "",
       "amount": 2500000,
       "openAwal": 1000000,
@@ -4408,7 +4408,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-016",
     "branch": "",
     "data": {
-      "client": "JESI",
+      "client": "PERORANGAN CONTOH TIRTA",
       "project": "",
       "amount": 1000000,
       "openAwal": 1500000,
@@ -4425,7 +4425,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-017",
     "branch": "",
     "data": {
-      "client": "AGUS RIONO",
+      "client": "PERORANGAN CONTOH UNGGUL",
       "project": "",
       "amount": 1500000,
       "openAwal": 2000000,
@@ -4442,7 +4442,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-018",
     "branch": "",
     "data": {
-      "client": "SUKARMAN",
+      "client": "PERORANGAN CONTOH WIBAWA",
       "project": "",
       "amount": 2000000,
       "openAwal": 3000000,
@@ -4459,7 +4459,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-019",
     "branch": "",
     "data": {
-      "client": "PASHA",
+      "client": "PERORANGAN CONTOH ANUGERAH",
       "project": "",
       "amount": 1500000,
       "openAwal": 2000000,
@@ -4476,7 +4476,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-020",
     "branch": "",
     "data": {
-      "client": "SAFARUDIN",
+      "client": "PERORANGAN CONTOH CITRA",
       "project": "",
       "amount": 1500000,
       "openAwal": 2000000,
@@ -4493,7 +4493,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-021",
     "branch": "",
     "data": {
-      "client": "ALUS",
+      "client": "PERORANGAN CONTOH DELTA",
       "project": "",
       "amount": 5000000,
       "openAwal": 1000000,
@@ -4510,7 +4510,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-022",
     "branch": "",
     "data": {
-      "client": "HAIRUDIN",
+      "client": "PERORANGAN CONTOH GITA",
       "project": "",
       "amount": 2000000,
       "openAwal": 2500000,
@@ -4527,7 +4527,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-023",
     "branch": "",
     "data": {
-      "client": "RAHMAD",
+      "client": "PERORANGAN CONTOH INSAN",
       "project": "",
       "amount": 2000000,
       "openAwal": 2500000,
@@ -4544,7 +4544,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-024",
     "branch": "",
     "data": {
-      "client": "SUPIAN AGUS",
+      "client": "PERORANGAN CONTOH JATI",
       "project": "",
       "amount": 2000000,
       "openAwal": 4000000,
@@ -4561,7 +4561,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-025",
     "branch": "",
     "data": {
-      "client": "AKBAR",
+      "client": "PERORANGAN CONTOH KURNIA",
       "project": "",
       "amount": 1000000,
       "openAwal": 1500000,
@@ -4578,7 +4578,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-026",
     "branch": "",
     "data": {
-      "client": "IHSAN",
+      "client": "PERORANGAN CONTOH LINTAS",
       "project": "",
       "amount": 2500000,
       "openAwal": 0,
@@ -4595,7 +4595,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-027",
     "branch": "",
     "data": {
-      "client": "AULIA",
+      "client": "PERORANGAN CONTOH MITRA",
       "project": "",
       "amount": 3500000,
       "openAwal": 0,
@@ -4612,7 +4612,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-028",
     "branch": "",
     "data": {
-      "client": "AGUSRIYANTO",
+      "client": "PERORANGAN CONTOH NAYAKA",
       "project": "",
       "amount": 3000000,
       "openAwal": 0,
@@ -4629,7 +4629,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-029",
     "branch": "",
     "data": {
-      "client": "SUNARJI",
+      "client": "PERORANGAN CONTOH PRATAMA",
       "project": "",
       "amount": 3000000,
       "openAwal": 0,
@@ -4646,7 +4646,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-030",
     "branch": "",
     "data": {
-      "client": "BUDI",
+      "client": "PERORANGAN CONTOH SABDA",
       "project": "",
       "amount": 2500000,
       "openAwal": 0,
@@ -4663,7 +4663,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-031",
     "branch": "",
     "data": {
-      "client": "GORDON",
+      "client": "PERORANGAN CONTOH TUNAS",
       "project": "",
       "amount": 750000,
       "openAwal": 0,
@@ -4680,7 +4680,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-032",
     "branch": "",
     "data": {
-      "client": "ALI HUSNI",
+      "client": "PERORANGAN CONTOH WAHANA",
       "project": "",
       "amount": 500000,
       "openAwal": 0,
@@ -4697,7 +4697,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-033",
     "branch": "",
     "data": {
-      "client": "SUGIHARTO",
+      "client": "PERORANGAN CONTOH ZAMRUD",
       "project": "",
       "amount": 5000000,
       "openAwal": 0,
@@ -4714,7 +4714,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-034",
     "branch": "",
     "data": {
-      "client": "FENY",
+      "client": "PERORANGAN CONTOH ARUNIKA",
       "project": "",
       "amount": 3500000,
       "openAwal": 0,
@@ -4731,7 +4731,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-035",
     "branch": "",
     "data": {
-      "client": "PT BUNGA TERATAI",
+      "client": "PT PELAYARAN CONTOH BAYU",
       "project": "",
       "amount": 7322331403,
       "openAwal": 7322331403,
@@ -4748,7 +4748,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-036",
     "branch": "",
     "data": {
-      "client": "PT Teratai Sejahtera Line.",
+      "client": "PT Pelayaran Contoh Candra",
       "project": "",
       "amount": 135000000,
       "openAwal": 135000000,
@@ -4765,7 +4765,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV/OPEN-2026-037",
     "branch": "",
     "data": {
-      "client": "PT Saha Agropalm Mandiri",
+      "client": "PT Pelayaran Contoh Dharma",
       "project": "",
       "amount": 812692000,
       "openAwal": 841370000,
@@ -4782,7 +4782,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-SB-2026-058",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "RP-2026-006",
       "noInv": "058/INV-SB/SMD/IX/2026",
       "vessel": "BG RMN 3324",
@@ -4812,7 +4812,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-SB-2026-049",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN ROYLEA MARINE LINE",
+      "client": "PT PELAYARAN CONTOH SEJAHTERA",
       "project": "RP-2026-007",
       "noInv": "049/INV-SB/SMD/VII/2026",
       "vessel": "AWB SEA HAVEN 2",
@@ -4843,7 +4843,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-SB-2026-037",
     "branch": "",
     "data": {
-      "client": "PT ALVI CIPTA SENTOSA",
+      "client": "PT PELAYARAN CONTOH MAKMUR",
       "project": "RP-2026-008",
       "noInv": "037/INV-SB/SMD/V/2026",
       "vessel": "BG MHKL 35",
@@ -4873,7 +4873,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-SB-2026-045",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN ROYLEA MARINE LINE",
+      "client": "PT PELAYARAN CONTOH SEJAHTERA",
       "project": "RP-2026-007",
       "noInv": "045/INV-SB/SMD/VI/2026",
       "vessel": "AWB SEA HAVEN 2",
@@ -5467,13 +5467,13 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "prId": "PR-2026-207",
       "item": "Cat Epoxy",
       "vendors": [
-        "PT Jotun Indonesia",
+        "PT Cat Contoh Marine",
         "PT Bahana Baja",
         "PT Steel Rig"
       ],
       "quotes": [
         {
-          "vendor": "PT Jotun Indonesia",
+          "vendor": "PT Cat Contoh Marine",
           "price": 480000000,
           "eta": "2026-08-12"
         },
@@ -5772,7 +5772,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "quotationId": "QT-SB-001",
       "projectId": "RP-2026-006",
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "value": 1671211310,
       "signedAt": "2026-08-01",
       "status": "Aktif"
@@ -5894,7 +5894,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "vessel": "AWB SEA HAVEN 2",
-      "client": "PT PELAYARAN ROYLEA MARINE LINE",
+      "client": "PT PELAYARAN CONTOH SEJAHTERA",
       "kind": "Repair Request",
       "scope": "Docking + repair (DP-1 → pelunasan V2)",
       "value": 3143047332,
@@ -5908,7 +5908,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "vessel": "BG RMN 3324",
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "kind": "Repair Request",
       "scope": "Docking/Undocking & Repair BG RMN 3324",
       "value": 1671211310,
@@ -6277,7 +6277,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202511-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 3864000000,
@@ -6300,7 +6300,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202511-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1850000000,
@@ -6323,7 +6323,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202511-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2851200000,
@@ -6346,7 +6346,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202511-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 940800000,
@@ -6369,7 +6369,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202512-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4452000000,
@@ -6392,7 +6392,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202512-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1776000000,
@@ -6415,7 +6415,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202512-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2745600000,
@@ -6438,7 +6438,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202512-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 902400000,
@@ -6461,7 +6461,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202601-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4284000000,
@@ -6484,7 +6484,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202601-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1702000000,
@@ -6507,7 +6507,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202601-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2640000000,
@@ -6530,7 +6530,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202601-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 1036800000,
@@ -6553,7 +6553,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202602-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4116000000,
@@ -6576,7 +6576,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202602-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1961000000,
@@ -6599,7 +6599,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202602-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2534400000,
@@ -6622,7 +6622,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202602-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 998400000,
@@ -6645,7 +6645,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202603-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 3948000000,
@@ -6668,7 +6668,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202603-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1887000000,
@@ -6691,7 +6691,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202603-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2428800000,
@@ -6714,7 +6714,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202603-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 960000000,
@@ -6737,7 +6737,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202604-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4536000000,
@@ -6760,7 +6760,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202604-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1813000000,
@@ -6783,7 +6783,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202604-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2798400000,
@@ -6806,7 +6806,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202604-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 921600000,
@@ -6829,7 +6829,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202605-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4368000000,
@@ -6852,7 +6852,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202605-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1739000000,
@@ -6875,7 +6875,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202605-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2692800000,
@@ -6898,7 +6898,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202605-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 883200000,
@@ -6921,7 +6921,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202606-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4200000000,
@@ -6944,7 +6944,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202606-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1998000000,
@@ -6967,7 +6967,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202606-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2587200000,
@@ -6990,7 +6990,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202606-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 1017600000,
@@ -7013,7 +7013,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202607-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4032000000,
@@ -7036,7 +7036,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202607-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1924000000,
@@ -7059,7 +7059,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202607-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2481600000,
@@ -7082,7 +7082,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202607-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 979200000,
@@ -7105,7 +7105,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202608-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 3864000000,
@@ -7128,7 +7128,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202608-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1850000000,
@@ -7151,7 +7151,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202608-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2851200000,
@@ -7174,7 +7174,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202608-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 940800000,
@@ -7197,7 +7197,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202609-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4452000000,
@@ -7220,7 +7220,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202609-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1776000000,
@@ -7243,7 +7243,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202609-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2745600000,
@@ -7266,7 +7266,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202609-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 902400000,
@@ -7289,7 +7289,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202610-01",
     "branch": "Samarinda",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "project": "NB-2025-012",
       "vessel": "NB-2025-012",
       "amount": 4284000000,
@@ -7312,7 +7312,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202610-02",
     "branch": "Samarinda",
     "data": {
-      "client": "PT MUTIARA EXPRESS LINES",
+      "client": "PT PELAYARAN CONTOH HARAPAN",
       "project": "RP-2026-003",
       "vessel": "RP-2026-003",
       "amount": 1702000000,
@@ -7335,7 +7335,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202610-03",
     "branch": "Samarinda",
     "data": {
-      "client": "PT TIRTA MAHAKAM RESOURCES TBK",
+      "client": "PT PELAYARAN CONTOH KARYA",
       "project": "NB-2025-014",
       "vessel": "NB-2025-014",
       "amount": 2640000000,
@@ -7358,7 +7358,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "INV-HIST-202610-04",
     "branch": "Samarinda",
     "data": {
-      "client": "PT KALIMANTAN MARITIM LINE",
+      "client": "PT PELAYARAN CONTOH SENTOSA 2",
       "project": "U/STOCK",
       "vessel": "U/STOCK",
       "amount": 1036800000,
@@ -9301,7 +9301,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "vessel": "BG RMN 3324",
       "type": "Repair",
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "status": "Dalam Proses",
       "start": "2026-08-01",
       "end": "2026-09-15",
@@ -9323,7 +9323,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "vessel": "AWB SEA HAVEN 2",
       "type": "Repair",
-      "client": "PT PELAYARAN ROYLEA MARINE LINE",
+      "client": "PT PELAYARAN CONTOH SEJAHTERA",
       "status": "Dalam Proses",
       "start": "2026-06-15",
       "end": "2026-08-15",
@@ -9345,7 +9345,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "vessel": "BG MHKL 35",
       "type": "Repair",
-      "client": "PT ALVI CIPTA SENTOSA",
+      "client": "PT PELAYARAN CONTOH MAKMUR",
       "status": "Selesai",
       "start": "2026-04-10",
       "end": "2026-05-08",
@@ -9508,7 +9508,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "class": "BKI",
       "flag": "Indonesia",
       "built": 2018,
-      "owner": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "owner": "PT PELAYARAN CONTOH ELANG",
       "loa": 28.5,
       "beam": 8,
       "draft": 3.8,
@@ -9535,7 +9535,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "class": "BKI",
       "flag": "Indonesia",
       "built": 2020,
-      "owner": "PT PELAYARAN ROYLEA MARINE LINE",
+      "owner": "PT PELAYARAN CONTOH SEJAHTERA",
       "loa": 30,
       "beam": 9,
       "draft": 4,
@@ -9562,7 +9562,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "class": "BKI",
       "flag": "Indonesia",
       "built": 2019,
-      "owner": "PT ALVI CIPTA SENTOSA",
+      "owner": "PT PELAYARAN CONTOH MAKMUR",
       "loa": 27,
       "beam": 8,
       "draft": 3.5,
@@ -10359,7 +10359,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "SUB-SB-001",
     "branch": "",
     "data": {
-      "name": "Pak Yusuf",
+      "name": "Pak Mandor Contoh",
       "services": "Outfitting Deck (Borongan)",
       "rating": 85,
       "active": 1,
@@ -11059,7 +11059,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "item": "Cat Epoxy",
-      "vendor": "PT Jotun Indonesia",
+      "vendor": "PT Cat Contoh Marine",
       "req": "PR-2026-207",
       "amount": 480000000,
       "status": "Menunggu Persetujuan",
@@ -11086,7 +11086,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "poType": "Besar",
       "item": "Cat Epoxy Primer",
-      "vendor": "PT Jotun Indonesia",
+      "vendor": "PT Cat Contoh Marine",
       "req": "-",
       "qty": 400,
       "amount": 76000000,
@@ -11118,7 +11118,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "data": {
       "poType": "Besar",
       "item": "Cat Epoxy Primer",
-      "vendor": "PT Jotun Indonesia",
+      "vendor": "PT Cat Contoh Marine",
       "req": "-",
       "qty": 500,
       "amount": 97500000,
@@ -11167,7 +11167,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "poType": "Besar",
       "item": "Anoda Zink",
       "itemId": "INV-005",
-      "vendor": "PT Jotun Indonesia",
+      "vendor": "PT Cat Contoh Marine",
       "req": "PR-2026-211",
       "qty": 20,
       "amount": 4200000,
@@ -11220,7 +11220,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "item": "Besi WF (250/150/200)",
-      "vendor": "PT KALTIM LESTARI UNGGUL",
+      "vendor": "PT MITRA CONTOH EKASA",
       "req": "PR-SB-2024-006",
       "amount": 27811050,
       "qty": 23,
@@ -11260,7 +11260,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "item": "PLAT 14MM",
-      "vendor": "PT KALTIM LESTARI UNGGUL",
+      "vendor": "PT MITRA CONTOH EKASA",
       "req": "PR-SB-2026-004",
       "amount": 36341622,
       "qty": 2,
@@ -11280,7 +11280,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "item": "SIKU PRESS + ROUNDBAR",
-      "vendor": "PT KALTIM LESTARI UNGGUL",
+      "vendor": "PT MITRA CONTOH EKASA",
       "req": "PR-SB-2026-012",
       "amount": 409492875,
       "qty": 130,
@@ -11300,7 +11300,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "branch": "",
     "data": {
       "item": "PLAT 12MM/8MM",
-      "vendor": "PT KALTIM LESTARI UNGGUL",
+      "vendor": "PT MITRA CONTOH EKASA",
       "req": "PR-SB-2026-036",
       "amount": 982905000,
       "qty": 75,
@@ -11371,7 +11371,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "QT-SB-001",
     "branch": "",
     "data": {
-      "client": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "client": "PT PELAYARAN CONTOH ELANG",
       "vessel": "BG RMN 3324",
       "type": "Repair",
       "value": 1671211310,
@@ -11440,7 +11440,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "C-SB-001",
     "branch": "",
     "data": {
-      "name": "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+      "name": "PT PELAYARAN CONTOH ELANG",
       "fleet": 6,
       "rating": 90,
       "since": 2024
@@ -11451,7 +11451,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "C-SB-002",
     "branch": "",
     "data": {
-      "name": "PT PELAYARAN ROYLEA MARINE LINE",
+      "name": "PT PELAYARAN CONTOH SEJAHTERA",
       "fleet": 9,
       "rating": 87,
       "since": 2023
@@ -11462,7 +11462,7 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
     "id": "C-SB-003",
     "branch": "",
     "data": {
-      "name": "PT ALVI CIPTA SENTOSA",
+      "name": "PT PELAYARAN CONTOH MAKMUR",
       "fleet": 4,
       "rating": 89,
       "since": 2024
@@ -11606,12 +11606,12 @@ export const FE_MIRROR_ROWS: MirrorRow[] = [
       "itemId": "INV-SB-003",
       "type": "Penerimaan",
       "qty": 6,
-      "by": "UD TIGA BERLIAN",
+      "by": "UD MITRA CONTOH UTAMA 2",
       "date": "2024-01-02",
       "tone": "in",
-      "supplier": "UD TIGA BERLIAN",
+      "supplier": "UD MITRA CONTOH UTAMA 2",
       "purpose": "TB SYUKUR 75",
-      "pic": "SANTI"
+      "pic": "PERORANGAN CONTOH GADING"
     }
   },
   {

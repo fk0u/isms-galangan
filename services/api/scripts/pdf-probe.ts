@@ -129,7 +129,7 @@ geometryCheck("callout + metric", doc(DOC_OPTS).add(kopBlock({})).add(callout(["
 
 geometryCheck("tanda tangan", doc(DOC_OPTS).add(kopBlock({})).add(titleBlock("KWITANSI", "No. KW/001")).add(spacer(6)).add(signatures([
   { role: "Yang Menerima", name: "Bapak Hadi" },
-  { role: "Yang Menyerahkan", name: "PT BANGUNAN PERMANEN NUSANTARA" },
+  { role: "Yang Menyerahkan", name: "PT BAJA CONTOH ABADI" },
 ])));
 
 /* Nama tanda tangan panjang sekali - harus di-wrap, bukan menimpa blok
@@ -240,7 +240,7 @@ geometryCheck(
       pairs: [
         { label: "No. Kwitansi", value: "KW/2026/0001" },
         { label: "Tanggal", value: "2 Oktober 2026" },
-        { label: "Diterima Dari", value: "PT BANGUNAN PERMANEN NUSANTARA" },
+        { label: "Diterima Dari", value: "PT BAJA CONTOH ABADI" },
       ],
     }),
   ).add(
@@ -255,7 +255,7 @@ geometryCheck(
   ).add(paragraph({ text: "Jumlah diterima: Rp 279.000.000", bold: true, size: 11 }));
   const res = d.render();
   const raw = Buffer.from(res.bytes).toString("latin1");
-  const mustHave = ["KW/2026/0001", "BANGUNAN PERMANEN", "279.000.000", "Retensi"];
+  const mustHave = ["KW/2026/0001", "BAJA CONTOH", "279.000.000", "Retensi"];
   const missing = mustHave.filter((m) => !raw.includes(m.split(" ")[0]!));
   ok("isi kwitansi tercetak", missing.length === 0, missing.length === 0 ? `${(res.bytes.byteLength / 1024).toFixed(1)} kB` : `hilang: ${missing.join(", ")}`);
   ok("kwitansi 1 halaman", res.pages === 1, `${res.pages} halaman`);
@@ -300,7 +300,7 @@ ok("axisTicks naik monoton", axisTicks(100, 25).every((v, i, a) => i === 0 || v 
   const d = kwitansiDoc({
     no: "KW/TRM-2026-001",
     tanggal: "2026-10-02",
-    diterimaDari: "PT BANGUNAN PERMANEN NUSANTARA",
+    diterimaDari: "PT BAJA CONTOH ABADI",
     untuk: "TRM-2026-001 - Pekerjaan rangka kapal TB Nusantara 22",
     breakdown,
     netLabel: "Dibayar",
@@ -311,7 +311,7 @@ ok("axisTicks naik monoton", axisTicks(100, 25).every((v, i, a) => i === 0 || v 
   const raw = Buffer.from(res.bytes).toString("latin1");
   ok("kwitansi: nilai lengkap tercetak", raw.includes("279.000.000"), "279.000.000");
   ok("kwitansi: nomor tercetak", raw.includes("KW/TRM-2026-001"));
-  ok("kwitansi: penerima tercetak", raw.includes("BANGUNAN PERMANEN"));
+  ok("kwitansi: penerima tercetak", raw.includes("BAJA CONTOH"));
   ok("kwitansi: kwitansi tidak terpotong", res.pages === 1, `${res.pages} halaman`);
   const problems = checkGeometry(res, res.margin, { width: res.pageW, height: res.pageH });
   ok("kwitansi: geometri", problems.length === 0, problems.length === 0 ? "semua tinta di dalam content box" : `${problems.length} pelanggaran`);
@@ -320,7 +320,7 @@ ok("axisTicks naik monoton", axisTicks(100, 25).every((v, i, a) => i === 0 || v 
   const big = kwitansiDoc({
     no: "KW/TRM-2026-999",
     tanggal: "2026-10-02",
-    diterimaDari: "PT KONSTRUKSI REKAYASA INDUSTRI DAN PERTAHANAN NUSANTARA",
+    diterimaDari: "PT REKAYASA KAPAL CONTOH",
     untuk: "TRM-2026-999 - Perbaikan AMC kapal",
     breakdown: [{ label: "Nilai termin", value: 12_500_000_000 }, { label: "Dibayar", value: 12_500_000_000 }],
     netLabel: "Dibayar",
@@ -398,7 +398,7 @@ const MODELS: Record<string, unknown> = {
   invoice: {
     no: "058/INV-SB/SMD/IX/2026",
     tanggal: "2026-09-01",
-    client: "PT PELAYARAN KARTIKA SAMUDRA ADIJAYA",
+    client: "PT PELAYARAN CONTOH ELANG",
     project: "RP-2026-006",
     vessel: "BG RMN 3324",
     paymentTerm: "NET 30",
@@ -430,13 +430,13 @@ const MODELS: Record<string, unknown> = {
     skdt: false,
     paidAt: "",
     paidRef: "",
-    signer: "H. Syarif Sarapping",
+    signer: "Direktur Contoh",
     locale: "id",
   },
   invoiceTanpaLines: {
     no: "037/INV-SB/SMD/V/2026",
     tanggal: "2026-05-08",
-    client: "PT ALVI CIPTA SENTOSA",
+    client: "PT PELAYARAN CONTOH MAKMUR",
     project: "RP-2026-008",
     vessel: "BG MHKL 35",
     paymentTerm: "NET 30",
@@ -461,7 +461,7 @@ const MODELS: Record<string, unknown> = {
     skdt: true,
     paidAt: "2026-06-20",
     paidRef: "BCA/2026/06/7781",
-    signer: "H. Syarif Sarapping",
+    signer: "Direktur Contoh",
     locale: "id",
   },
   voucher: {
@@ -479,7 +479,7 @@ const MODELS: Record<string, unknown> = {
   kwitansi: {
     no: "KW/TRM-2026-001",
     tanggal: "2026-10-02",
-    diterimaDari: "PT KONSTRUKSI REKAYASA INDUSTRI DAN PERTAHANAN NUSANTARA",
+    diterimaDari: "PT REKAYASA KAPAL CONTOH",
     untuk: "TRM-2026-001 - Perbaikan AMC kapal",
     breakdown: [
       { label: "Nilai termin", value: 279_000_000 },
@@ -501,7 +501,7 @@ const MODELS: Record<string, unknown> = {
     from: "2026-10-02",
     to: "2026-10-16",
     alasan: "Urusan keluarga yang tidak bisa diundur",
-    approverNama: "Syarif Sarapping",
+    approverNama: "Direktur Contoh",
     approverJabatan: "Direktur",
     tanggalPersetujuan: "2026-10-01",
     locale: "id",
@@ -518,7 +518,7 @@ const MODELS: Record<string, unknown> = {
     tanggalPelanggaran: "2026-09-20",
     tindakan: "Pemberitahuran tertulis dan evaluar ulang selama satu bulan",
     berlakuSampai: "2026-11-02",
-    namaPemberi: "H. Syarif Sarapping",
+    namaPemberi: "Direktur Contoh",
     jabatanPemberi: "Direktur",
     locale: "id",
   },
@@ -526,13 +526,13 @@ const MODELS: Record<string, unknown> = {
     no: "BAST-2026-003",
     tanggal: "2026-10-02",
     projectName: "Repairs & Maintenance Km. Nyak Kopong",
-    subcontractorName: "PT KRI REKAYASA",
+    subcontractorName: "PT SUBKON CONTOH REKAYASA",
     subcontractorAddress: "Jl.ymm Manunggal No.8, Balikpapan",
     scopeOfWork: "Penggantian plat engine, overhaul pompa injeksi, dan perbaikan sistem hidrolik kontrol kemudi.",
     deliverables: Array.from({ length: 24 }, (_, i) => ({ description: `Komponen pekerjaan nomor ${i + 1}`, qty: i + 1, unit: "unit", status: "Selesai" })),
     notes: "Diterima tanpa catatanminor.",
-    nameReceiver: "H. Syarif Sarapping",
-    nameGiver: "PT KRI REKAYASA",
+    nameReceiver: "Direktur Contoh",
+    nameGiver: "PT SUBKON CONTOH REKAYASA",
     locale: "id",
   },
   boq: {
@@ -553,7 +553,7 @@ const MODELS: Record<string, unknown> = {
     no: "WO-2026-021",
     tanggal: "2026-10-02",
     projectName: "Repairs & Maintenance Km. Nyak Kopong",
-    subcontractorName: "PT KRI REKAYASA",
+    subcontractorName: "PT SUBKON CONTOH REKAYASA",
     subcontractorAddress: "Jl. Manunggal No.8, Balikpapan",
     subcontractorNPWP: "01.234.567.8-901.000",
     scopeOfWork: "Pekerjaan dock repair dan overhaul pompa injeksi sesuai catatan pekerjaan.",
@@ -562,14 +562,14 @@ const MODELS: Record<string, unknown> = {
     contractValue: 750_000_000,
     paymentTerms: "Termin 30/40/30",
     k3Requirements: "Pakai alat pelindung diri lengkap; izin kerja panas untuk pekerjaan las.",
-    nameDirector: "H. Syarif Sarapping",
-    nameSubcontractor: "PT KRI REKAYASA",
+    nameDirector: "Direktur Contoh",
+    nameSubcontractor: "PT SUBKON CONTOH REKAYASA",
     locale: "id",
   },
   po: {
     no: "PO/2026/10/0021",
     tanggal: "2026-10-02",
-    vendorName: "PT SUMBER BAHAN BAKTI",
+    vendorName: "PT MITRA CONTOH TERANG 2",
     vendorAddress: "Jl. Ahmad Yani No.45, Samarinda",
     vendorNPWP: "01.234.567.8-901.000",
     projectName: "Repairs & Maintenance Km. Nyak Kopong",
@@ -625,7 +625,7 @@ const MODELS: Record<string, unknown> = {
     totalValue: 1_250_000_000,
     validUntil: "2026-10-30",
     notes: "Harga belum termasuk GST danärtsmaterial approval.",
-    nameSigner: "H. Syarif Sarapping",
+    nameSigner: "Direktur Contoh",
     locale: "id",
   },
   slipGaji: {
@@ -655,7 +655,7 @@ const MODELS: Record<string, unknown> = {
     attention: "Surveyor kelas",
     items: Array.from({ length: 18 }, (_, i) => ({ code: `DRW-${String(i + 1).padStart(3, "0")}`, title: `Shop Drawing_${i + 1}`, revision: String.fromCharCode(65 + (i % 4)), status: "Disetujui" })),
     notes: "Mohon konfirmasi penerimaan dokumen ini.",
-    sender: "H. Syarif Sarapping",
+    sender: "Direktur Contoh",
     locale: "id",
   },
   spt: {
@@ -681,7 +681,7 @@ const MODELS: Record<string, unknown> = {
     formulir: "01-AR-0000012345",
     bank: "Bank Mandiri Samarinda",
     teller: "012",
-    namaPenandatangan: "H. Syarif Sarapping",
+    namaPenandatangan: "Direktur Contoh",
     jabatanPenandatangan: "Direktur",
     locale: "id",
   },
@@ -730,7 +730,7 @@ const MODELS: Record<string, unknown> = {
       { label: "Invoice belum lunas", value: 2 },
       { label: "PO", value: 12 },
     ],
-    signature: { name: "H. Syarif Sarapping", role: "Direktur", date: "2026-10-05" },
+    signature: { name: "Direktur Contoh", role: "Direktur", date: "2026-10-05" },
     locale: "id",
   },
   laporanProyek: {
@@ -793,11 +793,11 @@ const MODELS: Record<string, unknown> = {
       wonContractCount: 6,
     },
     activeProjectsList: [
-      { id: "PRJ-2026-001", vessel: "TB. Berau Coal 01", client: "PT Berau Coal", type: "Repair", budget: 6_500_000_000, progress: 85, status: "Sedang Berjalan" },
+      { id: "PRJ-2026-001", vessel: "TB. Batubara Contoh 01", client: "PT Batubara Contoh", type: "Repair", budget: 6_500_000_000, progress: 85, status: "Sedang Berjalan" },
       { id: "PRJ-2026-002", vessel: "TB. Mahakam 01", client: "PT Pelayaran Mahakam", type: "New Build", budget: 14_000_000_000, progress: 92, status: "Dalam Proses" },
       { id: "PRJ-2026-003", vessel: "BG. Nusantara 300", client: "PT Nusantara Lines", type: "Retrofit", budget: 4_200_000_000, progress: 45, status: "Sedang Berjalan" },
       { id: "PRJ-2026-004", vessel: "Km. Nyak Kopong", client: "Dinas Perhubungan", type: "Repair", budget: 3_800_000_000, progress: 60, status: "Dalam Proses" },
-      { id: "PRJ-2026-009", vessel: "Km. Sepinggan", client: "PT Pelni", type: "Repair", budget: 8_500_000_000, progress: 30, status: "Terlambat" },
+      { id: "PRJ-2026-009", vessel: "Km. Sepinggan", client: "PT Pelayaran Contoh Negara", type: "Repair", budget: 8_500_000_000, progress: 30, status: "Terlambat" },
       { id: "PRJ-2026-012", vessel: "TB. Kaltim Trans", client: "PT Kaltim Jaya", type: "Repair", budget: 5_000_000_000, progress: 15, status: "Tertunda" },
     ],
     series: Array.from({ length: 13 }, (_, i) => ({
@@ -858,7 +858,7 @@ const MODELS: Record<string, unknown> = {
       openNcr: 11,
       maintenancePending: 4,
       calibrationPending: 6,
-      worstVendor: { name: "PT SUMBER BAHAN BAKTI", onTime: 62 },
+      worstVendor: { name: "PT MITRA CONTOH TERANG 2", onTime: 62 },
     },
     projectStatus: [
       { label: "Dalam Proses", value: 18 },

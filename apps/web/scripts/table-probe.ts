@@ -165,7 +165,7 @@ const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unkno
   const inv = asRec({
     id: "INV-SB-2026-058",
     noInv: "058/INV-SB/SMD/IX/2026",
-    client: "PT PELAYARAN KARTIKA",
+    client: "PT PELAYARAN CONTOH ELANG",
     project: "RP-2026-006",
     vessel: "BG RMN 3324",
     status: "Belum Dibayar",
@@ -174,7 +174,7 @@ const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unkno
 
   assert(rowMatches(inv, "058/INV", fields), "cari sebagian nomor invoice resmi");
   assert(rowMatches(inv, "bg rmn", fields), "cari nama kapal (tidak ada di pola lama)");
-  assert(rowMatches(inv, "kARTIKA rp-2026", fields), "dua kata dari dua field berbeda");
+  assert(rowMatches(inv, "eLANG rp-2026", fields), "dua kata dari dua field berbeda");
   assert(rowMatches(inv, "belum dibayar", fields), "cari status");
 
   /* Yang TIDAK ada di daftar field tidak boleh ditemukan - inilah bug yang
@@ -219,7 +219,7 @@ const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unkno
   const po = asRec({
     id: "PO-2026-116",
     item: "Cat Epoxy",
-    vendor: "PT Jotun Indonesia",
+    vendor: "PT Cat Contoh Marine",
     status: "Diterima",
     lines: [
       { name: "Cat Epoxy Anti Korosi", unit: "Pail", spec: "5 gal" },
@@ -230,14 +230,14 @@ const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unkno
   assert(rowMatches(po, "cat epoxy", poFields), "cari nama baris di dalam array lines");
   assert(rowMatches(po, "xylene", poFields), "cari baris kedua saja dari array lines");
   assert(rowMatches(po, "5 gal", poFields), "cari spec di dalam objek baris");
-  assert(rowMatches(po, "jotun cat", poFields), "kata dari field skalar dan lines digabung");
+  assert(rowMatches(po, "marine xylene", poFields), "kata dari field skalar dan lines digabung");
   assert(!rowMatches(po, "pelat baja", poFields), "isi lines tidak membuat semua PO cocok");
 
   const rfq = asRec({
     id: "RFQ-2026-031",
     prId: "PR-2026-207",
     item: "Cat Epoxy",
-    vendors: ["PT Jotun Indonesia", "PT Bahana Baja"],
+    vendors: ["PT Cat Contoh Marine", "PT Bahana Baja"],
     quotes: [{ vendor: "PT Bahana Baja", price: 495000000, eta: "2026-08-10" }],
     status: "Evaluasi",
   });

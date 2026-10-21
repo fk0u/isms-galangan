@@ -854,7 +854,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
     const termId = termPay.id;
     const prevStatus = String(termPay.status ?? "");
     try {
-    // PPh variatif RawData (cth PAK YUSUF 0.5%): potong saat bayar + simpan bukti potong.
+    // PPh variatif RawData (cth PAK MANDOR CONTOH 0.5%): potong saat bayar + simpan bukti potong.
     const pphAmt = Math.round(pphAmountOf(termPay, pphDefault));
     const retAmt = Math.round(Number(termPay.amount || 0) * retOf(termPay) / 100);
     const wo = workOrders.find((w) => w.id === termPay.woId);

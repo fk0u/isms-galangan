@@ -44,7 +44,7 @@ const VENDOR_NAMES = [
 const CLIENT_NAMES = [
   "PT Pelayaran Samudra Nusantara", "PT Borneo Trans Logistik", "PT Mahakam Energi Maritim",
   "PT Barito Coal Transport", "PT Samudra Perkasa Abadi", "PT Kutai Bahari Shipping",
-  "PT Nusantara Lines Maritim", "PT Pelayaran Kaltim Jaya", "PT Berau Coal Trans",
+  "PT Nusantara Lines Maritim", "PT Pelayaran Kaltim Jaya", "PT Batubara Contoh Trans",
   "PT Mega Pratama Shipping", "PT Bintang Laut Transport", "PT Arung Samudra Lines"
 ];
 
@@ -158,7 +158,7 @@ function genTonase() {
 function genSubkon() {
   return {
     title: "RINCIAN PEKERJAAN TB NUSANTARA 01 (CV MANDIRI TEKNIK)",
-    sub: "Pak Yusuf",
+    sub: "Pak Mandor Contoh",
     vessel: "TB Nusantara 01",
     lines: [
       {
