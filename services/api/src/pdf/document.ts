@@ -17,7 +17,7 @@
  * error apa pun.
  */
 import { jsPDF } from "jspdf";
-import { COLOR, MARGIN_MM, PAGES, STROKE, TYPE, type RGB } from "./theme.js";
+import { ADDRESS_FOOTER, COLOR, FOOTER_ZONE_MM, MARGIN_MM, PAGES, STROKE, TYPE, type RGB } from "./theme.js";
 import { cjkChars, fontName, registerFonts, safe } from "./font.js";
 import type { Block, Ctx, DrawRecord, Segment } from "./blocks.js";
 import { drawText, textWidth } from "./blocks.js";
@@ -32,6 +32,9 @@ export interface DocOptions {
   subject?: string;
   /** Footer per halaman. */
   footer?: (pageNo: number, totalPages: number) => string;
+  /** Footer alamat perusahaan di dasar tiap halaman (default true). Surat HR
+   *  mematikannya karena menggambar footer template-nya sendiri. */
+  addressFooter?: boolean;
   /** Watermark diagonal. */
   watermark?: string;
   /** Level kompresi. true = berkas kecil, false = stream bisa dibaca (probe). */
@@ -109,9 +112,9 @@ export class Document {
     return this.contentW;
   }
 
-  /** Batas bawah area isi. Footer diberi ruang 8 mm. */
+  /** Batas bawah area isi: di atas zona footer alamat (atau 8 mm tanpa itu). */
   private bottom(): number {
-    return this.pageH - this.margin - 8;
+    return this.pageH - this.margin - (this.opts.addressFooter === false ? 8 : FOOTER_ZONE_MM);
   }
 
   private ctx(): Ctx {
@@ -152,6 +155,20 @@ export class Document {
       applyOpacity(this.pdf, 1);
       this.pdf.setTextColor(0, 0, 0);
       this.pdf.setFontSize(TYPE.base);
+    }
+    if (this.opts.addressFooter !== false) {
+      /* Footer alamat selalu di dasar halaman, bukan mengikuti isi: garis
+         aksen merah lalu tiga baris alamat, di dalam zona yang tidak boleh
+         dipakai isi (lihat bottom()). */
+      const top = this.pageH - this.margin - FOOTER_ZONE_MM + 2.5;
+      this.pdf.setDrawColor(COLOR.accent[0], COLOR.accent[1], COLOR.accent[2]);
+      this.pdf.setLineWidth(STROKE.thin);
+      this.pdf.line(this.margin, top, this.pageW - this.margin, top);
+      this.pdf.setFont(fontName("regular"), "normal");
+      this.pdf.setFontSize(TYPE.footer);
+      this.pdf.setTextColor(60, 60, 60);
+      ADDRESS_FOOTER.forEach((t, i) => this.pdf.text(safe(t, "regular"), this.pageW / 2, top + 3.4 + i * 3.1, { align: "center" }));
+      this.pdf.setTextColor(0, 0, 0);
     }
     const label = this.opts.footer ? this.opts.footer(page, this.drawnPages) : `Halaman ${page} dari ${this.drawnPages}`;
     if (label !== "") {

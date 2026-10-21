@@ -28,38 +28,43 @@ export const MARGIN_MM = 15;
 
 /** Palet. Urutan warna di sini = urutan prioritas di dokumen resmi. */
 export const COLOR = {
-  /* Identitas: kop, judul, garis pemisah utama. */
-  navy: [11, 58, 99] as RGB,
+  /* Permintaan user 21 Okt: dokumen tanpa biru - utama hitam, aksen merah
+     (merah kop SB). Nama token `navy` dipertahankan supaya pemanggil tidak
+     berubah; nilainya kini hitam. */
+  /* Identitas: judul, angka total, garis pemisah utama. */
+  navy: [17, 17, 17] as RGB,
+  /* Aksen: garis bawah judul section, garis footer. */
+  accent: [200, 32, 46] as RGB,
   /* Teks sekunder: subjudul, label nilai, catatan kaki. */
-  steel: [82, 105, 124] as RGB,
+  steel: [85, 85, 85] as RGB,
   /* Isian header tabel. */
-  headFill: [233, 239, 244] as RGB,
+  headFill: [240, 240, 240] as RGB,
   /* Garis grid dan pemisah. */
   rule: [150, 150, 150] as RGB,
-  hair: [208, 216, 224] as RGB,
+  hair: [214, 214, 214] as RGB,
   /* Isian callout / ringkasan. */
-  softFill: [245, 248, 251] as RGB,
+  softFill: [247, 247, 247] as RGB,
   /* Semantic. */
   danger: [190, 42, 42] as RGB,
   warn: [180, 118, 12] as RGB,
   ok: [26, 122, 74] as RGB,
   /* Chart. Dipakai juga oleh grafik di layar supaya PDF dan UI satu warna. */
   series: [
-    [11, 58, 99],      // navy
-    [13, 148, 136],    // teal - margin/profit
+    [17, 17, 17],      // hitam - utama
+    [200, 32, 46],     // merah aksen - margin/profit
     [217, 119, 6],     // amber - peripher
-    [190, 42, 42],     // red - masalah
-    [107, 114, 128],   // slate - netral
-    [43, 108, 176],    // blue
+    [127, 29, 29],     // merah tua - masalah
+    [120, 120, 120],   // abu - netral
+    [64, 64, 64],      // abu tua
     [146, 64, 14],     // brown
     [22, 163, 74],     // green
   ] as RGB[],
   /* Garis bantu chart. Di layar memakai #e9eff4 yang kontrasnya 1,06:1 -
      tidak terlihat setelah JPEG. Di PDF memakai token yang jauh lebih gelap
      supaya garis benar-benar ada di kertas. */
-  grid: [148, 163, 184] as RGB,
-  axis: [71, 85, 105] as RGB,
-  zero: [100, 116, 139] as RGB,
+  grid: [160, 160, 160] as RGB,
+  axis: [80, 80, 80] as RGB,
+  zero: [110, 110, 110] as RGB,
 };
 
 export type RGB = [number, number, number];
@@ -119,3 +124,12 @@ export const STROKE: Record<string, number> = {
   medium: 0.45,
   heavy: 0.9,
 };
+/* Footer alamat perusahaan di dasar SETIAP halaman dokumen (permintaan user
+   21 Okt; teks sama dengan footer template Surat Peringatan klien). */
+export const ADDRESS_FOOTER = [
+  "Kantor : Jl. Mulawarman no. 23 Tlp. (0541) 742529 Fax. (0541) 731034 Samarinda",
+  "Shipyard : Jl. Olah bebaya Kampung tengah Pulau atas (Samarinda ilir)",
+  "Email: Syukurbersaudara@gmail.com · Web: www.syukurbersaudara.com",
+];
+/** Tinggi zona footer (mm) di atas margin bawah: garis + 3 baris alamat. */
+export const FOOTER_ZONE_MM = 14;
