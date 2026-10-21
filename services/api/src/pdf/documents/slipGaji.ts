@@ -27,6 +27,7 @@ export function slipGaji(input: SlipGajiInput, opts: DocOptions = {}): Document 
     ...opts,
   });
 
+  d.add(companyKop());
   d.add(
     docTitle({
       title: L(locale, "SLIP GAJI", "PAY SLIP"),

@@ -188,7 +188,7 @@ export default function Subcontractor() {
   const [msSub, setMsSub] = useState<StoreItem | null>(null);
   const [msForm, setMsForm] = useState({ title: "", pct: "", due: "" });
   const [showWo, setShowWo] = useState(false);
-  const EMPTY_WO = { sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0.1", value: "", wbsTask: "", schemeType: "Kontan" as TerminSchemeType, parts: [{ label: "", pct: "", amount: "" }] as SchemePartForm[], taxPct: "2", taxOther: "", retPct: "5" };
+  const EMPTY_WO = { sub: "", project: "", scope: "", targetDate: "", penaltyPct: "0", value: "", wbsTask: "", schemeType: "Kontan" as TerminSchemeType, parts: [{ label: "", pct: "", amount: "" }] as SchemePartForm[], taxPct: "2", taxOther: "", retPct: "5" };
   const [woForm, setWoForm] = useState(EMPTY_WO);
   const [progPhotos, setProgPhotos] = useState<PhotoUploadItem[]>([]);
   // #95: simpan ditahan sampai semua foto selesai diunggah.

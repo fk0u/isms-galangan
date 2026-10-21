@@ -69,6 +69,8 @@ async function main(): Promise<void> {
         if (Buffer.from(res.bytes.subarray(0, 5)).toString() !== "%PDF-") { failures.push(`${label}: bukan PDF`); bad++; continue; }
         const geo = checkGeometry(res, res.margin, { width: res.pageW, height: res.pageH });
         if (geo.length > 0) { failures.push(`${label}: geometri - ${geo[0]?.reason ?? "?"}`); bad++; continue; }
+        // Q28: semua dokumen memakai template kop gambar yang sama di halaman 1.
+        if (!res.records.some((r) => r.page === 1 && r.kind === "image")) { failures.push(`${label}: tanpa kop template`); bad++; continue; }
         checked++;
       } catch (err) {
         failures.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);

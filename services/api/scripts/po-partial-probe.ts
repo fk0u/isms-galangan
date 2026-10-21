@@ -124,7 +124,7 @@ async function main(): Promise<void> {
     // K17-PROC-05: PO Besar yang Disetujui otomatis punya hutang (sekali), dan
     // hutang belum dibayar berkurang bila vendor tidak sanggup sebagian.
     const apOf = async (poId: string) => (await q<{ id: string; data: string }>("SELECT id, data FROM payables WHERE json_extract(data, '$.poId') = ?", [poId]))
-      .map((r) => ({ id: r.id, ...(JSON.parse(r.data) as { amt: number; st: string }) }));
+      .map((r) => ({ id: r.id, ...(JSON.parse(r.data) as { amt: number; st: string; persetujuan?: string }) }));
     const big = await post(dir, "/api/purchaseOrders", { data: {
       poType: "Besar", item: "Probe Pompa", itemId, vendor: "PT Vendor A Probe", req: "-", qty: 4, amount: 4_000_000,
       receivedQty: 0, status: "Diajukan", date: "2026-10-10", project: project.id,
@@ -134,7 +134,7 @@ async function main(): Promise<void> {
     assert("PO Diajukan belum punya hutang", (await apOf(bigId)).length === 0);
     await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Disetujui" } } });
     const ap1 = await apOf(bigId);
-    assert("PO Besar Disetujui → hutang otomatis Rp4 jt Belum Dibayar", ap1.length === 1 && ap1[0]?.amt === 4_000_000 && ap1[0]?.st === "Belum Dibayar", JSON.stringify(ap1));
+    assert("PO Besar Disetujui → invoice otomatis Rp4 jt Belum Dibayar, menunggu persetujuan", ap1.length === 1 && ap1[0]?.amt === 4_000_000 && ap1[0]?.st === "Belum Dibayar" && ap1[0]?.persetujuan === "Menunggu", JSON.stringify(ap1));
     await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Dikirim" } } });
     await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${bigId}`, headers: auth(dir), payload: { data: { status: "Disetujui" } } });
     assert("persetujuan ulang tidak membuat hutang ganda", (await apOf(bigId)).length === 1);
@@ -143,16 +143,49 @@ async function main(): Promise<void> {
     assert("vendor batal 1 dari 4 → hutang jadi Rp3 jt", cut.statusCode === 200 && ap2[0]?.amt === 3_000_000, `${cut.statusCode} ${JSON.stringify(ap2)}`);
     for (const a of ap2) await exec("DELETE FROM payables WHERE id = ?", [a.id]);
 
-    // PO Kecil: Diajukan → Disetujui → Diterima, tanpa tahap kirim (K17-PROC-01).
+    // PO Besar tanpa amount (pernah terjadi dari pemenang RFQ): nilai invoice dari baris.
+    const noAmt = await post(dir, "/api/purchaseOrders", { data: {
+      poType: "Besar", item: "Probe Tanpa Nilai", itemId, vendor: "PT Vendor A Probe", req: "-", qty: null, amount: null,
+      receivedQty: 0, status: "Diajukan", date: "2026-10-10", lines: [{ name: "Probe Tanpa Nilai", qty: null, unit: "pcs", price: 480000 }],
+    } });
+    const noAmtId = (noAmt.json().data as { id: string }).id;
+    poIds.push(noAmtId);
+    await app.inject({ method: "PATCH", url: `/api/purchaseOrders/${noAmtId}`, headers: auth(dir), payload: { data: { status: "Disetujui" } } });
+    const apNo = await apOf(noAmtId);
+    assert("PO Besar tanpa amount → invoice dari baris (Rp480 rb)", apNo.length === 1 && apNo[0]?.amt === 480000, JSON.stringify(apNo));
+    for (const a of apNo) await exec("DELETE FROM payables WHERE id = ?", [a.id]);
+
+    // PO Kecil (Q27): Diajukan → Disetujui (invoice Rp0 menunggu nota) → Ubah PO
+    // melengkapi nota → Keuangan menyetujui invoice → baru bisa diterima.
     const small = await post(dir, "/api/purchaseOrders", { data: {
       poType: "Kecil", item: "Probe Kawat Las", itemId, vendor: "Workshop Internal", req: "-", qty: 2, amount: 0,
-      receivedQty: 0, status: "Disetujui", date: "2026-10-10", project: project.id,
-      lines: [{ name: "Probe Kawat Las", qty: 2, unit: "kg", price: 0 }],
+      receivedQty: 0, status: "Diajukan", date: "2026-10-10", project: project.id,
+      lines: [{ name: "Probe Kawat Las", itemId, qty: 2, unit: "kg", price: 0 }],
     } });
     const smallId = (small.json().data as { id: string }).id;
     poIds.push(smallId);
+    const patchPo = (data: Record<string, unknown>) => app.inject({ method: "PATCH", url: `/api/purchaseOrders/${smallId}`, headers: auth(dir), payload: { data } });
+    await patchPo({ status: "Disetujui" });
+    const apS = await apOf(smallId);
+    assert("PO Kecil Disetujui → invoice terbit (Rp0, menunggu nota)", apS.length === 1 && apS[0]?.amt === 0 && apS[0]?.persetujuan === "Menunggu", JSON.stringify(apS));
+    const noNota = await post(dir, `/api/purchaseOrders/${smallId}/receive`, { qty: 2 });
+    assert("terima PO Kecil sebelum nota lengkap → 409", noNota.statusCode === 409 && noNota.body.includes("nota"), noNota.body);
+    const apId = apS[0]?.id ?? "";
+    const patchAp = (data: Record<string, unknown>) => app.inject({ method: "PATCH", url: `/api/payables/${apId}`, headers: auth(dir), payload: { data } });
+    const zero = await patchAp({ persetujuan: "Disetujui" });
+    assert("invoice Rp0 tidak bisa disetujui → 422", zero.statusCode === 422, zero.body);
+    await patchPo({ nota: "NOTA-PROBE", notaUrl: "/api/files/probe.pdf", notaAmount: 150000, amount: 150000 });
+    const apN = await apOf(smallId);
+    assert("nilai & nomor nota mengikuti ke invoice", apN[0]?.amt === 150000, JSON.stringify(apN));
+    const pending = await post(dir, `/api/purchaseOrders/${smallId}/receive`, { qty: 2 });
+    assert("terima sebelum invoice disetujui → 409", pending.statusCode === 409 && pending.body.includes("Invoice"), pending.body);
+    const okAp = await patchAp({ persetujuan: "Disetujui" });
+    assert("Keuangan menyetujui invoice → 200", okAp.statusCode === 200, okAp.body);
+    const back = await patchAp({ persetujuan: "Menunggu" });
+    assert("invoice disetujui tidak bisa kembali ke Menunggu → 422", back.statusCode === 422, back.body);
     const smallRecv = await post(dir, `/api/purchaseOrders/${smallId}/receive`, { qty: 2, noFaktur: "NOTA-PROBE" });
-    assert("PO Kecil Disetujui bisa langsung diterima → Diterima", smallRecv.statusCode === 200 && (await poOf(smallId)).status === "Diterima", smallRecv.body);
+    assert("invoice disetujui → PO Kecil diterima", smallRecv.statusCode === 200 && (await poOf(smallId)).status === "Diterima", smallRecv.body);
+    for (const a of await apOf(smallId)) await exec("DELETE FROM payables WHERE id = ?", [a.id]);
 
     // PO konsolidasi tanpa perincian baris ditolak; PO lama tanpa qty tetap bisa diterima penuh.
     const multi = await post(dir, "/api/purchaseOrders", { data: {

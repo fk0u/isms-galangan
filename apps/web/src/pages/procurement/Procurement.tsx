@@ -24,7 +24,7 @@ import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLi
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { getSetting } from "../../utils/settings";
 import { bucketByMonth, fmtMonthRange, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../../utils/monthAxis";
-import { sbPoNumber, sbSplitIncludePpn, maxSeq, SB_KOP } from "../../utils/sb";
+import { sbPoNumber, sbSplitIncludePpn, maxSeq } from "../../utils/sb";
 import { spendByCategory, procurementTrend } from "../../data";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
@@ -381,10 +381,15 @@ export default function Procurement() {
 
   /* ---- PO Kecil ---- */
   const [showSmall, setShowSmall] = useState(false);
-  const [smallForm, setSmallForm] = useState({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", eta: "", project: "", vessel: "", nota: "", notaUrl: "" });
-  const [smallProofUploading, setSmallProofUploading] = useState(false);
-  const [smallProofError, setSmallProofError] = useState<string | null>(null);
-  const [smallProofFailedFile, setSmallProofFailedFile] = useState<File | null>(null);
+  /* Catatan CTO 20 Okt: barang wajib dari katalog Inventori, tujuan Proyek/Stok
+     seperti PO Besar; nota & bukti dilengkapi lewat Ubah PO setelah disetujui. */
+  const EMPTY_SMALL = { requester: "", item: "", itemId: "", qty: "1", unit: "pcs", eta: "", tujuan: "kapal" as "kapal" | "stok", project: "", vessel: "", warehouse: "" };
+  const [smallForm, setSmallForm] = useState(EMPTY_SMALL);
+  const [smallItem, setSmallItem] = useState<StoreItem | null>(null);
+  /* Validasi form (catatan CTO 21 Okt): semua field bermasalah ditandai sekaligus. */
+  const [smallErr, setSmallErr] = useState<Record<string, string>>({});
+  const [bigErr, setBigErr] = useState<Record<string, string>>({});
+  const [smallSearch, setSmallSearch] = useState("");
   const [kasAwal, setKasAwal] = useState("");
 
   /* ---- RFQ ---- */
@@ -425,9 +430,6 @@ export default function Procurement() {
   const [recvDendaPct, setRecvDendaPct] = useState("0.1");
   const [signPo, setSignPo] = useState<StoreItem | null>(null);
   const [signForm, setSignForm] = useState<Record<string, string>>({});
-  /* K17-PROC-01: nilai nota PO Kecil diisi saat terima barang. */
-  const [recvNotaAmount, setRecvNotaAmount] = useState("");
-  const [recvOverReason, setRecvOverReason] = useState("");
   const [inventoryLookupRows, setInventoryLookupRows] = useState<StoreItem[]>([]);
   const [retPo, setRetPo] = useState<StoreItem | null>(null);
   const [retQty, setRetQty] = useState("");
@@ -457,8 +459,8 @@ export default function Procurement() {
      di awal. Ubah HANYA tersedia sebelum PO Dikirim, karena setelah
      pengiriman fisik daftar barisnya jadi acuan penerima barang. */
   const [editPo, setEditPo] = useState<StoreItem | null>(null);
-  const [poEditForm, setPoEditForm] = useState<{ item: string; qty: string; unit: string; workshop: string; requester: string; project: string; itemId: string; nota?: string; notaUrl?: string }>({
-    item: "", qty: "1", unit: "pcs", workshop: "", requester: "", project: "", itemId: "", nota: "", notaUrl: "",
+  const [poEditForm, setPoEditForm] = useState<{ item: string; qty: string; unit: string; workshop: string; requester: string; project: string; itemId: string; nota?: string; notaUrl?: string; notaAmount?: string; overReason?: string }>({
+    item: "", qty: "1", unit: "pcs", workshop: "", requester: "", project: "", itemId: "", nota: "", notaUrl: "", notaAmount: "", overReason: "",
   });
   const [editProofUploading, setEditProofUploading] = useState(false);
   const [editProofError, setEditProofError] = useState<string | null>(null);
@@ -490,8 +492,8 @@ export default function Procurement() {
     void resyncCollections(["inventory"]);
   }, [resyncCollections]);
 
-  const catalogSearchResults = useMemo(() => {
-    const q = prItemSearch.trim().toLowerCase();
+  const catalogMatches = (search: string): StoreItem[] => {
+    const q = search.trim().toLowerCase();
     if (!q) return inventoryChoices.slice(0, 15);
     return inventoryChoices
       .filter((item) => {
@@ -501,7 +503,7 @@ export default function Procurement() {
         return name.includes(q) || sku.includes(q) || cat.includes(q);
       })
       .slice(0, 30);
-  }, [inventoryChoices, prItemSearch]);
+  };
 
   const rememberInventory = useCallback((rows: readonly StoreItem[]) => {
     setInventoryLookupRows((previous) => {
@@ -711,24 +713,94 @@ export default function Procurement() {
     toast(S.tKasExport);
   };
 
+  /* Tab tujuan bersama PO Besar & PO Kecil: Kapal/Proyek atau Stok Gudang. */
+  const renderTujuanTabs = (value: "kapal" | "stok", onChange: (t: "kapal" | "stok") => void, name: string) => (
+    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={S.ariaTujuan}>
+      {(["kapal", "stok"] as const).map((t) => (
+        <label key={t} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${value === t ? "border-navy-700 bg-navy-50 text-navy-900" : "border-steel-200 text-steel-600"}`}>
+          <input type="radio" name={name} checked={value === t} onChange={() => onChange(t)} />
+          {t === "kapal" ? S.tujuanKapal : S.tujuanStok}
+        </label>
+      ))}
+    </div>
+  );
+
+  /* Pemilih barang dari katalog Inventori (PR & PO Kecil). Barang yang belum
+     ada diarahkan ke modul Inventori untuk dibuat katalognya dulu. */
+  const renderCatalogPicker = (o: { selected: StoreItem | null; search: string; setSearch: (v: string) => void; onPick: (item: StoreItem) => void; onClear: () => void; onLeave: () => void; error?: string }) => {
+    if (o.selected) {
+      const it = o.selected;
+      return (
+        <div className="rounded-xl border border-steel-200 bg-steel-50/70 p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-xs font-medium text-steel-500">{S.itemKatalogTerpilih}</p>
+              <p className="font-semibold text-steel-900">{it.name}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-steel-600">
+                {it.category && <span className="rounded bg-steel-200/70 px-1.5 py-0.5">{String(it.category)}</span>}
+                {it.sku && <span className="font-mono text-steel-500">SKU: {String(it.sku)}</span>}
+                <span className="text-steel-400">·</span>
+                <span>{S.stokTersedia.replace("{n}", `${fmtJumlah(Number(it.stock ?? 0))} ${it.unit ?? "pcs"}`)}</span>
+              </div>
+            </div>
+            <button type="button" className="btn-secondary text-xs" onClick={o.onClear}>{S.gantiItem}</button>
+          </div>
+        </div>
+      );
+    }
+    const results = catalogMatches(o.search);
+    return (
+      <div className="space-y-2">
+        <Field label={S.itemButuh} hint={S.hintPilihDariKatalog} required error={o.error}>
+          <input className="input" placeholder={S.cariKatalogInv} value={o.search} onChange={(e) => o.setSearch(e.target.value)} autoFocus />
+        </Field>
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-steel-200 bg-white divide-y divide-steel-100 shadow-inner">
+          {results.length > 0 ? results.map((item) => (
+            <button key={item.id} type="button" className="w-full px-3 py-2 text-left hover:bg-steel-50 flex items-center justify-between transition-colors"
+              onClick={() => { o.onPick(item); o.setSearch(""); }}>
+              <div>
+                <p className="font-medium text-sm text-steel-900">{item.name}</p>
+                <p className="text-xs text-steel-500">
+                  {item.category ? `${item.category} · ` : ""}
+                  {item.sku ? `SKU: ${item.sku} · ` : ""}
+                  {S.stokTersedia.replace("{n}", `${fmtJumlah(Number(item.stock ?? 0))} ${item.unit ?? "pcs"}`)}
+                </p>
+              </div>
+              <span className="text-xs text-brand-600 font-medium">{S.btnPilihItem}</span>
+            </button>
+          )) : (
+            <div className="p-3 text-center space-y-2">
+              <p className="text-xs text-steel-500">{S.tidakDitemukanKatalog}</p>
+              <p className="text-xs text-steel-500">{S.arahkanKeInventori}</p>
+              {canWriteInventory && (
+                <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1.5"
+                  onClick={() => { o.onLeave(); navigate(`/inventori?tab=Katalog&action=tambah&name=${encodeURIComponent(o.search.trim())}`); }}>
+                  <Plus className="h-3.5 w-3.5" />
+                  {S.btnTambahMaterialInv}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   /* ============ PO BESAR ============ */
   const saveBig = async () => {
     try {
-    if (!bigForm.prId) { toast(S.tPrWajib, "info"); return; }
-    if (!bigForm.vendor) { toast(S.tVendorWajib, "info"); return; }
+    const err: Record<string, string> = {};
     if (bigForm.tujuan === "kapal") {
-      if (!bigForm.project) { toast(S.tKapalProyek, "info"); return; }
-      if (!bigForm.vessel.trim()) { toast(S.tKapalUtk, "info"); return; }
-    } else {
-      if (!bigForm.warehouse.trim()) { toast(S.tGudangWajib, "info"); return; }
-    }
-    if (!bigForm.eta) { toast(S.tEtaWajib, "info"); return; }
-    if (bigLines.length === 0) { toast(S.tMinBaris, "info"); return; }
-    for (const l of bigLines) {
-      if (!l.name.trim()) { toast(S.tNamaBaris, "info"); return; }
-      if (!Number(l.qty) || Number(l.qty) <= 0) { toast(S.tQtyBaris, "info"); return; }
-      if (!Number(l.price) || Number(l.price) <= 0) { toast(S.tHargaBaris, "info"); return; }
-    }
+      if (!bigForm.project) err.project = S.tKapalProyek;
+      if (!bigForm.vessel.trim()) err.vessel = S.tKapalUtk;
+    } else if (!bigForm.warehouse.trim()) err.warehouse = S.tGudangWajib;
+    if (!bigForm.prId) err.prId = S.tPrWajib;
+    if (!bigForm.vendor) err.vendor = S.tVendorWajib;
+    if (!bigForm.eta) err.eta = S.tEtaWajib;
+    if (bigLines.length === 0) err.lines = S.tMinBaris;
+    else if (bigLines.some((l) => !l.name.trim() || !(Number(l.qty) > 0) || !(parseRupiah(l.price) > 0))) err.lines = S.tBarisInvalid;
+    setBigErr(err);
+    if (Object.keys(err).length > 0) { toast(S.tFormInvalid, "info"); return; }
     if (bigOver && (!bigForm.override || !bigForm.overrideReason.trim())) {
       toast(S.tOverBudget, "info");
       return;
@@ -812,36 +884,38 @@ export default function Procurement() {
   /* ============ PO KECIL ============ */
   const saveSmall = async () => {
     try {
-    if (!smallForm.workshop.trim()) { toast(S.tWorkshop, "info"); return; }
-    if (!smallForm.requester.trim()) { toast(S.tPeminta, "info"); return; }
-    if (!smallForm.item.trim()) { toast(S.tItemButuh2, "info"); return; }
     const qty = Number(smallForm.qty);
-    if (!qty || qty <= 0) { toast(S.tQtyPos, "info"); return; }
-    if (!smallForm.unit.trim()) { toast(S.tSatuan, "info"); return; }
-    if (!smallForm.eta) { toast(S.tEtaWajib, "info"); return; }
-    if (smallForm.project && !smallForm.vessel.trim()) { toast(S.tProyekUtk, "info"); return; }
+    const isStok = smallForm.tujuan === "stok";
+    const err: Record<string, string> = {};
+    if (isStok && !smallForm.warehouse) err.warehouse = S.tGudangWajib;
+    if (!isStok && !smallForm.project) err.project = S.tKapalProyek;
+    if (!isStok && !smallForm.vessel.trim()) err.vessel = S.tKapalUtk;
+    if (!smallForm.requester.trim()) err.requester = S.tPeminta;
+    if (!smallForm.eta) err.eta = S.tEtaWajib;
+    if (!smallForm.itemId) err.item = S.hintPilihDariKatalog;
+    if (!qty || qty <= 0) err.qty = S.tQtyPos;
+    if (!smallForm.unit.trim()) err.unit = S.tSatuan;
+    setSmallErr(err);
+    if (Object.keys(err).length > 0) { toast(S.tFormInvalid, "info"); return; }
     /* K17-PROC-01 (Q17): PO Kecil diajukan tanpa harga. Nilai diambil dari
-       nota saat barang diterima (confirmRecv) - di sana batas PO Kecil, cek
-       anggaran proyek, harga stok, dan hutang otomatis memakai nilai nota. */
-    const amount = 0;
+       nota yang dilengkapi lewat Ubah PO setelah disetujui (Q27). */
     await add("purchaseOrders", {
-      poType: "Kecil", item: smallForm.item.trim(), workshop: smallForm.workshop.trim(),
+      poType: "Kecil", item: smallForm.item, itemId: smallForm.itemId,
       requester: smallForm.requester.trim(), vendor: "Workshop Internal",
-      req: "-", amount, qty, unit: smallForm.unit.trim(), receivedQty: 0, returnedQty: 0, status: "Diajukan",
-      date: todayISO(), eta: smallForm.eta || "", project: smallForm.project || "-",
-      vessel: smallForm.vessel.trim(), nota: smallForm.nota.trim(),
-      notaUrl: smallForm.notaUrl?.trim() || "",
-      buktiUrl: smallForm.notaUrl?.trim() || "",
+      req: "-", amount: 0, qty, unit: smallForm.unit.trim(), receivedQty: 0, returnedQty: 0, status: "Diajukan",
+      date: todayISO(), eta: smallForm.eta, tujuan: smallForm.tujuan,
+      project: isStok ? "-" : smallForm.project, vessel: isStok ? "" : smallForm.vessel.trim(),
+      warehouse: isStok ? smallForm.warehouse : "",
+      nota: "", notaUrl: "", buktiUrl: "",
       docNo: sbPoNumber(nextPoSeq()),
-      lines: [{ name: smallForm.item.trim(), qty, unit: smallForm.unit.trim(), price: 0, spec: smallForm.spec.trim(), need: smallForm.need.trim() }],
+      lines: [{ name: smallForm.item, itemId: smallForm.itemId, qty, unit: smallForm.unit.trim(), price: 0 }],
       revisi: "", amendments: [], overrideReason: "",
     }, { action: "membuat PO Kecil", module: "Procurement" });
     toast(S.tSmallCreated);
     setShowSmall(false);
-    setSmallForm({ workshop: "", requester: "", item: "", spec: "", need: "", qty: "1", unit: "pcs", eta: "", project: "", vessel: "", nota: "", notaUrl: "" });
-    setSmallProofUploading(false);
-    setSmallProofError(null);
-    setSmallProofFailedFile(null);
+    setSmallForm(EMPTY_SMALL);
+    setSmallItem(null);
+    setSmallSearch("");
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1132,9 +1206,6 @@ export default function Procurement() {
     const lines = poLines(po);
     const split = po.includePpn === false ? null : sbSplitIncludePpn(Number(po.amount || 0), getSetting(data, "PPN_RATE", 12));
     const rows: (string | number | null)[][] = [
-      [SB_KOP.line1, SB_KOP.name],
-      [SB_KOP.hq, `${SB_KOP.addr1} · HP ${SB_KOP.hp}`],
-      [],
       [S.xPo, po.docNo ? `${po.id} / ${po.docNo}` : po.id],
       [S.xTipe, po.poType === "Kecil" ? S.tabSmall : S.tabBig],
       [S.vendor, po.vendor ?? "-"],
@@ -1155,7 +1226,7 @@ export default function Procurement() {
       [S.xTotal, "", "", "", Number(po.amount || lineTotal(lines))],
       ...(split ? [[S.xDpp.replace("{n}", String(ppnRate)), "", "", "", split.dpp], [S.xPpn.replace("{n}", String(ppnRate)), "", "", "", split.ppn]] : []),
     ];
-    void exportExcel(rows, `PO-${po.id}`, "PO").catch(() => toast(S.saveFail, "info"));
+    void exportExcel(rows, `PO-${po.id}`, "PO", { kop: true }).catch(() => toast(S.saveFail, "info"));
     toast(S.tPoExport.replace("{n}", po.id));
   };
 
@@ -1198,11 +1269,25 @@ export default function Procurement() {
       ]);
     }
     setRecvWarehouse(String(po.warehouse || (data.warehouses?.[0]?.name ?? "")));
-    setRecvNoFaktur(po.noFaktur ? String(po.noFaktur) : "");
+    setRecvNoFaktur(String(po.poType === "Kecil" ? (po.nota ?? "") : (po.noFaktur ?? "")));
     setRecvTglFaktur(po.tglFaktur ? String(po.tglFaktur) : todayISO());
     setRecvDendaPct("0.1");
-    setRecvNotaAmount(Number(po.amount || 0) > 0 ? String(Number(po.amount)) : "");
-    setRecvOverReason("");
+  };
+
+  /* Q27: invoice PO (hutang otomatis saat disetujui) harus disetujui Keuangan
+     atau lunas sebelum barang diterima; PO Kecil juga wajib nota lengkap.
+     Server menolak dengan aturan yang sama (receiveBlocker). */
+  const poInvoiceOf = (po: StoreItem): StoreItem | undefined => {
+    const key = po.docNo ? `${po.id} / ${po.docNo}` : String(po.id);
+    return (data.payables ?? []).find((a) => String(a.poId ?? "") === String(po.id) || String(a.po ?? "") === key);
+  };
+  const notaLengkap = (po: StoreItem): boolean =>
+    Boolean(String(po.nota ?? "").trim() && String(po.notaUrl ?? po.buktiUrl ?? "").trim() && Number(po.notaAmount || 0) > 0);
+  const recvBlocker = (po: StoreItem): string | null => {
+    if (po.poType === "Kecil" && !notaLengkap(po)) return S.recvNeedNota;
+    const ap = poInvoiceOf(po);
+    if (!ap || ap.persetujuan === undefined || ap.st === "Lunas" || ap.persetujuan === "Disetujui") return null;
+    return S.recvNeedInvoice.replace("{n}", String(ap.id));
   };
 
   const recvLate = recvPo ? lateDaysOf(recvPo) : 0;
@@ -1242,22 +1327,12 @@ export default function Procurement() {
     if (!recvPo) return;
     const isBig = recvPo.poType !== "Kecil";
     if (isBig && (!recvNoFaktur.trim() || !recvTglFaktur)) { toast(S.tFakturWajib, "info"); return; }
-    if (!isBig && !recvNoFaktur.trim()) { toast(S.tNotaWajib, "info"); return; }
+    const blocker = recvBlocker(recvPo);
+    if (blocker) { toast(blocker, "info"); return; }
     if (totalRecvQty <= 0) { toast(S.tMinOneItem, "info"); return; }
-    /* PO Kecil: nilai PO = nilai nota (Q17). Batas PO Kecil & anggaran proyek
-       dicek di sini karena saat pengajuan harga belum diketahui. */
-    const poAmount = isBig ? Number(recvPo.amount || 0) : parseRupiah(recvNotaAmount);
-    let overNote = "";
-    if (!isBig) {
-      if (!poAmount || poAmount <= 0) { toast(S.tNotaNilai, "info"); return; }
-      if (poAmount > PO_KECIL_LIMIT) { toast(S.tOverKecil, "info"); return; }
-      const proj = String(recvPo.project ?? "");
-      const bi = proj && proj !== "-" ? budgetInfo(proj, poAmount, String(recvPo.id)) : null;
-      if (bi && bi.aktif + poAmount > bi.sisa) {
-        if (!recvOverReason.trim()) { toast(S.tRecvOverBudget.replace("{n}", fmtRupiah(bi.sisa)), "info"); return; }
-        overNote = recvOverReason.trim();
-      }
-    }
+    /* PO Kecil: nilai PO = nilai nota (Q17), sudah dicek batas & anggaran saat
+       dilengkapi lewat Ubah PO. */
+    const poAmount = isBig ? Number(recvPo.amount || 0) : Number(recvPo.notaAmount || recvPo.amount || 0);
 
     for (const rl of recvLines) {
       const q = Number(rl.qtyToReceive);
@@ -1306,21 +1381,12 @@ export default function Procurement() {
         }
       }
 
-      if (!isBig && poAmount !== Number(recvPo.amount || 0)) {
-        // Harga satuan baris ikut nota supaya nilai stok (avg cost) di server benar.
-        const q = Number(recvPo.qty || 0) > 0 ? Number(recvPo.qty) : 1;
-        const lines = (Array.isArray(recvPo.lines) ? (recvPo.lines as Record<string, unknown>[]) : []).map((l) => ({ ...l, price: Math.round((poAmount / q) * 100) / 100 }));
-        await update("purchaseOrders", String(recvPo.id), {
-          amount: poAmount, notaAmount: poAmount, lines,
-          ...(overNote ? { overrideReason: overNote } : {}),
-        });
-        log("nilai nota PO Kecil", `${recvPo.id}: ${fmtRupiah(poAmount)}${overNote ? ` (melebihi anggaran: ${overNote})` : ""}`, "Procurement");
-      }
       const outcome = await poActions.receive(recvPo, {
         qty: totalRecvQty,
         itemId: finalLines[0]?.itemId || String(recvPo.itemId || ""),
         lines: finalLines,
-        warehouse: recvWarehouse,
+        // Tujuan tetap seperti saat PO dibuat (catatan CTO 20 Okt).
+        warehouse: String(recvPo.warehouse || recvWarehouse),
         noFaktur: recvNoFaktur.trim(),
         tglFaktur: recvTglFaktur,
         dendaRp,
@@ -1421,6 +1487,8 @@ export default function Procurement() {
       itemId: String(po.itemId ?? ""),
       nota: String(po.nota ?? ""),
       notaUrl: String(po.notaUrl ?? po.buktiUrl ?? ""),
+      notaAmount: Number(po.notaAmount || 0) > 0 ? String(Number(po.notaAmount)) : "",
+      overReason: "",
     });
     setEditProofUploading(false);
     setEditProofError(null);
@@ -1458,7 +1526,22 @@ export default function Procurement() {
       (s, l) => s + Number(l.qty || 0) * Number(l.price || 0),
       0,
     );
-    const levelBerubah = Math.abs(amountBaru - Number(editPo.amount || 0)) > 1;
+    const kecil = editPo.poType === "Kecil";
+    /* PO Kecil: nilai = nilai nota (Q17), diisi di sini setelah disetujui (Q27).
+       Batas PO Kecil & sisa anggaran proyek dicek di sini, bukan saat terima. */
+    const notaAmount = kecil ? parseRupiah(poEditForm.notaAmount ?? "") : 0;
+    let overNote = "";
+    if (kecil && notaAmount > 0) {
+      if (notaAmount > PO_KECIL_LIMIT) { toast(S.tOverKecil, "info"); return; }
+      const proj = String(poEditForm.project || editPo.project || "");
+      const bi = proj && proj !== "-" ? budgetInfo(proj, notaAmount, String(editPo.id)) : null;
+      if (bi && bi.aktif + notaAmount > bi.sisa) {
+        if (!(poEditForm.overReason ?? "").trim()) { toast(S.tRecvOverBudget.replace("{n}", fmtRupiah(bi.sisa)), "info"); return; }
+        overNote = (poEditForm.overReason ?? "").trim();
+      }
+    }
+    // PO Kecil hanya satu tahap setuju; nilai nota tidak mengulang persetujuan.
+    const levelBerubah = !kecil && Math.abs(amountBaru - Number(editPo.amount || 0)) > 1;
     try {
       await update("purchaseOrders", String(editPo.id), {
         item: poEditForm.item.trim(),
@@ -1467,11 +1550,15 @@ export default function Procurement() {
         workshop: poEditForm.workshop.trim(),
         requester: poEditForm.requester.trim(),
         project: poEditForm.project,
-        amount: amountBaru,
-        ...(editPo.poType === "Kecil" ? {
+        amount: kecil ? notaAmount : amountBaru,
+        ...(kecil ? {
           nota: (poEditForm.nota ?? "").trim(),
           notaUrl: (poEditForm.notaUrl ?? "").trim(),
           buktiUrl: (poEditForm.notaUrl ?? "").trim(),
+          notaAmount,
+          // Harga satuan baris ikut nota supaya nilai stok (avg cost) di server benar.
+          lines: poLines({ ...editPo, qty }).map((l) => ({ ...l, price: Math.round((notaAmount / qty) * 100) / 100 })),
+          ...(overNote ? { overrideReason: overNote } : {}),
         } : {}),
         ...(levelBerubah
           ? { status: "Draft", approvals: [], received: 0, receivedAt: "" }
@@ -2267,8 +2354,10 @@ const sparkVendors = useMemo(() => {
         </>}
       >
         <div className="space-y-3">
+          {/* PO Kecil: barang dari katalog & tujuan tetap seperti saat dibuat
+              (catatan CTO 20 Okt); yang dilengkapi di sini nota & nilainya. */}
           <Field label={S.item}>
-            <input className="input" value={poEditForm.item} onChange={(e) => setPoEditForm({ ...poEditForm, item: e.target.value })} />
+            <input className="input" value={poEditForm.item} disabled={editPo?.poType === "Kecil"} onChange={(e) => setPoEditForm({ ...poEditForm, item: e.target.value })} />
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={S.qty}>
@@ -2277,21 +2366,32 @@ const sparkVendors = useMemo(() => {
             <Field label={S.satuan}>
               <input className="input" value={poEditForm.unit} onChange={(e) => setPoEditForm({ ...poEditForm, unit: e.target.value })} />
             </Field>
-            <Field label={S.workshop}>
-              <input className="input" value={poEditForm.workshop} onChange={(e) => setPoEditForm({ ...poEditForm, workshop: e.target.value })} />
-            </Field>
+            {editPo?.poType !== "Kecil" && (
+              <Field label={S.workshop}>
+                <input className="input" value={poEditForm.workshop} onChange={(e) => setPoEditForm({ ...poEditForm, workshop: e.target.value })} />
+              </Field>
+            )}
             <Field label={S.peminta}>
               <input className="input" value={poEditForm.requester} onChange={(e) => setPoEditForm({ ...poEditForm, requester: e.target.value })} />
             </Field>
+            {editPo?.poType === "Kecil" ? (
+              <Field label={S.tujuanPenerimaan}>
+                <div className="input bg-steel-100 text-navy-900 flex items-center">
+                  {editPo.warehouse ? S.tujuanStokFmt.replace("{a}", String(editPo.warehouse)) : S.tujuanProyekFmt.replace("{a}", String(editPo.project ?? "-")).replace("{b}", String(editPo.vessel ?? "-"))}
+                </div>
+              </Field>
+            ) : (
             <Field label={S.proyek}>
               <select className="input" value={poEditForm.project} onChange={(e) => setPoEditForm({ ...poEditForm, project: e.target.value })}>
                 <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {String(p.vessel ?? "")}</option>)}
               </select>
             </Field>
+            )}
           </div>
           {editPo?.poType === "Kecil" && (
             <div className="space-y-3 rounded-xl border border-steel-200 bg-surface p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-steel-700">{S.notaBukti}</p>
               <Field label={S.nota}>
                 <input
                   className="input"
@@ -2391,6 +2491,20 @@ const sparkVendors = useMemo(() => {
                   )}
                 </div>
               </Field>
+              <Field label={S.notaNilai} hint={S.hintNotaNilai.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}>
+                <MoneyInput className="input" value={poEditForm.notaAmount ?? ""} onChange={(v) => setPoEditForm({ ...poEditForm, notaAmount: v })} />
+              </Field>
+              {(() => {
+                const val = parseRupiah(poEditForm.notaAmount ?? "");
+                const proj = String(poEditForm.project || "");
+                const bi = val > 0 && proj && proj !== "-" && editPo ? budgetInfo(proj, val, String(editPo.id)) : null;
+                return bi && bi.aktif + val > bi.sisa ? (
+                  <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {S.overSmall.replace("{n}", fmtRupiah(bi.sisa))}
+                    <input className="input mt-2" placeholder={S.phOverride} value={poEditForm.overReason ?? ""} onChange={(e) => setPoEditForm({ ...poEditForm, overReason: e.target.value })} />
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
           <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-500">
@@ -2522,47 +2636,30 @@ const sparkVendors = useMemo(() => {
       </Modal>
 
       {/* Modal PO Besar */}
-      <Modal open={showBig} onClose={() => setShowBig(false)} title={S.mBigT} subtitle={S.mBigS}
+      <Modal open={showBig} onClose={() => { setShowBig(false); setBigErr({}); }} title={S.mBigT} subtitle={S.mBigS}
         wide footer={<><button className="btn-secondary" onClick={() => setShowBig(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveBig}>{S.btnSimpanBig}</AsyncButton></>}>
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={S.ariaTujuan}>
-            {(["kapal", "stok"] as const).map((t) => (
-              <label key={t} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${bigForm.tujuan === t ? "border-navy-700 bg-navy-50 text-navy-900" : "border-steel-200 text-steel-600"}`}>
-                <input
-                  type="radio"
-                  name="tujuan-po"
-                  checked={bigForm.tujuan === t}
-                  onChange={() =>
-                    setBigForm((prev) => ({
-                      ...prev,
-                      tujuan: t,
-                      ...(t === "stok"
-                        ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") }
-                        : { warehouse: "" }),
-                    }))
-                  }
-                />
-                {t === "kapal" ? S.tujuanKapal : S.tujuanStok}
-              </label>
-            ))}
-          </div>
+          {renderTujuanTabs(bigForm.tujuan, (t) => setBigForm((prev) => ({
+            ...prev, tujuan: t,
+            ...(t === "stok" ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") } : { warehouse: "" }),
+          })), "tujuan-po")}
 
           <FormGrid>
             {bigForm.tujuan === "kapal" ? (
               <>
-                <Field label={S.proyekBudget} hint={S.hintWajibKapal}>
-                  <select className="input" value={bigForm.project} onChange={(e) => setBigForm({ ...bigForm, project: e.target.value })}>
-                    <option value="">{S.optTanpaProyek}</option>
+                <Field label={S.proyekBudget} required error={bigErr.project}>
+                  <select className="input" value={bigForm.project} onChange={(e) => { setBigErr((x) => ({ ...x, project: "" })); setBigForm({ ...bigForm, project: e.target.value }); }}>
+                    <option value="">{S.optPilihProyek}</option>
                     {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
                   </select>
                 </Field>
-                <Field label={S.fUtk} hint={S.hintUtkContoh}>
-                  <input className="input" value={bigForm.vessel} onChange={(e) => setBigForm({ ...bigForm, vessel: e.target.value })} placeholder={S.phUtk} />
+                <Field label={S.fUtk} hint={S.hintUtkContoh} required error={bigErr.vessel}>
+                  <input className="input" value={bigForm.vessel} onChange={(e) => { setBigErr((x) => ({ ...x, vessel: "" })); setBigForm({ ...bigForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
                 </Field>
               </>
             ) : (
-              <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
-                <select className="input" value={bigForm.warehouse} onChange={(e) => setBigForm({ ...bigForm, warehouse: e.target.value })}>
+              <Field label={S.fGudangTujuan} required error={bigErr.warehouse}>
+                <select className="input" value={bigForm.warehouse} onChange={(e) => { setBigErr((x) => ({ ...x, warehouse: "" })); setBigForm({ ...bigForm, warehouse: e.target.value }); }}>
                   <option value="">{S.optPilihGudang}</option>
                   {warehouseNames(data.warehouses ?? []).map((w) => (
                     <option key={w} value={w}>{w}</option>
@@ -2570,8 +2667,8 @@ const sparkVendors = useMemo(() => {
                 </select>
               </Field>
             )}
-            <Field label={S.fPrDisetujui} hint={S.hintPrWajib}>
-              <select className="input" value={bigForm.prId} onChange={(e) => setBigForm({ ...bigForm, prId: e.target.value })}>
+            <Field label={S.fPrDisetujui} hint={S.hintPrWajib} required error={bigErr.prId}>
+              <select className="input" value={bigForm.prId} onChange={(e) => { setBigErr((x) => ({ ...x, prId: "" })); setBigForm({ ...bigForm, prId: e.target.value }); }}>
                 <option value="">{S.optPilihPr}</option>
                 {approvedPRs.map((r) => <option key={r.id} value={r.id}>{r.id} - {r.item} · {fmtRupiah(r.amount)}</option>)}
               </select>
@@ -2580,7 +2677,8 @@ const sparkVendors = useMemo(() => {
 
           {/* Editor baris item di BAGIAN ATAS form */}
           <div className="rounded-xl border border-steel-200 bg-steel-50/50 p-3">
-            <p className="label !mb-2">{S.barisMin}</p>
+            <p className="label !mb-2">{S.barisMin}<span className="text-rose-600" aria-hidden> *</span></p>
+            {bigErr.lines && <p role="alert" className="mb-2 text-[11px] font-medium text-rose-600">{bigErr.lines}</p>}
             <datalist id="inv-item-catalog-list">
               {(data.inventory ?? []).map((inv) => (
                 <option key={inv.id} value={inv.name}>{inv.name} · stok {fmtJumlah(Number(inv.stock))} {inv.unit}</option>
@@ -2642,13 +2740,13 @@ const sparkVendors = useMemo(() => {
           </div>
 
           <FormGrid>
-            <Field label={S.vendor}>
-              <select className="input" value={bigForm.vendor} onChange={(e) => setBigForm({ ...bigForm, vendor: e.target.value })}>
+            <Field label={S.vendor} required error={bigErr.vendor}>
+              <select className="input" value={bigForm.vendor} onChange={(e) => { setBigErr((x) => ({ ...x, vendor: "" })); setBigForm({ ...bigForm, vendor: e.target.value }); }}>
                 <option value="">{S.optPilihVendor}</option>
                 {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}{payungOf(v) ? ` (Payung: ${fmtRupiah(payungOf(v)!.plafon)})` : ""}</option>)}
               </select>
             </Field>
-            <Field label={S.etaWajib}><input type="date" className="input" value={bigForm.eta} onChange={(e) => setBigForm({ ...bigForm, eta: e.target.value })} /></Field>
+            <Field label={S.eta} required error={bigErr.eta}><input type="date" className="input" value={bigForm.eta} onChange={(e) => { setBigErr((x) => ({ ...x, eta: "" })); setBigForm({ ...bigForm, eta: e.target.value }); }} /></Field>
           </FormGrid>
 
           <FormGrid>
@@ -2686,138 +2784,59 @@ const sparkVendors = useMemo(() => {
       </Modal>
 
       {/* Modal PO Kecil */}
-      <Modal open={showSmall} onClose={() => setShowSmall(false)} title={S.mSmallT} subtitle={S.mSmallS}
+      <Modal open={showSmall} onClose={() => { setShowSmall(false); setSmallErr({}); }} title={S.mSmallT} subtitle={S.mSmallS}
         footer={<><button className="btn-secondary" onClick={() => setShowSmall(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveSmall}>{S.btnSimpanSmall}</AsyncButton></>}>
         <div className="space-y-3">
+          {/* Catatan CTO 21 Okt: pilihan tujuan paling atas; Workshop diganti Proyek. */}
+          {renderTujuanTabs(smallForm.tujuan, (t) => { setSmallErr({}); setSmallForm((prev) => ({
+            ...prev, tujuan: t,
+            ...(t === "stok" ? { project: "", vessel: "", warehouse: prev.warehouse || (data.warehouses?.[0]?.name ?? "") } : { warehouse: "" }),
+          })); }, "tujuan-po-kecil")}
           <FormGrid>
-            <Field label={S.workshop}><input className="input" value={smallForm.workshop} onChange={(e) => setSmallForm({ ...smallForm, workshop: e.target.value })} placeholder={S.phWorkshop} /></Field>
-            <Field label={S.peminta}><input className="input" value={smallForm.requester} onChange={(e) => setSmallForm({ ...smallForm, requester: e.target.value })} placeholder={S.phPeminta} /></Field>
+            {smallForm.tujuan === "kapal" ? (
+              <>
+                <Field label={S.proyekBudget} required error={smallErr.project}>
+                  <select className="input" value={smallForm.project} onChange={(e) => { setSmallErr((x) => ({ ...x, project: "", vessel: "" })); setSmallForm({ ...smallForm, project: e.target.value, vessel: smallForm.vessel || String(data.projects.find((p) => p.id === e.target.value)?.vessel ?? "") }); }}>
+                    <option value="">{S.optPilihProyek}</option>
+                    {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
+                  </select>
+                </Field>
+                <Field label={S.fUtk} hint={S.hintUtkContoh} required error={smallErr.vessel}>
+                  <input className="input" value={smallForm.vessel} onChange={(e) => { setSmallErr((e) => ({ ...e, vessel: "" })); setSmallForm({ ...smallForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
+                </Field>
+              </>
+            ) : (
+              <Field label={S.fGudangTujuan} required error={smallErr.warehouse}>
+                <select className="input" value={smallForm.warehouse} onChange={(e) => { setSmallErr((e) => ({ ...e, warehouse: "" })); setSmallForm({ ...smallForm, warehouse: e.target.value }); }}>
+                  <option value="">{S.optPilihGudang}</option>
+                  {warehouseNames(data.warehouses ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label={S.peminta} required error={smallErr.requester}><input className="input" value={smallForm.requester} onChange={(e) => { setSmallErr((e) => ({ ...e, requester: "" })); setSmallForm({ ...smallForm, requester: e.target.value }); }} placeholder={S.phPeminta} /></Field>
+            <Field label={S.eta} required error={smallErr.eta}><input type="date" className="input" value={smallForm.eta} onChange={(e) => { setSmallErr((e) => ({ ...e, eta: "" })); setSmallForm({ ...smallForm, eta: e.target.value }); }} /></Field>
           </FormGrid>
-          <Field label={S.itemBebas}><input className="input" value={smallForm.item} onChange={(e) => setSmallForm({ ...smallForm, item: e.target.value })} placeholder={S.phItemBebas} /></Field>
+          {renderCatalogPicker({
+            selected: smallItem,
+            search: smallSearch,
+            setSearch: setSmallSearch,
+            onPick: (item) => {
+              setSmallItem(item);
+              setSmallErr((x) => ({ ...x, item: "" }));
+              setSmallForm((prev) => ({ ...prev, item: String(item.name ?? ""), itemId: String(item.id ?? ""), unit: String(item.unit ?? prev.unit ?? "pcs") }));
+            },
+            onClear: () => { setSmallItem(null); setSmallForm((prev) => ({ ...prev, item: "", itemId: "" })); },
+            onLeave: () => setShowSmall(false),
+            error: smallErr.item,
+          })}
           <FormGrid>
-            <Field label="Spesifikasi"><input className="input" value={smallForm.spec} onChange={(e) => setSmallForm({ ...smallForm, spec: e.target.value })} placeholder="cth: MS P/K 10x10" /></Field>
-            <Field label="Kebutuhan / untuk apa"><input className="input" value={smallForm.need} onChange={(e) => setSmallForm({ ...smallForm, need: e.target.value })} placeholder="cth: BPK deck 3" /></Field>
-          </FormGrid>
-          <FormGrid>
-            <Field label={S.qty}><NumInput min={1} className="input" value={smallForm.qty} onChange={(e) => setSmallForm({ ...smallForm, qty: e.target.value })} /></Field>
-            <Field label={S.satuan}>
+            <Field label={S.qty} required error={smallErr.qty}><NumInput min={1} className="input" value={smallForm.qty} onChange={(e) => { setSmallErr((e) => ({ ...e, qty: "" })); setSmallForm({ ...smallForm, qty: e.target.value }); }} /></Field>
+            <Field label={S.satuan} required error={smallErr.unit}>
               <select className="input" value={smallForm.unit} onChange={(e) => setSmallForm({ ...smallForm, unit: e.target.value })}>
-                {["pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"].map((u) => <option key={u}>{u}</option>)}
+                {[...new Set([smallForm.unit, "pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"])].map((u) => <option key={u}>{u}</option>)}
               </select>
             </Field>
           </FormGrid>
-
-          {/* No. Nota & Bukti Transaksi */}
-          <div className="rounded-xl border border-steel-200 bg-steel-50/60 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700">{S.notaBukti}</h4>
-              <span className="text-[11px] text-steel-500">{locale === "en" ? "Receipt number & proof file" : "Nomor nota & berkas bukti transaksi"}</span>
-            </div>
-            <Field label={S.nota} hint={locale === "en" ? "Receipt or invoice reference number" : "Nomor nota atau referensi struk pembelian"}>
-              <input className="input bg-white" value={smallForm.nota} onChange={(e) => setSmallForm({ ...smallForm, nota: e.target.value })} placeholder={S.phNota} />
-            </Field>
-            <Field label={S.lampiranBukti} hint={locale === "en" ? "Upload receipt/invoice document or photo" : "Unggah berkas kuitansi atau struk (.png, .jpg, .pdf max 10MB)"}>
-            <div className="space-y-2">
-              {smallForm.notaUrl ? (
-                <div className="flex items-center justify-between rounded-lg border border-steel-200 bg-steel-50 p-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Paperclip className="h-4 w-4 shrink-0 text-navy-700" />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-navy-900" title={fileNameOf(smallForm.notaUrl)}>
-                        {fileNameOf(smallForm.notaUrl)}
-                      </p>
-                      <p className="text-[11px] text-emerald-600">{S.buktiTerlampir}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      className="btn-secondary py-1 px-2 text-xs"
-                      onClick={() => void openFileUrl(smallForm.notaUrl)}
-                    >
-                      {S.bukaBukti}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary py-1 px-2 text-xs text-rose-600 hover:text-rose-700"
-                      onClick={() => setSmallForm({ ...smallForm, notaUrl: "" })}
-                      title={S.hapusBukti}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className={`inline-flex items-center gap-2 rounded-lg border border-steel-300 bg-white px-3 py-2 text-xs font-medium text-steel-700 shadow-sm hover:bg-steel-50 cursor-pointer ${smallProofUploading ? "opacity-50 pointer-events-none" : ""}`}>
-                    <input
-                      type="file"
-                      accept=".png,.jpg,.jpeg,.pdf"
-                      className="hidden"
-                      disabled={smallProofUploading}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) {
-                          void uploadProofFile(
-                            file,
-                            (url) => setSmallForm((prev) => ({ ...prev, notaUrl: url })),
-                            setSmallProofUploading,
-                            setSmallProofError,
-                            setSmallProofFailedFile,
-                          );
-                        }
-                      }}
-                    />
-                    {smallProofUploading ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-navy-700" />
-                        <span>{S.statusMengunggah}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-3.5 w-3.5 text-steel-500" />
-                        <span>{S.unggahBukti}</span>
-                      </>
-                    )}
-                  </label>
-                  <span className="ml-2 text-xs text-steel-400">(.png, .jpg, .pdf max 10MB)</span>
-                </div>
-              )}
-
-              {smallProofError && (
-                <div className="flex items-center justify-between rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                  <span className="truncate mr-2">{smallProofError}</span>
-                  {smallProofFailedFile && (
-                    <button
-                      type="button"
-                      className="shrink-0 font-semibold underline hover:text-rose-900"
-                      onClick={() => void uploadProofFile(
-                        smallProofFailedFile,
-                        (url) => setSmallForm((prev) => ({ ...prev, notaUrl: url })),
-                        setSmallProofUploading,
-                        setSmallProofError,
-                        setSmallProofFailedFile,
-                      )}
-                    >
-                      {S.cobaUlang}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </Field>
-          </div>
-          <FormGrid>
-            <Field label={S.etaWajib}><input type="date" className="input" value={smallForm.eta} onChange={(e) => setSmallForm({ ...smallForm, eta: e.target.value })} /></Field>
-            <Field label={S.proyekBudget}>
-              <select className="input" value={smallForm.project} onChange={(e) => setSmallForm({ ...smallForm, project: e.target.value })}>
-                <option value="">{S.optStokWorkshop}</option>
-                {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
-            </Field>
-          </FormGrid>
-          <Field label={S.fUtk} hint={S.hintWajibProyek}><input className="input" value={smallForm.vessel} onChange={(e) => setSmallForm({ ...smallForm, vessel: e.target.value })} placeholder={S.phUtkStok} /></Field>
           <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">{S.smallValueHint.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}</p>
         </div>
       </Modal>
@@ -2890,7 +2909,7 @@ const sparkVendors = useMemo(() => {
       <Modal open={recvPo !== null} onClose={() => setRecvPo(null)} title={S.mRecvT.replace("{n}", recvPo?.id ?? "")} subtitle={S.mRecvS}
         wide footer={<>
           <button className="btn-secondary" onClick={() => setRecvPo(null)}>{S.btnBatal}</button>
-          <AsyncButton className="btn-primary" onAction={confirmRecv}>{n_mr[locale].poReceiveBtn}</AsyncButton>
+          <AsyncButton className="btn-primary" onAction={confirmRecv} disabled={recvPo ? recvBlocker(recvPo) !== null : false}>{n_mr[locale].poReceiveBtn}</AsyncButton>
         </>}>
         <div className="space-y-4">
           {/* 1. DAFTAR ITEM PO TERLEBIH DAHULU */}
@@ -2942,12 +2961,16 @@ const sparkVendors = useMemo(() => {
             <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700">{S.tujuanPenerimaan}</h4>
             <FormGrid>
               {recvPo && (recvPo.tujuan === "stok" || recvPo.project === "-") ? (
-                <Field label={S.fGudangTujuan} hint={S.hintGudangWajib}>
+                <Field label={S.fGudangTujuan} hint={recvPo.warehouse ? undefined : S.hintGudangWajib}>
+                  {recvPo.warehouse ? (
+                    <div className="input bg-steel-100 text-navy-900 flex items-center">{String(recvPo.warehouse)}</div>
+                  ) : (
                   <select className="input bg-white" value={recvWarehouse} onChange={(e) => setRecvWarehouse(e.target.value)}>
                     {warehouseNames(data.warehouses ?? []).map((w) => (
                       <option key={w} value={w}>{w}</option>
                     ))}
                   </select>
+                  )}
                 </Field>
               ) : (
                 <Field label={S.proyekBudget}>
@@ -2964,34 +2987,34 @@ const sparkVendors = useMemo(() => {
             </FormGrid>
           </div>
 
-          {/* 3. FAKTUR PAJAK / SURAT JALAN */}
+          {/* 3. FAKTUR PAJAK (PO Besar) / NOTA dari Ubah PO (PO Kecil) */}
+          {recvPo?.poType === "Kecil" ? (
+            <div className="rounded-xl border border-steel-200 p-3 text-xs">
+              <p className="mb-2 font-semibold uppercase tracking-wider text-steel-700">{S.notaBukti}</p>
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div><dt className="text-steel-500">{S.nota}</dt><dd className="font-mono text-navy-900">{String(recvPo.nota || "-")}</dd></div>
+                <div><dt className="text-steel-500">{S.lampiranBukti}</dt><dd>{String(recvPo.notaUrl ?? recvPo.buktiUrl ?? "") ? <button type="button" className="text-brand-600 underline" onClick={() => void openFileUrl(String(recvPo.notaUrl ?? recvPo.buktiUrl))}>{S.bukaBukti}</button> : "-"}</dd></div>
+                <div><dt className="text-steel-500">{S.notaNilai}</dt><dd className="font-mono text-navy-900">{Number(recvPo.notaAmount || 0) > 0 ? fmtRupiah(Number(recvPo.notaAmount)) : "-"}</dd></div>
+              </dl>
+            </div>
+          ) : (
           <FormGrid>
-            <Field label={recvPo?.poType === "Kecil" ? S.nota : S.noFaktur} hint={recvPo?.poType === "Kecil" ? undefined : S.hintWajibBesar}>
+            <Field label={S.noFaktur} hint={S.hintWajibBesar}>
               <input className="input font-mono" value={recvNoFaktur} onChange={(e) => setRecvNoFaktur(e.target.value)} placeholder={S.phFaktur} />
             </Field>
-            <Field label={S.tglFaktur} hint={recvPo?.poType === "Kecil" ? S.hintOpsKecil : S.hintWajibBesar}>
+            <Field label={S.tglFaktur} hint={S.hintWajibBesar}>
               <input type="date" className="input" value={recvTglFaktur} onChange={(e) => setRecvTglFaktur(e.target.value)} />
             </Field>
           </FormGrid>
-          {recvPo?.poType === "Kecil" && (() => {
-            const val = parseRupiah(recvNotaAmount);
-            const proj = String(recvPo.project ?? "");
-            const bi = val > 0 && proj && proj !== "-" ? budgetInfo(proj, val, String(recvPo.id)) : null;
-            const over = bi !== null && bi.aktif + val > bi.sisa;
-            return (
-              <div className="space-y-2">
-                <Field label={S.notaNilai} hint={S.hintNotaNilai.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}>
-                  <MoneyInput className="input" value={recvNotaAmount} onChange={(v) => setRecvNotaAmount(v)} />
-                </Field>
-                {over && bi && (
-                  <div className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                    {S.overSmall.replace("{n}", fmtRupiah(bi.sisa))}
-                    <input className="input mt-2" placeholder={S.phOverride} value={recvOverReason} onChange={(e) => setRecvOverReason(e.target.value)} />
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          )}
+          {recvPo && recvBlocker(recvPo) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              <span>{recvBlocker(recvPo)}</span>
+              {recvPo.poType === "Kecil" && !notaLengkap(recvPo) && (
+                <button type="button" className="btn-secondary text-xs" onClick={() => { const po = recvPo; setRecvPo(null); openPoEdit(po); }}>{S.btnLengkapiNota}</button>
+              )}
+            </div>
+          )}
 
           {recvPo && recvLate > 0 && (
             <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
@@ -3247,92 +3270,17 @@ const sparkVendors = useMemo(() => {
           } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
         }}>{S.btnAjukan}</button></>}>
         <div className="space-y-3">
-          {prSelectedItem ? (
-            <div className="rounded-xl border border-steel-200 bg-steel-50/70 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs font-medium text-steel-500">{S.itemKatalogTerpilih}</p>
-                  <p className="font-semibold text-steel-900">{prSelectedItem.name}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-steel-600">
-                    {prSelectedItem.category && <span className="rounded bg-steel-200/70 px-1.5 py-0.5">{String(prSelectedItem.category)}</span>}
-                    {prSelectedItem.sku && <span className="font-mono text-steel-500">SKU: {String(prSelectedItem.sku)}</span>}
-                    <span className="text-steel-400">·</span>
-                    <span>{S.stokTersedia.replace("{n}", `${fmtJumlah(Number(prSelectedItem.stock ?? 0))} ${prSelectedItem.unit ?? "pcs"}`)}</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary text-xs"
-                  onClick={() => {
-                    setPrSelectedItem(null);
-                    setPrForm((prev) => ({ ...prev, item: "", itemId: "" }));
-                  }}
-                >
-                  {S.gantiItem}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Field label={S.itemButuh} hint={S.hintPilihDariKatalog}>
-                <input
-                  className="input"
-                  placeholder={S.cariKatalogInv}
-                  value={prItemSearch}
-                  onChange={(e) => setPrItemSearch(e.target.value)}
-                  autoFocus
-                />
-              </Field>
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-steel-200 bg-white divide-y divide-steel-100 shadow-inner">
-                {catalogSearchResults.length > 0 ? (
-                  catalogSearchResults.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="w-full px-3 py-2 text-left hover:bg-steel-50 flex items-center justify-between transition-colors"
-                      onClick={() => {
-                        setPrSelectedItem(item);
-                        setPrForm((prev) => ({
-                          ...prev,
-                          item: String(item.name ?? ""),
-                          itemId: String(item.id ?? ""),
-                          unit: String(item.unit ?? prev.unit ?? "pcs"),
-                        }));
-                        setPrItemSearch("");
-                      }}
-                    >
-                      <div>
-                        <p className="font-medium text-sm text-steel-900">{item.name}</p>
-                        <p className="text-xs text-steel-500">
-                          {item.category ? `${item.category} · ` : ""}
-                          {item.sku ? `SKU: ${item.sku} · ` : ""}
-                          {S.stokTersedia.replace("{n}", `${fmtJumlah(Number(item.stock ?? 0))} ${item.unit ?? "pcs"}`)}
-                        </p>
-                      </div>
-                      <span className="text-xs text-brand-600 font-medium">{S.btnPilihItem}</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="p-3 text-center space-y-2">
-                    <p className="text-xs text-steel-500">{S.tidakDitemukanKatalog}</p>
-                    {canWriteInventory && (
-                      <button
-                        type="button"
-                        className="btn-secondary text-xs inline-flex items-center gap-1.5"
-                        onClick={() => {
-                          setShowPr(false);
-                          navigate(`/inventori?tab=Katalog&action=tambah&name=${encodeURIComponent(prItemSearch.trim())}`);
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {S.btnTambahMaterialInv}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {renderCatalogPicker({
+            selected: prSelectedItem,
+            search: prItemSearch,
+            setSearch: setPrItemSearch,
+            onPick: (item) => {
+              setPrSelectedItem(item);
+              setPrForm((prev) => ({ ...prev, item: String(item.name ?? ""), itemId: String(item.id ?? ""), unit: String(item.unit ?? prev.unit ?? "pcs") }));
+            },
+            onClear: () => { setPrSelectedItem(null); setPrForm((prev) => ({ ...prev, item: "", itemId: "" })); },
+            onLeave: () => setShowPr(false),
+          })}
           <FormGrid>
             <Field label={S.pemohon}><input className="input" value={prForm.by} onChange={(e) => setPrForm({ ...prForm, by: e.target.value })} placeholder={S.phPeminta} /></Field>
           </FormGrid>

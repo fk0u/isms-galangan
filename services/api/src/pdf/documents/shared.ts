@@ -4,6 +4,9 @@
  * TIDAK duplikat di 21 factory. Kesalahan seperti "kwitansi pakai ejaan
  * tanggal berbeda dari PO" tidak mungkin terjadi kalau semua lewat sini.
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { q } from "../../db.js";
 import { kopBlock, titleBlock, paragraph, type Block } from "../blocks.js";
 import type { Document } from "../document.js";
@@ -72,8 +75,41 @@ export function kopDirector(): string {
   return kopOverride.director ?? KOP.director;
 }
 
-/** Kop perusahaan. Semua dokumen resmi memakai ini tanpa variasi. */
+/* Kop gambar milik klien (dari template Word mereka, 1142×214 px). Catatan CTO
+   20 Okt + Q28: SEMUA dokumen memakai kop yang sama dengan surat HR. */
+let kopCache: string | null = null;
+export function kopImageSrc(): string | null {
+  if (kopCache !== null) return kopCache || null;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  try {
+    kopCache = `data:image/jpeg;base64,${fs.readFileSync(path.resolve(here, "../../../assets/kop-sb.jpg")).toString("base64")}`;
+  } catch {
+    kopCache = ""; // tanpa berkas: kop teks di bawah
+  }
+  return kopCache || null;
+}
+const KOP_RATIO = 214 / 1142;
+
+/** Kop perusahaan. Semua dokumen resmi memakai ini tanpa variasi: kop gambar
+ *  klien selebar area isi; kop teks (bisa diubah lewat setting) hanya bila
+ *  berkas gambar tidak ada. */
 export function companyKop(): Block {
+  const src = kopImageSrc();
+  if (src) {
+    return {
+      spaceAfter: 3,
+      plan: (_ctx, width) => ({
+        splittable: false,
+        segments: [{
+          height: width * KOP_RATIO,
+          draw: (c, rec, x, y) => {
+            c.pdf.addImage(src, "JPEG", x, y, width, width * KOP_RATIO, "kop-sb");
+            rec.push({ page: c.pdf.getCurrentPageInfo().pageNumber, x, y, w: width, h: width * KOP_RATIO, kind: "image" });
+          },
+        }],
+      }),
+    };
+  }
   const k = { ...KOP, ...kopOverride };
   return kopBlock({
     name: k.name,

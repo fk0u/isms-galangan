@@ -35,3 +35,6 @@ Bila klien memberi jawaban berbeda nanti, catat sebagai baris baru (jangan hapus
 | Q23 | Pemicu invoice otomatis dari PO | **Saat PO disetujui.** | #185 K17-PROC-05 |
 | Q24 | Transaksi yang menerbitkan voucher jurnal | **Semua transaksi yang berdampak ke Keuangan & Billing.** | #193 K17-FIN-08 |
 | Q25 | Aturan potongan kasbon Rp500 rb / Rp1 jt | Dipotong otomatis lewat gaji bulanan; **nominal dipilih lewat dropdown (Rp500.000 / Rp1.000.000) saat mencatat kasbon** di Payroll. | #196 K17-HR-03 |
+| Q26 | Stepper progress proyek lama (7 tahap) vs dropdown 8 tahap (catatan CTO 20 Okt) | **Semua proyek memakai 8 tahap Q20.** Proyek lama dipindah lewat `npm run migrate:project-stages` (pemetaan tetap, cadangan JSON, `--revert`); `tahapLog` lama tidak diubah. (Owner, 21 Okt) | menggantikan sebagian Q20 |
+| Q27 | Syarat terima barang PO | **Semua PO (besar & kecil):** invoice PO terbit saat PO disetujui; barang baru bisa diterima setelah invoice disetujui/lunas. (Owner, 21 Okt) | lanjutan Q23 |
+| Q28 | Kop surat dokumen | **Semua PDF memakai kop gambar klien yang sama** (`services/api/assets/kop-sb.jpg`). (Owner, 21 Okt) | catatan CTO 20 Okt |
