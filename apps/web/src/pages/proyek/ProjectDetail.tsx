@@ -337,10 +337,10 @@ const confirmStatus = async () => {
     try {
       await update("projects", pid, {
         tahap: to,
-        ...(to === "Handover" && tahapMove.dir === 1 ? { status: "Selesai" } : {}),
+        ...(to === tahapAkhirOf(project) && tahapMove.dir === 1 ? { status: "Selesai" } : {}),
         tahapLog: [...(project.tahapLog ?? []), { from: tahapOf(project), to, date: todayISO(), by: "Anda", reason: tahapReason.trim() }],
       });
-      log(tahapMove.dir === 1 ? "memajukan tahap" : "menurunkan tahap", `${pid} → ${to} (alasan: ${tahapReason.trim()})${to === "Handover" && tahapMove.dir === 1 ? " + status Selesai" : ""}`, "Proyek");
+      log(tahapMove.dir === 1 ? "memajukan tahap" : "menurunkan tahap", `${pid} → ${to} (alasan: ${tahapReason.trim()})${to === tahapAkhirOf(project) && tahapMove.dir === 1 ? " + status Selesai" : ""}`, "Proyek");
       toast(S.detToastStage.replace("{a}", pid).replace("{b}", to));
       setTahapMove(null);
       setTahapReason("");

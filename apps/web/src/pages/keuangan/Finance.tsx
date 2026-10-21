@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban } from "lucide-react";
+import { tahapAkhirOf } from "../../utils/projectStages";
 import { openFileUrl } from "../../services/files";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { pdfServerReady } from "../../services/pdfClient";
@@ -2574,7 +2575,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           const bastOk = (data.bast ?? []).some(
             (b) => String(b.projectId ?? "") === pid && String(b.status) === "Disetujui"
           );
-          if (rest.length === 0 && String(proj.tahap) === "Handover" && bastOk) {
+          if (rest.length === 0 && String(proj.tahap) === tahapAkhirOf(proj) && bastOk) {
             const backendConfigured = isBackendConfigured();
             const remoteSession = backendConfigured && Boolean(getJwt());
             let wbs: WbsItem[] | undefined = backendConfigured ? undefined : wbsByProject[pid];
