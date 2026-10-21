@@ -909,7 +909,7 @@ export default function KaryawanDetail() {
         }
       >
         <div className="space-y-3">
-          <Field label={S.fJudulDok}><input className="input" value={docForm.title} onChange={(e) => setDocForm({ ...docForm, title: e.target.value })} placeholder={S.phDok} /></Field>
+          <Field label={S.fJudulDok} required><input className="input" value={docForm.title} onChange={(e) => setDocForm({ ...docForm, title: e.target.value })} placeholder={S.phDok} /></Field>
           <FormGrid>
             <Field label={S.thTipe}>
               <select className="input" value={docForm.type} onChange={(e) => setDocForm({ ...docForm, type: e.target.value })}>
@@ -955,7 +955,7 @@ export default function KaryawanDetail() {
       >
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thTanggal}><input type="date" className="input" value={attForm.date} onChange={(e) => setAttForm({ ...attForm, date: e.target.value })} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={attForm.date} onChange={(e) => setAttForm({ ...attForm, date: e.target.value })} /></Field>
             <Field label={S.thShift}>
               <select className="input" value={attForm.shift} onChange={(e) => setAttForm({ ...attForm, shift: e.target.value })}>
                 <option>Pagi</option>

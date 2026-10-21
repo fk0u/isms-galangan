@@ -571,16 +571,16 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title={S.boqAddTitle}
         footer={<><button className="btn-secondary" onClick={() => setShowAdd(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveBoq}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.boqNameField}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.boqNamePh} /></Field>
+          <Field label={S.boqNameField} required><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.boqNamePh} /></Field>
           <Field label={S.prjScopeDesc}><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
           <FormGrid>
-            <Field label={S.boqQty}><NumInput className="input" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field>
+            <Field label={S.boqQty} required><NumInput className="input" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field>
             <Field label={S.colUnit}><select className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
               {SATUAN.map((u) => <option key={u} value={u}>{u}</option>)}
             </select></Field>
           </FormGrid>
           <FormGrid>
-            <Field label={S.colUnitPrice} hint={
+            <Field label={S.colUnitPrice} required hint={
               /* #85: subtotal langsung = kuantitas × harga satuan, mengikuti isian.
                  Belum lengkap/invalid → tidak menampilkan angka yang menyesatkan. */
               !(Number(form.quantity) > 0 && parseRupiah(form.unitPrice) > 0) ? undefined : S.boqLiveTotal

@@ -807,6 +807,7 @@ export function Modal({
   fullWidth?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { locale } = useT();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
@@ -886,7 +887,23 @@ export function Modal({
             </div>
             <div className="overflow-y-auto px-5 py-4">{children}</div>
             {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-steel-100 bg-steel-50/70 px-5 py-3">
+              <div
+                className="flex items-center justify-end gap-2 border-t border-steel-100 bg-steel-50/70 px-5 py-3"
+                onClickCapture={(e) => {
+                  /* Tombol utama (simpan) memeriksa semua Field `required` dulu.
+                     Ada yang kosong: klik dibatalkan, fokus ke isian pertama. */
+                  const btn = (e.target as HTMLElement).closest("button");
+                  const root = dialogRef.current;
+                  if (!btn || !root || btn.disabled || !btn.matches(".btn-primary, .btn-primary-gradient, [data-submit]") || btn.matches("[data-novalidate]")) return;
+                  const ev = new CustomEvent(VALIDATE_EVENT, { detail: { invalid: 0 } });
+                  root.dispatchEvent(ev);
+                  if (ev.detail.invalid === 0) return;
+                  e.stopPropagation();
+                  e.preventDefault();
+                  toast(n_misc[locale === "en" ? "en" : "id"].formInvalid, "info");
+                  requestAnimationFrame(() => root.querySelector<HTMLElement>('label[aria-invalid="true"] input, label[aria-invalid="true"] select, label[aria-invalid="true"] textarea')?.focus());
+                }}
+              >
                 {footer}
               </div>
             )}
@@ -942,9 +959,15 @@ export function ConfirmModal({
   );
 }
 
-/** Field form. `required` menandai label dengan *, `error` (validasi saat
- *  simpan) memberi garis merah pada input di dalamnya + pesan di bawahnya,
- *  menggantikan hint selama ada error. */
+/** Event yang dikirim Modal ke isinya saat tombol simpan ditekan. */
+export const VALIDATE_EVENT = "isms:validate";
+
+/** Field form (catatan CTO 21 Okt: sistem validasi form).
+ *  - `required`: label diberi *, dan saat tombol utama modal ditekan field ini
+ *    memeriksa sendiri isiannya; kosong = garis merah + "<label> wajib diisi",
+ *    penyimpanan dibatalkan (lihat Modal). Tanda hilang begitu diisi.
+ *  - `error`: pesan dari validasi halaman (aturan selain wajib isi), tampil
+ *    dengan gaya yang sama dan menggantikan hint. */
 export function Field({
   label,
   children,
@@ -958,12 +981,34 @@ export function Field({
   required?: boolean;
   error?: string | null;
 }) {
+  const { locale } = useT();
+  const ref = useRef<HTMLLabelElement>(null);
+  const [autoErr, setAutoErr] = useState("");
+  useEffect(() => {
+    const root = required ? ref.current?.closest('[role="dialog"]') : null;
+    if (!root) return;
+    const onValidate = (ev: Event) => {
+      const ctl = ref.current?.querySelector<HTMLInputElement>('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea');
+      if (!ctl || ctl.disabled || String(ctl.value ?? "").trim() !== "") return;
+      setAutoErr(n_misc[locale === "en" ? "en" : "id"].fieldRequired.replace("{n}", label));
+      (ev as CustomEvent<{ invalid: number }>).detail.invalid += 1;
+    };
+    root.addEventListener(VALIDATE_EVENT, onValidate);
+    return () => root.removeEventListener(VALIDATE_EVENT, onValidate);
+  }, [required, label, locale]);
+  const shown = error || autoErr;
   return (
-    <label className={`block ${error ? "[&_.input]:!border-rose-500 [&_.input]:!ring-rose-200" : ""}`} aria-invalid={error ? true : undefined}>
+    <label
+      ref={ref}
+      className={`block ${shown ? "[&_.input]:!border-rose-500 [&_.input]:!ring-rose-200" : ""}`}
+      aria-invalid={shown ? true : undefined}
+      onInputCapture={() => { if (autoErr) setAutoErr(""); }}
+      onChangeCapture={() => { if (autoErr) setAutoErr(""); }}
+    >
       <span className="label">{label}{required && <span className="text-rose-600" aria-hidden> *</span>}</span>
       {children}
-      {error
-        ? <span role="alert" className="mt-1 block text-[11px] font-medium text-rose-600">{error}</span>
+      {shown
+        ? <span role="alert" className="mt-1 block text-[11px] font-medium text-rose-600">{shown}</span>
         : hint && <span className="mt-1 block text-[11px] text-steel-400">{hint}</span>}
     </label>
   );

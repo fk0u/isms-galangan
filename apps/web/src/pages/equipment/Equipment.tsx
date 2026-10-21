@@ -2607,8 +2607,8 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
       >
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.eqNameField}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.eqNamePh} /></Field>
-            <Field label={S.eqCodeField}><input className="input font-mono" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder={S.eqCodePh} /></Field>
+            <Field label={S.eqNameField} required><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.eqNamePh} /></Field>
+            <Field label={S.eqCodeField} required><input className="input font-mono" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder={S.eqCodePh} /></Field>
             <Field label={S.thCategory}>
               <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 {EQ_CATS.map((c) => <option key={c}>{c}</option>)}
@@ -2621,7 +2621,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
             )}
             <Field label={S.eqUnitYearField}><NumInput integer min={0} className="input" value={form.unitYear} onChange={(e) => setForm({ ...form, unitYear: e.target.value })} placeholder={S.eqUnitYearPh} /></Field>
             <Field label={S.eqAcquisitionYearField}><NumInput integer min={0} className="input" value={form.acquisitionYear} onChange={(e) => setForm({ ...form, acquisitionYear: e.target.value })} placeholder={S.eqAcquisitionYearPh} /></Field>
-            <Field label={S.eqPicField} hint={S.eqPicHint}><SearchSelect value={form.pic} onChange={(v) => setForm({ ...form, pic: v })} options={picOptions} placeholder={S.eqPicPh} ariaLabel={S.eqPicField} emptyText={S.eqEmployeeNone} allowCustom invalid={form.pic.trim() !== "" && !isKnownEmployee(data.employees, form.pic)} /></Field>
+            <Field label={S.eqPicField} hint={S.eqPicHint} required><SearchSelect value={form.pic} onChange={(v) => setForm({ ...form, pic: v })} options={picOptions} placeholder={S.eqPicPh} ariaLabel={S.eqPicField} emptyText={S.eqEmployeeNone} allowCustom invalid={form.pic.trim() !== "" && !isKnownEmployee(data.employees, form.pic)} /></Field>
             <Field label={S.eqBrandField}><input className="input" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder={S.eqBrandPh} /></Field>
             <Field label={S.eqUtilField}><NumInput min={0} max={100} className="input" value={form.util} onChange={(e) => { setForm({ ...form, util: e.target.value }); setUtilTouched(true); }} /></Field>
             {SHOW_EQP_COST_FIELDS && <Field label={S.eqRateField}><MoneyInput className="input" value={form.rate} onChange={(v) => setForm({ ...form, rate: v })} placeholder={S.eqRatePh} /></Field>}
@@ -2974,14 +2974,14 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
         </>}
       >
         <div className="space-y-3">
-          <Field label={S.thEquipment}>
+          <Field label={S.thEquipment} required>
             <select className="input" value={calForm.equipmentId} onChange={(e) => setCalForm({ ...calForm, equipmentId: e.target.value })}>
               <option value="">{S.eqChoose}</option>
               {equipment.map((e) => <option key={e.id} value={e.id}>{e.name} ({e.code}){isMeasuring(e) ? " · alat ukur" : ""}</option>)}
             </select>
           </Field>
-          <Field label={S.eqMeasureField}><input className="input" value={calForm.item} onChange={(e) => setCalForm({ ...calForm, item: e.target.value })} placeholder={S.eqMeasurePh} /></Field>
-          <Field label={S.eqDueField}><input type="date" className="input" value={calForm.due} onChange={(e) => setCalForm({ ...calForm, due: e.target.value })} /></Field>
+          <Field label={S.eqMeasureField} required><input className="input" value={calForm.item} onChange={(e) => setCalForm({ ...calForm, item: e.target.value })} placeholder={S.eqMeasurePh} /></Field>
+          <Field label={S.eqDueField} required><input type="date" className="input" value={calForm.due} onChange={(e) => setCalForm({ ...calForm, due: e.target.value })} /></Field>
         </div>
       </Modal>
 

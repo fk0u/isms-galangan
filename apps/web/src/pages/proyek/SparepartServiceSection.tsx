@@ -627,7 +627,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
             <>
               <p className="rounded-lg bg-surface px-3 py-2 text-[13px] text-steel-600">{S.spsFlowHint}</p>
               <FormGrid>
-                <Field label={S.spsFromInv}>
+                <Field label={S.spsFromInv} required>
                   <SearchSelect
                     value={form.invItemId}
                     onChange={(v) => setForm({ ...form, invItemId: v })}
@@ -648,7 +648,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
             </>
           ) : (
             <>
-          <Field label={S.spsSpName}><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.spsSpNamePh} /></Field>
+          <Field label={S.spsSpName} required><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.spsSpNamePh} /></Field>
           <Field label={S.spsPartNo}><input className="input" value={form.partNumber} onChange={(e) => setForm({ ...form, partNumber: e.target.value })} /></Field>
             </>
           )}
@@ -716,7 +716,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
               </Field>
             )}
           </FormGrid>
-          <Field label={S.prjScopeDesc}><input className="input" value={svcForm.description} onChange={(e) => setSvcForm({ ...svcForm, description: e.target.value })} placeholder={S.spsSvcDescPh} /></Field>
+          <Field label={S.prjScopeDesc} required><input className="input" value={svcForm.description} onChange={(e) => setSvcForm({ ...svcForm, description: e.target.value })} placeholder={S.spsSvcDescPh} /></Field>
           <FormGrid>
             <Field label={S.dateField}><input type="date" className="input" value={svcForm.date} onChange={(e) => setSvcForm({ ...svcForm, date: e.target.value })} /></Field>
             <Field label={S.spsSvcTech}>

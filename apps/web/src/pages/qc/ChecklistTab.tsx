@@ -557,7 +557,7 @@ export default function ChecklistTab() {
         footer={<><button type="button" className="btn-secondary" onClick={() => setEdit(null)}>×</button><AsyncButton className="btn-primary" onAction={saveTemplate}>{T.tplSave}</AsyncButton></>}>
         {edit && (
           <div className="space-y-3">
-            <Field label={T.tplName}><input className="input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
+            <Field label={T.tplName} required><input className="input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
             <FormGrid>
               <Field label={T.tplScope}><select className="input" value={edit.scope} onChange={(e) => setEdit({ ...edit, scope: e.target.value as "QC" | "HSE" })}><option>QC</option><option>HSE</option></select></Field>
               <Field label={T.tplTarget}><select className="input" value={edit.target} onChange={(e) => setEdit({ ...edit, target: e.target.value as "pekerjaan" | "pekerja" })}><option value="pekerjaan">{T.tgtWork}</option><option value="pekerja">{T.tgtWorker}</option></select></Field>

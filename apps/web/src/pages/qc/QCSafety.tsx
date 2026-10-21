@@ -1285,19 +1285,19 @@ export default function QCSafety() {
               <Card className="p-4">
                 <h3 className="text-sm font-semibold text-navy-900">{S.ppeTitle}</h3>
                 <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label={S.thProyek}>
+                  <Field label={S.thProyek} required>
                     <select className="input" value={ppeForm.project} onChange={(e) => setPpeForm({ ...ppeForm, project: e.target.value })}>
                       <option value="">{S.optPilihProyek}</option>
                       {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
                     </select>
                   </Field>
-                  <Field label={S.fPenerima} hint={S.hintPpePer}>
+                  <Field label={S.fPenerima} hint={S.hintPpePer} required>
                     <select className="input" value={ppeForm.employeeId} onChange={(e) => setPpeForm({ ...ppeForm, employeeId: e.target.value })}>
                       <option value="">{S.optPilihKaryawan}</option>
                       {data.employees.filter((e) => e.status === "Aktif").map((e) => <option key={e.id} value={e.id}>{e.name} · {e.id}</option>)}
                     </select>
                   </Field>
-                  <Field label={S.thTanggal}><input type="date" className="input" value={ppeForm.date} onChange={(e) => setPpeForm({ ...ppeForm, date: e.target.value })} /></Field>
+                  <Field label={S.thTanggal} required><input type="date" className="input" value={ppeForm.date} onChange={(e) => setPpeForm({ ...ppeForm, date: e.target.value })} /></Field>
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {PPE_ITEMS.map((item) => (
@@ -1576,7 +1576,7 @@ export default function QCSafety() {
       >
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thProyek}>
+            <Field label={S.thProyek} required>
               <select className="input" value={inspForm.project} onChange={(e) => setInspForm({ ...inspForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
@@ -1585,7 +1585,7 @@ export default function QCSafety() {
             <Field label={S.fNomorItp} hint={S.hintItpNext.replace("{n}", nextItp(inspections))}>
               <input className="input font-mono" value={nextItp(inspections)} disabled readOnly />
             </Field>
-            <Field label={S.thTanggal}><input type="date" className="input" value={inspForm.date} onChange={(e) => setInspForm({ ...inspForm, date: e.target.value })} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={inspForm.date} onChange={(e) => setInspForm({ ...inspForm, date: e.target.value })} /></Field>
             <Field label={S.fHasil}>
               <select className="input" value={inspForm.status} onChange={(e) => setInspForm({ ...inspForm, status: e.target.value })}>
                 {["Terjadwal", "Dalam Proses", "Lulus", "NCR"].map((s) => <option key={s}>{s}</option>)}
@@ -1596,7 +1596,7 @@ export default function QCSafety() {
                 {HOLD_TYPES.map((h) => <option key={h}>{h}</option>)}
               </select>
             </Field>
-            <Field label={S.fInspectorQ}>
+            <Field label={S.fInspectorQ} required>
               <select className="input" value={inspForm.inspector} onChange={(e) => setInspForm({ ...inspForm, inspector: e.target.value })}>
                 <option value="">{S.optPilihInspector}</option>
                 {qualityStaff.map((e) => <option key={e.id} value={e.name}>{e.name} · {e.role}</option>)}
@@ -1624,7 +1624,7 @@ export default function QCSafety() {
               <NumInput min={0} className="input" value={inspForm.defectsFound} onChange={(e) => setInspForm({ ...inspForm, defectsFound: e.target.value })} placeholder={S.phCth0} />
             </Field>
             {inspForm.nde === "Ya" && (
-              <Field label={S.fAlatKal} hint={S.hintAlat}>
+              <Field label={S.fAlatKal} hint={S.hintAlat} required>
                 <select className="input" value={inspForm.calTool} onChange={(e) => setInspForm({ ...inspForm, calTool: e.target.value })}>
                   <option value="">{S.optPilihAlat}</option>
                   {validCals.map((c) => <option key={c.id} value={c.id}>{calLabel(c.id)} · due {fmtTanggal(String(c.due))}</option>)}
@@ -1632,7 +1632,7 @@ export default function QCSafety() {
               </Field>
             )}
           </FormGrid>
-          <Field label={S.fTitik}><input className="input" value={inspForm.point} onChange={(e) => setInspForm({ ...inspForm, point: e.target.value })} placeholder={S.phWelding} /></Field>
+          <Field label={S.fTitik} required><input className="input" value={inspForm.point} onChange={(e) => setInspForm({ ...inspForm, point: e.target.value })} placeholder={S.phWelding} /></Field>
         </div>
       </Modal>
 
@@ -1641,7 +1641,7 @@ export default function QCSafety() {
         wide footer={<><button className="btn-secondary" onClick={() => setShowNcr(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveNcr}>{S.btnTerbitkan}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thProyek}>
+            <Field label={S.thProyek} required>
               <select className="input" value={ncrForm.project} onChange={(e) => setNcrForm({ ...ncrForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
@@ -1658,7 +1658,7 @@ export default function QCSafety() {
                 {["Minor", "Major", "Critical"].map((s) => <option key={s}>{s}</option>)}
               </select>
             </Field>
-            <Field label={S.fTenggat}><input type="date" className="input" value={ncrForm.due} onChange={(e) => setNcrForm({ ...ncrForm, due: e.target.value })} /></Field>
+            <Field label={S.fTenggat} required><input type="date" className="input" value={ncrForm.due} onChange={(e) => setNcrForm({ ...ncrForm, due: e.target.value })} /></Field>
             <Field label="Penerima (owner/client)" hint="Owner yang berhak menekan Terima di detail NCR">
               <select className="input" value={ncrForm.penerima} onChange={(e) => setNcrForm({ ...ncrForm, penerima: e.target.value })}>
                 <option value="">Belum ditentukan</option>
@@ -1671,7 +1671,7 @@ export default function QCSafety() {
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.fUraian}><textarea className="input" rows={3} value={ncrForm.issue} onChange={(e) => setNcrForm({ ...ncrForm, issue: e.target.value })} /></Field>
+          <Field label={S.fUraian} required><textarea className="input" rows={3} value={ncrForm.issue} onChange={(e) => setNcrForm({ ...ncrForm, issue: e.target.value })} /></Field>
           <Field label={S.fUraianRoot}><textarea className="input" rows={2} value={ncrForm.causeNote} onChange={(e) => setNcrForm({ ...ncrForm, causeNote: e.target.value })} placeholder={S.phRootcause} /></Field>
         </div>
       </Modal>
@@ -1818,8 +1818,8 @@ export default function QCSafety() {
       <Modal open={followUpNcr !== null} onClose={() => setFollowUpNcr(null)} title={followUpNcr ? S.mFollowT.replace("{n}", String(followUpNcr.id)) : ""} subtitle={S.mFollowS}
         footer={<><button className="btn-secondary" onClick={() => setFollowUpNcr(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={confirmFollowUp}>{S.btnSimpanVerif}</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.fTglVerif}><input type="date" className="input" value={followUpForm.date} onChange={(e) => setFollowUpForm({ ...followUpForm, date: e.target.value })} /></Field>
-          <Field label={S.fCatVerif}><textarea className="input" rows={3} value={followUpForm.note} onChange={(e) => setFollowUpForm({ ...followUpForm, note: e.target.value })} placeholder={S.phFollow} /></Field>
+          <Field label={S.fTglVerif} required><input type="date" className="input" value={followUpForm.date} onChange={(e) => setFollowUpForm({ ...followUpForm, date: e.target.value })} /></Field>
+          <Field label={S.fCatVerif} required><textarea className="input" rows={3} value={followUpForm.note} onChange={(e) => setFollowUpForm({ ...followUpForm, note: e.target.value })} placeholder={S.phFollow} /></Field>
         </div>
       </Modal>
 
@@ -1827,9 +1827,9 @@ export default function QCSafety() {
       <Modal open={capaFor !== null} onClose={() => setCapaFor(null)} title={capaFor ? `CAPA ${String(capaFor.id)}` : ""} subtitle="Wajib: tindakan korektif + PIC (foto URL opsional)"
         footer={<><button className="btn-secondary" onClick={() => setCapaFor(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveCapa}>Simpan & Proses ke Dalam Perbaikan</AsyncButton></>}>
         <div className="space-y-3">
-          <Field label={S.fCorrective}><textarea className="input" rows={3} value={capaForm.corrective} onChange={(e) => setCapaForm({ ...capaForm, corrective: e.target.value })} placeholder="Cth: gerinda ulang + las ulang seam 4, WPS-07" /></Field>
+          <Field label={S.fCorrective} required><textarea className="input" rows={3} value={capaForm.corrective} onChange={(e) => setCapaForm({ ...capaForm, corrective: e.target.value })} placeholder="Cth: gerinda ulang + las ulang seam 4, WPS-07" /></Field>
           <FormGrid>
-            <Field label="PIC perbaikan"><input className="input" value={capaForm.pic} onChange={(e) => setCapaForm({ ...capaForm, pic: e.target.value })} placeholder="Nama PIC" /></Field>
+            <Field label="PIC perbaikan" required><input className="input" value={capaForm.pic} onChange={(e) => setCapaForm({ ...capaForm, pic: e.target.value })} placeholder="Nama PIC" /></Field>
             <Field label="Foto/bukti URL (opsional)">
               <div className="flex flex-wrap items-center gap-2">
                 <input className="input flex-1 font-mono" value={capaForm.photoUrl} onChange={(e) => setCapaForm({ ...capaForm, photoUrl: e.target.value })} placeholder="https://…" />
@@ -1873,7 +1873,7 @@ export default function QCSafety() {
         footer={<><button className="btn-secondary" onClick={() => { setShowInc(false); setIncEditId(null); }}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveIncident}>{S.btnSimpan}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.fProyekTerkait} hint={S.hintIncProyek}>
+            <Field label={S.fProyekTerkait} hint={S.hintIncProyek} required>
               <select className="input" value={incForm.project} onChange={(e) => setIncForm({ ...incForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
@@ -1890,8 +1890,8 @@ export default function QCSafety() {
               </select>
             </Field>
           </FormGrid>
-          <Field label={S.fLokasi}><input className="input" value={incForm.location} onChange={(e) => setIncForm({ ...incForm, location: e.target.value })} placeholder={S.phLokasi} /></Field>
-          <Field label={S.fUraianKejadian}><textarea className="input" rows={3} value={incForm.desc} onChange={(e) => setIncForm({ ...incForm, desc: e.target.value })} /></Field>
+          <Field label={S.fLokasi} required><input className="input" value={incForm.location} onChange={(e) => setIncForm({ ...incForm, location: e.target.value })} placeholder={S.phLokasi} /></Field>
+          <Field label={S.fUraianKejadian} required><textarea className="input" rows={3} value={incForm.desc} onChange={(e) => setIncForm({ ...incForm, desc: e.target.value })} /></Field>
         </div>
       </Modal>
 
@@ -1924,17 +1924,17 @@ export default function QCSafety() {
         footer={<><button className="btn-secondary" onClick={() => { setShowTbm(false); setTbmEditId(null); }}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveToolbox}>{S.btnSimpan}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thProyek}>
+            <Field label={S.thProyek} required>
               <select className="input" value={tbmForm.project} onChange={(e) => setTbmForm({ ...tbmForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
               </select>
             </Field>
-            <Field label={S.thTanggal}><input type="date" className="input" value={tbmForm.date} onChange={(e) => setTbmForm({ ...tbmForm, date: e.target.value })} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={tbmForm.date} onChange={(e) => setTbmForm({ ...tbmForm, date: e.target.value })} /></Field>
             <Field label={S.fJmlPeserta}><NumInput min={0} className="input" value={tbmForm.attendees} onChange={(e) => setTbmForm({ ...tbmForm, attendees: e.target.value })} /></Field>
-            <Field label={S.fPic}><EntityPicker value={tbmForm.pic} onChange={(v) => setTbmForm({ ...tbmForm, pic: v })} options={picOptions} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(tbmForm.pic)} /></Field>
+            <Field label={S.fPic} required><EntityPicker value={tbmForm.pic} onChange={(v) => setTbmForm({ ...tbmForm, pic: v })} options={picOptions} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(tbmForm.pic)} /></Field>
           </FormGrid>
-          <Field label={S.fTopik}><input className="input" value={tbmForm.topic} onChange={(e) => setTbmForm({ ...tbmForm, topic: e.target.value })} placeholder={S.phTopik} /></Field>
+          <Field label={S.fTopik} required><input className="input" value={tbmForm.topic} onChange={(e) => setTbmForm({ ...tbmForm, topic: e.target.value })} placeholder={S.phTopik} /></Field>
         </div>
       </Modal>
 
@@ -1944,9 +1944,9 @@ export default function QCSafety() {
         footer={<><button className="btn-secondary" onClick={() => { setShowWalk(false); setWalkEditId(null); }}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveWalk}>{S.btnSimpan}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thTanggal}><input type="date" className="input" value={walkForm.date} onChange={(e) => setWalkForm({ ...walkForm, date: e.target.value })} /></Field>
-            <Field label={S.fPic}><EntityPicker value={walkForm.pic} onChange={(v) => setWalkForm({ ...walkForm, pic: v })} options={picOptions} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(walkForm.pic)} /></Field>
-            <Field label={S.fArea}><input className="input" value={walkForm.area} onChange={(e) => setWalkForm({ ...walkForm, area: e.target.value })} placeholder={S.phArea} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={walkForm.date} onChange={(e) => setWalkForm({ ...walkForm, date: e.target.value })} /></Field>
+            <Field label={S.fPic} required><EntityPicker value={walkForm.pic} onChange={(v) => setWalkForm({ ...walkForm, pic: v })} options={picOptions} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(walkForm.pic)} /></Field>
+            <Field label={S.fArea} required><input className="input" value={walkForm.area} onChange={(e) => setWalkForm({ ...walkForm, area: e.target.value })} placeholder={S.phArea} /></Field>
             <Field label={S.fJmlTemuan}><NumInput min={0} className="input" value={walkForm.findings} onChange={(e) => setWalkForm({ ...walkForm, findings: e.target.value })} /></Field>
           </FormGrid>
         </div>
@@ -1957,9 +1957,9 @@ export default function QCSafety() {
         footer={<><button className="btn-secondary" onClick={() => setShowAuditPlan(false)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveAuditPlan}>{S.btnSimpanJadwal}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
-            <Field label={S.thTanggal}><input type="date" className="input" value={auditForm.date} onChange={(e) => setAuditForm({ ...auditForm, date: e.target.value })} /></Field>
-            <Field label={S.fArea}><input className="input" value={auditForm.area} onChange={(e) => setAuditForm({ ...auditForm, area: e.target.value })} placeholder={S.phArea2} /></Field>
-            <Field label={S.fAuditor}><input className="input" value={auditForm.auditor} onChange={(e) => setAuditForm({ ...auditForm, auditor: e.target.value })} placeholder={S.phAuditor} /></Field>
+            <Field label={S.thTanggal} required><input type="date" className="input" value={auditForm.date} onChange={(e) => setAuditForm({ ...auditForm, date: e.target.value })} /></Field>
+            <Field label={S.fArea} required><input className="input" value={auditForm.area} onChange={(e) => setAuditForm({ ...auditForm, area: e.target.value })} placeholder={S.phArea2} /></Field>
+            <Field label={S.fAuditor} required><input className="input" value={auditForm.auditor} onChange={(e) => setAuditForm({ ...auditForm, auditor: e.target.value })} placeholder={S.phAuditor} /></Field>
             <Field label={S.fJmlTemuan}><NumInput min={0} className="input" value={auditForm.findings} onChange={(e) => setAuditForm({ ...auditForm, findings: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.fLinkNcr}>

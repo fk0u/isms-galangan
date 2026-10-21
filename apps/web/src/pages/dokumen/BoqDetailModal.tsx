@@ -12,9 +12,20 @@ import { Modal, Badge, StatusBadge, toast } from "../../components/ui";
 import { type StoreItem } from "../../data/store";
 import { fmtRupiah, fmtTanggal } from "../../utils/format";
 import { terbilangRupiah, spelledOutCurrency } from "../../utils/terbilang";
-import { printBoqHtml, type BoqPrintItem } from "../../utils/printBoqHtml";
+import { usePdfDoc } from "../../components/usePdfDoc";
 import { exportExcel } from "../../utils/export";
 import { useT } from "../../i18n/LanguageContext";
+
+interface BoqPrintItem {
+  no: number;
+  name: string;
+  description?: string;
+  category?: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+}
 
 interface BoqDetailModalProps {
   open: boolean;
@@ -39,6 +50,7 @@ export function BoqDetailModal({
 }: BoqDetailModalProps) {
   const { locale } = useT();
   const isEn = locale === "en";
+  const boqPdf = usePdfDoc();
   const [itemQuery, setItemQuery] = useState("");
 
   const number = String(boqDoc?.number ?? doc?.title ?? "BQ/PRJ/001");
@@ -105,25 +117,10 @@ export function BoqDetailModal({
       .sort((a, b) => Number(a.revision ?? 0) - Number(b.revision ?? 0));
   }, [allBoqDocs, number]);
 
-  // Action: Print HTML Enterprise
+  // Q28: cetak lewat PDF server (template kop + footer yang sama dengan semua dokumen).
   const handlePrint = () => {
-    printBoqHtml({
-      number,
-      revision,
-      status,
-      issuedAt,
-      projectId,
-      vesselName,
-      clientName,
-      approvedBy,
-      approvedAt,
-      note,
-      items: computedItems,
-      total: totalAmount,
-      signerName: approvedBy || "Commercial Estimator",
-      locale,
-    });
-    toast(isEn ? "Opening Enterprise Print preview..." : "Membuka pratinjau cetak Enterprise...", "info");
+    if (!boqDoc?.id) { toast(isEn ? "BoQ document not found" : "Surat BoQ tidak ditemukan", "info"); return; }
+    void boqPdf.request({ kind: "boq", id: String(boqDoc.id), locale }, `BoQ-${number.replace(/[/\\]/g, "-")}`, false);
   };
 
   // Action: Export Excel

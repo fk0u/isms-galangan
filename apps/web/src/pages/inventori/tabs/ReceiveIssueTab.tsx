@@ -495,7 +495,7 @@ export default function ReceiveIssueTab() {
                 </Field>
               </div>
             </FormGrid>
-            <Field label={T.reason}>
+            <Field label={T.reason} required>
               <input
                 className="input"
                 maxLength={300}
@@ -640,7 +640,7 @@ export default function ReceiveIssueTab() {
             </div>
             <p className="mb-3 text-xs text-steel-500">{T.outProcSub}</p>
             <FormGrid>
-              <Field label={T.colProject}>
+              <Field label={T.colProject} required>
                 <select
                   className="input"
                   value={procOut.projectId}
@@ -775,7 +775,7 @@ export default function ReceiveIssueTab() {
                 />
               </Field>
             )}
-            <Field label={T.reason}>
+            <Field label={T.reason} required>
               <input
                 className="input"
                 maxLength={300}

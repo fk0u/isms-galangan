@@ -1,5 +1,7 @@
 export const n_misc = {
   id: {
+    fieldRequired: "{n} wajib diisi",
+    formInvalid: "Lengkapi isian yang ditandai merah",
     rangeFrom: "Dari bulan",
     rangeTo: "Sampai bulan",
     rangeReset: "Reset",
@@ -515,6 +517,8 @@ export const n_misc = {
     cardSearchPh: "Cari di daftar ini...",
   },
   en: {
+    fieldRequired: "{n} is required",
+    formInvalid: "Complete the fields marked in red",
     rangeFrom: "From month",
     rangeTo: "To month",
     rangeReset: "Reset",
