@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
-import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban } from "lucide-react";
+import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { openFileUrl } from "../../services/files";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
@@ -3271,9 +3271,19 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td font-semibold text-navy-900">{fmtRupiah(Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)))}</td>
                         <td className="td text-steel-600">{fmtTanggal(String(a.due ?? ""))}</td>
                         <td className="td text-steel-600">{String(a.pph ?? "2%")}</td>
-                        <td className="td"><StatusBadge status={String(a.st)} /></td>
+                        <td className="td"><StatusBadge status={String(a.st)} />
+                          {a.persetujuan === "Menunggu" && <p className="mt-1 text-[11px] font-medium text-amber-700">{num(a.amt) > 0 ? S.apInvMenunggu : S.apInvNol}</p>}</td>
                         <td className="td">
                           <div className="flex flex-wrap gap-1.5">
+                            {/* Q27: invoice dari PO menunggu persetujuan Keuangan sebelum
+                                barang boleh diterima; nilai 0 = nota PO Kecil belum lengkap. */}
+                            {a.persetujuan === "Menunggu" && (
+                              <RowAction icon={Check} tone="success" label={S.apInvSetujui} ariaLabel={`${S.apInvSetujui} ${String(a.po)}`}
+                                disabled={!(num(a.amt) > 0)}
+                                onClick={() => void update("payables", String(a.id), { persetujuan: "Disetujui", disetujuiAt: new Date().toISOString() })
+                                  .then(() => toast(S.apInvOk.replace("{n}", String(a.po))))
+                                  .catch((e: unknown) => toast(e instanceof Error ? e.message : S.saveFail, "info"))} />
+                            )}
                             {a.st !== "Lunas" && (
                               <>
                                 <RowAction

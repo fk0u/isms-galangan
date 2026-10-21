@@ -17,13 +17,10 @@
  * Teks baku surat disalin persis dari template (termasuk ejaan aslinya,
  * mis. "sepunuhnya", "konstribusi"); hanya data karyawan yang diisi aplikasi.
  */
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { jsPDF } from "jspdf";
 import { Document, type DocOptions } from "../document.js";
 import type { Block, DrawRecord } from "../blocks.js";
-import { longDate } from "./shared.js";
+import { kopImageSrc as kopDataUrl, longDate } from "./shared.js";
 import { terbilangAngka } from "./kwitansi.js";
 
 export type HrLetterKind = "sp1" | "sp2" | "phk" | "pengalaman" | "keterangan";
@@ -58,19 +55,6 @@ const TWIP = 25.4 / 1440; // 1 twip dalam mm
 const EMU = 1 / 36000; // 1 EMU dalam mm
 /* Tinggi baris "single" Word untuk Times New Roman = 1,15 x ukuran huruf. */
 const single = (size: number): number => size * 1.15 * PT;
-
-let kopCache: string | null = null;
-function kopDataUrl(): string | null {
-  if (kopCache !== null) return kopCache || null;
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const file = path.resolve(here, "../../../assets/kop-sb.jpg");
-  try {
-    kopCache = `data:image/jpeg;base64,${fs.readFileSync(file).toString("base64")}`;
-  } catch {
-    kopCache = ""; // tanpa berkas kop: surat tetap tercetak, tanpa gambar
-  }
-  return kopCache || null;
-}
 
 type Style = "normal" | "bold" | "italic" | "bolditalic";
 interface Run { text: string; style?: Style; underline?: boolean; color?: [number, number, number] }
