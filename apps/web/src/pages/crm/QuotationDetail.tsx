@@ -14,7 +14,6 @@ import { isProjectManager } from "../../utils/employeeOptions";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
-import { SB_KOP } from "../../utils/sb";
 import { useDraftState } from "../../utils/draft";
 import { useT } from "../../i18n/LanguageContext";
 import { n_crm } from "../../i18n/n_crm";
@@ -248,10 +247,6 @@ export default function QuotationDetail() {
     const cabang = String(client?.branch ?? quotation.branch ?? "Samarinda");
     const terms = String(client?.paymentTerms ?? quotation.paymentTerms ?? "NET 30");
     const rows: unknown[][] = [
-      [SB_KOP.name],
-      [SB_KOP.line1],
-      [SB_KOP.hq],
-      [`${SB_KOP.addr1} · HP ${SB_KOP.hp}`],
       [`Cabang ${cabang} · ${fmtTanggal(todayISO())}`],
       [`Penawaran ${quotation.id} v${version} · ${String(quotation.client)} · ${String(quotation.vessel)}`],
       [],
@@ -261,7 +256,7 @@ export default function QuotationDetail() {
       [],
       [`Syarat pembayaran: ${terms}`],
     ];
-    void exportExcel(rows, `Kop-${quotation.id}-v${version}`, "Kop Penawaran").catch(() => toast(S.saveFail, "info"));
+    void exportExcel(rows, `Kop-${quotation.id}-v${version}`, "Kop Penawaran", { kop: true }).catch(() => toast(S.saveFail, "info"));
     toast(S.tKopExported.replace("{n}", quotation.id));
   };
 

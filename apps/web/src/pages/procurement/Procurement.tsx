@@ -24,7 +24,7 @@ import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLi
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { getSetting } from "../../utils/settings";
 import { bucketByMonth, fmtMonthRange, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../../utils/monthAxis";
-import { sbPoNumber, sbSplitIncludePpn, maxSeq, SB_KOP } from "../../utils/sb";
+import { sbPoNumber, sbSplitIncludePpn, maxSeq } from "../../utils/sb";
 import { spendByCategory, procurementTrend } from "../../data";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
@@ -1204,9 +1204,6 @@ export default function Procurement() {
     const lines = poLines(po);
     const split = po.includePpn === false ? null : sbSplitIncludePpn(Number(po.amount || 0), getSetting(data, "PPN_RATE", 12));
     const rows: (string | number | null)[][] = [
-      [SB_KOP.line1, SB_KOP.name],
-      [SB_KOP.hq, `${SB_KOP.addr1} · HP ${SB_KOP.hp}`],
-      [],
       [S.xPo, po.docNo ? `${po.id} / ${po.docNo}` : po.id],
       [S.xTipe, po.poType === "Kecil" ? S.tabSmall : S.tabBig],
       [S.vendor, po.vendor ?? "-"],
@@ -1227,7 +1224,7 @@ export default function Procurement() {
       [S.xTotal, "", "", "", Number(po.amount || lineTotal(lines))],
       ...(split ? [[S.xDpp.replace("{n}", String(ppnRate)), "", "", "", split.dpp], [S.xPpn.replace("{n}", String(ppnRate)), "", "", "", split.ppn]] : []),
     ];
-    void exportExcel(rows, `PO-${po.id}`, "PO").catch(() => toast(S.saveFail, "info"));
+    void exportExcel(rows, `PO-${po.id}`, "PO", { kop: true }).catch(() => toast(S.saveFail, "info"));
     toast(S.tPoExport.replace("{n}", po.id));
   };
 

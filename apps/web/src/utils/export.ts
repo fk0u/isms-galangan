@@ -18,7 +18,21 @@ function normalizeCell(c: unknown): CellRaw {
   return String(c);
 }
 
-export async function exportExcel(data: unknown[][], filename: string, sheetName = "Export"): Promise<void> {
+/* Q28 (21 Okt): dokumen yang diekspor ke Excel memakai kop gambar yang sama
+   dengan PDF. Kop 1142×214 px diskalakan selebar ~600 px dan menempati
+   KOP_ROWS baris kosong di atas isi. Gagal memuat = tanpa kop (isi tetap). */
+const KOP_ROWS = 6;
+async function kopImage(): Promise<{ content: ArrayBuffer; contentType: string; width: number; height: number; dpi: number; anchor: { row: number; column: number } } | null> {
+  try {
+    const res = await fetch("/kop-sb.jpg");
+    if (!res.ok) return null;
+    return { content: await res.arrayBuffer(), contentType: "image/jpeg", width: 600, height: Math.round(600 * 214 / 1142), dpi: 96, anchor: { row: 1, column: 1 } };
+  } catch {
+    return null;
+  }
+}
+
+export async function exportExcel(data: unknown[][], filename: string, sheetName = "Export", opts: { kop?: boolean } = {}): Promise<void> {
   const widths: number[] = [];
   const rows: SheetData = (data ?? []).map((row, r) =>
     (row ?? []).map((c, cIdx) => {
@@ -31,10 +45,11 @@ export async function exportExcel(data: unknown[][], filename: string, sheetName
       return raw ?? null;
     })
   );
-  await writeXlsxFile(rows, {
+  const kop = opts.kop ? await kopImage() : null;
+  await writeXlsxFile(kop ? [...Array.from({ length: KOP_ROWS }, () => [null]), ...rows] : rows, {
     sheet: cleanSheetName(sheetName),
     columns: widths.map((w) => ({ width: w })),
-    stickyRowsCount: 1,
+    ...(kop ? { images: [kop] } : { stickyRowsCount: 1 }),
   }).toFile(`${filename}.xlsx`);
 }
 
