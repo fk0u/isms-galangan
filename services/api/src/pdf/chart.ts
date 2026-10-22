@@ -470,7 +470,10 @@ function drawDonut(ctx: ChartCtx, spec: DonutSpec): void {
     const rel = pts.map((p, i) =>
       i === 0 ? [0, 0] : [p[0] - pts[i - 1]![0], p[1] - pts[i - 1]![1]],
     );
-    ctx.pdf.lines(rel, cx, cy, [1, 1], "F", true);
+    /* Titik awal = titik pertama busur luar, BUKAN pusat donat: koordinat
+       `rel` relatif terhadap titik awal ini. Memulai dari pusat menggeser
+       seluruh potongan sejauh r sehingga donat tergambar pecah. */
+    ctx.pdf.lines(rel, pts[0]![0], pts[0]![1], [1, 1], "F", true);
     ctx.rec.push({ page: ctx.pdf.getCurrentPageInfo().pageNumber, x: cx - r, y: cy - r, w: r * 2, h: r * 2, kind: "rect" });
     angle += sweep;
   });

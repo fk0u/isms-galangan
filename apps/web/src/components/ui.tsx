@@ -1712,7 +1712,7 @@ export function useServerPager<T>(
  *  "007" → "7". Desimal ("0.5") tetap utuh. */
 function stripLeadingZero(v: string): string {
   if (!v) return v;
-  if (v === "0") return "";
+  // "0" sendiri adalah nilai sah (retensi/denda/diskon 0%) - hanya nol di depan angka lain yang dibuang.
   if (v.includes(".")) return v;
   return v.replace(/^0+(?=\d)/, "");
 }

@@ -149,22 +149,13 @@ function reportHeader(d: Document, title: string, subtitle: string, locale: Loca
 }
 
 function signOff(d: Document, sig: { name: string; role: string; date: string }, locale: Locale): void {
+  /* Satu blok tanda tangan (dulu blok + paragraf nama/jabatan/tanggal ganda,
+     dan isian kosong tercetak "-"). Nama kosong = garis tanda tangan saja. */
+  // Model mengisi isian kosong dengan "-"; di tanda tangan itu berarti kosong.
+  const v = (x: string): string => (x && x.trim() !== "-" ? x.trim() : "");
   d.add(divider());
-  d.add(
-    paragraph({
-      text: lt(locale, "Mengetahui,", "Approved by,"),
-      size: TYPE.base,
-    }),
-  );
-  d.add(spacer(6));
-  d.add(signatures([{ role: sig.role || lt(locale, "Penanggung Jawab", "Responsible"), name: sig.name || "-", rows: 4 }]));
-  d.add(
-    paragraph({
-      text: `${sig.name || "-"}\n${sig.role || "-"}\n${sig.date ? longDate(sig.date) : ""}`,
-      size: TYPE.base - 1,
-      align: "right",
-    }),
-  );
+  d.add(paragraph({ text: `Samarinda, ${longDate(v(sig.date) || new Date().toISOString().slice(0, 10))}`, size: TYPE.base, align: "center" }));
+  d.add(signatures([{ role: v(sig.role) || lt(locale, "Mengetahui", "Approved by"), name: v(sig.name), rows: 4 }]));
 }
 
 /* ==========================================================================
@@ -647,7 +638,8 @@ function profitTable(rows: ProfitRow[], locale: Locale) {
   ];
   return table({
     head: [lt(locale, "Kategori", "Category"), lt(locale, "Anggaran", "Budget"), lt(locale, "Realisasi", "Realized"), lt(locale, "Selisih", "Variance"), lt(locale, "Proyek", "Projects")],
-    widths: ["auto", 30, 30, 30, 20],
+    // Kolom Rupiah cukup untuk "Rp 999.999.999.999" tanpa terpotong dua baris.
+    widths: ["auto", 38, 38, 38, 16],
     align: ["left", "right", "right", "right", "right"],
     rows: body,
     totalRow: body.length - 1,

@@ -125,6 +125,7 @@ export class Document {
       x0: this.margin,
       width: this.contentW,
       y0: this.y,
+      top: this.margin,
       bottom: this.bottom(),
     };
   }
@@ -184,27 +185,78 @@ export class Document {
   /**
    * Tambahkan blok. Satu blok per panggilan boleh panjang, tabel boleh banyak.
    */
-  add(block: Block): this {
-    const ctx = this.ctx();
-    ctx.y0 = this.y;
-    const planned = block.plan(ctx, this.contentW);
-    const gapBefore = block.spaceBefore ?? 0;
+  /** Rantai blok `keepWithNext` yang menunggu blok berikutnya (judul section,
+   *  grafik + keterangannya, dll). */
+  private pending: Block[] = [];
 
-    /* Blok non-splittable yang muat dipindah ke halaman baru bila hanya
-       tersisa sedikit ruang - supaya tidak ada halaman yang isinya satu
-       judul dan lalu kosong. */
-    const totalSingle = planned.segments.reduce((s, seg) => s + seg.height, 0);
-    if (!planned.splittable && planned.segments.length === 1) {
-      const need = gapBefore + totalSingle;
-      if (this.y + need > this.bottom() && this.y > this.margin + 0.5) {
-        this.newPage();
+  private blockHeight(block: Block, y0: number): { total: number; first: number } {
+    const c = this.ctx();
+    c.y0 = y0;
+    const segs = block.plan(c, this.contentW).segments;
+    const body = segs.reduce((s, seg) => s + seg.height, 0);
+    return { total: (block.spaceBefore ?? 0) + body + (block.spaceAfter ?? 0), first: (block.spaceBefore ?? 0) + (segs[0]?.height ?? 0) };
+  }
+
+  /** Lepas rantai; setiap blok keepWithNext tetap dijaga menempel ke potongan
+   *  pertama blok sesudahnya di rantai (judul + grafik pertama, dst). */
+  private flushPending(): void {
+    const chain = this.pending;
+    this.pending = [];
+    chain.forEach((b, i) => {
+      const next = chain[i + 1];
+      if (next && this.y > this.margin + 0.5) {
+        const own = this.blockHeight(b, this.y).total;
+        const nf = this.blockHeight(next, this.y + own).first;
+        if (this.y + own + nf > this.bottom() && own + nf <= this.bottom() - this.margin) this.newPage();
       }
+      this.place(b);
+    });
+  }
+
+  add(block: Block): this {
+    /* keepWithNext: judul tidak boleh tertinggal sendirian di dasar halaman.
+       Blok ditahan sampai blok biasa berikutnya datang; bila seluruh rantai +
+       potongan pertama blok itu tidak muat, semuanya pindah halaman. Rantai
+       yang melebihi satu halaman penuh tidak ditahan lagi (dilepas apa adanya). */
+    const fullPage = this.bottom() - this.margin;
+    if (block.keepWithNext) {
+      this.pending.push(block);
+      const chainH = this.pending.reduce((s, b) => s + this.blockHeight(b, this.margin).total, 0);
+      if (chainH > fullPage) this.flushPending();
+      return this;
     }
-    if (this.y + gapBefore > this.y + 0 && block.spaceBefore && this.y > this.margin + 0.5) {
-      /* spaceBefore hanya boleh menambah ruang di halaman yang sama; kalau
-         memaksakan pindah halaman, ruang kosong itu hilang (bukan dipindah). */
+    if (this.pending.length > 0) {
+      const chainH = this.pending.reduce((s, b) => s + this.blockHeight(b, this.margin).total, 0);
+      const nextFirst = this.blockHeight(block, this.y + chainH).first;
+      if (this.y + chainH + nextFirst > this.bottom() && this.y > this.margin + 0.5 && chainH + nextFirst <= fullPage) this.newPage();
+      this.flushPending();
+    }
+    this.place(block);
+    return this;
+  }
+
+  /** Gambar blok di posisi sekarang (pecah antar halaman bila splittable). */
+  private place(block: Block): void {
+    const gapBefore = block.spaceBefore ?? 0;
+    /* spaceBefore diterapkan SEBELUM blok direncanakan, supaya potongan
+       pertama dihitung dari posisi akhirnya. Dulu rencana dibuat dulu: potongan
+       pertama lalu tidak muat, terdorong ke halaman baru dengan ukuran sisa
+       halaman lama, dan tabel tampil dengan kepala berulang. spaceBefore tidak
+       pernah memaksa pindah halaman (ruangnya hilang, bukan dipindah). */
+    if (gapBefore && this.y > this.margin + 0.5) {
       if (this.y + gapBefore > this.bottom()) this.newPage();
       else this.y += gapBefore;
+    }
+    const ctx = this.ctx();
+    ctx.y0 = this.y;
+    let planned = block.plan(ctx, this.contentW);
+    const first = planned.segments[0];
+    /* Potongan pertama tidak muat di sisa halaman: pindah halaman lalu
+       rencanakan ulang dengan tinggi halaman penuh. */
+    if (first && this.y + first.height > this.bottom() && this.y > this.margin + 0.5) {
+      this.newPage();
+      ctx.y0 = this.y;
+      planned = block.plan(ctx, this.contentW);
     }
 
     const minSeg = planned.minSegmentHeight ?? 0;
@@ -239,7 +291,6 @@ export class Document {
          digambar tapi flag ini dipakai report untuk guilty check. */
       void consumedAll;
     }
-    return this;
   }
 
   /** Tambahkan banyak blok. */
@@ -256,6 +307,7 @@ export class Document {
 
   /** Render menjadi byte. */
   render(): RenderResult {
+    this.flushPending();
     const total = this.pdf.getNumberOfPages();
     /* Footer harus tahu total halaman - itu hanya bisa diketahui setelah
        semua konten selesai. Semua halaman didekorasi sekarang. */

@@ -38,6 +38,8 @@ export interface Ctx {
   width: number;
   /** Kursor atas halaman saat ini; tinggi tersedia = bottom - y0. */
   y0: number;
+  /** Batas atas area isi pada halaman BARU (untuk blok yang dipecah). */
+  top: number;
   /** Batas bawah area isi (tidak termasuk footer). */
   bottom: number;
 }
@@ -536,7 +538,11 @@ export function table(spec: TableSpec): Block {
       let guard = 0;
       while (idx < bodyRows.length) {
         if (++guard > 100000) break;
-        const avail = ctx.bottom - ctx.y0;
+        /* Potongan pertama memakai sisa halaman sekarang; potongan berikutnya
+           mulai di halaman baru sehingga mendapat tinggi penuh. Dulu semua
+           potongan memakai sisa halaman pertama: setiap potongan lanjutan hanya
+           berisi satu baris dan kepala tabel berulang per baris. */
+        const avail = ctx.bottom - (segments.length === 0 ? ctx.y0 : ctx.top);
         let used = 0;
         const take: LaidRow[] = [];
         for (let i = idx; i < bodyRows.length; i += 1) {
@@ -769,7 +775,8 @@ export function signatures(sigs: SignatureSpec[]): Block {
                    dan mesin lama tidak pernah mengeceknya. */
                 for (const [k, text, size, bold] of [
                   [0, s.role, TYPE.label, true],
-                  [1, s.name || "-", TYPE.label, false],
+                  // Nama kosong: biarkan garis tanda tangan saja (bukan "-").
+                  [1, s.name || "", TYPE.label, false],
                 ] as Array<[number, string, number, boolean]>) {
                   const ls = wrap(c.pdf, text, colW - 6, { font: bold ? "bold" : "regular", size, embedded: c.embedded });
                   const yBase = k === 0 ? y + lineHeightFor(size) * 0.9 : y + roleH + rows * SPACE.sigRow;
@@ -885,7 +892,9 @@ export function chartBlock(spec: ChartSpec): Block {
   return {
     spaceBefore: 2,
     spaceAfter: 3,
-    keepWithNext: true,
+    /* Tidak keepWithNext: judul grafik sudah di dalam blok ini. Menahan grafik
+       ke blok berikutnya membuat beberapa grafik berturut-turut saling
+       mendorong ke halaman baru dan menyisakan halaman setengah kosong. */
     plan: (ctx, width) => {
       const planned = planChartHeight(spec, width);
       return {
