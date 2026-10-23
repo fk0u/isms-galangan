@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
+import { useAuth } from "../../auth/auth";
 import { openFileUrl } from "../../services/files";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { pdfServerReady } from "../../services/pdfClient";
@@ -857,7 +858,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const pdfDoc = usePdfDoc();
     const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
-  const [tab, setTab] = useState("Akun");
+  /* #289: tab Keuangan yang boleh dibuka role ini (Commercial: Invoice saja). */
+  const { user: finUser } = useAuth();
+  const finTabs = useMemo(() => {
+    const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak"];
+    const allow = finUser?.modules?.finTabs;
+    return allow ? all.filter((t) => allow.includes(t)) : all;
+  }, [finUser?.modules?.finTabs]);
+  const [tab, setTabRaw] = useState(() => finTabs[0] ?? "Akun");
+  const setTab = (t: string) => { if (finTabs.includes(t)) setTabRaw(t); };
+  useEffect(() => { if (!finTabs.includes(tab)) setTabRaw(finTabs[0] ?? "Akun"); }, [finTabs, tab]);
   useModuleSync(financeCollectionsForTab(tab), [tab]);
   // WBS tidak diperlukan untuk merender Project P&L; ambil exact hanya ketika
   // settlement invoice perlu memeriksa syarat penutupan proyek.
@@ -3016,7 +3026,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       </div>
 
       <div className="mt-4 card">
-        <Tabs tabs={["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak"]} active={tab} onChange={setTab} />
+        <Tabs tabs={finTabs} active={tab} onChange={setTab} />
         <div className="p-4">
           {tab === "Akun" && (
             <CoaTab

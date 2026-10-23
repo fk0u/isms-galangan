@@ -14,6 +14,8 @@ import { getAuditErrorCount, requestIp, writeAudit } from "./audit.js";
 import { exec, q } from "./db.js";
 import { requireManageUsers } from "./rbac.js";
 import { permissionsFor } from "./policy.js";
+import { moduleAccessFor } from "./moduleAccess.js";
+import { registerRbacRoutes } from "./routes/rbac.js";
 import { COLLECTIONS, registerCrud } from "./routes/crud.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerFileRoutes } from "./routes/files.js";
@@ -317,9 +319,11 @@ export function buildApp(): FastifyInstance {
       // tabel sessions belum ada (DB lama) — login tetap jalan
     }
     const permissions = permissionsFor(user.role);
+    const modules = await moduleAccessFor(user.role);
     return ok({
       token,
       permissions,
+      modules,
       user: {
         id: user.id,
         username: user.username,
@@ -334,7 +338,8 @@ export function buildApp(): FastifyInstance {
 
   app.get("/api/auth/me", { preHandler: [requireAuth] }, async (req) => {
     const permissions = permissionsFor(req.user?.role);
-    return ok({ user: req.user, permissions, ip: requestIp(req) });
+    const modules = await moduleAccessFor(req.user?.role);
+    return ok({ user: req.user, permissions, modules, ip: requestIp(req) });
   });
 
   // Heartbeat sesi (FE: tiap 60 dtk saat JWT ada). Upsert baris user.
@@ -395,6 +400,7 @@ export function buildApp(): FastifyInstance {
   registerWbsRoutes(app);
   registerAdminRoutes(app);
   registerUserRoutes(app);
+  registerRbacRoutes(app);
   registerPdfRoutes(app);
   registerBoqDocRoutes(app);
   registerMaterialRequestRoutes(app);

@@ -277,6 +277,9 @@ export const SEED_ACCOUNTS: SeedAccount[] = [
   { username: "subkon@galangan.com", name: "Mitra Subkon", role: "subkon", email: "subkon@galangan.com" },
   { username: "equipment@galangan.com", name: "Staff Equipment", role: "equipment", email: "equipment@galangan.com" },
   { username: "drydock@galangan.com", name: "Dockmaster", role: "drydock", email: "drydock@galangan.com" },
+  // #289: peran baru notulen 23 Okt.
+  { username: "commercial@galangan.com", name: "Staff Commercial", role: "commercial", email: "commercial@galangan.com" },
+  { username: "pajak@galangan.com", name: "Staff Pajak", role: "pajak", email: "pajak@galangan.com" },
 ];
 
 export async function seedUsers(

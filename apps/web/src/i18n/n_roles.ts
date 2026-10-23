@@ -1,5 +1,13 @@
 export const n_roles = {
   id: {
+    rbacTitle: "Akses modul per peran (developer)",
+    rbacSub: "Centang = peran boleh membuka modul. Default mengikuti notulen 23 Okt; izin tambah/ubah/hapus data tetap dijaga server.",
+    rbacReset: "Kembalikan default",
+    rbacSave: "Simpan akses",
+    rbacSaved: "Akses modul disimpan - berlaku saat pengguna memuat ulang aplikasi",
+    rbacLoadFail: "Gagal memuat pengaturan akses",
+    rbacRole: "Peran",
+    rbacFinTabs: "Tab Keuangan yang boleh dibuka",
     title: "Peran & Akses",
     subtitle: "Matriks RBAC tampilan + siap enforce - enforcement penuh di backend",
     exportBtn: "Export Excel",
@@ -141,6 +149,14 @@ export const n_roles = {
     adminOpsSub: "Token backend & impor seed awal (bukan konstanta bisnis)",
   },
   en: {
+    rbacTitle: "Module access per role (developer)",
+    rbacSub: "Checked = the role may open the module. Defaults follow the 23 Oct notes; data create/edit/delete permissions are still enforced by the server.",
+    rbacReset: "Restore defaults",
+    rbacSave: "Save access",
+    rbacSaved: "Module access saved - applies when users reload the app",
+    rbacLoadFail: "Failed to load access settings",
+    rbacRole: "Role",
+    rbacFinTabs: "Finance tabs allowed",
     title: "Roles & Access",
     subtitle: "Display RBAC matrix + ready to enforce - full enforcement lives in the backend",
     exportBtn: "Export Excel",

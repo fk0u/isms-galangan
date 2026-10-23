@@ -16,6 +16,9 @@ export const ROLES = [
   "subkon",
   "equipment",
   "drydock",
+  // Notulen 23 Okt (#289): Commercial (CRM/penawaran/invoice) dan Pajak.
+  "commercial",
+  "pajak",
   "viewer",
 ] as const;
 
@@ -38,6 +41,8 @@ export const ROLE_RANK: Record<Role, number> = {
   subkon: 50,
   equipment: 50,
   drydock: 50,
+  commercial: 50,
+  pajak: 50,
   viewer: 10,
 };
 
@@ -54,9 +59,10 @@ export function normalizeRole(raw: unknown): Role {
   if (/qc|hse|inspector|quality|safety/i.test(r)) return "qc";
   if (/gudang|warehouse|inventory|logistik/i.test(r)) return "gudang";
   if (/procurement|purchasing|pengadaan/i.test(r)) return "procurement";
-  if (/finance|keuangan|account|pajak|tax/i.test(r)) return "finance";
+  if (/pajak|tax/i.test(r)) return "pajak";
+  if (/finance|keuangan|account/i.test(r)) return "finance";
   if (/\bhr\b|sdm|payroll|absensi|hc\b|personalia/i.test(r)) return "hr";
-  if (/sales|crm|marketing|commercial/i.test(r)) return "proyek";
+  if (/sales|crm|marketing|commercial|komersial/i.test(r)) return "commercial";
   if (/subkon|subcontractor/i.test(r)) return "subkon";
   if (/drydock|dock|docking|galangan/i.test(r)) return "drydock";
   if (/equipment|alat|utility/i.test(r)) return "equipment";
@@ -331,6 +337,24 @@ function makeDrydockMatrix(): Record<string, Action[]> {
   return m;
 }
 
+/* Commercial (#289): CRM, penawaran, kontrak, dan invoice. Modul lain cukup
+   baca data rujukan (proyek, kapal) untuk mengisi form. */
+function makeCommercialMatrix(): Record<string, Action[]> {
+  const m: Record<string, Action[]> = {};
+  for (const c of ["clients", "quotations", "requests", "communications", "contracts", "clientPos", "surveys"]) m[c] = [...RWD];
+  m.invoices = [...RW];
+  m.documents = [...RW];
+  m.activities = [...RW];
+  for (const c of ["projects", "vessels", "branches", "termins", "boq", "boqDocs"]) m[c] = [...R_ONLY];
+  return m;
+}
+
+/* Pajak (#289): sama dengan Finance (penuh di Keuangan, modul bernilai uang
+   lain baca saja) + boleh mengubah setting bergrup "Pajak" (dicek di CRUD). */
+function makePajakMatrix(): Record<string, Action[]> {
+  return { ...makeFinanceMatrix(), settings: [...RW] };
+}
+
 function makeViewerMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {
     projects: [...R_ONLY],
@@ -362,6 +386,8 @@ export const MATRIX: Record<Role, Record<string, Action[]>> = {
   subkon: makeSubkonMatrix(),
   equipment: makeEquipmentMatrix(),
   drydock: makeDrydockMatrix(),
+  commercial: makeCommercialMatrix(),
+  pajak: makePajakMatrix(),
   viewer: makeViewerMatrix(),
 };
 

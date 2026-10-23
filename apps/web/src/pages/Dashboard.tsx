@@ -165,7 +165,7 @@ const DASH_LEVEL_HEAD: Record<AlertLevel, string> = {
   perhatian: "text-amber-900",
   info: "text-ocean-800",
 };
-import { useAuth, hasPermission } from "../auth/auth";
+import { useAuth, hasPermission, canOpenModule } from "../auth/auth";
 
 import { pdfServerReady } from "../services/pdfClient";
 import { usePdfDoc } from "../components/usePdfDoc";
@@ -516,10 +516,12 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     const out: { key: ModuleAlertKey; item: ModuleAlertItem }[] = [];
     /* Urutan modul = urutan trademark kartu di bawah, jadi stable. */
     for (const k of DASH_ALERT_KEYS) {
+      // #288: hanya modul yang boleh dibuka role ini.
+      if (!canOpenModule(user, k)) continue;
       for (const item of byKey[k]) out.push({ key: k, item });
     }
     return out;
-  }, [scopedAlertData]);
+  }, [scopedAlertData, user]);
 
   const selectedAttentionItems = useMemo(
     () => selectedAttentionCategory

@@ -4,6 +4,7 @@
  * pertama berpindah, supaya perpindahan berikutnya dan "Kembali" selalu
  * memakai akun asal. Cache offline dibersihkan setiap pindah agar data peran
  * sebelumnya tidak ikut terlihat oleh peran yang haknya lebih sempit. */
+import type { ModuleAccess } from "./auth";
 import { apiFetch, getJwt, setJwt } from "../services/http";
 import { purgeOfflineCache } from "../data/idb";
 import type { PermissionsMap } from "./auth";
@@ -56,7 +57,7 @@ async function resetCacheFor(userId: string): Promise<void> {
 
 export async function switchToRole(role: string): Promise<void> {
   if (!confirmDropPending()) return;
-  const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
+  const res = await apiFetch<{ token: string; permissions: PermissionsMap; modules?: ModuleAccess; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
     "/api/auth/demo-switch",
     { method: "POST", body: JSON.stringify({ role }), headers: authHeader() },
   );
@@ -68,7 +69,7 @@ export async function switchToRole(role: string): Promise<void> {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     id: u.id, name: u.name, role: u.role, email: u.email, username: u.username,
     initials: u.name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase(),
-    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, employeeId: u.employeeId ?? null,
+    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, modules: res.modules, employeeId: u.employeeId ?? null,
   }));
   await resetCacheFor(u.id);
   window.location.assign("/dashboard");
@@ -103,7 +104,7 @@ export async function fetchLoginRoles(): Promise<LoginRole[]> {
 }
 
 export async function loginAsRole(role: string, to = "/dashboard"): Promise<void> {
-  const res = await apiFetch<{ token: string; permissions: PermissionsMap; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
+  const res = await apiFetch<{ token: string; permissions: PermissionsMap; modules?: ModuleAccess; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId?: string | null } }>(
     "/api/auth/demo-login",
     { method: "POST", body: JSON.stringify({ role }) },
   );
@@ -113,7 +114,7 @@ export async function loginAsRole(role: string, to = "/dashboard"): Promise<void
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     id: u.id, name: u.name, role: u.role, email: u.email, username: u.username,
     initials: u.name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase(),
-    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, employeeId: u.employeeId ?? null,
+    loginAt: new Date().toISOString(), branch: u.branch || "SEMUA", permissions: res.permissions, modules: res.modules, employeeId: u.employeeId ?? null,
   }));
   await resetCacheFor(u.id);
   window.location.assign(to);

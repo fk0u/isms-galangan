@@ -1,0 +1,15 @@
+meta {
+  name: PUT rbac
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/rbac
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

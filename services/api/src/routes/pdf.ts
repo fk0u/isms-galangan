@@ -12,6 +12,7 @@
  * Yang disimpan hanya dua jejak: audit (siapa mencetak apa) dan MODEL
  * render (apa yang benar-benar tercetak) - lihat pdf/renderStore.ts.
  */
+import { canOpenModule } from "../moduleAccess.js";
 import type { FastifyInstance } from "fastify";
 import { requireAuth, branchAllowed } from "../auth.js";
 import { ok } from "../envelope.js";
@@ -93,6 +94,12 @@ export function registerPdfRoutes(app: FastifyInstance): void {
         ok: false,
         error: { message: `Jenis dokumen tidak dikenal: ${kind || "(kosong)"}`, code: "VALIDATION_ERROR" },
       });
+    }
+    /* #289: laporan & analitik perusahaan hanya untuk role yang boleh membuka
+       modul Laporan/Analisis (default: Direktur). */
+    const execModule = kind === "laporan" ? "laporan" : kind === "analitik" ? "analytics" : null;
+    if (execModule && !(await canOpenModule(req.user?.role, execModule))) {
+      return reply.status(403).send({ ok: false, error: { message: "Laporan ini hanya untuk pimpinan", code: "FORBIDDEN" } });
     }
     const id = String(body.id ?? "").trim();
     if (recipe.requiresEntity && id === "") {

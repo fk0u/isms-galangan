@@ -10,6 +10,7 @@
  *   - hanya pemanggil berperan direktur/developer (dibaca dari DB, bukan klaim token);
  *   - setiap perpindahan tercatat di audit_log (auth.demo_switch).
  * Kembali ke akun asal dilakukan klien dengan token asal yang disimpan di sesi. */
+import { moduleAccessFor, type ModuleAccess } from "../moduleAccess.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { branchOfUser, requireAuth, SEED_ACCOUNTS, signToken } from "../auth.js";
@@ -44,7 +45,7 @@ interface UserRow {
 
 type DemoIssue =
   | { error: string; status: 403 | 404 | 409 | 503; code: string }
-  | { token: string; permissions: ReturnType<typeof permissionsFor>; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId: string | null } };
+  | { token: string; permissions: ReturnType<typeof permissionsFor>; modules: ModuleAccess; user: { id: string; username: string; name: string; role: string; branch: string; email: string; employeeId: string | null } };
 
 /** Token untuk akun seed sebuah peran. Dipakai "lihat sebagai peran" dan login demo. */
 async function issueDemoToken(role: string): Promise<DemoIssue> {
@@ -71,6 +72,7 @@ async function issueDemoToken(role: string): Promise<DemoIssue> {
   return {
     token,
     permissions: permissionsFor(user.role),
+    modules: await moduleAccessFor(user.role),
     user: { id: user.id, username: user.username, name: user.name, role: user.role, branch, email: user.email, employeeId: user.employee_id },
   };
 }
