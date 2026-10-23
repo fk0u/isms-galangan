@@ -927,7 +927,16 @@ export default function Procurement() {
     }
     await update("purchaseOrders", po.id, { status: next });
     toast(S.tArrow.replace("{a}", po.id).replace("{b}", next));
+    if (next === "Disetujui") afterApproved(po);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+  };
+
+  /* Q27: server menerbitkan invoice PO (hutang) saat PO Disetujui. Ambil
+     barisnya dan beri tahu pengguna di mana invoice itu - sebelumnya invoice
+     terbit diam-diam di Keuangan sehingga terlihat "tidak terbit". */
+  const afterApproved = (po: StoreItem) => {
+    void resyncCollections(["payables"]);
+    toast(S.tInvTerbit.replace("{n}", String(po.id)), "success");
   };
 
   /* Persetujuan berjenjang SPV → Manager → Director sesuai nominal. */
@@ -941,6 +950,7 @@ export default function Procurement() {
     await update("purchaseOrders", po.id, { approvals: done, status: still ? po.status : "Disetujui" });
     log("persetujuan PO", `${po.id} level ${nx}${still ? `, lanjut ke ${still}` : " (penuh)"}`, "Procurement");
     toast(still ? S.tApprNext.replace("{n}", po.id).replace("{a}", nx).replace("{b}", still) : S.tApprFull.replace("{n}", po.id));
+    if (!still) afterApproved(po);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
 
@@ -1614,6 +1624,24 @@ export default function Procurement() {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
         <button className="btn-secondary text-xs" onClick={() => setPoDetail(po)}>{locale === "en" ? "Detail" : "Detail"}</button>
+        {(() => {
+          /* Invoice PO (hutang otomatis) terlihat langsung dari PO + tautan ke Keuangan. */
+          const inv = poInvoiceOf(po);
+          if (!inv) return null;
+          const lunas = String(inv.st ?? "") === "Lunas";
+          const ok = lunas || inv.persetujuan === "Disetujui" || inv.persetujuan === undefined;
+          const label = lunas ? S.invLunas : inv.persetujuan === "Disetujui" ? S.invDisetujui : inv.persetujuan === "Menunggu" ? (Number(inv.amt || 0) > 0 ? S.invMenunggu : S.invMenungguNota) : S.invAda;
+          return (
+            <button
+              type="button"
+              className={`rounded-lg border px-2 py-1 text-xs font-medium ${ok ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`}
+              title={S.invBuka}
+              onClick={() => navigate(`/keuangan?tab=${encodeURIComponent("Hutang (AP)")}&highlight=${encodeURIComponent(String(inv.id))}`)}
+            >
+              {S.invBadge.replace("{n}", String(inv.id)).replace("{s}", label)}
+            </button>
+          );
+        })()}
         {/* Ubah hanya sebelum Dikirim: sesudah itu baris PO adalah acuan
             penerima barang dan sudah bisa jadi hutang. */}
         {st !== "Dikirim" && st !== "Diterima Sebagian" && st !== "Diterima" && st !== "Dibatalkan Sebagian" && st !== "Ditolak" && (
