@@ -14,10 +14,11 @@ import { equipmentCostSummary } from "../../utils/projectCost";
 import { useT } from "../../i18n/LanguageContext";
 import { n_misc } from "../../i18n/n_misc";
 import { exportExcelSheets } from "../../utils/export";
+import EksekutifPanel, { exportEksekutif, useEksekutif } from "./Eksekutif";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 
-type Mode = "Mingguan" | "Bulanan" | "Per Proyek";
+type Mode = "Mingguan" | "Bulanan" | "Per Proyek" | "Eksekutif";
 
 const num = (v: unknown): number => Number(v) || 0;
 const inRange = (d: string, a: string, b: string): boolean => d >= a && d <= b;
@@ -95,7 +96,7 @@ function loadArc(): ReportArc[] {
 /* Batch koleksi modul Laporan untuk useModuleSync (pengganti resync penuh).
    `equipment`, `bookings`, `maintenances`, `payables` ditambahkan supaya
    kartu biaya equipment per proyek benar-benar terisi di mode remote. */
-const LAP_COLS: CollectionKey[] = ["activities", "attendance", "boq", "branches", "equipment", "bookings", "maintenances", "incidents", "invoices", "ncr", "payables", "payroll", "projects", "purchaseOrders", "taxPeriods"];
+const LAP_COLS: CollectionKey[] = ["activities", "attendance", "boq", "branches", "equipment", "bookings", "maintenances", "incidents", "invoices", "ncr", "payables", "payroll", "projects", "purchaseOrders", "taxPeriods", "journals", "rabItems"];
 
 export default function Laporan() {
 
@@ -105,7 +106,7 @@ export default function Laporan() {
   useModuleSync(LAP_COLS);
   const { locale } = useT();
   const S = n_misc[locale];
-  const [mode, setMode] = useState<Mode>("Mingguan");
+  const [mode, setMode] = useState<Mode>("Eksekutif");
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
   const [month, setMonth] = useState(() => todayISO().slice(0, 7));
   const [projectId, setProjectId] = useState("");
@@ -374,7 +375,8 @@ export default function Laporan() {
     toast(S.tExcelProjectDownloaded);
   };
 
-  const pdfName = mode === "Mingguan" ? `Laporan-Mingguan-${week0}` : mode === "Bulanan" ? `Laporan-Bulanan-${month}` : `Laporan-${activeProjectId}`;
+  const eks = useEksekutif(month);
+  const pdfName = mode === "Eksekutif" ? `Laporan-Eksekutif-${month}` : mode === "Mingguan" ? `Laporan-Mingguan-${week0}` : mode === "Bulanan" ? `Laporan-Bulanan-${month}` : `Laporan-${activeProjectId}`;
   /* Laporan kas (mingguan/bulanan) dan laporan proyek dirakit server dari baris
      DB-nya sendiri. Versi lama memotret `#laporan-konten` dengan html2canvas,
      sehingga angka di PDF bisa berbeda dari pembukuan dan grafiknya jadi gambar.
@@ -397,8 +399,9 @@ export default function Laporan() {
         locale,
         branch,
         filters: {
-          mode,
-          period: mode === "Bulanan" ? month : week0,
+          // Eksekutif memakai laporan bulanan server (kas, biaya, payroll) untuk bulan yang sama.
+          mode: mode === "Eksekutif" ? "Bulanan" : mode,
+          period: mode === "Bulanan" || mode === "Eksekutif" ? month : week0,
           projectId: activeProjectId,
           signatureName: sigName.trim(),
           signatureRole: sigRole.trim(),
@@ -409,7 +412,7 @@ export default function Laporan() {
       false,
     );
     if (!done) return;
-    pushArc(pdfName, isProject ? String(project?.vessel ?? "") : mode === "Bulanan" ? month : `${fmtTanggal(week0)} - ${fmtTanggal(week1)}`, mode);
+    pushArc(pdfName, isProject ? String(project?.vessel ?? "") : mode === "Bulanan" || mode === "Eksekutif" ? month : `${fmtTanggal(week0)} - ${fmtTanggal(week1)}`, mode);
     toast(S.tPdfArchived);
   };
 
@@ -420,7 +423,9 @@ export default function Laporan() {
         subtitle={S.lapSubtitle}
         icon={<FileText className="h-5 w-5" />}
         actions={
-          mode === "Mingguan"
+          mode === "Eksekutif"
+            ? <><AsyncButton className="btn-secondary" onAction={async () => { await exportEksekutif(eks, month, sigRows() as (string | number)[][]); pushArc(pdfName, month, "Eksekutif"); toast(S.tExcelMonthDownloaded); }}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
+          : mode === "Mingguan"
             ? <><AsyncButton className="btn-secondary" onAction={async () => exportWeek()}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
             : mode === "Bulanan"
               ? <><AsyncButton className="btn-secondary" onAction={async () => exportMonth()}>{S.exportExcelBtn}</AsyncButton><AsyncButton className="btn-primary" onAction={exportPDFLogged}>{S.pdfReportBtn}</AsyncButton></>
@@ -430,13 +435,13 @@ export default function Laporan() {
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex rounded-xl bg-steel-100 p-1">
-          {(["Mingguan", "Bulanan", "Per Proyek"] as Mode[]).map((m) => (
+          {(["Eksekutif", "Mingguan", "Bulanan", "Per Proyek"] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${mode === m ? "bg-white text-navy-900 shadow-soft" : "text-steel-500"}`}
             >
-              {m === "Mingguan" ? S.modeWeekly : m === "Bulanan" ? S.modeMonthly : S.modePerProject}
+              {m === "Eksekutif" ? S.modeExec : m === "Mingguan" ? S.modeWeekly : m === "Bulanan" ? S.modeMonthly : S.modePerProject}
             </button>
           ))}
         </div>
@@ -453,7 +458,7 @@ export default function Laporan() {
             {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        {mode === "Bulanan" && (
+        {(mode === "Bulanan" || mode === "Eksekutif") && (
           <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
             {S.monthLabel}
             <input type="month" className="input w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
@@ -506,6 +511,7 @@ export default function Laporan() {
           <img src="/kop-sb.jpg" alt={SB_KOP.name} style={{ width: "100%", height: "auto", display: "block" }} />
           <p style={{ fontSize: 12, fontWeight: 700, color: "#0A0A0A", marginTop: 8 }}>{pdfName}</p>
         </div>
+        {mode === "Eksekutif" && <EksekutifPanel month={month} />}
         {mode === "Mingguan" && (
           <div className="space-y-4">
             <p className="text-sm text-steel-500">{S.weekRangeProjects.replace("{a}", fmtTanggal(week0)).replace("{b}", fmtTanggal(week1)).replace("{n}", fmtJumlah(weekly.projects.length))}</p>

@@ -176,6 +176,7 @@ export interface StoreShape {
   checklistResponses: StoreItem[];
   /** BOM per proyek: material inventori yang dibutuhkan satu proyek. */
   bomItems: StoreItem[];
+  rabItems: StoreItem[];
   wbsByProject: Record<string, WbsItem[]>;
   teamByProject: Record<string, string[]>;
 }
@@ -368,6 +369,7 @@ function buildSeeds(): StoreShape {
       checklistTemplates: clone(seedChecklistTemplates) as StoreItem[],
       checklistResponses: clone(seedChecklistResponses) as StoreItem[],
       bomItems: clone(seedBomItems) as StoreItem[],
+      rabItems: [],
       wbsByProject: clone(seedWbsByProject),
       teamByProject: clone(seedTeamByProject),
    };
@@ -526,6 +528,7 @@ const PREFIX: Record<string, string> = {
     checklistTemplates: "CLT",
     checklistResponses: "CLR",
     bomItems: "BOM",
+    rabItems: "RAB",
  };
 
 const ARRAY_KEYS: (keyof StoreShape)[] = [
@@ -537,7 +540,7 @@ const ARRAY_KEYS: (keyof StoreShape)[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties",
-  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
+  "calibrations", "communications", "contracts", "bast", "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems", "rabItems",
 ];
 
 function sanitizeStore(parsed: Partial<StoreShape>): StoreShape {
@@ -817,7 +820,7 @@ const OFFLINE_COLLECTIONS: string[] = [
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
-  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
+  "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems", "rabItems",
   "wbsByProject", "teamByProject", "wbsBaseByProject", "teamBaseByProject",
 ];
 

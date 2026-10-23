@@ -1,0 +1,15 @@
+meta {
+  name: POST closing
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/closing
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}
