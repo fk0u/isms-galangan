@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { useAuth } from "../../auth/auth";
@@ -49,6 +49,9 @@ import type { SortState } from "../../components/ui";
 import { useBusy } from "../../components/ui";
 import { n_fin } from "../../i18n/n_fin";
 import PayrollTab from "./tabs/PayrollTab";
+import RabTab from "./tabs/RabTab";
+import TutupBukuCard from "./tabs/TutupBukuCard";
+import NeracaLajurCard from "./tabs/NeracaLajurCard";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
 import type { StoreItem, WbsItem } from "../../data/store";
@@ -864,7 +867,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* #289: tab Keuangan yang boleh dibuka role ini (Commercial: Invoice saja). */
   const { user: finUser } = useAuth();
   const finTabs = useMemo(() => {
-    const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll"];
+    const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll", "RAB"];
     const allow = finUser?.modules?.finTabs;
     return allow ? all.filter((t) => allow.includes(t)) : all;
   }, [finUser?.modules?.finTabs]);
@@ -2586,6 +2589,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
      dan Pasiva (2 kewajiban, 3 ekuitas, + laba berjalan dari akun 4-9).
      Selisih Aktiva - Pasiva ditampung di baris "Historical Balancing" agar
      neraca seimbang, dan indikatornya menunjukkan besarnya selisih itu. */
+  const nrInPeriod = useCallback((d: string) => matchHist(d, nrHist), [nrHist]);
   const nrNeraca = useMemo(() => {
     const saldo = new Map<string, number>();
     for (const j of manJournals) {
@@ -4524,6 +4528,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <div className="space-y-4">
               <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
+              <TutupBukuCard />
+              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} />
               <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
                 {nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}
               </div>
@@ -4700,6 +4706,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           })() : null}
 
           {tab === "Payroll" && <PayrollTab />}
+          {tab === "RAB" && <RabTab />}
           {tab === "Pajak" && (
             <div className="space-y-4">
               <CardHeader
@@ -4812,6 +4819,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 subtitle={S.assetSub}
                 action={<button className="btn-primary text-xs" onClick={() => { setAstEdit(null); setAstForm({ nama: "", kelompok: "2", bulan: "", tahun: "", nilai: "", metode: "GL" }); setShowAst(true); }}>{S.addAset}</button>}
               />
+              {/* #282: ringkasan aset mengikuti daftar yang sedang difilter. */}
+              {(() => {
+                const total = filteredAset.reduce((s, x) => s + num(x.nilai), 0);
+                const perTahun = filteredAset.reduce((s, x) => s + num(x.susutTahun), 0);
+                return (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <KpiCard label={S.astTotalNilai} value={fmtRupiah(total)} hint={S.astCount.replace("{n}", String(filteredAset.length))} chip="navy" />
+                    <KpiCard label={S.astSusutTahun} value={fmtRupiah(perTahun)} hint={S.astSusutHint} chip="amber" />
+                    <KpiCard label={S.astSusutBulan} value={fmtRupiah(Math.round(perTahun / 12))} hint={S.astSusutBulanHint} chip="teal" />
+                  </div>
+                );
+              })()}
               <div className="mb-2 flex justify-end">
                 <SearchBox value={asetQ} onChange={setAsetQ} className="max-w-xs" placeholder={locale === "en" ? "Search assets..." : "Cari aset..."} ariaLabel={locale === "en" ? "Search fixed assets" : "Cari aset tetap"} />
               </div>

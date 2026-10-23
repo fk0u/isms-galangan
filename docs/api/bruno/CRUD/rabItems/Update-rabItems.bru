@@ -1,0 +1,25 @@
+meta {
+  name: Update rabItems
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/rabItems/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {
+    "data": {}
+  }
+}
+
+docs {
+  Merge sebagian field ke data.
+}

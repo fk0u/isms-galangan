@@ -16,6 +16,7 @@ import { requireManageUsers } from "./rbac.js";
 import { permissionsFor } from "./policy.js";
 import { moduleAccessFor } from "./moduleAccess.js";
 import { registerRbacRoutes } from "./routes/rbac.js";
+import { registerClosingRoutes } from "./routes/closing.js";
 import { COLLECTIONS, registerCrud } from "./routes/crud.js";
 import { registerAuditRoutes } from "./routes/audit.js";
 import { registerFileRoutes } from "./routes/files.js";
@@ -401,6 +402,7 @@ export function buildApp(): FastifyInstance {
   registerAdminRoutes(app);
   registerUserRoutes(app);
   registerRbacRoutes(app);
+  registerClosingRoutes(app);
   registerPdfRoutes(app);
   registerBoqDocRoutes(app);
   registerMaterialRequestRoutes(app);

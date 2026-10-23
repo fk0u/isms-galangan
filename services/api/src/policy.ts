@@ -87,7 +87,7 @@ const ALL_ENVELOPE_COLLECTIONS = [
   "equipment", "bookings", "subcontractors", "workOrders", "termins",
   "employees", "invoices", "payables", "ncr", "incidents", "inspections",
   "purchaseOrders", "requisitions", "vendors", "quotations", "clients",
-  "documents", "surveys", "activities", "services", "spareparts", "boq", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems",
+  "documents", "surveys", "activities", "services", "spareparts", "boq", "boqDocs", "materialRequests", "checklistTemplates", "checklistResponses", "bomItems", "rabItems",
   "branches", "attendance", "payroll", "taxPeriods", "rfqs", "changeOrders",
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
@@ -161,6 +161,8 @@ function makeFinanceMatrix(): Record<string, Action[]> {
     // #281: membayar gaji; field yang boleh diubah dibatasi payrollGuard.ts.
     payroll: [...RW],
     employees: [...RW],
+    // #285: RAB belanja rutin dikelola Keuangan.
+    rabItems: [...RWD],
   };
   return m;
 }

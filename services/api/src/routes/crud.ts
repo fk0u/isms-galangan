@@ -15,6 +15,7 @@ import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { payrollRoleError } from "../payrollGuard.js";
+import { closingGuardError } from "../closing.js";
 import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError, projectFeeError, payableApprovalError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
@@ -114,6 +115,7 @@ export const PREFIX: Record<string, string> = {
   checklistTemplates: "CLT",
   checklistResponses: "CLR",
   bomItems: "BOM",
+  rabItems: "RAB",
 };
 
 // Every envelope table from migrations/001_init.sql except users
@@ -128,7 +130,7 @@ export const COLLECTIONS: string[] = [
   "risks", "leaves", "trainings", "timesheets", "drawings", "toolbox",
   "warranties", "calibrations", "communications", "contracts", "bast",
   "trials", "requests", "clientPos", "walks", "auditPlans", "warehouses", "maintenances", "letters", "settings", "coa", "journals", "assets", "boqDocs", "materialRequests",
-  "checklistTemplates", "checklistResponses", "bomItems",
+  "checklistTemplates", "checklistResponses", "bomItems", "rabItems",
 ];
 
 // Tulis settings/coa dibatasi di registerCrud (requireSettingsWrite).
@@ -577,6 +579,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
     const payCreate = payrollRoleError(table, null, rowData, req.user?.role);
     if (payCreate) return reply.status(403).send(fail(payCreate, "FORBIDDEN"));
+    const closedCreate = await closingGuardError(table, null, rowData);
+    if (closedCreate) return reply.status(409).send(fail(closedCreate, "LOCKED"));
     // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
     if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
     const ruleCreate = transferError(table, rowData) ?? projectFeeError(table, null, rowData) ?? await projectManagerError(table, null, rowData) ?? await bomItemError(table, null, rowData);
@@ -707,6 +711,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
     const payLock = payrollRoleError(table, oldData, merged as Record<string, unknown>, req.user?.role);
     if (payLock) return reply.status(403).send(fail(payLock, "FORBIDDEN"));
+    const closedLock = await closingGuardError(table, oldData, merged as Record<string, unknown>);
+    if (closedLock) return reply.status(409).send(fail(closedLock, "LOCKED"));
     // Baris Transfer lama (tanpa fromWh/toWh) tetap bisa diedit selama gudangnya tidak disentuh.
     const whChanged = (["type", "fromWh", "toWh"] as const).some((k) => oldData[k] !== (merged as Record<string, unknown>)[k]);
     if (table === "workOrders" && Array.isArray((merged as Record<string, unknown>).progressLog)) {
@@ -830,6 +836,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     const deleteLock = await boqLockError(table, toJson(doomed).data as Record<string, unknown>, null);
     const deleteGuard = await serviceGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
     if (deleteGuard) return reply.status(409).send(fail(deleteGuard, "LOCKED"));
+    const closedDelete = await closingGuardError(table, toJson(doomed).data as Record<string, unknown>, null);
+    if (closedDelete) return reply.status(409).send(fail(closedDelete, "LOCKED"));
     const coDelete = changeOrderDeleteError(table, toJson(doomed).data as Record<string, unknown>);
     if (coDelete) return reply.status(409).send(fail(coDelete, "LOCKED"));
     const spkDelete = spkLockError(table, toJson(doomed).data as Record<string, unknown>, null, req.user?.role);
