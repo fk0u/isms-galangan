@@ -890,8 +890,9 @@ function sizeOf(src: string): { w: number; h: number } | null {
 /** Grafik vektor - blok warga layout, bukan gambar. */
 export function chartBlock(spec: ChartSpec): Block {
   return {
-    spaceBefore: 2,
-    spaceAfter: 3,
+    // Jarak lega dari isi di atas dan di bawah grafik (dulu 2 / 3 mm, terlalu mepet).
+    spaceBefore: 8,
+    spaceAfter: 6,
     /* Tidak keepWithNext: judul grafik sudah di dalam blok ini. Menahan grafik
        ke blok berikutnya membuat beberapa grafik berturut-turut saling
        mendorong ke halaman baru dan menyisakan halaman setengah kosong. */

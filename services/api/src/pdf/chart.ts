@@ -112,6 +112,9 @@ function rect(ctx: ChartCtx, x: number, y: number, w: number, h: number, color: 
 }
 
 /** Judul + subjudul di atas chart; mengembalikan tinggi yang dipakai. */
+/** Jarak antara judul grafik dan area grafik (permintaan user 23 Okt: grafik terlalu mepet). */
+const TITLE_GAP = 3;
+
 function drawChartTitle(ctx: ChartCtx, title: string, sub?: string): number {
   let h = 0;
   txt(ctx, title, ctx.x, ctx.y + lineHeightFor(TYPE.base, 1.1), ctx.width, {
@@ -127,7 +130,7 @@ function drawChartTitle(ctx: ChartCtx, title: string, sub?: string): number {
     });
     h += lineHeightFor(TYPE.base - 1, 1.1);
   }
-  return h;
+  return h + TITLE_GAP;
 }
 
 /** Legenda seri di bawah chart; mengembalikan tinggi yang dipakai. */
@@ -171,11 +174,10 @@ function drawXLabels(ctx: ChartCtx, labels: string[], plotX: number, plotW: numb
   const step = widest + 3 > slot ? Math.max(1, Math.ceil((widest + 3) / slot)) : 1;
   labels.forEach((label, i) => {
     if (i % step !== 0) return;
-    /* Slot label dipusatkan pada titik data, jadi kotak label untuk data
-       pertama bisa mulai sebelum margin kiri - dan teksnya keluar dari kertas.
-       Kotak label dijepit ke area plot; perataan "center" tetap dipakai, jadi
-       label pertama cukup geser, bukan terpotong. */
-    const slotX = Math.max(plotX, Math.min(plotX + slot * i - slot / 2, plotX + plotW - slot));
+    /* Batang & titik data berada di TENGAH slot ke-i (slot*i + slot/2), jadi
+       kotak label = slot itu sendiri. Dulu kotak digeser setengah slot ke kiri
+       sehingga setiap label meleset dari batangnya. */
+    const slotX = plotX + slot * i;
     txt(ctx, label, slotX, y, slot, { size, color: COLOR.axis, align: "center" });
   });
 }
@@ -239,7 +241,7 @@ export function planChartHeight(spec: ChartSpec, width: number): { height: numbe
   return { height: chartHeight(spec, width) };
 }
 
-const TITLE_H = lineHeightFor(TYPE.base, 1.1) + 1;
+const TITLE_H = lineHeightFor(TYPE.base, 1.1) + 1 + TITLE_GAP;
 const SUB_H = lineHeightFor(TYPE.base - 1, 1.1) + 0.6;
 const XLABEL_H = lineHeightFor(TYPE.axis) + 1.5;
 

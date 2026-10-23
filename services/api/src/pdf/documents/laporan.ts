@@ -556,7 +556,8 @@ export function analyticReport(input: AnalyticModel, opts: DocOptions = {}): Doc
       series: [{ key: "margin", label: "%", color: COLOR.series[1] ?? COLOR.navy }],
       values: { margin: input.series.map((p) => p.margin) },
       emphasizeZero: true,
-      format: (v) => `${v.toFixed(0)}%`,
+      // Satu desimal bila perlu: skala kecil (0,2; 0,4; …) dulu tercetak "0%" / "1%" berulang.
+      format: (v) => `${String(Number(v.toFixed(2))).replace(".", ",")}%`,
     }),
   );
 
