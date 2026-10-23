@@ -350,6 +350,8 @@ const invNeto = (inv: StoreItem): number => {
   if (g > 0) return g;
   return Math.max(0, num(inv.amount) - num(inv.retentionAmt));
 };
+// #275: invoice bisa dibayar bertahap; `paidTotal` = jumlah semua pembayaran.
+const invSisa = (inv: StoreItem): number => Math.max(0, invNeto(inv) - num(inv.paidTotal));
 
 // Payroll: bruto = basic + tunjangan (array|number) + lembur; net = kas keluar;
 // potongan = bruto - net (PPh21 + BPJS karyawan), selalu seimbang.
@@ -535,7 +537,7 @@ function arOutAsOf(list: StoreItem[], end: string): { c: string; total: number; 
     if (st === "Draft") continue;
     if (st === "Dihapusbukukan" && String(i.writeOffAt ?? "") <= end) continue;
     if (st === "Lunas" && (!i.paidAt || String(i.paidAt) <= end)) continue;
-    const v = invNeto(i);
+    const v = st === "Lunas" ? invNeto(i) : invSisa(i);
     if (v <= 0) continue;
     const c = String(i.client ?? "-");
     const cur = m.get(c) ?? { c, total: 0, count: 0 };
@@ -887,6 +889,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [kasQ, setKasQ] = useState("");
   const [jadwalQ, setJadwalQ] = useState("");
   const [bbQ, setBbQ] = useState("");
+  // #272: buku besar per akun ("" = semua akun).
+  const [bbAkun, setBbAkun] = useState("");
   const [lrQ, setLrQ] = useState("");
   const [nrQ, setNrQ] = useState("");
   const [asetQ, setAsetQ] = useState("");
@@ -949,6 +953,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [apTarget, setApTarget] = useState<StoreItem | null>(null);
   const [apPayAmt, setApPayAmt] = useState("");
   const [proof, setProof] = useState(emptyProof);
+  const [invPayAmt, setInvPayAmt] = useState("");
   /* Lampiran gambar bukti pembayaran (satu state dipakai modal invoice & hutang). */
   const [proofImg, setProofImg] = useState("");
   /* Modal Detail Invoice (read-only + viewer bukti & jurnal). */
@@ -1418,7 +1423,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               ["Selisih", bbDAll - bbKAll],
             ],
           },
-        ], `Buku-Besar-${bbAsOf}`);
+          ...(bbAkun ? [{
+            name: `Mutasi ${bbAkun}`,
+            rows: [
+              ["Akun", `${bbAkun} ${String(coaRows.find((c) => String(c.kode) === bbAkun)?.nama ?? "")}`],
+              ["Saldo awal", bbMutasi.awal],
+              ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"],
+              ...bbMutasi.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo] as (string | number)[]),
+            ],
+          }] : []),
+        ], `Buku-Besar-${bbAkun ? `${bbAkun}-` : ""}${bbAsOf}`);
       } else if (which === "lr") {
         await exportExcelSheets([
           {
@@ -1436,7 +1450,28 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           },
         ], `Laba-Rugi-${lrAsOf}`);
       } else {
+        const n = nrNeraca;
+        const sect = (title: string, l: Array<{ kode: string; nama: string; nilai: number }>): (string | number)[][] =>
+          [[title, "", ""], ...l.map((x) => [x.kode, x.nama, x.nilai] as (string | number)[]), ["", `Jumlah ${title}`, l.reduce((s, x) => s + x.nilai, 0)]];
         await exportExcelSheets([
+          {
+            name: "Neraca",
+            rows: [
+              ["NERACA", "", ""],
+              ["Per tanggal", nrAsOf, ""],
+              [],
+              ["AKTIVA", "", ""],
+              ...sect("Aktiva", n.aktiva),
+              ["", "TOTAL AKTIVA", n.totalAktiva],
+              [],
+              ["PASIVA", "", ""],
+              ...sect("Kewajiban", n.kewajiban),
+              ...sect("Ekuitas", n.ekuitas),
+              ["", "Laba (rugi) berjalan", n.laba],
+              ["3-999", "Historical Balancing", n.selisih],
+              ["", "TOTAL PASIVA", n.totalPasiva],
+            ],
+          },
           {
             name: "Hutang",
             rows: [
@@ -1501,7 +1536,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     () => invoices.filter((i) => i.status !== "Lunas" && i.status !== "Draft" && i.status !== "Dihapusbukukan"),
     [invoices]
   );
-  const arTotal = arOpen.reduce((s, i) => s + invNeto(i), 0);
+  const arTotal = arOpen.reduce((s, i) => s + invSisa(i), 0);
   const apTotal = payables.filter((a) => a.st !== "Lunas").reduce((s, a) => s + Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)), 0);
   const lateCount = invoices.filter((i) => i.status === "Terlambat").length;
   const writeOffTotal = invoices.filter((i) => i.status === "Dihapusbukukan").reduce((s, i) => s + invNeto(i), 0);
@@ -1513,7 +1548,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           const age = ageDays(i.due, today);
           return age >= b.min && age <= b.max;
         });
-        return { ...b, count: rows.length, total: rows.reduce((s, i) => s + invNeto(i), 0) };
+        return { ...b, count: rows.length, total: rows.reduce((s, i) => s + invSisa(i), 0) };
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [arOpen]
@@ -1658,7 +1693,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     for (const i of arOpen) {
       const dueMs = Date.parse(String(i.due ?? ""));
       if (!Number.isFinite(dueMs) || dueMs > cutoff) continue;
-      rows.push({ key: `AR:${i.id}`, kind: "AR", id: String(i.id), ref: String(i.project ?? ""), desc: String(i.client ?? ""), due: String(i.due ?? ""), amount: invNeto(i), age: ageDays(i.due, today) });
+      rows.push({ key: `AR:${i.id}`, kind: "AR", id: String(i.id), ref: String(i.project ?? ""), desc: String(i.client ?? ""), due: String(i.due ?? ""), amount: invSisa(i), age: ageDays(i.due, today) });
     }
     return rows.sort((a, b) => String(a.due).localeCompare(String(b.due)));
   }, [payables, arOpen, today]);
@@ -2010,7 +2045,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     if (!proj) { toast(S.pickProjectFirst, "info"); return; }
     if (!invForm.due) { toast(S.dueRequired, "info"); return; }
     if (!invForm.paymentTerm.trim()) { toast(S.termLabelRequired, "info"); return; }
-    if (invForm.billingType === "Milestone" && !invForm.milestoneRef.trim()) { toast(S.milestoneRequired, "info"); return; }
     if (num(invForm.dpApplied) > 0 && !invForm.dpRef.trim()) { toast(S.dpRefRequired, "info"); return; }
     const validLines = invLines.filter((l) => l.desc.trim() && lineAmount(l, isTMForm) > 0);
     if (validLines.length === 0) { toast(S.minOneLine, "info"); return; }
@@ -2519,6 +2553,25 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* Saldo kumulatif harus seimbang: total debit = total kredit untuk semua
      akun. Kalau tidak, ada jurnal yang tanggalnya di luar rentang as-of dan
      angka yang tampil bukan saldo. */
+  /* Mutasi satu akun dalam rentang filter + saldo berjalan (saldo awal =
+     mutasi sebelum rentang). Saldo dihitung D - K. */
+  const bbMutasi = useMemo(() => {
+    if (!bbAkun) return { awal: 0, rows: [] as Array<{ j: StoreItem; d: number; k: number; saldo: number }> };
+    const touch = manJournals
+      .filter((j) => j.status !== "Void" && (String(j.db ?? "") === bbAkun || String(j.kr ?? "") === bbAkun))
+      .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
+    let saldo = 0;
+    let awal = 0;
+    const rows: Array<{ j: StoreItem; d: number; k: number; saldo: number }> = [];
+    for (const j of touch) {
+      const tgl = String(j.date ?? "").slice(0, 10);
+      const d = String(j.db ?? "") === bbAkun ? num(j.amount) : 0;
+      const k = String(j.kr ?? "") === bbAkun ? num(j.amount) : 0;
+      if (matchHist(tgl, bbHist)) { saldo += d - k; rows.push({ j, d, k, saldo }); }
+      else if (rows.length === 0 && tgl <= bbAsOf) { awal += d - k; saldo = awal; }
+    }
+    return { awal, rows };
+  }, [bbAkun, manJournals, bbHist, bbAsOf]);
   const bbDAll = bbLive.reduce((s, r) => s + r.dAll, 0);
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
@@ -2529,6 +2582,34 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const hutLiveTotal = hutLive.reduce((s, h) => s + h.total, 0);
   const piuLiveTotal = piuLive.reduce((s, p) => s + p.total, 0);
   const nrLabaLive = plMonthly.filter((p) => p.period <= nrAsOf.slice(0, 7)).reduce((s, p) => s + p.laba, 0);
+  /* #273/#274: neraca dari saldo jurnal s.d. as-of, disusun Aktiva (kode 1)
+     dan Pasiva (2 kewajiban, 3 ekuitas, + laba berjalan dari akun 4-9).
+     Selisih Aktiva - Pasiva ditampung di baris "Historical Balancing" agar
+     neraca seimbang, dan indikatornya menunjukkan besarnya selisih itu. */
+  const nrNeraca = useMemo(() => {
+    const saldo = new Map<string, number>();
+    for (const j of manJournals) {
+      if (j.status === "Void" || String(j.date ?? "").slice(0, 10) > nrAsOf) continue;
+      const a = num(j.amount);
+      const db = String(j.db ?? ""), kr = String(j.kr ?? "");
+      if (db) saldo.set(db, (saldo.get(db) ?? 0) + a);
+      if (kr) saldo.set(kr, (saldo.get(kr) ?? 0) - a);
+    }
+    const nameOf = (kode: string): string => String(coaRows.find((c) => String(c.kode) === kode)?.nama ?? kode);
+    const lines = (prefix: string, sign: 1 | -1) => [...saldo.entries()]
+      .filter(([k, v]) => k.startsWith(prefix) && Math.abs(v) >= 1)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([kode, v]) => ({ kode, nama: nameOf(kode), nilai: v * sign }));
+    const aktiva = lines("1", 1);
+    const kewajiban = lines("2", -1);
+    const ekuitas = lines("3", -1);
+    const laba = -[...saldo.entries()].filter(([k]) => /^[4-9]/.test(k)).reduce((s, [, v]) => s + v, 0);
+    const sum = (l: Array<{ nilai: number }>): number => l.reduce((s, x) => s + x.nilai, 0);
+    const totalAktiva = sum(aktiva);
+    const pasivaTanpaHb = sum(kewajiban) + sum(ekuitas) + laba;
+    const selisih = Math.round(totalAktiva - pasivaTanpaHb);
+    return { aktiva, kewajiban, ekuitas, laba, totalAktiva, selisih, totalPasiva: pasivaTanpaHb + selisih };
+  }, [manJournals, nrAsOf, coaRows]);
 
   const stepInvoice = async (inv: StoreItem, next: string) => {    if (next === "Lunas") {
       setPayTarget(inv);
@@ -2667,27 +2748,62 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     }
   };
 
+  /* Sisa piutang jadi nominal awal tiap kali modal pembayaran dibuka. */
+  useEffect(() => { if (payTarget) setInvPayAmt(String(invSisa(payTarget))); }, [payTarget]);
+
+  /* #275: pembayaran piutang dengan nominal. Kurang bayar → invoice tetap
+     terbuka dengan sisa; lunas saat total bayar ≥ neto; kelebihan bayar
+     dicatat sebagai uang muka pelanggan (2-150) dan diberi notifikasi. */
   const confirmBuktiInv = async () => {
     if (!payTarget) return;
     if (!proof.date) { toast(S.payDateRequired, "info"); return; }
     if (!proof.ref.trim()) { toast(S.refRequired, "info"); return; }
+    const bayar = Math.round(num(invPayAmt));
+    if (!bayar || bayar <= 0) { toast(S.payAmtRequired, "info"); return; }
+    const sisaAwal = invSisa(payTarget);
+    const prev = Array.isArray(payTarget.payments) ? (payTarget.payments as unknown[]) : [];
+    const ke = prev.length + 1;
+    const paidTotal = num(payTarget.paidTotal) + bayar;
+    const lunas = bayar >= sisaAwal;
+    const lebih = Math.max(0, bayar - sisaAwal);
     try {
       await update("invoices", payTarget.id, {
-        status: "Lunas", paidAt: proof.date, paidMethod: proof.method, paidRef: proof.ref.trim(),
+        payments: [...prev, { date: proof.date, method: proof.method, ref: proof.ref.trim(), amount: bayar, ...(proofImg ? { proofUrl: proofImg } : {}) }],
+        paidTotal,
+        ...(lebih > 0 ? { overpaid: num(payTarget.overpaid) + lebih } : {}),
+        ...(lunas ? { status: "Lunas", paidAt: proof.date, paidMethod: proof.method, paidRef: proof.ref.trim() } : {}),
         ...(proofImg ? { paidProofUrl: proofImg, buktiUrl: proofImg } : {}),
       });
-      log("melunasi invoice", `${payTarget.id} via ${proof.method} ${proof.ref.trim()}`, "Keuangan");
+      log(lunas ? "melunasi invoice" : "pembayaran sebagian invoice", `${payTarget.id} ${fmtRupiah(bayar)} via ${proof.method} ${proof.ref.trim()}`, "Keuangan");
       const kasKode = kasKodeOf(proof.method);
+      // Pembayaran pertama memakai dokumen lama CASH-<id> agar idempoten dengan data sebelumnya.
+      const dok = ke === 1 ? `CASH-${payTarget.id}` : `CASH-${payTarget.id}-${ke}`;
       const jurnalOk = await postAutoJournal({
-        dokumen: `CASH-${payTarget.id}`,
+        dokumen: dok,
         date: proof.date,
-        uraian: `Pelunasan ${payTarget.id} via ${proof.method} ${proof.ref.trim()}`,
+        uraian: `${lunas ? "Pelunasan" : "Pembayaran sebagian"} ${payTarget.id} via ${proof.method} ${proof.ref.trim()}`,
         db: kasKode,
         kr: "1-130",
-        amount: invNeto(payTarget),
+        amount: bayar - lebih,
       });
-      await afterInvoicePaid(payTarget, proof.date, proof.ref.trim());
-      toast(S.paidRecorded.replace("{a}", payTarget.id) + (jurnalOk ? S.paidWithJournal : ""));
+      if (lebih > 0) {
+        await postAutoJournal({
+          dokumen: `${dok}-LEBIH`,
+          date: proof.date,
+          uraian: `Kelebihan bayar ${payTarget.id} via ${proof.ref.trim()}`,
+          db: kasKode,
+          kr: "2-150",
+          amount: lebih,
+        });
+        log("kelebihan bayar invoice", `${payTarget.id} lebih ${fmtRupiah(lebih)} dicatat sebagai uang muka pelanggan`, "Keuangan");
+        toast(S.overpaidNote.replace("{a}", payTarget.id).replace("{b}", fmtRupiah(lebih)), "info");
+      }
+      if (lunas) {
+        await afterInvoicePaid(payTarget, proof.date, proof.ref.trim());
+        toast(S.paidRecorded.replace("{a}", payTarget.id) + (jurnalOk ? S.paidWithJournal : ""));
+      } else {
+        toast(S.partialPaid.replace("{a}", payTarget.id).replace("{b}", fmtRupiah(bayar)).replace("{c}", fmtRupiah(sisaAwal - bayar)));
+      }
       setPayTarget(null);
       setProofImg("");
     } catch {
@@ -2780,10 +2896,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           amount: sisaAp,
         });
       } else {
-        await update("invoices", r.id, { status: "Lunas", paidAt: batchProof.date, paidMethod: batchProof.method, paidRef: batchProof.ref.trim(), ...(batchImg ? { paidProofUrl: batchImg, buktiUrl: batchImg } : {}) });
+        const inv0 = (data.invoices ?? []).find((i) => String(i.id) === String(r.id));
+        const prevPay = Array.isArray(inv0?.payments) ? (inv0?.payments as unknown[]) : [];
+        await update("invoices", r.id, {
+          status: "Lunas", paidAt: batchProof.date, paidMethod: batchProof.method, paidRef: batchProof.ref.trim(),
+          payments: [...prevPay, { date: batchProof.date, method: batchProof.method, ref: batchProof.ref.trim(), amount: r.amount }],
+          paidTotal: num(inv0?.paidTotal) + r.amount,
+          ...(batchImg ? { paidProofUrl: batchImg, buktiUrl: batchImg } : {}),
+        });
         log("melunasi invoice massal", `${r.id} via ${batchProof.method} ${batchProof.ref.trim()}`, "Keuangan");
         await postAutoJournal({
-          dokumen: `CASH-${r.id}`,
+          // Invoice yang sudah dibayar sebagian sudah memakai CASH-<id> (#275).
+          dokumen: prevPay.length > 0 ? `CASH-${r.id}-${prevPay.length + 1}` : `CASH-${r.id}`,
           date: batchProof.date,
           uraian: `Pelunasan massal ${r.id} via ${batchProof.ref.trim()}`,
           db: kasKodeOf(batchProof.method),
@@ -3106,7 +3230,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                                 </span>
                               ) : <span className="text-xs text-steel-400">-</span>}
                             </td>
-                            <td className="td"><StatusBadge status={String(inv.status)} /></td>
+                            <td className="td">
+                              <StatusBadge status={String(inv.status)} />
+                              {num(inv.paidTotal) > 0 && String(inv.status) !== "Lunas" && (
+                                <p className="mt-1 text-[11px] text-steel-500">{S.invPaidPart.replace("{a}", fmtRupiah(num(inv.paidTotal))).replace("{b}", fmtRupiah(invSisa(inv)))}</p>
+                              )}
+                            </td>
                             <td className="td">
                               <div className="flex flex-wrap gap-1.5">
                                 {invNext(String(inv.status)).map((next) => (
@@ -3853,9 +3982,42 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   </div>
                 );
               })()}
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <select className="input w-full sm:max-w-xs" value={bbAkun} onChange={(e) => setBbAkun(e.target.value)} aria-label={S.bbAkunPick}>
+                  <option value="">{S.bbAkunAll}</option>
+                  {coaRows.filter((c) => String(c.dk) !== "-").map((c) => (
+                    <option key={String(c.kode)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>
+                  ))}
+                </select>
                 <SearchBox value={bbQ} onChange={setBbQ} className="w-full sm:max-w-xs" placeholder={S.bbSearchPh} ariaLabel={S.bbSearchPh} />
               </div>
+              {bbAkun && (
+                <Card className="p-4">
+                  <CardHeader title={S.bbMutasiTitle.replace("{a}", bbAkun)} subtitle={S.bbMutasiSub.replace("{a}", fmtRupiah(bbMutasi.awal))} />
+                  <div className="overflow-x-auto px-1 pb-3">
+                    <table className="w-full">
+                      <thead className="bg-surface sticky top-0 z-10">
+                        <tr><th className="th">{S.colTanggal}</th><th className="th">{S.colDokumen}</th><th className="th">{S.colUraian}</th><th className="th">{S.colDebit}</th><th className="th">{S.colKredit}</th><th className="th">{S.bbSaldoCol}</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {bbMutasi.rows.map((r) => (
+                          <tr key={String(r.j.id)} className="hover:bg-surface">
+                            <td className="td font-mono text-xs text-steel-600">{fmtTanggal(String(r.j.date ?? ""))}</td>
+                            <td className="td font-mono text-xs">{String(r.j.dokumen ?? "-")}</td>
+                            <td className="td max-w-56 truncate text-xs text-steel-600" title={String(r.j.uraian ?? "")}>{String(r.j.uraian ?? "")}</td>
+                            <td className="td text-xs">{r.d ? fmtRupiah(r.d) : "-"}</td>
+                            <td className="td text-xs">{r.k ? fmtRupiah(r.k) : "-"}</td>
+                            <td className="td text-xs font-semibold">{fmtRupiah(r.saldo)}</td>
+                          </tr>
+                        ))}
+                        {bbMutasi.rows.length === 0 && (
+                          <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.bbEmptyLive}</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.bbLiveBadge.replace("{n}", String(bbLive.reduce((s, r) => s + r.n, 0))).replace("{d}", bbAsOf).replace("{s}", bbSnap ? S.bbSnapSuffix : S.bbLiveSuffix)}
               </p>
@@ -4362,6 +4524,37 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <div className="space-y-4">
               <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
+              <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
+                {nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}
+              </div>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {([
+                  [S.nrAktiva, [...nrNeraca.aktiva], nrNeraca.totalAktiva],
+                  [S.nrPasiva, [
+                    ...nrNeraca.kewajiban, ...nrNeraca.ekuitas,
+                    { kode: "", nama: S.nrLabaBerjalan, nilai: nrNeraca.laba },
+                    { kode: "3-999", nama: "Historical Balancing", nilai: nrNeraca.selisih },
+                  ], nrNeraca.totalPasiva],
+                ] as Array<[string, Array<{ kode: string; nama: string; nilai: number }>, number]>).map(([title, list, total]) => (
+                  <Card key={title} className="p-4">
+                    <CardHeader title={title} subtitle={S.nrDocAsOf.replace("{d}", nrAsOf)} />
+                    <table className="w-full">
+                      <tbody className="divide-y divide-steel-100">
+                        {list.map((x) => (
+                          <tr key={`${x.kode}-${x.nama}`}>
+                            <td className="td font-mono text-xs text-steel-500">{x.kode || "-"}</td>
+                            <td className="td text-xs text-steel-700">{x.nama}</td>
+                            <td className="td text-right text-xs font-semibold">{fmtRupiah(x.nilai)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="border-t-2 border-steel-200 bg-surface">
+                        <tr><td className="td" /><td className="td text-xs font-bold text-navy-900">Total {title}</td><td className="td text-right text-xs font-bold text-navy-900">{fmtRupiah(total)}</td></tr>
+                      </tfoot>
+                    </table>
+                  </Card>
+                ))}
+              </div>
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.nrLiveBadge.replace("{a}", nrAsOf).replace("{b}", fmtMiliar(hutLiveTotal)).replace("{c}", String(hutLive.length)).replace("{d}", fmtMiliar(piuLiveTotal)).replace("{e}", String(piuLive.length)).replace("{f}", fmtRupiah(nrLabaLive)).replace("{g}", nrSnap ? S.nrSnapSuffix : S.nrLiveSuffix)}
               </p>
@@ -4902,10 +5095,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </select>
             </Field>
           </FormGrid>
+          {/* #277: field Milestone ref dihapus dari form buat invoice (notulen 23 Okt). */}
           <FormGrid>
-            <Field label={S.fMilestone} hint={S.milestoneHint}>
-              <input className="input" value={invForm.milestoneRef} onChange={(e) => setInv("milestoneRef", e.target.value)} placeholder="Milestone 3" />
-            </Field>
             <Field label={S.dueLabel} required>
               <input type="date" required className="input" value={invForm.due} onChange={(e) => setInv("due", e.target.value)} />
             </Field>
@@ -4969,9 +5160,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </div>
             </div>
             <p className="mb-2 rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">
-              Jasa {fmtRupiah(sbPreview.jasa)} + Material {fmtRupiah(sbPreview.material)} = {fmtRupiah(sbPreview.total)}
+              {S.invTotalAll} {fmtRupiah(sbPreview.total)} · {S.invTotalJasa} {fmtRupiah(sbPreview.jasa)} · {S.invPphJasa} {fmtRupiah(sbPreview.pph)} · {S.invPpnJasa} {fmtRupiah(sbPreview.ppnJasa)}
               {" · "}DPP (×11/12) {fmtRupiah(sbPreview.dpp)} · PPN {getSetting(data, "PPN_INVOICE_RATE", PPN_INVOICE_DEFAULT)}% {fmtRupiah(sbPreview.ppn)}{invForm.skdt ? " (SKDT)" : ""}
-              {" · "}PPh jasa {fmtRupiah(sbPreview.pph)}{num(invForm.dpApplied) > 0 ? ` · DP -${fmtRupiah(sbPreview.dpApplied)}` : ""}
+              {num(invForm.dpApplied) > 0 ? ` · DP -${fmtRupiah(sbPreview.dpApplied)}` : ""}
               {" → "}<strong className="text-navy-900">Grand {fmtRupiah(sbPreview.grand)}</strong>
             </p>
             <div className="space-y-2">
@@ -5016,7 +5207,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         </div>
       </Modal>
 
-      <Modal open={payTarget !== null} onClose={() => { setPayTarget(null); setProofImg(""); }} title={S.markPaidTitle.replace("{a}", payTarget?.id ?? "")} subtitle={`${String(payTarget?.client ?? "")} · ${fmtRupiah(num(payTarget?.amount))}`}
+      <Modal open={payTarget !== null} onClose={() => { setPayTarget(null); setProofImg(""); }} title={S.markPaidTitle.replace("{a}", payTarget?.id ?? "")} subtitle={`${String(payTarget?.client ?? "")} · ${S.invSisaLabel} ${fmtRupiah(payTarget ? invSisa(payTarget) : 0)}`}
         footer={<><button className="btn-secondary" onClick={() => { setPayTarget(null); setProofImg(""); }}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={confirmBuktiInv}>{S.saveProofPaid}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
@@ -5030,6 +5221,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <Field label={S.fRefNo} hint={S.refProofHint} required>
             <input className="input font-mono" value={proof.ref} onChange={(e) => setProofField("ref", e.target.value)} placeholder={S.refProofPh} />
           </Field>
+          {payTarget && (() => {
+            const sisa = invSisa(payTarget);
+            const bayar = Math.round(num(invPayAmt));
+            return (
+              <Field label={S.payAmtLabel} required
+                hint={bayar > sisa ? S.payOverHint.replace("{a}", fmtRupiah(bayar - sisa)) : bayar > 0 && bayar < sisa ? S.payPartialHint.replace("{a}", fmtRupiah(sisa - bayar)) : S.payFullHint}>
+                <MoneyInput className={`input ${bayar > sisa ? "border-amber-400" : ""}`} value={invPayAmt} onChange={setInvPayAmt} />
+              </Field>
+            );
+          })()}
           <Field label={S.proofImgLabel} hint={S.proofImgHint}>
             <div className="flex flex-wrap items-center gap-2">
               <FileUploadButton accept=".png,.jpg,.jpeg" label={proofImg ? S.imgReplace : S.imgUpload} onUploaded={setProofImg} />
@@ -5566,6 +5767,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.dueLabel}</dt><dd className="text-right font-medium text-navy-900">{fmtTanggal(String(invDetail.due ?? ""))}</dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.colStatus}</dt><dd className="text-right"><StatusBadge status={String(invDetail.status ?? "")} /></dd></div>
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detTax}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(num(invDetail.dpp))} / {fmtRupiah(num(invDetail.ppnAmt))}{num(invDetail.ppnAmt) > 0 ? ` (${num(invDetail.ppnRate) || getSetting(data, "PPN_INVOICE_RATE", PPN_INVOICE_DEFAULT)}%)` : ""} / {fmtRupiah(num(invDetail.pphAmt))}</dd></div>
+                {num(invDetail.jasaTotal) + num(invDetail.matTotal) > 0 && (() => {
+                  const jasa = num(invDetail.jasaTotal);
+                  const ppnJasa = invDetail.skdt ? 0 : Math.round(Math.round(jasa * DPP_FACTOR) * (num(invDetail.ppnRate) || getSetting(data, "PPN_INVOICE_RATE", PPN_INVOICE_DEFAULT)) / 100);
+                  return (
+                    <>
+                      <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.invTotalAll}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(jasa + num(invDetail.matTotal))}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.invTotalJasa}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(jasa)}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.invPphJasa}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(num(invDetail.pphAmt))}</dd></div>
+                      <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.invPpnJasa}</dt><dd className="text-right font-medium text-navy-900">{fmtRupiah(ppnJasa)}</dd></div>
+                    </>
+                  );
+                })()}
                 <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detGrand}</dt><dd className="text-right font-bold text-navy-900">{fmtRupiah(invNeto(invDetail))}</dd></div>
                 {(invDetail.paidAt || invDetail.paidRef) && (
                   <div className="flex justify-between gap-4"><dt className="shrink-0 text-steel-500">{S.detPaid}</dt><dd className="text-right font-medium text-navy-900">{invDetail.paidAt ? fmtTanggal(String(invDetail.paidAt)) : "-"} · {String(invDetail.paidMethod ?? "-")} · {String(invDetail.paidRef ?? "-")}</dd></div>

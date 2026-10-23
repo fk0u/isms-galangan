@@ -156,7 +156,7 @@ const invoiceRecipe: Recipe<InvoiceInput> = {
         desc: str(r, "desc"),
         qty: str(r, "qty"),
         unit: str(r, "unit"),
-        price: money(r.price),
+        price: rupiah(r.price),
         hours: str(r, "hours"),
         kategori: str(r, "kategori"),
       };

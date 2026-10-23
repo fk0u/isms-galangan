@@ -22,7 +22,7 @@
  */
 import { Document, type DocOptions } from "../document.js";
 import { keyValue, table, callout, signatures, spacer, divider } from "../blocks.js";
-import { companyKop, docNote, docTitle, longDate, L, type Locale } from "./shared.js";
+import { companyKop, docNote, docTitle, longDate, rupiah, L, type Locale } from "./shared.js";
 
 export interface InvoiceLine {
   desc: string;
@@ -119,9 +119,9 @@ export function invoiceDoc(input: InvoiceInput, opts: DocOptions = {}): Document
     input.lines.length > 0
       ? input.lines
       : [
-          { desc: L(locale, "Jasa perbaikan & pemeliharaan", "Repair & maintenance services"), qty: "1", unit: L(locale, "Paket", "Lot"), price: String(input.jasaTotal), hours: "", kategori: "Jasa" },
-          { desc: L(locale, "Material & suku cadang", "Materials & spare parts"), qty: "1", unit: L(locale, "Paket", "Lot"), price: String(input.matTotal), hours: "", kategori: "Material" },
-        ].filter((l) => Number(l.price) > 0);
+          { desc: L(locale, "Jasa perbaikan & pemeliharaan", "Repair & maintenance services"), qty: "1", unit: L(locale, "Paket", "Lot"), price: input.jasaTotal, hours: "", kategori: "Jasa" },
+          { desc: L(locale, "Material & suku cadang", "Materials & spare parts"), qty: "1", unit: L(locale, "Paket", "Lot"), price: input.matTotal, hours: "", kategori: "Material" },
+        ].filter((l) => l.price > 0).map((l) => ({ ...l, price: rupiah(l.price) }));
 
   if (detail.length > 0) {
     d.add(
@@ -154,16 +154,23 @@ export function invoiceDoc(input: InvoiceInput, opts: DocOptions = {}): Document
   /* Rincian pajak. SKDT berarti Structured Invoice - PPN 0 itu disengaja,
      jadi angkanya tetap dicetak apa adanya supaya selisih 0 bisa terlihat
      dan bukan disalahartikan sebagai bug. */
-  const taxRows: string[][] = [
-    [L(locale, "Nilai Invoice (DPP)", "Invoice base (taxable)"), String(input.dpp)],
-  ];
+  /* #277: rincian jasa/material → total → DPP → PPN (+ porsi jasa) → PPh
+     jasa (material tidak kena PPh) → neto. DPP = 11/12 × total. */
+  const total = input.jasaTotal + input.matTotal > 0 ? input.jasaTotal + input.matTotal : input.amount;
+  const ppnJasa = input.skdt ? 0 : Math.round((input.jasaTotal * 11 / 12) * input.ppnRate / 100);
+  const taxRows: string[][] = [];
+  if (input.jasaTotal > 0) taxRows.push([L(locale, "Total Jasa", "Total services"), rupiah(input.jasaTotal)]);
+  if (input.matTotal > 0) taxRows.push([L(locale, "Total Material", "Total materials"), rupiah(input.matTotal)]);
+  taxRows.push([L(locale, "Total Keseluruhan", "Grand subtotal"), rupiah(total)]);
+  taxRows.push([L(locale, "DPP (11/12 × total)", "Tax base (11/12 × total)"), rupiah(input.dpp)]);
   if (input.ppnAmt > 0 || input.ppnRate > 0) {
-    taxRows.push([`PPN ${input.ppnRate}%`, String(input.ppnAmt)]);
+    taxRows.push([`PPN ${input.ppnRate}%`, rupiah(input.ppnAmt)]);
+    if (input.jasaTotal > 0 && input.matTotal > 0) taxRows.push([L(locale, "   di antaranya PPN jasa", "   of which VAT on services"), rupiah(ppnJasa)]);
   }
   if (input.pphAmt > 0 || input.pphRate > 0) {
-    taxRows.push([`PPh ${input.pphRate}%`, String(input.pphAmt)]);
+    taxRows.push([`PPh ${input.pphRate}% ${L(locale, "(jasa)", "(services)")}`, rupiah(-input.pphAmt)]);
   }
-  taxRows.push([L(locale, "Neto Invoice", "Invoice total"), input.neto.toString()]);
+  taxRows.push([L(locale, "Neto Invoice", "Invoice total"), rupiah(input.neto)]);
   d.add(
     table({
       head: ["", ""],
@@ -180,7 +187,7 @@ export function invoiceDoc(input: InvoiceInput, opts: DocOptions = {}): Document
     d.add(spacer(1));
     d.add(
       callout([
-        `${L(locale, "Sudah termasuk dipotong", "Deducted upfront")}: ${input.dpApplied.toLocaleString(locale === "en" ? "en-US" : "id-ID")}${ref}`,
+        `${L(locale, "Sudah termasuk dipotong", "Deducted upfront")}: ${rupiah(input.dpApplied)}${ref}`,
       ]),
     );
   }
@@ -188,7 +195,7 @@ export function invoiceDoc(input: InvoiceInput, opts: DocOptions = {}): Document
     d.add(spacer(1));
     d.add(
       callout([
-        `${L(locale, "Retensi ditahan", "Retention withheld")}: ${input.retentionAmt.toLocaleString(locale === "en" ? "en-US" : "id-ID")}`,
+        `${L(locale, "Retensi ditahan", "Retention withheld")}: ${rupiah(input.retentionAmt)}`,
       ]),
     );
   }

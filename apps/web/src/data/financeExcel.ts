@@ -56,6 +56,7 @@ export const COA_EXCEL: CoaExcel[] = [
   { kode: '3-000', nama: 'E K U I T A S', dk: '-', nrlr: '-' },
   { kode: '3-100', nama: 'Modal Usaha', dk: 'K', nrlr: 'NR' },
   { kode: '3-200', nama: 'Laba Ditahan', dk: 'K', nrlr: 'NR' },
+  { kode: '3-999', nama: 'Historical Balancing', dk: 'K', nrlr: 'NR' },
   { kode: '4-000', nama: 'P E N D A P A T A N', dk: '-', nrlr: '-' },
   { kode: '4-100', nama: 'Pendapatan Jasa Pembuatan Kapal', dk: 'K', nrlr: 'LR' },
   { kode: '4-101', nama: 'Pendapatan Jasa Repair dan Docking', dk: 'K', nrlr: 'LR' },

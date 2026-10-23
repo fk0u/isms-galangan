@@ -17,7 +17,7 @@
 import { Document, type DocOptions } from "../document.js";
 import { keyValue, paragraph, table, callout, signatures, spacer } from "../blocks.js";
 import { COLOR } from "../theme.js";
-import { companyKop, docNote, docTitle, longDate, money, rupiah, L, type Locale } from "./shared.js";
+import { companyKop, docNote, docTitle, longDate, rupiah, L, type Locale } from "./shared.js";
 
 export interface KwitansiInput {
   no: string;
@@ -59,7 +59,7 @@ export function kwitansi(input: KwitansiInput, opts: DocOptions = {}): Document 
     }),
   );
 
-  const rows = input.breakdown.map((b) => [b.label, b.value < 0 ? `(${money(Math.abs(b.value))})` : money(b.value)]);
+  const rows = input.breakdown.map((b) => [b.label, b.value < 0 ? `(${rupiah(Math.abs(b.value))})` : rupiah(b.value)]);
   const net = input.breakdown.reduce((s, b) => s + b.value, 0);
   d.add(
     table({
