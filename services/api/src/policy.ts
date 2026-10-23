@@ -158,6 +158,9 @@ function makeFinanceMatrix(): Record<string, Action[]> {
     quotations: [...R_ONLY],
     contracts: [...R_ONLY],
     termins: [...R_ONLY],
+    // #281: membayar gaji; field yang boleh diubah dibatasi payrollGuard.ts.
+    payroll: [...RW],
+    employees: [...RW],
   };
   return m;
 }

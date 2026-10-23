@@ -14,6 +14,7 @@ import { withVoucherNo } from "../voucher.js";
 import { boqLockError, normalizeNewDoc, resyncBoqDocument, syncBoqDocToDocuments, withBoqLineTotal } from "../boqDocs.js";
 import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
+import { payrollRoleError } from "../payrollGuard.js";
 import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError, projectFeeError, payableApprovalError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
@@ -574,6 +575,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
+    const payCreate = payrollRoleError(table, null, rowData, req.user?.role);
+    if (payCreate) return reply.status(403).send(fail(payCreate, "FORBIDDEN"));
     // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
     if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
     const ruleCreate = transferError(table, rowData) ?? projectFeeError(table, null, rowData) ?? await projectManagerError(table, null, rowData) ?? await bomItemError(table, null, rowData);
@@ -702,6 +705,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (patchGuard) return reply.status(422).send(fail(patchGuard, "UNPROCESSABLE"));
     const spkLock = spkLockError(table, oldData, merged, req.user?.role);
     if (spkLock) return reply.status(403).send(fail(spkLock, "FORBIDDEN"));
+    const payLock = payrollRoleError(table, oldData, merged as Record<string, unknown>, req.user?.role);
+    if (payLock) return reply.status(403).send(fail(payLock, "FORBIDDEN"));
     // Baris Transfer lama (tanpa fromWh/toWh) tetap bisa diedit selama gudangnya tidak disentuh.
     const whChanged = (["type", "fromWh", "toWh"] as const).some((k) => oldData[k] !== (merged as Record<string, unknown>)[k]);
     if (table === "workOrders" && Array.isArray((merged as Record<string, unknown>).progressLog)) {

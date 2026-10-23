@@ -57,6 +57,7 @@ const FINANCE_TAB_COLLECTIONS: Record<string, CollectionKey[]> = {
     "payables", "payroll", "projects", "purchaseOrders", "termins", "timesheets", "workOrders",
   ],
   Pajak: ["invoices", "payables", "payroll", "taxPeriods", "termins"],
+  Payroll: ["employees", "journals", "payroll"],
 };
 
 /* KPI yang selalu tampil di header Finance membutuhkan sumber terkini pada
