@@ -4,7 +4,7 @@
 import { Document, type DocOptions } from "../document.js";
 import { keyValue, table, signatures, spacer, callout } from "../blocks.js";
 import { COLOR } from "../theme.js";
-import { companyKop, docTitle, longDate, money, L, type Locale } from "./shared.js";
+import { companyKop, docTitle, longDate, rupiah, L, type Locale } from "./shared.js";
 
 export interface VoucherInput {
   no: string;
@@ -35,8 +35,8 @@ export function voucher(input: VoucherInput, opts: DocOptions = {}): Document {
   const debit = input.lines.reduce((s, l) => s + l.debit, 0);
   const kredit = input.lines.reduce((s, l) => s + l.kredit, 0);
   const rows = [
-    ...input.lines.map((l) => [l.kode, l.nama, l.uraian, l.debit ? money(l.debit) : "-", l.kredit ? money(l.kredit) : "-"]),
-    ["", L(locale, "Total", "Total"), "", money(debit), money(kredit)],
+    ...input.lines.map((l) => [l.kode, l.nama, l.uraian, l.debit ? rupiah(l.debit) : "-", l.kredit ? rupiah(l.kredit) : "-"]),
+    ["", L(locale, "Total", "Total"), "", rupiah(debit), rupiah(kredit)],
   ];
   d.add(table({
     head: [L(locale, "Akun", "Account"), L(locale, "Nama Akun", "Account name"), L(locale, "Uraian", "Description"), L(locale, "Debit (Rp)", "Debit (Rp)"), L(locale, "Kredit (Rp)", "Credit (Rp)")],
@@ -48,7 +48,7 @@ export function voucher(input: VoucherInput, opts: DocOptions = {}): Document {
     zebra: false,
   }));
   if (Math.round(debit) !== Math.round(kredit)) {
-    d.add(callout([L(locale, `Tidak seimbang: selisih ${money(Math.abs(debit - kredit))}`, `Unbalanced: difference ${money(Math.abs(debit - kredit))}`)], { fill: COLOR.softFill, border: COLOR.hair, size: 9 }));
+    d.add(callout([L(locale, `Tidak seimbang: selisih ${rupiah(Math.abs(debit - kredit))}`, `Unbalanced: difference ${rupiah(Math.abs(debit - kredit))}`)], { fill: COLOR.softFill, border: COLOR.hair, size: 9 }));
   }
   d.add(spacer(4));
   d.add(signatures([

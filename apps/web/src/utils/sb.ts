@@ -37,6 +37,8 @@ export interface SbInvoiceMath {
   dpp: number;
   ppn: number;
   pph: number;
+  /** #277: porsi PPN atas jasa (DPP jasa × tarif), untuk rincian invoice. */
+  ppnJasa: number;
   dpApplied: number;
   retentionAmt: number;
   grand: number;
@@ -53,7 +55,8 @@ export function sbInvoiceMath(i: SbInvoiceInput): SbInvoiceMath {
   const dpApplied = Math.max(0, Math.round(Number(i.dpApplied) || 0));
   const retentionAmt = Math.round((total * (Number(i.retentionPct) || 0)) / 100);
   const grand = total + ppn - pph - dpApplied - retentionAmt;
-  return { jasa, material, total, dpp, ppn, pph, dpApplied, retentionAmt, grand };
+  const ppnJasa = Math.round((Math.round(jasa * DPP_FACTOR) * ppnRate) / 100);
+  return { jasa, material, total, dpp, ppn, pph, ppnJasa, dpApplied, retentionAmt, grand };
 }
 
 /** Max sekuens dari daftar nomor dokumen: parse grup digit re, kembalikan max atau 0. */

@@ -1,6 +1,6 @@
 // Bulk-seed rows for POST /api/admin/seed dan npm run seed. Sumber:
 // - settings: 36 baris (halaman Pengaturan membaca semuanya; JANGAN dikurangi)
-// - coa: apps/web/src/data/financeExcel.ts COA_EXCEL (98 akun, sama dengan FE)
+// - coa: apps/web/src/data/financeExcel.ts COA_EXCEL (99 akun termasuk 3-999 Historical Balancing, sama dengan FE)
 // - branches/journals/assets: sama dengan FE (financeExcel + seeds.ts)
 // - koleksi operasional: CERMIN apps/web (data/seeds.ts + data/index.ts) via
 //   `npm run seed:mirror` → seedFeMirror.ts. Id SAMA dengan FE sehingga
@@ -94,7 +94,7 @@ const COA: Array<[string, string, string, string]> = [
   ["2-232","Hutang Pajak PPh 23","K","NR"],["2-233","Hutang Pajak PPh Pasal 4 Ayat 2","K","NR"],
   ["2-234","Hutang Pajak PPN","K","NR"],["2-235","Hutang Pajak STP","K","NR"],
   ["2-240","Hutang Antar Perusahaan","K","NR"],["3-000","E K U I T A S","-","-"],
-  ["3-100","Modal Usaha","K","NR"],["3-200","Laba Ditahan","K","NR"],
+  ["3-100","Modal Usaha","K","NR"],["3-200","Laba Ditahan","K","NR"],["3-999","Historical Balancing","K","NR"],
   ["4-000","P E N D A P A T A N","-","-"],["4-100","Pendapatan Jasa Pembuatan Kapal","K","LR"],
   ["4-101","Pendapatan Jasa Repair dan Docking","K","LR"],["4-102","Pendapatan Jasa Lainnya","K","LR"],
   ["5-000","B E B A N  P O K O K  P E N D A P A T A N","-","-"],["5-100","Beban Pokok Pemborong","D","LR"],
