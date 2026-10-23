@@ -1,8 +1,8 @@
 # Dokumen Handover & Panduan Onboarding Arsitektur Sistem
 
 > **Proyek:** ISMS PT Syukur Bersaudara  
-> **Waktu Pembuatan:** `2026-10-23T16:15:57.241Z`  
-> **Total File:** 400 | **Total Simbol AST:** 3126 | **Total Relasi:** 15016 | **Sub-sistem Terdeteksi:** 898  
+> **Waktu Pembuatan:** `2026-10-23T16:49:50.878Z`  
+> **Total File:** 401 | **Total Simbol AST:** 3131 | **Total Relasi:** 15034 | **Sub-sistem Terdeteksi:** 880  
 > **Prinsip Dokumentasi:** *Zero Uncited Claims* — Setiap klaim fungsional dan arsitektural wajib menyertakan tautan langsung ke nomor baris kode sumber asli.
 
 ---
@@ -11,36 +11,50 @@
 
 Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF bebas LLM eksternal, basis kode ini secara otomatis terkelompokkan ke dalam beberapa sub-sistem fungsional berikut:
 
-### Sub-sistem: `invoiceid:paidat:paidtotal` (Klaster #758)
-- **Kepadatan Simbol:** 83 simbol.
+### Sub-sistem: `routes:register:parse` (Klaster #147)
+- **Kepadatan Simbol:** 167 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`setTab`](file://apps/web/src/pages/keuangan/Finance.tsx#L870-L870) (`apps/web/src/pages/keuangan/Finance.tsx:870-870`) [Tipe: `function`]
+  - [`slice`](file://apps/web/src/components/ui.tsx#L1615-L1615) (`apps/web/src/components/ui.tsx:1615-1615`) [Tipe: `function`]
+    - *Signature:* `(rows: T[]): T[]`
+  - [`parse`](file://services/api/src/changeOrders.ts#L26-L26) (`services/api/src/changeOrders.ts:26-26`) [Tipe: `function`]
+    - *Signature:* `(r: Row): Data`
+  - [`parse`](file://services/api/scripts/relations-probe.ts#L32-L32) (`services/api/scripts/relations-probe.ts:32-32`) [Tipe: `function`]
+    - *Signature:* `(d: string): Record<string, unknown>`
+  - [`exec`](file://services/api/src/db.ts#L95-L97) (`services/api/src/db.ts:95-97`) [Tipe: `function`]
+    - *Signature:* `(sql: string, params: unknown[] = []): Promise<ExecResult>`
+  - [`parse`](file://services/api/src/materialRequests.ts#L67-L69) (`services/api/src/materialRequests.ts:67-69`) [Tipe: `function`]
+    - *Signature:* `(row: Row): Data`
+
+### Sub-sistem: `draw:push:ringkas` (Klaster #841)
+- **Kepadatan Simbol:** 100 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`push`](file://apps/web/src/utils/woMilestones.ts#L120-L125) (`apps/web/src/utils/woMilestones.ts:120-125`) [Tipe: `function`]
+    - *Signature:* `(m: WoMilestone): void`
+  - [`push`](file://services/api/src/routes/readModels.ts#L24-L29) (`services/api/src/routes/readModels.ts:24-29`) [Tipe: `function`]
+    - *Signature:* `(row: WbsPhotoRow): void`
+  - [`push`](file://apps/web/src/pages/proyek/WbsTree.tsx#L19-L19) (`apps/web/src/pages/proyek/WbsTree.tsx:19-19`) [Tipe: `function`]
+    - *Signature:* `(p: Photo): void`
+  - [`push`](file://apps/web/src/utils/usages.ts#L13-L15) (`apps/web/src/utils/usages.ts:13-15`) [Tipe: `function`]
+    - *Signature:* `(out: string[], n: number, label: string): void`
+    - *Deskripsi:* // Perbandingan nama memakai sameName (trim + case-insensitive); join ID exact.
+  - [`add`](file://services/api/src/pdf/documents/shared.ts#L244-L250) (`services/api/src/pdf/documents/shared.ts:244-250`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): void`
+
+### Sub-sistem: `invoiceid:paidat:clients` (Klaster #741)
+- **Kepadatan Simbol:** 85 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`setTab`](file://apps/web/src/pages/keuangan/Finance.tsx#L872-L872) (`apps/web/src/pages/keuangan/Finance.tsx:872-872`) [Tipe: `function`]
     - *Signature:* `(t: string)`
   - [`allowlistedDeepLinkTab`](file://apps/web/src/components/useDeepLink.ts#L62-L65) (`apps/web/src/components/useDeepLink.ts:62-65`) [Tipe: `function`]
     - *Signature:* `(tab: string, allowedTabs?: readonly string[]): string`
-  - [`sptNumOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L599-L602) (`apps/web/src/pages/keuangan/Finance.tsx:599-602`) [Tipe: `function`]
+  - [`sptNumOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L601-L604) (`apps/web/src/pages/keuangan/Finance.tsx:601-604`) [Tipe: `function`]
     - *Signature:* `(v: unknown): number`
-  - [`nameOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L2502-L2502) (`apps/web/src/pages/keuangan/Finance.tsx:2502-2502`) [Tipe: `function`]
+  - [`nameOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L2598-L2598) (`apps/web/src/pages/keuangan/Finance.tsx:2598-2598`) [Tipe: `function`]
     - *Signature:* `(kode: string): string`
-  - [`taxManualOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L609-L610) (`apps/web/src/pages/keuangan/Finance.tsx:609-610`) [Tipe: `function`]
-    - *Signature:* `(period: StoreItem | null | undefined, k: TaxManualKey): number`
+  - [`lines`](file://apps/web/src/pages/keuangan/Finance.tsx#L2599-L2602) (`apps/web/src/pages/keuangan/Finance.tsx:2599-2602`) [Tipe: `function`]
+    - *Signature:* `(prefix: string, sign: 1 | -1)`
 
-### Sub-sistem: `routes:register:post` (Klaster #141)
-- **Kepadatan Simbol:** 78 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`can`](file://services/api/src/policy.ts#L400-L405) (`services/api/src/policy.ts:400-405`) [Tipe: `function`]
-    - *Signature:* `(role: unknown, collection: string, action: Action): boolean`
-  - [`fail`](file://services/api/src/envelope.ts#L8-L10) (`services/api/src/envelope.ts:8-10`) [Tipe: `function`]
-    - *Signature:* `(message: string, code?: string): { ok: false; error: { message: string; code?: string } }`
-  - [`fail`](file://apps/web/src/pages/Login.tsx#L54-L57) (`apps/web/src/pages/Login.tsx:54-57`) [Tipe: `function`]
-    - *Signature:* `(message: string)`
-    - *Deskripsi:* // Satu klik pada tombol peran = langsung masuk (catatan CTO 14 Okt).
-  - [`writeAudit`](file://services/api/src/audit.ts#L30-L45) (`services/api/src/audit.ts:30-45`) [Tipe: `function`]
-    - *Signature:* `(input: AuditInput, options: AuditWriteOptions = {}): Promise<void>`
-  - [`buildApp`](file://services/api/src/app.ts#L105-L423) (`services/api/src/app.ts:105-423`) [Tipe: `function`]
-    - *Signature:* `(): FastifyInstance`
-
-### Sub-sistem: `analisis:potong:stok` (Klaster #736)
+### Sub-sistem: `analisis:potong:stok` (Klaster #718)
 - **Kepadatan Simbol:** 78 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setF`](file://apps/web/src/pages/inventori/Inventory.tsx#L1312-L1330) (`apps/web/src/pages/inventori/Inventory.tsx:1312-1330`) [Tipe: `function`]
@@ -61,57 +75,22 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(i: StoreItem)`
     - *Deskripsi:* // Analisis + BOM + Stok: search PER CARD (bukan global), tanpa potong jumlah.
 
-### Sub-sistem: `ringkas:enak:1234567` (Klaster #859)
-- **Kepadatan Simbol:** 73 simbol.
+### Sub-sistem: `siklus:stok:memotong` (Klaster #706)
+- **Kepadatan Simbol:** 64 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`push`](file://services/api/src/routes/readModels.ts#L24-L29) (`services/api/src/routes/readModels.ts:24-29`) [Tipe: `function`]
-    - *Signature:* `(row: WbsPhotoRow): void`
-  - [`push`](file://apps/web/src/pages/proyek/WbsTree.tsx#L19-L19) (`apps/web/src/pages/proyek/WbsTree.tsx:19-19`) [Tipe: `function`]
-    - *Signature:* `(p: Photo): void`
-  - [`push`](file://apps/web/src/utils/usages.ts#L13-L15) (`apps/web/src/utils/usages.ts:13-15`) [Tipe: `function`]
-    - *Signature:* `(out: string[], n: number, label: string): void`
-    - *Deskripsi:* // Perbandingan nama memakai sameName (trim + case-insensitive); join ID exact.
-  - [`add`](file://services/api/src/pdf/documents/shared.ts#L244-L250) (`services/api/src/pdf/documents/shared.ts:244-250`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): void`
-  - [`add`](file://apps/web/src/components/ServiceNotes.tsx#L82-L105) (`apps/web/src/components/ServiceNotes.tsx:82-105`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-
-### Sub-sistem: `str:tanggal:klien` (Klaster #646)
-- **Kepadatan Simbol:** 62 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`slice`](file://apps/web/src/components/ui.tsx#L1615-L1615) (`apps/web/src/components/ui.tsx:1615-1615`) [Tipe: `function`]
-    - *Signature:* `(rows: T[]): T[]`
-  - [`prepare`](file://services/api/src/pdf/registry.ts#L1387-L1398) (`services/api/src/pdf/registry.ts:1387-1398`) [Tipe: `method`]
-    - *Signature:* `(_id, ctx)`
-  - [`str`](file://services/api/src/domainGuards.ts#L10-L10) (`services/api/src/domainGuards.ts:10-10`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): string`
-  - [`arr`](file://services/api/src/pdf/documents/shared.ts#L320-L338) (`services/api/src/pdf/documents/shared.ts:320-338`) [Tipe: `function`]
-    - *Signature:* `(src: Record<string, unknown>, ...keys: string[]): Record<string, unknown>[]`
-  - [`str`](file://apps/web/src/pages/kapal/Vessels.tsx#L125-L125) (`apps/web/src/pages/kapal/Vessels.tsx:125-125`) [Tipe: `function`]
-    - *Signature:* `(x: unknown): string`
-
-### Sub-sistem: `siklus:stok:memotong` (Klaster #724)
-- **Kepadatan Simbol:** 61 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`norm24`](file://apps/web/src/utils/time24.ts#L27-L46) (`apps/web/src/utils/time24.ts:27-46`) [Tipe: `function`]
+    - *Signature:* `(t: unknown): string`
   - [`parseJam`](file://apps/web/src/utils/time24.ts#L86-L91) (`apps/web/src/utils/time24.ts:86-91`) [Tipe: `function`]
     - *Signature:* `(jam: unknown): { mulai: string; selesai: string } | null`
+  - [`fmtJam24`](file://apps/web/src/utils/time24.ts#L73-L83) (`apps/web/src/utils/time24.ts:73-83`) [Tipe: `function`]
+    - *Signature:* `(jam: unknown): string`
   - [`projOf`](file://apps/web/src/pages/equipment/Equipment.tsx#L444-L445) (`apps/web/src/pages/equipment/Equipment.tsx:444-445`) [Tipe: `function`]
     - *Signature:* `(id: unknown): StoreItem | undefined`
   - [`saveUtilOverride`](file://apps/web/src/pages/equipment/Equipment.tsx#L1556-L1570) (`apps/web/src/pages/equipment/Equipment.tsx:1556-1570`) [Tipe: `function`]
     - *Signature:* `(eq: StoreItem, manual: boolean)`
     - *Deskripsi:* /** Hapus satu siklus. Stok dikembalikan bila siklus sudah memotong stok. */
-  - [`adjustMaintMaterials`](file://apps/web/src/pages/equipment/Equipment.tsx#L1071-L1118) (`apps/web/src/pages/equipment/Equipment.tsx:1071-1118`) [Tipe: `function`]
-    - *Signature:* `(m: StoreItem, next: { itemId: string; qty: string }[])`
-    - *Deskripsi:* /**
-   * Ubah qty material pada siklus yang stoknya SUDAH terpotong.
-   * Dipakai tombol Ubah di baris berstatus Selesai: yang dihitung adalah
-   * DELTA (kurang/tambah), bukan jumlah baru - supaya adjusting tidak
-   * menggandakan atau mengembalikan seluruh stok.
-   */
-  - [`equipKey`](file://apps/web/src/pages/equipment/Equipment.tsx#L384-L384) (`apps/web/src/pages/equipment/Equipment.tsx:384-384`) [Tipe: `function`]
-    - *Signature:* `(ref: unknown): string`
 
-### Sub-sistem: `pemakai:confirmmodal:vendor` (Klaster #793)
+### Sub-sistem: `pemakai:confirmmodal:vendor` (Klaster #775)
 - **Kepadatan Simbol:** 60 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`signKeys`](file://apps/web/src/pages/procurement/Procurement.tsx#L1193-L1193) (`apps/web/src/pages/procurement/Procurement.tsx:1193-1193`) [Tipe: `function`]
@@ -130,7 +109,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(o: { selected: StoreItem | null; search: string; setSearch: (v: string) => void; onPick: (item: StoreItem) => void; onClear: () => void; onLeave: () => void; error?: string })`
     - *Deskripsi:* // Hapus PO/PR (Draft saja) & vendor via ConfirmModal + daftar pemakai.
 
-### Sub-sistem: `draf:termin:aliran` (Klaster #841)
+### Sub-sistem: `draf:termin:aliran` (Klaster #823)
 - **Kepadatan Simbol:** 55 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pphOf`](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L84-L84) (`apps/web/src/pages/subkontraktor/Subcontractor.tsx:84-84`) [Tipe: `function`]
@@ -148,21 +127,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(woId: string): number`
     - *Deskripsi:* // Ubah / hapus timesheet & termin. Edit hanya boleh saat belum Disetujui.
 
-### Sub-sistem: `parse:409:exec` (Klaster #152)
-- **Kepadatan Simbol:** 52 simbol.
+### Sub-sistem: `str:tanggal:klien` (Klaster #635)
+- **Kepadatan Simbol:** 53 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`parse`](file://services/api/src/changeOrders.ts#L26-L26) (`services/api/src/changeOrders.ts:26-26`) [Tipe: `function`]
-    - *Signature:* `(r: Row): Data`
-  - [`exec`](file://services/api/src/db.ts#L95-L97) (`services/api/src/db.ts:95-97`) [Tipe: `function`]
-    - *Signature:* `(sql: string, params: unknown[] = []): Promise<ExecResult>`
-  - [`parse`](file://services/api/src/materialRequests.ts#L67-L69) (`services/api/src/materialRequests.ts:67-69`) [Tipe: `function`]
-    - *Signature:* `(row: Row): Data`
-  - [`parse`](file://services/api/src/poFulfillment.ts#L32-L34) (`services/api/src/poFulfillment.ts:32-34`) [Tipe: `function`]
-    - *Signature:* `(row: Row): Data`
-  - [`exec`](file://services/api/src/db.ts#L209-L212) (`services/api/src/db.ts:209-212`) [Tipe: `method`]
-    - *Signature:* `(sql: string, params: unknown[] = []): Promise<ExecResult>`
+  - [`prepare`](file://services/api/src/pdf/registry.ts#L1387-L1398) (`services/api/src/pdf/registry.ts:1387-1398`) [Tipe: `method`]
+    - *Signature:* `(_id, ctx)`
+  - [`str`](file://services/api/src/domainGuards.ts#L10-L10) (`services/api/src/domainGuards.ts:10-10`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): string`
+  - [`arr`](file://services/api/src/pdf/documents/shared.ts#L320-L338) (`services/api/src/pdf/documents/shared.ts:320-338`) [Tipe: `function`]
+    - *Signature:* `(src: Record<string, unknown>, ...keys: string[]): Record<string, unknown>[]`
+  - [`str`](file://apps/web/src/pages/kapal/Vessels.tsx#L125-L125) (`apps/web/src/pages/kapal/Vessels.tsx:125-125`) [Tipe: `function`]
+    - *Signature:* `(x: unknown): string`
+  - [`str`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L226-L226) (`apps/web/src/pages/kapal/VesselDetail.tsx:226-226`) [Tipe: `function`]
+    - *Signature:* `(x: unknown): string`
 
-### Sub-sistem: `nde:due:kalibrasi` (Klaster #829)
+### Sub-sistem: `nde:due:kalibrasi` (Klaster #811)
 - **Kepadatan Simbol:** 50 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`reworkCost`](file://apps/web/src/pages/qc/QCSafety.tsx#L396-L397) (`apps/web/src/pages/qc/QCSafety.tsx:396-397`) [Tipe: `function`]
@@ -179,7 +158,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`toTab`](file://apps/web/src/pages/qc/QCSafety.tsx#L161-L165) (`apps/web/src/pages/qc/QCSafety.tsx:161-165`) [Tipe: `function`]
     - *Signature:* `(name: string, after: () => void): void`
 
-### Sub-sistem: `otomatis:trial:selesai` (Klaster #811)
+### Sub-sistem: `otomatis:trial:selesai` (Klaster #793)
 - **Kepadatan Simbol:** 48 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`key`](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L1124-L1124) (`apps/web/src/pages/proyek/ProjectDetail.tsx:1124-1124`) [Tipe: `function`]
@@ -195,7 +174,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(r: StoreItem): number`
     - *Deskripsi:* // Terlambat otomatis dari due (P8: bisa di-override manual).
 
-### Sub-sistem: `cuti:final:absensi` (Klaster #833)
+### Sub-sistem: `cuti:final:absensi` (Klaster #815)
 - **Kepadatan Simbol:** 47 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`contractDays`](file://apps/web/src/pages/sdm/HR.tsx#L408-L408) (`apps/web/src/pages/sdm/HR.tsx:408-408`) [Tipe: `function`]
@@ -238,7 +217,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(ids: string[]): void`
     - *Deskripsi:* // Cap waktu server UTC: dipotong 10 huruf pertama akan mundur sehari di WITA.
 
-### Sub-sistem: `slot:dock:save` (Klaster #720)
+### Sub-sistem: `slot:dock:save` (Klaster #702)
 - **Kepadatan Simbol:** 43 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`slotOffsetsForView`](file://apps/web/src/pages/drydock/Drydock.tsx#L182-L182) (`apps/web/src/pages/drydock/Drydock.tsx:182-182`) [Tipe: `function`]
@@ -252,38 +231,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`overlap`](file://apps/web/src/pages/drydock/Drydock.tsx#L471-L476) (`apps/web/src/pages/drydock/Drydock.tsx:471-476`) [Tipe: `function`]
     - *Signature:* `(dockId: string, from: number, to: number, ignore?: string)`
 
-### Sub-sistem: `dulu:tidak:sehingga` (Klaster #392)
-- **Kepadatan Simbol:** 42 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`currentSessionUsername`](file://apps/web/src/data/store.tsx#L600-L611) (`apps/web/src/data/store.tsx:600-611`) [Tipe: `function`]
-    - *Signature:* `(): string | null`
-  - [`loadSideMapConflictHolds`](file://apps/web/src/data/sideMapConflictHolds.ts#L14-L21) (`apps/web/src/data/sideMapConflictHolds.ts:14-21`) [Tipe: `function`]
-    - *Signature:* `(storage: ConflictHoldStorage): Set<string>`
-  - [`persistSideMapConflictHolds`](file://apps/web/src/data/sideMapConflictHolds.ts#L23-L31) (`apps/web/src/data/sideMapConflictHolds.ts:23-31`) [Tipe: `function`]
-    - *Signature:* `(storage: ConflictHoldStorage, holds: ReadonlySet<string>): void`
-  - [`storedCacheOwnerId`](file://apps/web/src/data/store.tsx#L613-L619) (`apps/web/src/data/store.tsx:613-619`) [Tipe: `function`]
-    - *Signature:* `(): string | null`
-    - *Deskripsi:* /** Username akun yang sedang login, untuk kolom "Aktor" jejak aktivitas.
- *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
- *  pelakunya (catatan CTO 15 Okt). */
-  - [`currentSessionOwnerId`](file://apps/web/src/data/store.tsx#L586-L595) (`apps/web/src/data/store.tsx:586-595`) [Tipe: `function`]
-    - *Signature:* `(): string | null`
-
-### Sub-sistem: `open:seq:archive` (Klaster #718)
-- **Kepadatan Simbol:** 41 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`looksLikeUrl`](file://apps/web/src/utils/docAttachment.ts#L30-L37) (`apps/web/src/utils/docAttachment.ts:30-37`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): boolean`
-  - [`setF`](file://apps/web/src/pages/dokumen/Documents.tsx#L678-L678) (`apps/web/src/pages/dokumen/Documents.tsx:678-678`) [Tipe: `function`]
-    - *Signature:* `(k: string, v: string)`
-  - [`maxSeq`](file://apps/web/src/utils/sb.ts#L60-L71) (`apps/web/src/utils/sb.ts:60-71`) [Tipe: `function`]
-    - *Signature:* `(docNos: string[], re: RegExp): number`
-  - [`flowTo`](file://apps/web/src/pages/dokumen/Documents.tsx#L614-L624) (`apps/web/src/pages/dokumen/Documents.tsx:614-624`) [Tipe: `function`]
-    - *Signature:* `(d: StoreItem, next: string)`
-  - [`openDetail`](file://apps/web/src/pages/dokumen/Documents.tsx#L465-L475) (`apps/web/src/pages/dokumen/Documents.tsx:465-475`) [Tipe: `function`]
-    - *Signature:* `(d: StoreItem)`
-
-### Sub-sistem: `projects:contract:quotations` (Klaster #712)
+### Sub-sistem: `projects:contract:quotations` (Klaster #694)
 - **Kepadatan Simbol:** 40 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/pages/crm/CRM.tsx#L59-L59) (`apps/web/src/pages/crm/CRM.tsx:59-59`) [Tipe: `function`]
@@ -300,7 +248,50 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(q: StoreItem)`
     - *Deskripsi:* // Relasi lokal di luar findUsages: quotation←projects/contracts, request←quotations, contract←projects/clientPos.
 
-### Sub-sistem: `bonus:nominal:thr` (Klaster #774)
+### Sub-sistem: `use:termasuk:turunan` (Klaster #768)
+- **Kepadatan Simbol:** 40 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`getJwt`](file://apps/web/src/services/http.ts#L65-L71) (`apps/web/src/services/http.ts:65-71`) [Tipe: `function`]
+    - *Signature:* `(): string | null`
+  - [`isBackendConfigured`](file://apps/web/src/services/http.ts#L99-L101) (`apps/web/src/services/http.ts:99-101`) [Tipe: `function`]
+    - *Signature:* `(): boolean`
+  - [`todayISO`](file://apps/web/src/utils/moduleAlerts.ts#L93-L96) (`apps/web/src/utils/moduleAlerts.ts:93-96`) [Tipe: `function`]
+    - *Signature:* `(): string`
+    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
+  - [`todayISO`](file://apps/web/src/utils/format.ts#L104-L109) (`apps/web/src/utils/format.ts:104-109`) [Tipe: `function`]
+    - *Signature:* `(): string`
+  - [`useStore`](file://apps/web/src/data/store.tsx#L2798-L2802) (`apps/web/src/data/store.tsx:2798-2802`) [Tipe: `function`]
+    - *Signature:* `(): StoreCtx`
+
+### Sub-sistem: `open:seq:archive` (Klaster #700)
+- **Kepadatan Simbol:** 40 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`looksLikeUrl`](file://apps/web/src/utils/docAttachment.ts#L30-L37) (`apps/web/src/utils/docAttachment.ts:30-37`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): boolean`
+  - [`setF`](file://apps/web/src/pages/dokumen/Documents.tsx#L678-L678) (`apps/web/src/pages/dokumen/Documents.tsx:678-678`) [Tipe: `function`]
+    - *Signature:* `(k: string, v: string)`
+  - [`maxSeq`](file://apps/web/src/utils/sb.ts#L63-L74) (`apps/web/src/utils/sb.ts:63-74`) [Tipe: `function`]
+    - *Signature:* `(docNos: string[], re: RegExp): number`
+  - [`flowTo`](file://apps/web/src/pages/dokumen/Documents.tsx#L614-L624) (`apps/web/src/pages/dokumen/Documents.tsx:614-624`) [Tipe: `function`]
+    - *Signature:* `(d: StoreItem, next: string)`
+  - [`openDetail`](file://apps/web/src/pages/dokumen/Documents.tsx#L465-L475) (`apps/web/src/pages/dokumen/Documents.tsx:465-475`) [Tipe: `function`]
+    - *Signature:* `(d: StoreItem)`
+
+### Sub-sistem: `berakhir:403:tidak` (Klaster #388)
+- **Kepadatan Simbol:** 37 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`currentSessionUsername`](file://apps/web/src/data/store.tsx#L600-L611) (`apps/web/src/data/store.tsx:600-611`) [Tipe: `function`]
+    - *Signature:* `(): string | null`
+  - [`loadSideMapConflictHolds`](file://apps/web/src/data/sideMapConflictHolds.ts#L14-L21) (`apps/web/src/data/sideMapConflictHolds.ts:14-21`) [Tipe: `function`]
+    - *Signature:* `(storage: ConflictHoldStorage): Set<string>`
+  - [`persistSideMapConflictHolds`](file://apps/web/src/data/sideMapConflictHolds.ts#L23-L31) (`apps/web/src/data/sideMapConflictHolds.ts:23-31`) [Tipe: `function`]
+    - *Signature:* `(storage: ConflictHoldStorage, holds: ReadonlySet<string>): void`
+  - [`lsGet`](file://apps/web/src/data/idb.ts#L200-L209) (`apps/web/src/data/idb.ts:200-209`) [Tipe: `function`]
+    - *Signature:* `(col: string): unknown | null`
+  - [`setBranch`](file://apps/web/src/data/store.tsx#L1208-L1210) (`apps/web/src/data/store.tsx:1208-1210`) [Tipe: `function`]
+    - *Signature:* `(b: string)`
+
+### Sub-sistem: `bonus:nominal:thr` (Klaster #756)
 - **Kepadatan Simbol:** 37 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`askAdvance`](file://apps/web/src/pages/payroll/Payroll.tsx#L493-L501) (`apps/web/src/pages/payroll/Payroll.tsx:493-501`) [Tipe: `function`]
@@ -319,24 +310,12 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(id: string): StoreItem | undefined`
     - *Deskripsi:* // Ubah THR/bonus HANYA bila Draft: nominal+keterangan (Bonus) / keterangan (THR, nominal turunan basis×masa).
 
-### Sub-sistem: `url:memorystorage:memory` (Klaster #761)
-- **Kepadatan Simbol:** 26 simbol.
+### Sub-sistem: `patch:parsial:divalidasi` (Klaster #665)
+- **Kepadatan Simbol:** 27 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`get`](file://services/api/scripts/files-privacy-probe.ts#L36-L36) (`services/api/scripts/files-privacy-probe.ts:36-36`) [Tipe: `function`]
-    - *Signature:* `(role: string | null, url: string)`
-  - [`set`](file://apps/web/src/pages/keuangan/Finance.tsx#L674-L677) (`apps/web/src/pages/keuangan/Finance.tsx:674-677`) [Tipe: `function`]
-    - *Signature:* `(f: SptNumField, v: string): void`
-  - [`num`](file://apps/web/src/pages/keuangan/Finance.tsx#L342-L345) (`apps/web/src/pages/keuangan/Finance.tsx:342-345`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): number`
-    - *Deskripsi:* /** DP = uang muka: tanpa retensi, dan menandai proyek punya uang muka. */
-  - [`useUrlParam`](file://apps/web/src/utils/urlParam.ts#L27-L49) (`apps/web/src/utils/urlParam.ts:27-49`) [Tipe: `function`]
-    - *Signature:* `(key: string, codec: UrlParamCodec<T>): [T, (next: T) => void]`
-  - [`branchOfUser`](file://services/api/src/auth.ts#L97-L112) (`services/api/src/auth.ts:97-112`) [Tipe: `function`]
-    - *Signature:* `(user: { employee_id?: string | null }): Promise<string>`
-
-### Sub-sistem: `predicate:patch:persist` (Klaster #680)
-- **Kepadatan Simbol:** 25 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`toJson`](file://services/api/src/routes/crud.ts#L251-L260) (`services/api/src/routes/crud.ts:251-260`) [Tipe: `function`]
+    - *Signature:* `(row: Row): { id: string; branch: string; data: unknown; updated_at: string }`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
   - [`persist`](file://services/api/src/routes/crud.ts#L755-L774) (`services/api/src/routes/crud.ts:755-774`) [Tipe: `function`]
     - *Signature:* `()`
     - *Deskripsi:* // Hanya saat dock/proyek berganti: slot lama yang sudah terlanjur tidak dikunci.
@@ -347,29 +326,22 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`performWrite`](file://services/api/src/routes/crud.ts#L775-L779) (`services/api/src/routes/crud.ts:775-779`) [Tipe: `function`]
     - *Signature:* `(): Promise<string | null>`
     - *Deskripsi:* // Hanya saat dock/proyek berganti: slot lama yang sudah terlanjur tidak dikunci.
-  - [`performDelete`](file://services/api/src/routes/crud.ts#L849-L863) (`services/api/src/routes/crud.ts:849-863`) [Tipe: `function`]
-    - *Signature:* `()`
-    - *Deskripsi:* // 5. activities: DELETE ditolak (append-only)
 
-### Sub-sistem: `pdf:fresh:remote` (Klaster #441)
-- **Kepadatan Simbol:** 24 simbol.
+### Sub-sistem: `url:memorystorage:memory` (Klaster #743)
+- **Kepadatan Simbol:** 23 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`getJwt`](file://apps/web/src/services/http.ts#L65-L71) (`apps/web/src/services/http.ts:65-71`) [Tipe: `function`]
-    - *Signature:* `(): string | null`
-  - [`isBackendConfigured`](file://apps/web/src/services/http.ts#L99-L101) (`apps/web/src/services/http.ts:99-101`) [Tipe: `function`]
-    - *Signature:* `(): boolean`
-  - [`isPdfHead`](file://apps/web/src/services/pdfClient.ts#L35-L41) (`apps/web/src/services/pdfClient.ts:35-41`) [Tipe: `function`]
-    - *Signature:* `(head: ArrayLike<number>): boolean`
-  - [`apiFetch`](file://apps/web/src/services/http.ts#L189-L198) (`apps/web/src/services/http.ts:189-198`) [Tipe: `function`]
-    - *Signature:* `(path: string, init?: ApiFetchInit): Promise<T>`
-  - [`renderPdfFrom`](file://apps/web/src/services/pdfClient.ts#L107-L158) (`apps/web/src/services/pdfClient.ts:107-158`) [Tipe: `function`]
-    - *Signature:* `(
-  base: string,
-  jwt: string,
-  req: PdfRequest,
-): Promise<PdfRenderResult>`
+  - [`get`](file://services/api/scripts/files-privacy-probe.ts#L36-L36) (`services/api/scripts/files-privacy-probe.ts:36-36`) [Tipe: `function`]
+    - *Signature:* `(role: string | null, url: string)`
+  - [`set`](file://apps/web/src/pages/keuangan/Finance.tsx#L676-L679) (`apps/web/src/pages/keuangan/Finance.tsx:676-679`) [Tipe: `function`]
+    - *Signature:* `(f: SptNumField, v: string): void`
+  - [`useUrlParam`](file://apps/web/src/utils/urlParam.ts#L27-L49) (`apps/web/src/utils/urlParam.ts:27-49`) [Tipe: `function`]
+    - *Signature:* `(key: string, codec: UrlParamCodec<T>): [T, (next: T) => void]`
+  - [`weekKey`](file://apps/web/src/utils/overtime.ts#L29-L34) (`apps/web/src/utils/overtime.ts:29-34`) [Tipe: `function`]
+    - *Signature:* `(dateISO: string): string`
+  - [`dailyOvertime`](file://apps/web/src/utils/overtime.ts#L24-L26) (`apps/web/src/utils/overtime.ts:24-26`) [Tipe: `function`]
+    - *Signature:* `(hours: number, rules: OvertimeRules = DEFAULT_OVERTIME_RULES): number`
 
-### Sub-sistem: `klaim:lanjut:dlp` (Klaster #743)
+### Sub-sistem: `klaim:lanjut:dlp` (Klaster #725)
 - **Kepadatan Simbol:** 23 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setCompliance`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L259-L272) (`apps/web/src/pages/kapal/VesselDetail.tsx:259-272`) [Tipe: `function`]
@@ -387,128 +359,8 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(idx: number)`
     - *Deskripsi:* // Klaim garansi/DLP: Aktif → Klaim (lanjut Selesai setelah perbaikan).
 
-### Sub-sistem: `dekat:muncul:kapan` (Klaster #514)
+### Sub-sistem: `blok:rantai:atas` (Klaster #625)
 - **Kepadatan Simbol:** 21 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`sinceOf`](file://apps/web/src/utils/moduleAlerts.ts#L120-L124) (`apps/web/src/utils/moduleAlerts.ts:120-124`) [Tipe: `function`]
-    - *Signature:* `(row: StoreItem, explicit?: unknown): string`
-    - *Deskripsi:* /** Umur kondisi: dari field yang paling dekat ke "kapan ini muncul". */
-  - [`list`](file://apps/web/src/services/repositories.ts#L160-L194) (`apps/web/src/services/repositories.ts:160-194`) [Tipe: `method`]
-    - *Signature:* `()`
-  - [`list`](file://services/api/scripts/rbac-modules-probe.ts#L75-L79) (`services/api/scripts/rbac-modules-probe.ts:75-79`) [Tipe: `function`]
-    - *Signature:* `(role: string): Promise<string[]>`
-    - *Deskripsi:* // #288 dokumen per role
-  - [`num`](file://apps/web/src/utils/moduleAlerts.ts#L81-L81) (`apps/web/src/utils/moduleAlerts.ts:81-81`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): number`
-    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
-  - [`daysUntil`](file://apps/web/src/utils/moduleAlerts.ts#L83-L91) (`apps/web/src/utils/moduleAlerts.ts:83-91`) [Tipe: `function`]
-    - *Signature:* `(iso: string | null | undefined): number | null`
-    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
-
-### Sub-sistem: `letter:phk:kanan` (Klaster #862)
-- **Kepadatan Simbol:** 21 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`single`](file://services/api/src/pdf/documents/hrLetter.ts#L57-L57) (`services/api/src/pdf/documents/hrLetter.ts:57-57`) [Tipe: `function`]
-    - *Signature:* `(size: number): number`
-    - *Deskripsi:* // 1 twip dalam mm
-  - [`font`](file://services/api/src/pdf/documents/hrLetter.ts#L69-L72) (`services/api/src/pdf/documents/hrLetter.ts:69-72`) [Tipe: `method`]
-    - *Signature:* `(style: Style, size: number): void`
-  - [`line`](file://services/api/src/pdf/documents/hrLetter.ts#L94-L103) (`services/api/src/pdf/documents/hrLetter.ts:94-103`) [Tipe: `method`]
-    - *Signature:* `(runs: Run[], o: { size: number; spacing?: number; align?: "left" | "center" | "right"; indent?: number; boxRight?: number; after?: number }): void`
-    - *Deskripsi:* /** Satu baris (tidak dibungkus) berisi beberapa potongan gaya. */
-  - [`put`](file://services/api/src/pdf/documents/hrLetter.ts#L78-L92) (`services/api/src/pdf/documents/hrLetter.ts:78-92`) [Tipe: `method`]
-    - *Signature:* `(r: Run, x: number, base: number, size: number): number`
-    - *Deskripsi:* /** Tulis satu potongan pada baseline; catat jejaknya. */
-  - [`width`](file://services/api/src/pdf/documents/hrLetter.ts#L73-L76) (`services/api/src/pdf/documents/hrLetter.ts:73-76`) [Tipe: `method`]
-    - *Signature:* `(text: string, style: Style, size: number): number`
-
-### Sub-sistem: `draw:bar:500` (Klaster #632)
-- **Kepadatan Simbol:** 20 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`measure`](file://services/api/src/pdf/measure.ts#L67-L88) (`services/api/src/pdf/measure.ts:67-88`) [Tipe: `function`]
-    - *Signature:* `(
-  pdf: jsPDF,
-  text: string,
-  opts: { font: FontName; size: number; embedded: boolean },
-): number`
-  - [`fmt`](file://apps/web/src/utils/stockIssue.ts#L48-L48) (`apps/web/src/utils/stockIssue.ts:48-48`) [Tipe: `function`]
-    - *Signature:* `(n: number)`
-  - [`rect`](file://services/api/src/pdf/chart.ts#L107-L112) (`services/api/src/pdf/chart.ts:107-112`) [Tipe: `function`]
-    - *Signature:* `(ctx: ChartCtx, x: number, y: number, w: number, h: number, color: RGB, mode: "F" | "S" = "F"): void`
-    - *Deskripsi:* /** 1.500.000 -> "1,5 jt". Memakai pemisah ribuan Indonesia (titik). */
-  - [`txt`](file://services/api/src/pdf/chart.ts#L85-L97) (`services/api/src/pdf/chart.ts:85-97`) [Tipe: `function`]
-    - *Signature:* `(ctx: ChartCtx, text: string, x: number, yBaseline: number, boxW: number, o: { size?: number; font?: FontName; color?: RGB; align?: "left" | "center" | "right" } = {}): void`
-    - *Deskripsi:* /** 1.500.000 -> "1,5 jt". Memakai pemisah ribuan Indonesia (titik). */
-  - [`line`](file://services/api/src/pdf/chart.ts#L99-L105) (`services/api/src/pdf/chart.ts:99-105`) [Tipe: `function`]
-    - *Signature:* `(ctx: ChartCtx, x1: number, y1: number, x2: number, y2: number, color: RGB, weight = STROKE.thin): void`
-    - *Deskripsi:* /** 1.500.000 -> "1,5 jt". Memakai pemisah ribuan Indonesia (titik). */
-
-### Sub-sistem: `edit:save:att` (Klaster #837)
-- **Kepadatan Simbol:** 20 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`openLeaveEdit`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L401-L411) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:401-411`) [Tipe: `function`]
-    - *Signature:* `(l: StoreItem)`
-  - [`delRowDesc`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L476-L496) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:476-496`) [Tipe: `function`]
-    - *Signature:* `(): string`
-  - [`attOtApproved`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L341-L341) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:341-341`) [Tipe: `function`]
-    - *Signature:* `(a: StoreItem): boolean`
-  - [`openAttEdit`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L343-L362) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:343-362`) [Tipe: `function`]
-    - *Signature:* `(a: StoreItem)`
-  - [`delCert`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L257-L263) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:257-263`) [Tipe: `function`]
-    - *Signature:* `(name: string)`
-
-### Sub-sistem: `dashboard:attention:target` (Klaster #421)
-- **Kepadatan Simbol:** 19 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`statusLabel`](file://apps/web/src/pages/Dashboard.tsx#L209-L213) (`apps/web/src/pages/Dashboard.tsx:209-213`) [Tipe: `function`]
-    - *Signature:* `(s: string, locale: Locale): string`
-  - [`goAttentionItem`](file://apps/web/src/pages/Dashboard.tsx#L552-L555) (`apps/web/src/pages/Dashboard.tsx:552-555`) [Tipe: `function`]
-    - *Signature:* `(key: ModuleAlertKey, rowId: string)`
-  - [`toneFor`](file://apps/web/src/pages/Dashboard.tsx#L928-L929) (`apps/web/src/pages/Dashboard.tsx:928-929`) [Tipe: `function`]
-    - *Signature:* `(s: string): "blue" | "amber" | "red" | "gray" | "green"`
-  - [`toggleAttentionCategory`](file://apps/web/src/pages/Dashboard.tsx#L557-L566) (`apps/web/src/pages/Dashboard.tsx:557-566`) [Tipe: `function`]
-    - *Signature:* `(key: ModuleAlertKey)`
-  - [`highlightOf`](file://apps/web/src/pages/Dashboard.tsx#L286-L287) (`apps/web/src/pages/Dashboard.tsx:286-287`) [Tipe: `function`]
-    - *Signature:* `(ids: string[]): string`
-
-### Sub-sistem: `288:dibuka:notifikasi` (Klaster #415)
-- **Kepadatan Simbol:** 19 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`isGroupOpen`](file://apps/web/src/layouts/AppShell.tsx#L152-L152) (`apps/web/src/layouts/AppShell.tsx:152-152`) [Tipe: `function`]
-    - *Signature:* `(label: string): boolean`
-    - *Deskripsi:* // Accordion grup nav: default open semua, pilihan persist.
-  - [`toggleGroup`](file://apps/web/src/layouts/AppShell.tsx#L153-L163) (`apps/web/src/layouts/AppShell.tsx:153-163`) [Tipe: `function`]
-    - *Signature:* `(label: string)`
-    - *Deskripsi:* // Accordion grup nav: default open semua, pilihan persist.
-  - [`markNotifRead`](file://apps/web/src/layouts/AppShell.tsx#L191-L197) (`apps/web/src/layouts/AppShell.tsx:191-197`) [Tipe: `function`]
-    - *Signature:* `(id: string)`
-    - *Deskripsi:* // #288: notifikasi hanya untuk modul yang boleh dibuka role ini.
-  - [`beat`](file://apps/web/src/layouts/AppShell.tsx#L111-L114) (`apps/web/src/layouts/AppShell.tsx:111-114`) [Tipe: `function`]
-    - *Signature:* `()`
-  - [`doChangePassword`](file://apps/web/src/layouts/AppShell.tsx#L320-L340) (`apps/web/src/layouts/AppShell.tsx:320-340`) [Tipe: `function`]
-    - *Signature:* `()`
-    - *Deskripsi:* // #288: notifikasi hanya untuk modul yang boleh dibuka role ini.
-
-### Sub-sistem: `draft:saja:harga` (Klaster #797)
-- **Kepadatan Simbol:** 19 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`changeStatus`](file://apps/web/src/pages/proyek/BoQSection.tsx#L269-L279) (`apps/web/src/pages/proyek/BoQSection.tsx:269-279`) [Tipe: `function`]
-    - *Signature:* `(id: string, newStatus: string)`
-    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
-  - [`logOf`](file://apps/web/src/pages/proyek/BoQSection.tsx#L180-L186) (`apps/web/src/pages/proyek/BoQSection.tsx:180-186`) [Tipe: `function`]
-    - *Signature:* `(id: string): { time: string; text: string; target: string }[]`
-    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
-  - [`nextStatus`](file://apps/web/src/pages/proyek/BoQSection.tsx#L188-L188) (`apps/web/src/pages/proyek/BoQSection.tsx:188-188`) [Tipe: `function`]
-    - *Signature:* `(current: string): string[]`
-    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
-  - [`pos`](file://apps/web/src/pages/proyek/BoQSection.tsx#L171-L171) (`apps/web/src/pages/proyek/BoQSection.tsx:171-171`) [Tipe: `function`]
-    - *Signature:* `(s: string): number`
-  - [`openEdit`](file://apps/web/src/pages/proyek/BoQSection.tsx#L306-L310) (`apps/web/src/pages/proyek/BoQSection.tsx:306-310`) [Tipe: `function`]
-    - *Signature:* `(b: BoQExt)`
-    - *Deskripsi:* // Ubah qty & harga satuan (Draft/Pending saja; Approved/Completed terkunci alur).
-
-### Sub-sistem: `blok:rantai:atas` (Klaster #635)
-- **Kepadatan Simbol:** 19 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`add`](file://services/api/src/pdf/document.ts#L216-L236) (`services/api/src/pdf/document.ts:216-236`) [Tipe: `method`]
     - *Signature:* `(block: Block): this`
@@ -527,7 +379,106 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(block: Block): void`
     - *Deskripsi:* /** Gambar blok di posisi sekarang (pecah antar halaman bila splittable). */
 
-### Sub-sistem: `cabang:seksi:absensi` (Klaster #766)
+### Sub-sistem: `dekat:muncul:kapan` (Klaster #508)
+- **Kepadatan Simbol:** 21 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`sinceOf`](file://apps/web/src/utils/moduleAlerts.ts#L120-L124) (`apps/web/src/utils/moduleAlerts.ts:120-124`) [Tipe: `function`]
+    - *Signature:* `(row: StoreItem, explicit?: unknown): string`
+    - *Deskripsi:* /** Umur kondisi: dari field yang paling dekat ke "kapan ini muncul". */
+  - [`list`](file://apps/web/src/services/repositories.ts#L160-L194) (`apps/web/src/services/repositories.ts:160-194`) [Tipe: `method`]
+    - *Signature:* `()`
+  - [`list`](file://services/api/scripts/rbac-modules-probe.ts#L75-L79) (`services/api/scripts/rbac-modules-probe.ts:75-79`) [Tipe: `function`]
+    - *Signature:* `(role: string): Promise<string[]>`
+    - *Deskripsi:* // #288 dokumen per role
+  - [`num`](file://apps/web/src/utils/moduleAlerts.ts#L81-L81) (`apps/web/src/utils/moduleAlerts.ts:81-81`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): number`
+    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
+  - [`daysUntil`](file://apps/web/src/utils/moduleAlerts.ts#L83-L91) (`apps/web/src/utils/moduleAlerts.ts:83-91`) [Tipe: `function`]
+    - *Signature:* `(iso: string | null | undefined): number | null`
+    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
+
+### Sub-sistem: `letter:phk:kanan` (Klaster #844)
+- **Kepadatan Simbol:** 21 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`single`](file://services/api/src/pdf/documents/hrLetter.ts#L57-L57) (`services/api/src/pdf/documents/hrLetter.ts:57-57`) [Tipe: `function`]
+    - *Signature:* `(size: number): number`
+    - *Deskripsi:* // 1 twip dalam mm
+  - [`font`](file://services/api/src/pdf/documents/hrLetter.ts#L69-L72) (`services/api/src/pdf/documents/hrLetter.ts:69-72`) [Tipe: `method`]
+    - *Signature:* `(style: Style, size: number): void`
+  - [`line`](file://services/api/src/pdf/documents/hrLetter.ts#L94-L103) (`services/api/src/pdf/documents/hrLetter.ts:94-103`) [Tipe: `method`]
+    - *Signature:* `(runs: Run[], o: { size: number; spacing?: number; align?: "left" | "center" | "right"; indent?: number; boxRight?: number; after?: number }): void`
+    - *Deskripsi:* /** Satu baris (tidak dibungkus) berisi beberapa potongan gaya. */
+  - [`put`](file://services/api/src/pdf/documents/hrLetter.ts#L78-L92) (`services/api/src/pdf/documents/hrLetter.ts:78-92`) [Tipe: `method`]
+    - *Signature:* `(r: Run, x: number, base: number, size: number): number`
+    - *Deskripsi:* /** Tulis satu potongan pada baseline; catat jejaknya. */
+  - [`width`](file://services/api/src/pdf/documents/hrLetter.ts#L73-L76) (`services/api/src/pdf/documents/hrLetter.ts:73-76`) [Tipe: `method`]
+    - *Signature:* `(text: string, style: Style, size: number): number`
+
+### Sub-sistem: `edit:save:att` (Klaster #819)
+- **Kepadatan Simbol:** 20 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`openLeaveEdit`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L401-L411) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:401-411`) [Tipe: `function`]
+    - *Signature:* `(l: StoreItem)`
+  - [`delRowDesc`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L476-L496) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:476-496`) [Tipe: `function`]
+    - *Signature:* `(): string`
+  - [`attOtApproved`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L341-L341) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:341-341`) [Tipe: `function`]
+    - *Signature:* `(a: StoreItem): boolean`
+  - [`openAttEdit`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L343-L362) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:343-362`) [Tipe: `function`]
+    - *Signature:* `(a: StoreItem)`
+  - [`delCert`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L257-L263) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:257-263`) [Tipe: `function`]
+    - *Signature:* `(name: string)`
+
+### Sub-sistem: `attention:dashboard:target` (Klaster #420)
+- **Kepadatan Simbol:** 19 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`statusLabel`](file://apps/web/src/pages/Dashboard.tsx#L209-L213) (`apps/web/src/pages/Dashboard.tsx:209-213`) [Tipe: `function`]
+    - *Signature:* `(s: string, locale: Locale): string`
+  - [`goAttentionItem`](file://apps/web/src/pages/Dashboard.tsx#L552-L555) (`apps/web/src/pages/Dashboard.tsx:552-555`) [Tipe: `function`]
+    - *Signature:* `(key: ModuleAlertKey, rowId: string)`
+  - [`toneFor`](file://apps/web/src/pages/Dashboard.tsx#L928-L929) (`apps/web/src/pages/Dashboard.tsx:928-929`) [Tipe: `function`]
+    - *Signature:* `(s: string): "blue" | "amber" | "red" | "gray" | "green"`
+  - [`toggleAttentionCategory`](file://apps/web/src/pages/Dashboard.tsx#L557-L566) (`apps/web/src/pages/Dashboard.tsx:557-566`) [Tipe: `function`]
+    - *Signature:* `(key: ModuleAlertKey)`
+  - [`highlightOf`](file://apps/web/src/pages/Dashboard.tsx#L286-L287) (`apps/web/src/pages/Dashboard.tsx:286-287`) [Tipe: `function`]
+    - *Signature:* `(ids: string[]): string`
+
+### Sub-sistem: `288:dibuka:notifikasi` (Klaster #403)
+- **Kepadatan Simbol:** 19 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`isGroupOpen`](file://apps/web/src/layouts/AppShell.tsx#L152-L152) (`apps/web/src/layouts/AppShell.tsx:152-152`) [Tipe: `function`]
+    - *Signature:* `(label: string): boolean`
+    - *Deskripsi:* // Accordion grup nav: default open semua, pilihan persist.
+  - [`toggleGroup`](file://apps/web/src/layouts/AppShell.tsx#L153-L163) (`apps/web/src/layouts/AppShell.tsx:153-163`) [Tipe: `function`]
+    - *Signature:* `(label: string)`
+    - *Deskripsi:* // Accordion grup nav: default open semua, pilihan persist.
+  - [`markNotifRead`](file://apps/web/src/layouts/AppShell.tsx#L191-L197) (`apps/web/src/layouts/AppShell.tsx:191-197`) [Tipe: `function`]
+    - *Signature:* `(id: string)`
+    - *Deskripsi:* // #288: notifikasi hanya untuk modul yang boleh dibuka role ini.
+  - [`beat`](file://apps/web/src/layouts/AppShell.tsx#L111-L114) (`apps/web/src/layouts/AppShell.tsx:111-114`) [Tipe: `function`]
+    - *Signature:* `()`
+  - [`doChangePassword`](file://apps/web/src/layouts/AppShell.tsx#L320-L340) (`apps/web/src/layouts/AppShell.tsx:320-340`) [Tipe: `function`]
+    - *Signature:* `()`
+    - *Deskripsi:* // #288: notifikasi hanya untuk modul yang boleh dibuka role ini.
+
+### Sub-sistem: `draft:saja:harga` (Klaster #779)
+- **Kepadatan Simbol:** 19 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`changeStatus`](file://apps/web/src/pages/proyek/BoQSection.tsx#L269-L279) (`apps/web/src/pages/proyek/BoQSection.tsx:269-279`) [Tipe: `function`]
+    - *Signature:* `(id: string, newStatus: string)`
+    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
+  - [`logOf`](file://apps/web/src/pages/proyek/BoQSection.tsx#L180-L186) (`apps/web/src/pages/proyek/BoQSection.tsx:180-186`) [Tipe: `function`]
+    - *Signature:* `(id: string): { time: string; text: string; target: string }[]`
+    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
+  - [`nextStatus`](file://apps/web/src/pages/proyek/BoQSection.tsx#L188-L188) (`apps/web/src/pages/proyek/BoQSection.tsx:188-188`) [Tipe: `function`]
+    - *Signature:* `(current: string): string[]`
+    - *Deskripsi:* // Ubah qty/harga (Draft/Pending saja) + hapus (Draft saja) via ConfirmModal.
+  - [`pos`](file://apps/web/src/pages/proyek/BoQSection.tsx#L171-L171) (`apps/web/src/pages/proyek/BoQSection.tsx:171-171`) [Tipe: `function`]
+    - *Signature:* `(s: string): number`
+  - [`openEdit`](file://apps/web/src/pages/proyek/BoQSection.tsx#L306-L310) (`apps/web/src/pages/proyek/BoQSection.tsx:306-310`) [Tipe: `function`]
+    - *Signature:* `(b: BoQExt)`
+    - *Deskripsi:* // Ubah qty & harga satuan (Draft/Pending saja; Approved/Completed terkunci alur).
+
+### Sub-sistem: `cabang:seksi:absensi` (Klaster #748)
 - **Kepadatan Simbol:** 19 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/pages/laporan/Laporan.tsx#L22-L22) (`apps/web/src/pages/laporan/Laporan.tsx:22-22`) [Tipe: `function`]
@@ -544,7 +495,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(t: ReportTpl)`
     - *Deskripsi:* // Filter cabang lokal untuk seksi PO/absensi/insiden/payroll (Semua + daftar cabang).
 
-### Sub-sistem: `absensi:pemakai:confirmmodal` (Klaster #705)
+### Sub-sistem: `absensi:pemakai:confirmmodal` (Klaster #690)
 - **Kepadatan Simbol:** 18 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`rejectOT`](file://apps/web/src/pages/absensi/Absensi.tsx#L409-L415) (`apps/web/src/pages/absensi/Absensi.tsx:409-415`) [Tipe: `function`]
@@ -563,7 +514,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(id: string): string`
     - *Deskripsi:* // Hapus baris absensi via ConfirmModal + daftar pemakai.
 
-### Sub-sistem: `peran:email:user` (Klaster #783)
+### Sub-sistem: `peran:email:user` (Klaster #765)
 - **Kepadatan Simbol:** 18 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`doLinkEmployee`](file://apps/web/src/pages/pengaturan/Peran.tsx#L503-L516) (`apps/web/src/pages/pengaturan/Peran.tsx:503-516`) [Tipe: `function`]
@@ -582,7 +533,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `()`
     - *Deskripsi:* // Ubah user: nama + peran + email via PATCH.
 
-### Sub-sistem: `svc:service:vesselid` (Klaster #816)
+### Sub-sistem: `svc:service:vesselid` (Klaster #798)
 - **Kepadatan Simbol:** 18 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onError`](file://apps/web/src/pages/proyek/SparepartServiceSection.tsx#L262-L265) (`apps/web/src/pages/proyek/SparepartServiceSection.tsx:262-265`) [Tipe: `function`]
@@ -596,7 +547,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`openEditSvc`](file://apps/web/src/pages/proyek/SparepartServiceSection.tsx#L102-L115) (`apps/web/src/pages/proyek/SparepartServiceSection.tsx:102-115`) [Tipe: `function`]
     - *Signature:* `(s: SvcExt)`
 
-### Sub-sistem: `survei:blokir:pemakai` (Klaster #748)
+### Sub-sistem: `survei:blokir:pemakai` (Klaster #730)
 - **Kepadatan Simbol:** 17 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pickNotifIds`](file://apps/web/src/pages/kapal/Vessels.tsx#L238-L245) (`apps/web/src/pages/kapal/Vessels.tsx:238-245`) [Tipe: `function`]
@@ -614,21 +565,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `()`
     - *Deskripsi:* // Hapus kapal via ConfirmModal + daftar pemakai (blokir bila dipakai proyek/survei/dock/garansi).
 
-### Sub-sistem: `income:analytics:point` (Klaster #418)
+### Sub-sistem: `resolve:dirname:literal` (Klaster #693)
 - **Kepadatan Simbol:** 16 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`q`](file://apps/web/src/pages/Analytics.tsx#L479-L479) (`apps/web/src/pages/Analytics.tsx:479-479`) [Tipe: `function`]
-    - *Signature:* `(d: Date): number`
-  - [`fmtMonthRange`](file://apps/web/src/utils/monthAxis.ts#L253-L259) (`apps/web/src/utils/monthAxis.ts:253-259`) [Tipe: `function`]
-    - *Signature:* `(axis: MonthPoint[]): string`
-  - [`income`](file://apps/web/src/pages/Analytics.tsx#L313-L325) (`apps/web/src/pages/Analytics.tsx:313-325`) [Tipe: `function`]
-    - *Signature:* `(codes: string[]): Record<string, number>`
-  - [`delNote`](file://apps/web/src/pages/Analytics.tsx#L577-L583) (`apps/web/src/pages/Analytics.tsx:577-583`) [Tipe: `function`]
-    - *Signature:* `(idx: number)`
-  - [`annualFor`](file://apps/web/src/pages/Analytics.tsx#L556-L556) (`apps/web/src/pages/Analytics.tsx:556-556`) [Tipe: `function`]
-    - *Signature:* `(s: Scenario): number`
+  - [`normalize`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L19-L27) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:19-27`) [Tipe: `function`]
+    - *Signature:* `(path: string): string`
+  - [`existsSync`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L31-L31) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:31-31`) [Tipe: `function`]
+    - *Signature:* `(p: string): boolean`
+  - [`resolve`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L44-L49) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:44-49`) [Tipe: `function`]
+    - *Signature:* `(from: string, spec: string): string | null`
+  - [`resolve`](file://services/api/src/pdf/reports.ts#L423-L429) (`services/api/src/pdf/reports.ts:423-429`) [Tipe: `function`]
+    - *Signature:* `(row: Row): Record<string, unknown>`
+  - [`dirname`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L30-L30) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:30-30`) [Tipe: `function`]
+    - *Signature:* `(p: string): string`
 
-### Sub-sistem: `notifikasi:288:dibuka` (Klaster #768)
+### Sub-sistem: `notifikasi:288:dibuka` (Klaster #750)
 - **Kepadatan Simbol:** 16 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`markGroup`](file://apps/web/src/pages/notifikasi/Notifikasi.tsx#L171-L176) (`apps/web/src/pages/notifikasi/Notifikasi.tsx:171-176`) [Tipe: `function`]
@@ -645,24 +596,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`canSeePath`](file://apps/web/src/utils/moduleKey.ts#L29-L29) (`apps/web/src/utils/moduleKey.ts:29-29`) [Tipe: `function`]
     - *Signature:* `(user: U, to: string): boolean`
 
-### Sub-sistem: `move:employee:save` (Klaster #725)
+### Sub-sistem: `income:analytics:note` (Klaster #417)
 - **Kepadatan Simbol:** 15 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`toggleSort`](file://apps/web/src/components/ui.tsx#L1340-L1343) (`apps/web/src/components/ui.tsx:1340-1343`) [Tipe: `function`]
-    - *Signature:* `(prev: SortState, key: string): SortState`
-  - [`employeeOptions`](file://apps/web/src/utils/employeeOptions.ts#L39-L56) (`apps/web/src/utils/employeeOptions.ts:39-56`) [Tipe: `function`]
-    - *Signature:* `(
-  employees: readonly StoreItem[],
-  extra: EmployeeOptionExtra = {},
-): PickerOption[]`
-  - [`openMoveEdit`](file://apps/web/src/pages/inventori/BomDetail.tsx#L129-L138) (`apps/web/src/pages/inventori/BomDetail.tsx:129-138`) [Tipe: `function`]
-    - *Signature:* `(m: StoreItem)`
-  - [`isKnownEmployee`](file://apps/web/src/utils/employeeOptions.ts#L68-L72) (`apps/web/src/utils/employeeOptions.ts:68-72`) [Tipe: `function`]
-    - *Signature:* `(employees: readonly StoreItem[], name: unknown): boolean`
-  - [`reservedQty`](file://apps/web/src/pages/inventori/BomDetail.tsx#L29-L32) (`apps/web/src/pages/inventori/BomDetail.tsx:29-32`) [Tipe: `function`]
-    - *Signature:* `(it: StoreItem): number`
+  - [`q`](file://apps/web/src/pages/Analytics.tsx#L479-L479) (`apps/web/src/pages/Analytics.tsx:479-479`) [Tipe: `function`]
+    - *Signature:* `(d: Date): number`
+  - [`income`](file://apps/web/src/pages/Analytics.tsx#L313-L325) (`apps/web/src/pages/Analytics.tsx:313-325`) [Tipe: `function`]
+    - *Signature:* `(codes: string[]): Record<string, number>`
+  - [`delNote`](file://apps/web/src/pages/Analytics.tsx#L577-L583) (`apps/web/src/pages/Analytics.tsx:577-583`) [Tipe: `function`]
+    - *Signature:* `(idx: number)`
+  - [`annualFor`](file://apps/web/src/pages/Analytics.tsx#L556-L556) (`apps/web/src/pages/Analytics.tsx:556-556`) [Tipe: `function`]
+    - *Signature:* `(s: Scenario): number`
+  - [`numOf`](file://apps/web/src/utils/series.ts#L56-L59) (`apps/web/src/utils/series.ts:56-59`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): number`
 
-### Sub-sistem: `memisah:pipa:logistik` (Klaster #602)
+### Sub-sistem: `memisah:pipa:logistik` (Klaster #594)
 - **Kepadatan Simbol:** 15 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`warehouseSheets`](file://apps/web/src/utils/warehouseReport.ts#L43-L79) (`apps/web/src/utils/warehouseReport.ts:43-79`) [Tipe: `function`]
@@ -677,7 +625,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`itemOf`](file://apps/web/src/utils/warehouseReport.ts#L44-L44) (`apps/web/src/utils/warehouseReport.ts:44-44`) [Tipe: `function`]
     - *Signature:* `(m: StoreItem)`
 
-### Sub-sistem: `convert:send:move` (Klaster #714)
+### Sub-sistem: `convert:send:move` (Klaster #696)
 - **Kepadatan Simbol:** 15 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/pages/crm/QuotationDetail.tsx#L22-L22) (`apps/web/src/pages/crm/QuotationDetail.tsx:22-22`) [Tipe: `function`]
@@ -691,7 +639,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`move`](file://apps/web/src/pages/crm/QuotationDetail.tsx#L114-L124) (`apps/web/src/pages/crm/QuotationDetail.tsx:114-124`) [Tipe: `function`]
     - *Signature:* `(dir: 1 | -1)`
 
-### Sub-sistem: `paginasi:limit:query` (Klaster #450)
+### Sub-sistem: `paginasi:limit:query` (Klaster #449)
 - **Kepadatan Simbol:** 14 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`rowToItem`](file://apps/web/src/services/repositories.ts#L66-L73) (`apps/web/src/services/repositories.ts:66-73`) [Tipe: `function`]
@@ -707,7 +655,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`collect`](file://apps/web/src/services/repositories.ts#L143-L154) (`apps/web/src/services/repositories.ts:143-154`) [Tipe: `function`]
     - *Signature:* `(pages: StoreItem[], limit: number): StoreItem[]`
 
-### Sub-sistem: `dimemo:monitoringfeed:feed` (Klaster #805)
+### Sub-sistem: `dimemo:monitoringfeed:feed` (Klaster #787)
 - **Kepadatan Simbol:** 14 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`syncScroll`](file://apps/web/src/pages/proyek/Monitoring.tsx#L74-L81) (`apps/web/src/pages/proyek/Monitoring.tsx:74-81`) [Tipe: `function`]
@@ -726,7 +674,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(pid: string): StoreItem[]`
     - *Deskripsi:* // Dimemo supaya feed (MonitoringFeed) tidak menghitung ulang setiap render.
 
-### Sub-sistem: `slot:melebihi:dimensi` (Klaster #482)
+### Sub-sistem: `slot:melebihi:dimensi` (Klaster #476)
 - **Kepadatan Simbol:** 14 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`witaTodayISO`](file://apps/web/src/utils/drydockBookingDates.ts#L16-L21) (`apps/web/src/utils/drydockBookingDates.ts:16-21`) [Tipe: `function`]
@@ -747,44 +695,24 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`dayToISO`](file://apps/web/src/utils/drydockBookingDates.ts#L34-L38) (`apps/web/src/utils/drydockBookingDates.ts:34-38`) [Tipe: `function`]
     - *Signature:* `(day: number, today: string = witaTodayISO()): string`
 
-### Sub-sistem: `unit:conversion:category` (Klaster #587)
+### Sub-sistem: `move:employee:save` (Klaster #707)
 - **Kepadatan Simbol:** 14 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`normalizedCategory`](file://apps/web/src/utils/unitConversion.ts#L69-L71) (`apps/web/src/utils/unitConversion.ts:69-71`) [Tipe: `function`]
-    - *Signature:* `(value: unknown): string`
-    - *Deskripsi:* /** Satuan dasar yang lazim untuk kemasan tanpa aturan kategori: roll dikeluarkan
- *  per meter, drum/galon/kaleng per liter. Dipakai sebagai isian awal. */
-  - [`conversionRuleForCategory`](file://apps/web/src/utils/unitConversion.ts#L83-L85) (`apps/web/src/utils/unitConversion.ts:83-85`) [Tipe: `function`]
-    - *Signature:* `(category: unknown): UnitConversionRule | null`
-  - [`hasUnitConversionDraft`](file://apps/web/src/utils/unitConversion.ts#L104-L113) (`apps/web/src/utils/unitConversion.ts:104-113`) [Tipe: `function`]
-    - *Signature:* `(draft: UnitConversionDraft): boolean`
-  - [`sackKgOf`](file://apps/web/src/utils/unitConversion.ts#L54-L58) (`apps/web/src/utils/unitConversion.ts:54-58`) [Tipe: `function`]
-    - *Signature:* `(unit: unknown): number | null`
-  - [`suggestedBaseUnit`](file://apps/web/src/utils/unitConversion.ts#L62-L67) (`apps/web/src/utils/unitConversion.ts:62-67`) [Tipe: `function`]
-    - *Signature:* `(purchaseUnit: unknown): string`
-
-### Sub-sistem: `download:file:run` (Klaster #335)
-- **Kepadatan Simbol:** 13 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`toast`](file://apps/web/src/components/Toast.tsx#L39-L76) (`apps/web/src/components/Toast.tsx:39-76`) [Tipe: `function`]
+  - [`employeeOptions`](file://apps/web/src/utils/employeeOptions.ts#L39-L56) (`apps/web/src/utils/employeeOptions.ts:39-56`) [Tipe: `function`]
     - *Signature:* `(
-  message: string,
-  toneOrOptions?: ToastTone | ToastOptions,
-  extraOptions?: ToastOptions,
-): number | string`
-  - [`run`](file://apps/web/src/components/ui.tsx#L1473-L1483) (`apps/web/src/components/ui.tsx:1473-1483`) [Tipe: `function`]
-    - *Signature:* `(key: string, fn: () => Promise<T> | T): Promise<T | void>`
-  - [`run`](file://services/api/scripts/backup-restore-probe.ts#L18-L21) (`services/api/scripts/backup-restore-probe.ts:18-21`) [Tipe: `function`]
-    - *Signature:* `(script: string, args: string[], env: Record<string, string>): void`
-  - [`useAsyncAction`](file://apps/web/src/components/ui.tsx#L1492-L1510) (`apps/web/src/components/ui.tsx:1492-1510`) [Tipe: `function`]
-    - *Signature:* `(): {
-  pending: boolean;
-  run: <T>(fn: () => Promise<T> | T) => Promise<T | undefined>;
-}`
-  - [`downloadFileUrl`](file://apps/web/src/services/files.ts#L190-L214) (`apps/web/src/services/files.ts:190-214`) [Tipe: `function`]
-    - *Signature:* `(url: string, filename?: string): Promise<void>`
+  employees: readonly StoreItem[],
+  extra: EmployeeOptionExtra = {},
+): PickerOption[]`
+  - [`openMoveEdit`](file://apps/web/src/pages/inventori/BomDetail.tsx#L129-L138) (`apps/web/src/pages/inventori/BomDetail.tsx:129-138`) [Tipe: `function`]
+    - *Signature:* `(m: StoreItem)`
+  - [`isKnownEmployee`](file://apps/web/src/utils/employeeOptions.ts#L68-L72) (`apps/web/src/utils/employeeOptions.ts:68-72`) [Tipe: `function`]
+    - *Signature:* `(employees: readonly StoreItem[], name: unknown): boolean`
+  - [`reservedQty`](file://apps/web/src/pages/inventori/BomDetail.tsx#L29-L32) (`apps/web/src/pages/inventori/BomDetail.tsx:29-32`) [Tipe: `function`]
+    - *Signature:* `(it: StoreItem): number`
+  - [`qrPayloadOf`](file://apps/web/src/pages/inventori/BomDetail.tsx#L38-L40) (`apps/web/src/pages/inventori/BomDetail.tsx:38-40`) [Tipe: `function`]
+    - *Signature:* `(it: StoreItem): string`
 
-### Sub-sistem: `cabang:inspeksi:lingkup` (Klaster #828)
+### Sub-sistem: `cabang:inspeksi:lingkup` (Klaster #810)
 - **Kepadatan Simbol:** 13 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`patchItem`](file://apps/web/src/pages/qc/ChecklistTab.tsx#L166-L168) (`apps/web/src/pages/qc/ChecklistTab.tsx:166-168`) [Tipe: `function`]
@@ -803,7 +731,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(target: { pid: string; task: string; empId?: string; assignee?: string })`
     - *Deskripsi:* // Lingkup cabang sesi: proyek & hasil inspeksi cabang lain tidak ikut tampil.
 
-### Sub-sistem: `keluar:pengeluaran:alokasi` (Klaster #896)
+### Sub-sistem: `keluar:additional:pengeluaran` (Klaster #872)
 - **Kepadatan Simbol:** 13 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setPick`](file://apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx#L75-L83) (`apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx:75-83`) [Tipe: `function`]
@@ -829,66 +757,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(itemId: string)`
     - *Deskripsi:* // ---------- Additional masuk ----------
 
-### Sub-sistem: `termasuk:turunan:dicari` (Klaster #786)
-- **Kepadatan Simbol:** 12 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`useStore`](file://apps/web/src/data/store.tsx#L2798-L2802) (`apps/web/src/data/store.tsx:2798-2802`) [Tipe: `function`]
-    - *Signature:* `(): StoreCtx`
-  - [`mrStatus`](file://apps/web/src/data/useMaterialRequest.ts#L43-L46) (`apps/web/src/data/useMaterialRequest.ts:43-46`) [Tipe: `function`]
-    - *Signature:* `(issued: number, shortage: number, hadShortage: boolean): MrStatus`
-  - [`doFulfill`](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L129-L138) (`apps/web/src/pages/procurement/MaterialRequestsTab.tsx:129-138`) [Tipe: `function`]
-    - *Signature:* `(m: StoreItem)`
-    - *Deskripsi:* // Status tampilan (termasuk "Menunggu stok" turunan) ikut bisa dicari.
-  - [`stockOf`](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L60-L63) (`apps/web/src/pages/procurement/MaterialRequestsTab.tsx:60-63`) [Tipe: `function`]
-    - *Signature:* `(itemId: unknown)`
-    - *Deskripsi:* // Status tampilan (termasuk "Menunggu stok" turunan) ikut bisa dicari.
-  - [`doApprove`](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L109-L116) (`apps/web/src/pages/procurement/MaterialRequestsTab.tsx:109-116`) [Tipe: `function`]
-    - *Signature:* `(m: StoreItem)`
-    - *Deskripsi:* // Status tampilan (termasuk "Menunggu stok" turunan) ikut bisa dicari.
-
-### Sub-sistem: `role:clean:peran` (Klaster #192)
-- **Kepadatan Simbol:** 11 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`normalizeRole`](file://services/api/src/policy.ts#L53-L73) (`services/api/src/policy.ts:53-73`) [Tipe: `function`]
-    - *Signature:* `(raw: unknown): Role`
-  - [`moduleAccessFor`](file://services/api/src/moduleAccess.ts#L72-L79) (`services/api/src/moduleAccess.ts:72-79`) [Tipe: `function`]
-    - *Signature:* `(role: unknown): Promise<ModuleAccess>`
-  - [`loadOverride`](file://services/api/src/moduleAccess.ts#L59-L69) (`services/api/src/moduleAccess.ts:59-69`) [Tipe: `function`]
-    - *Signature:* `(): Promise<Override>`
-  - [`clean`](file://services/api/src/moduleAccess.ts#L44-L57) (`services/api/src/moduleAccess.ts:44-57`) [Tipe: `function`]
-    - *Signature:* `(raw: unknown): Override`
-  - [`permissionsFor`](file://services/api/src/policy.ts#L410-L413) (`services/api/src/policy.ts:410-413`) [Tipe: `function`]
-    - *Signature:* `(role: unknown): Record<string, Action[]>`
-
-### Sub-sistem: `doc:boq:surat` (Klaster #142)
-- **Kepadatan Simbol:** 11 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`parse`](file://services/api/src/boqDocs.ts#L38-L41) (`services/api/src/boqDocs.ts:38-41`) [Tipe: `function`]
-    - *Signature:* `(row: Row | undefined): Data | null`
-  - [`loadDoc`](file://services/api/src/boqDocs.ts#L48-L52) (`services/api/src/boqDocs.ts:48-52`) [Tipe: `function`]
-    - *Signature:* `(id: string): Promise<{ row: Row; data: Data } | null>`
-  - [`docTotal`](file://services/api/src/boqDocs.ts#L59-L71) (`services/api/src/boqDocs.ts:59-71`) [Tipe: `function`]
-    - *Signature:* `(docId: string): Promise<number>`
-  - [`syncBoqDocToDocuments`](file://services/api/src/boqDocs.ts#L135-L206) (`services/api/src/boqDocs.ts:135-206`) [Tipe: `function`]
-    - *Signature:* `(id: string, boqData: Data, branch: string, actor?: string): Promise<void>`
-  - [`statusOf`](file://services/api/src/boqDocs.ts#L43-L46) (`services/api/src/boqDocs.ts:43-46`) [Tipe: `function`]
-    - *Signature:* `(d: Data | null): BoqDocStatus`
-
-### Sub-sistem: `resolve:dirname:resolvesqlitepath` (Klaster #702)
-- **Kepadatan Simbol:** 11 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`normalize`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L19-L27) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:19-27`) [Tipe: `function`]
-    - *Signature:* `(path: string): string`
-  - [`existsSync`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L31-L31) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:31-31`) [Tipe: `function`]
-    - *Signature:* `(p: string): boolean`
-  - [`resolve`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L44-L49) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:44-49`) [Tipe: `function`]
-    - *Signature:* `(from: string, spec: string): string | null`
-  - [`resolve`](file://services/api/src/pdf/reports.ts#L423-L429) (`services/api/src/pdf/reports.ts:423-429`) [Tipe: `function`]
-    - *Signature:* `(row: Row): Record<string, unknown>`
-  - [`dirname`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L30-L30) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:30-30`) [Tipe: `function`]
-    - *Signature:* `(p: string): string`
-
-### Sub-sistem: `revise:q28:footer` (Klaster #799)
+### Sub-sistem: `revise:q28:footer` (Klaster #781)
 - **Kepadatan Simbol:** 11 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`statusLabel`](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L85-L88) (`apps/web/src/pages/proyek/BoqDocsSection.tsx:85-88`) [Tipe: `function`]
@@ -904,7 +773,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`totalOf`](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L82-L82) (`apps/web/src/pages/proyek/BoqDocsSection.tsx:82-82`) [Tipe: `function`]
     - *Signature:* `(docId: string)`
 
-### Sub-sistem: `melengkapi:menyetujui:nota` (Klaster #109)
+### Sub-sistem: `byte:dibandingkan:identik` (Klaster #103)
+- **Kepadatan Simbol:** 10 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`findRecipe`](file://services/api/src/pdf/registry.ts#L1455-L1457) (`services/api/src/pdf/registry.ts:1455-1457`) [Tipe: `function`]
+    - *Signature:* `(kind: string): RecipeView | undefined`
+  - [`assemble`](file://services/api/src/pdf/registry.ts#L314-L318) (`services/api/src/pdf/registry.ts:314-318`) [Tipe: `method`]
+    - *Signature:* `(input)`
+  - [`ok`](file://services/api/scripts/pdf-db-probe.ts#L30-L38) (`services/api/scripts/pdf-db-probe.ts:30-38`) [Tipe: `function`]
+    - *Signature:* `(name: string, cond: boolean, detail = ""): void`
+  - [`buildFromModel`](file://services/api/src/pdf/registry.ts#L1479-L1481) (`services/api/src/pdf/registry.ts:1479-1481`) [Tipe: `function`]
+    - *Signature:* `(recipe: RecipeView, model: unknown, ctx: RenderContext): Document`
+  - [`ctxWith`](file://services/api/scripts/pdf-db-probe.ts#L47-L49) (`services/api/scripts/pdf-db-probe.ts:47-49`) [Tipe: `function`]
+    - *Signature:* `(filters: Record<string, unknown>): Ctx`
+
+### Sub-sistem: `melengkapi:menyetujui:nota` (Klaster #106)
 - **Kepadatan Simbol:** 10 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`patchPo`](file://services/api/scripts/po-partial-probe.ts#L167-L167) (`services/api/scripts/po-partial-probe.ts:167-167`) [Tipe: `function`]
@@ -921,7 +804,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(data: Record<string, unknown>)`
     - *Deskripsi:* // melengkapi nota → Keuangan menyetujui invoice → baru bisa diterima.
 
-### Sub-sistem: `approve:create:auth` (Klaster #120)
+### Sub-sistem: `approve:create:auth` (Klaster #117)
 - **Kepadatan Simbol:** 10 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`patch`](file://services/api/scripts/service-flow-probe.ts#L58-L58) (`services/api/scripts/service-flow-probe.ts:58-58`) [Tipe: `function`]
@@ -935,7 +818,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`auth`](file://services/api/scripts/service-flow-probe.ts#L47-L47) (`services/api/scripts/service-flow-probe.ts:47-47`) [Tipe: `function`]
     - *Signature:* `(t: string)`
 
-### Sub-sistem: `risiko:tempo:terlambat` (Klaster #812)
+### Sub-sistem: `risiko:tempo:terlambat` (Klaster #794)
 - **Kepadatan Simbol:** 10 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`rowHighlightClass`](file://apps/web/src/components/rowHighlight.ts#L49-L61) (`apps/web/src/components/rowHighlight.ts:49-61`) [Tipe: `function`]
@@ -961,7 +844,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   isOverdueFn: (p: Record<string, unknown>, today: string) => boolean,
 ): boolean`
 
-### Sub-sistem: `teruji:viewer:fixture` (Klaster #84)
+### Sub-sistem: `jejak:audit:time` (Klaster #688)
+- **Kepadatan Simbol:** 10 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`timeOf`](file://apps/web/src/pages/audit/Audit.tsx#L36-L42) (`apps/web/src/pages/audit/Audit.tsx:36-42`) [Tipe: `function`]
+    - *Signature:* `(a: Record<string, unknown>): string | null`
+    - *Deskripsi:* /** Waktu persis kejadian: `createdAt` (jejak baru), lalu `time` bila berupa
+ *  tanggal, lalu `updated_at` server (saat jejak lama tersinkron). */
+  - [`toggleSort`](file://apps/web/src/components/ui.tsx#L1340-L1343) (`apps/web/src/components/ui.tsx:1340-1343`) [Tipe: `function`]
+    - *Signature:* `(prev: SortState, key: string): SortState`
+  - [`auditParams`](file://apps/web/src/pages/audit/Audit.tsx#L105-L113) (`apps/web/src/pages/audit/Audit.tsx:105-113`) [Tipe: `function`]
+    - *Signature:* `(page: number, size: number): string`
+  - [`mapAuditRow`](file://apps/web/src/pages/audit/Audit.tsx#L91-L103) (`apps/web/src/pages/audit/Audit.tsx:91-103`) [Tipe: `function`]
+    - *Signature:* `(r: ServerAuditRow): StoreItemLike`
+  - [`timeLabel`](file://apps/web/src/pages/audit/Audit.tsx#L46-L49) (`apps/web/src/pages/audit/Audit.tsx:46-49`) [Tipe: `function`]
+    - *Signature:* `(a: Record<string, unknown>): string`
+    - *Deskripsi:* /** Tampilan kolom Waktu: tanggal + jam bila waktunya diketahui, selain itu
+ *  label relatif lama apa adanya (mis. jejak seed "5 menit lalu"). */
+
+### Sub-sistem: `teruji:viewer:fixture` (Klaster #83)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`fulfill`](file://services/api/scripts/material-flow-probe.ts#L95-L95) (`services/api/scripts/material-flow-probe.ts:95-95`) [Tipe: `function`]
@@ -978,48 +879,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(token: string, id: string, payload: unknown)`
     - *Deskripsi:* // Viewer wajib ada di seed (dicek sebelum fixture dibuat): tanpa itu aturan 403 tidak teruji.
 
-### Sub-sistem: `probe:byte:dibandingkan` (Klaster #104)
+### Sub-sistem: `doc:boq:surat` (Klaster #138)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`findRecipe`](file://services/api/src/pdf/registry.ts#L1455-L1457) (`services/api/src/pdf/registry.ts:1455-1457`) [Tipe: `function`]
-    - *Signature:* `(kind: string): RecipeView | undefined`
-  - [`assemble`](file://services/api/src/pdf/registry.ts#L314-L318) (`services/api/src/pdf/registry.ts:314-318`) [Tipe: `method`]
-    - *Signature:* `(input)`
-  - [`buildFromModel`](file://services/api/src/pdf/registry.ts#L1479-L1481) (`services/api/src/pdf/registry.ts:1479-1481`) [Tipe: `function`]
-    - *Signature:* `(recipe: RecipeView, model: unknown, ctx: RenderContext): Document`
-  - [`ctxWith`](file://services/api/scripts/pdf-db-probe.ts#L47-L49) (`services/api/scripts/pdf-db-probe.ts:47-49`) [Tipe: `function`]
-    - *Signature:* `(filters: Record<string, unknown>): Ctx`
-  - [`probeDocuments`](file://services/api/scripts/pdf-db-probe.ts#L104-L231) (`services/api/scripts/pdf-db-probe.ts:104-231`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-    - *Deskripsi:* /**
- * Normalisasi byte PDF sebelum dibandingkan.
- *
- * Dua render dari input yang sama tidak pernah menghasilkan byte identik:
- * jsPDF menulis `/CreationDate` dan `/ID` yang mengandung waktu. Tanpa dua
- * field itu, "cetak ulang identik" akan selalu gagal dan probe ini akan
- * melatih orang untuk menolak assertion yang benar - lebih buruk daripada tidak
- * punya probe. Yang dibandingkan isi dokumennya, bukan stempel waktunya.
- */
+  - [`parse`](file://services/api/src/boqDocs.ts#L38-L41) (`services/api/src/boqDocs.ts:38-41`) [Tipe: `function`]
+    - *Signature:* `(row: Row | undefined): Data | null`
+  - [`loadDoc`](file://services/api/src/boqDocs.ts#L48-L52) (`services/api/src/boqDocs.ts:48-52`) [Tipe: `function`]
+    - *Signature:* `(id: string): Promise<{ row: Row; data: Data } | null>`
+  - [`docTotal`](file://services/api/src/boqDocs.ts#L59-L71) (`services/api/src/boqDocs.ts:59-71`) [Tipe: `function`]
+    - *Signature:* `(docId: string): Promise<number>`
+  - [`syncBoqDocToDocuments`](file://services/api/src/boqDocs.ts#L135-L206) (`services/api/src/boqDocs.ts:135-206`) [Tipe: `function`]
+    - *Signature:* `(id: string, boqData: Data, branch: string, actor?: string): Promise<void>`
+  - [`statusOf`](file://services/api/src/boqDocs.ts#L43-L46) (`services/api/src/boqDocs.ts:43-46`) [Tipe: `function`]
+    - *Signature:* `(d: Data | null): BoqDocStatus`
 
-### Sub-sistem: `prng:stabil:deterministik` (Klaster #238)
-- **Kepadatan Simbol:** 9 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`pick`](file://services/api/src/seedWhatIf.ts#L22-L22) (`services/api/src/seedWhatIf.ts:22-22`) [Tipe: `function`]
-    - *Signature:* `(arr: T[]): T`
-    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
-  - [`put`](file://services/api/src/seedWhatIf.ts#L41-L43) (`services/api/src/seedWhatIf.ts:41-43`) [Tipe: `function`]
-    - *Signature:* `(table: string, id: string, data: Record<string, unknown>, branch = ""): void`
-  - [`int`](file://services/api/src/seedWhatIf.ts#L23-L23) (`services/api/src/seedWhatIf.ts:23-23`) [Tipe: `function`]
-    - *Signature:* `(a: number, b: number): number`
-    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
-  - [`iso`](file://services/api/src/seedWhatIf.ts#L25-L26) (`services/api/src/seedWhatIf.ts:25-26`) [Tipe: `function`]
-    - *Signature:* `(y: number, m: number, d: number): string`
-    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
-  - [`pad`](file://services/api/src/seedWhatIf.ts#L24-L24) (`services/api/src/seedWhatIf.ts:24-24`) [Tipe: `function`]
-    - *Signature:* `(n: number, w = 3): string`
-    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
-
-### Sub-sistem: `payable:num:shrinkpayableoncancel` (Klaster #191)
+### Sub-sistem: `payable:num:shrinkpayableoncancel` (Klaster #185)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://services/api/src/poPayable.ts#L23-L23) (`services/api/src/poPayable.ts:23-23`) [Tipe: `function`]
@@ -1033,7 +907,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`poAmountOf`](file://services/api/src/poPayable.ts#L46-L52) (`services/api/src/poPayable.ts:46-52`) [Tipe: `function`]
     - *Signature:* `(po: Data): number`
 
-### Sub-sistem: `json:demo:writejson` (Klaster #274)
+### Sub-sistem: `json:demo:writejson` (Klaster #268)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`hideButton`](file://apps/web/src/components/DemoGuide.tsx#L116-L120) (`apps/web/src/components/DemoGuide.tsx:116-120`) [Tipe: `function`]
@@ -1048,7 +922,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`readJson`](file://apps/web/src/components/DemoGuide.tsx#L25-L32) (`apps/web/src/components/DemoGuide.tsx:25-32`) [Tipe: `function`]
     - *Signature:* `(key: string, fallback: T): T`
 
-### Sub-sistem: `capture:write:bump` (Klaster #378)
+### Sub-sistem: `capture:write:bump` (Klaster #372)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`key`](file://apps/web/src/data/sideMapEpochs.ts#L26-L28) (`apps/web/src/data/sideMapEpochs.ts:26-28`) [Tipe: `method`]
@@ -1062,7 +936,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`projectIds`](file://apps/web/src/data/sideMapEpochs.ts#L76-L83) (`apps/web/src/data/sideMapEpochs.ts:76-83`) [Tipe: `method`]
     - *Signature:* `(): string[]`
 
-### Sub-sistem: `spinner:detik:palsu` (Klaster #785)
+### Sub-sistem: `spinner:detik:palsu` (Klaster #767)
 - **Kepadatan Simbol:** 9 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`renderRow`](file://apps/web/src/pages/pengaturan/Settings.tsx#L240-L289) (`apps/web/src/pages/pengaturan/Settings.tsx:240-289`) [Tipe: `function`]
@@ -1080,7 +954,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(key: string): string`
     - *Deskripsi:* // agar toast "disimpan" tidak berbohong.
 
-### Sub-sistem: `counts:close:runmysqldump` (Klaster #137)
+### Sub-sistem: `counts:close:runmysqldump` (Klaster #134)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`close`](file://apps/web/src/components/ProjectAddModal.tsx#L130-L134) (`apps/web/src/components/ProjectAddModal.tsx:130-134`) [Tipe: `function`]
@@ -1094,7 +968,31 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`sanitizeTimestamp`](file://services/api/src/backup.ts#L22-L24) (`services/api/src/backup.ts:22-24`) [Tipe: `function`]
     - *Signature:* `(iso: string): string`
 
-### Sub-sistem: `riil:rekening:email` (Klaster #80)
+### Sub-sistem: `run:button:toast` (Klaster #328)
+- **Kepadatan Simbol:** 8 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`toast`](file://apps/web/src/components/Toast.tsx#L39-L76) (`apps/web/src/components/Toast.tsx:39-76`) [Tipe: `function`]
+    - *Signature:* `(
+  message: string,
+  toneOrOptions?: ToastTone | ToastOptions,
+  extraOptions?: ToastOptions,
+): number | string`
+  - [`run`](file://apps/web/src/components/ui.tsx#L1473-L1483) (`apps/web/src/components/ui.tsx:1473-1483`) [Tipe: `function`]
+    - *Signature:* `(key: string, fn: () => Promise<T> | T): Promise<T | void>`
+  - [`run`](file://services/api/scripts/backup-restore-probe.ts#L18-L21) (`services/api/scripts/backup-restore-probe.ts:18-21`) [Tipe: `function`]
+    - *Signature:* `(script: string, args: string[], env: Record<string, string>): void`
+  - [`useAsyncAction`](file://apps/web/src/components/ui.tsx#L1492-L1510) (`apps/web/src/components/ui.tsx:1492-1510`) [Tipe: `function`]
+    - *Signature:* `(): {
+  pending: boolean;
+  run: <T>(fn: () => Promise<T> | T) => Promise<T | undefined>;
+}`
+  - [`useBusy`](file://apps/web/src/components/ui.tsx#L1465-L1485) (`apps/web/src/components/ui.tsx:1465-1485`) [Tipe: `function`]
+    - *Signature:* `(): {
+  isBusy: (k: string) => boolean;
+  run: <T>(key: string, fn: () => Promise<T> | T) => Promise<T | void>;
+}`
+
+### Sub-sistem: `riil:rekening:email` (Klaster #79)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`randInt`](file://services/api/scripts/gen-seed-data.ts#L26-L28) (`services/api/scripts/gen-seed-data.ts:26-28`) [Tipe: `function`]
@@ -1113,7 +1011,28 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `()`
     - *Deskripsi:* // tanpa memuat data riil (nama orang riil, rekening riil, email riil).
 
-### Sub-sistem: `ditunggu:terbatas:vendor` (Klaster #184)
+### Sub-sistem: `nodes:count:has` (Klaster #140)
+- **Kepadatan Simbol:** 8 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`has`](file://services/api/src/boqDocs.ts#L305-L305) (`services/api/src/boqDocs.ts:305-305`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): boolean`
+  - [`projectInScope`](file://services/api/src/routes/wbs.ts#L52-L54) (`services/api/src/routes/wbs.ts:52-54`) [Tipe: `function`]
+    - *Signature:* `(projectId: string, scope: Set<string> | null): boolean`
+  - [`canApproveService`](file://apps/web/src/data/useServiceApproval.ts#L17-L19) (`apps/web/src/data/useServiceApproval.ts:17-19`) [Tipe: `function`]
+    - *Signature:* `(role: string | undefined): boolean`
+  - [`withBoqLineTotal`](file://services/api/src/boqDocs.ts#L304-L309) (`services/api/src/boqDocs.ts:304-309`) [Tipe: `function`]
+    - *Signature:* `(data: Record<string, unknown>, sent: Record<string, unknown> = data): Record<string, unknown>`
+  - [`shouldRetainSideProjectData`](file://apps/web/src/data/sideMapEpochs.ts#L4-L19) (`apps/web/src/data/sideMapEpochs.ts:4-19`) [Tipe: `function`]
+    - *Signature:* `(
+  kind: SideMapKind,
+  projectId: string,
+  liveProjects: Set<string>,
+  dirty: Set<string>,
+  conflictHolds: Set<string>,
+  activeWriteKeys: ReadonlySet<string> = new Set<string>(),
+): boolean`
+
+### Sub-sistem: `ditunggu:terbatas:vendor` (Klaster #178)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://services/api/src/poFulfillment.ts#L35-L35) (`services/api/src/poFulfillment.ts:35-35`) [Tipe: `function`]
@@ -1129,7 +1048,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(po: Data, current: string): string`
     - *Deskripsi:* /** Sisa yang masih ditunggu dari vendor PO ini. PO lama tanpa qty → tak terbatas. */
 
-### Sub-sistem: `seeds:build:seed` (Klaster #227)
+### Sub-sistem: `seeds:build:seed` (Klaster #221)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`buildWbsSeeds`](file://services/api/src/seedData.ts#L266-L274) (`services/api/src/seedData.ts:266-274`) [Tipe: `function`]
@@ -1143,7 +1062,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`runSeed`](file://services/api/src/seed.ts#L8-L82) (`services/api/src/seed.ts:8-82`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `dismiss:storage:sessionstorage` (Klaster #265)
+### Sub-sistem: `prng:stabil:deterministik` (Klaster #232)
+- **Kepadatan Simbol:** 8 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`pick`](file://services/api/src/seedWhatIf.ts#L22-L22) (`services/api/src/seedWhatIf.ts:22-22`) [Tipe: `function`]
+    - *Signature:* `(arr: T[]): T`
+    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
+  - [`put`](file://services/api/src/seedWhatIf.ts#L41-L43) (`services/api/src/seedWhatIf.ts:41-43`) [Tipe: `function`]
+    - *Signature:* `(table: string, id: string, data: Record<string, unknown>, branch = ""): void`
+  - [`int`](file://services/api/src/seedWhatIf.ts#L23-L23) (`services/api/src/seedWhatIf.ts:23-23`) [Tipe: `function`]
+    - *Signature:* `(a: number, b: number): number`
+    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
+  - [`iso`](file://services/api/src/seedWhatIf.ts#L25-L26) (`services/api/src/seedWhatIf.ts:25-26`) [Tipe: `function`]
+    - *Signature:* `(y: number, m: number, d: number): string`
+    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
+  - [`pad`](file://services/api/src/seedWhatIf.ts#L24-L24) (`services/api/src/seedWhatIf.ts:24-24`) [Tipe: `function`]
+    - *Signature:* `(n: number, w = 3): string`
+    - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
+
+### Sub-sistem: `dismiss:storage:sessionstorage` (Klaster #259)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`serializeDismissed`](file://apps/web/src/utils/bannerDismiss.ts#L51-L58) (`apps/web/src/utils/bannerDismiss.ts:51-58`) [Tipe: `function`]
@@ -1159,24 +1096,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`onStorage`](file://apps/web/src/components/AlertBanner.tsx#L187-L190) (`apps/web/src/components/AlertBanner.tsx:187-190`) [Tipe: `function`]
     - *Signature:* `(e: StorageEvent): void`
 
-### Sub-sistem: `audit:anda:akun` (Klaster #711)
-- **Kepadatan Simbol:** 8 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`reset`](file://apps/web/src/components/ui.tsx#L1616-L1616) (`apps/web/src/components/ui.tsx:1616-1616`) [Tipe: `function`]
-    - *Signature:* `()`
-  - [`auditParams`](file://apps/web/src/pages/audit/Audit.tsx#L105-L113) (`apps/web/src/pages/audit/Audit.tsx:105-113`) [Tipe: `function`]
-    - *Signature:* `(page: number, size: number): string`
-  - [`mapAuditRow`](file://apps/web/src/pages/audit/Audit.tsx#L91-L103) (`apps/web/src/pages/audit/Audit.tsx:91-103`) [Tipe: `function`]
-    - *Signature:* `(r: ServerAuditRow): StoreItemLike`
-  - [`actorOf`](file://apps/web/src/pages/audit/Audit.tsx#L28-L32) (`apps/web/src/pages/audit/Audit.tsx:28-32`) [Tipe: `function`]
-    - *Signature:* `(a: Record<string, unknown>): string`
-    - *Deskripsi:* /** Jejak lama di perangkat tercatat sebagai "Anda". Store aktivitas dipisah per
- *  akun (sessionScopeKey), jadi "Anda" di sini selalu akun yang sedang login. */
-  - [`toISODateOrNull`](file://apps/web/src/pages/audit/Audit.tsx#L16-L24) (`apps/web/src/pages/audit/Audit.tsx:16-24`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): string | null`
-    - *Deskripsi:* /** Ambil YYYY-MM-DD dari string waktu bila bisa diparse; abaikan "baru saja" dan teks relatif. */
-
-### Sub-sistem: `submit:handle:report` (Klaster #814)
+### Sub-sistem: `submit:handle:report` (Klaster #796)
 - **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`fmtMiliar`](file://apps/web/src/utils/format.ts#L89-L92) (`apps/web/src/utils/format.ts:89-92`) [Tipe: `function`]
@@ -1190,66 +1110,131 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`handleExportExcel`](file://apps/web/src/pages/proyek/ReportSection.tsx#L108-L130) (`apps/web/src/pages/proyek/ReportSection.tsx:108-130`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `tanggal:fin:sampai` (Klaster #750)
-- **Kepadatan Simbol:** 7 simbol.
+### Sub-sistem: `excel:berbahaya:injeksi` (Klaster #480)
+- **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`test`](file://services/api/scripts/env-probe.ts#L23-L33) (`services/api/scripts/env-probe.ts:23-33`) [Tipe: `function`]
-    - *Signature:* `(name: string, fn: () => void)`
-    - *Deskripsi:* // Simpan process.env asli
-  - [`hariValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L129-L136) (`apps/web/src/pages/keuangan/Finance.tsx:129-136`) [Tipe: `function`]
-    - *Signature:* `(v: string): boolean`
-    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
-  - [`bulanValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L124-L128) (`apps/web/src/pages/keuangan/Finance.tsx:124-128`) [Tipe: `function`]
-    - *Signature:* `(v: string): boolean`
-    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
-  - [`sheetDate`](file://apps/web/src/utils/readSheet.ts#L141-L148) (`apps/web/src/utils/readSheet.ts:141-148`) [Tipe: `function`]
-    - *Signature:* `(cell: string): string`
-  - [`isSideMapConflictKey`](file://apps/web/src/data/sideMapConflictHolds.ts#L9-L12) (`apps/web/src/data/sideMapConflictHolds.ts:9-12`) [Tipe: `function`]
-    - *Signature:* `(value: unknown): value is string`
+  - [`exportExcel`](file://apps/web/src/utils/export.ts#L58-L78) (`apps/web/src/utils/export.ts:58-78`) [Tipe: `function`]
+    - *Signature:* `(data: unknown[][], filename: string, sheetName = "Export", opts: { kop?: boolean } = {}): Promise<void>`
+  - [`asMoney`](file://apps/web/src/utils/export.ts#L38-L42) (`apps/web/src/utils/export.ts:38-42`) [Tipe: `function`]
+    - *Signature:* `(raw: CellRaw, isMoney: boolean | null): CellRaw | { value: number; format: string }`
+  - [`moneyColumns`](file://apps/web/src/utils/export.ts#L29-L36) (`apps/web/src/utils/export.ts:29-36`) [Tipe: `function`]
+    - *Signature:* `(header: unknown[] | undefined): Array<boolean | null>`
+  - [`sanitizeCell`](file://apps/web/src/utils/export.ts#L8-L11) (`apps/web/src/utils/export.ts:8-11`) [Tipe: `function`]
+    - *Signature:* `(v: string): string`
+  - [`cleanSheetName`](file://apps/web/src/utils/export.ts#L89-L91) (`apps/web/src/utils/export.ts:89-91`) [Tipe: `function`]
+    - *Signature:* `(name: string): string`
+    - *Deskripsi:* /** Awalan sel berbahaya untuk injeksi formula Excel saat dibuka. */
 
-### Sub-sistem: `nodes:count:has` (Klaster #144)
-- **Kepadatan Simbol:** 7 simbol.
+### Sub-sistem: `hari:selisih:negatif` (Klaster #549)
+- **Kepadatan Simbol:** 8 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`has`](file://services/api/src/boqDocs.ts#L305-L305) (`services/api/src/boqDocs.ts:305-305`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): boolean`
-  - [`canApproveService`](file://apps/web/src/data/useServiceApproval.ts#L17-L19) (`apps/web/src/data/useServiceApproval.ts:17-19`) [Tipe: `function`]
-    - *Signature:* `(role: string | undefined): boolean`
-  - [`withBoqLineTotal`](file://services/api/src/boqDocs.ts#L304-L309) (`services/api/src/boqDocs.ts:304-309`) [Tipe: `function`]
-    - *Signature:* `(data: Record<string, unknown>, sent: Record<string, unknown> = data): Record<string, unknown>`
-  - [`shouldRetainSideProjectData`](file://apps/web/src/data/sideMapEpochs.ts#L4-L19) (`apps/web/src/data/sideMapEpochs.ts:4-19`) [Tipe: `function`]
+  - [`existingId`](file://apps/web/src/utils/riskAuto.ts#L88-L97) (`apps/web/src/utils/riskAuto.ts:88-97`) [Tipe: `function`]
     - *Signature:* `(
-  kind: SideMapKind,
-  projectId: string,
-  liveProjects: Set<string>,
-  dirty: Set<string>,
-  conflictHolds: Set<string>,
-  activeWriteKeys: ReadonlySet<string> = new Set<string>(),
+  existing: readonly StoreItem[],
+  source: "WBS" | "WO",
+  wbsTask: string,
+): string | null`
+    - *Deskripsi:* /** ID risiko yang terkait dengan source+wbsTask tertentu. */
+  - [`impactFromWeight`](file://apps/web/src/utils/riskAuto.ts#L70-L74) (`apps/web/src/utils/riskAuto.ts:70-74`) [Tipe: `function`]
+    - *Signature:* `(weight: number): "Rendah" | "Sedang" | "Tinggi"`
+    - *Deskripsi:* /** Impact berdasarkan bobot WBS atau persentase milestone WO. */
+  - [`likelihoodFromDays`](file://apps/web/src/utils/riskAuto.ts#L63-L67) (`apps/web/src/utils/riskAuto.ts:63-67`) [Tipe: `function`]
+    - *Signature:* `(days: number): "Rendah" | "Sedang" | "Tinggi"`
+    - *Deskripsi:* /** Likelihood berdasarkan selisih hari ke jatuh tempo. */
+  - [`hasExisting`](file://apps/web/src/utils/riskAuto.ts#L77-L85) (`apps/web/src/utils/riskAuto.ts:77-85`) [Tipe: `function`]
+    - *Signature:* `(
+  existing: readonly StoreItem[],
+  source: "WBS" | "WO",
+  wbsTask: string,
 ): boolean`
-  - [`requireRole`](file://services/api/src/auth.ts#L233-L251) (`services/api/src/auth.ts:233-251`) [Tipe: `function`]
-    - *Signature:* `(...roles: string[])`
+    - *Deskripsi:* /** Deduplikasi: apakah risiko dengan source+wbsTask yang sama sudah ada? */
+  - [`daysUntilMonthEnd`](file://apps/web/src/utils/riskAuto.ts#L43-L49) (`apps/web/src/utils/riskAuto.ts:43-49`) [Tipe: `function`]
+    - *Signature:* `(month: string, today: string): number | null`
+    - *Deskripsi:* /** Selisih hari dari hari ini ke akhir bulan `YYYY-MM`; negatif = lewat. */
 
-### Sub-sistem: `level:banner:alert` (Klaster #516)
+### Sub-sistem: `2026:updated:created` (Klaster #571)
+- **Kepadatan Simbol:** 8 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`isStamp`](file://apps/web/src/utils/timestamps.ts#L17-L19) (`apps/web/src/utils/timestamps.ts:17-19`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): v is string`
+    - *Deskripsi:* /**
+ * Satu-satunya sumber nama field tanggal rekam. Dipakai store saat menulis,
+ * tabel saat menampilkan, dan probe saat memverifikasi.
+ *
+ * Kenapa BUKAN kolom `created_at` di SQL: setiap tabel hanya punya
+ * `id, branch, data, updated_at`, dan seluruh isi rekam disimpan sebagai JSON
+ * di kolom `data`. Menambah kolom berarti ALTER di ~25 tabel untuk data yang
+ * sebenarnya sudah muat di dalam `data` - dan `updated_at` yang ada sekarang
+ * tidak bisa dipakai karena nilainya ditimpa setiap PATCH (hanya concurrency
+ * token, bukan "terakhir diubah").
+ */
+  - [`asComparable`](file://apps/web/src/utils/timestamps.ts#L33-L37) (`apps/web/src/utils/timestamps.ts:33-37`) [Tipe: `function`]
+    - *Signature:* `(v: string | null): string | null`
+    - *Deskripsi:* /**
+ * Menyeragamkan bentuk tanggal supaya bisa diurutkan dengan perbandingan
+ * leksikografis.
+ *
+ * Tanpa ini, kolom tanggal yang bisa disortir diam-diam menampilkan urutan
+ * terbalik: `updated_at` dari server adalah ISO penuh
+ * ("2026-10-04T08:00:00.000Z") sementara `createdAt` bisa "2026-10-04" atau
+ * "2026-1-5". Dibandingkan sebagai teks, "2026-1-5" lebih kecil dari
+ * "2026-10-2" padahal Januari lebih dulu - jadi tanggal paling awal justru
+ * turun paling bawah. Semua bentuk yang bisa diparse diubah ke ISO penuh
+ * supaya urutannya benar.
+ */
+  - [`createdAtOf`](file://apps/web/src/utils/timestamps.ts#L58-L60) (`apps/web/src/utils/timestamps.ts:58-60`) [Tipe: `function`]
+    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
+  - [`createdAtRaw`](file://apps/web/src/utils/timestamps.ts#L63-L66) (`apps/web/src/utils/timestamps.ts:63-66`) [Tipe: `function`]
+    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
+  - [`lastTouchedAt`](file://apps/web/src/utils/timestamps.ts#L102-L109) (`apps/web/src/utils/timestamps.ts:102-109`) [Tipe: `function`]
+    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
+
+### Sub-sistem: `role:peran:demo` (Klaster #186)
 - **Kepadatan Simbol:** 7 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`isAlertLevel`](file://apps/web/src/utils/moduleAlerts.ts#L497-L499) (`apps/web/src/utils/moduleAlerts.ts:497-499`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): v is AlertLevel`
-    - *Deskripsi:* /** Umur kondisi: dari field yang paling dekat ke "kapan ini muncul". */
-  - [`sortByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L529-L539) (`apps/web/src/utils/moduleAlerts.ts:529-539`) [Tipe: `function`]
-    - *Signature:* `(items: ModuleAlertItem[]): ModuleAlertItem[]`
-  - [`countByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L562-L566) (`apps/web/src/utils/moduleAlerts.ts:562-566`) [Tipe: `function`]
-    - *Signature:* `(items: readonly ModuleAlertItem[]): Record<AlertLevel, number>`
-  - [`groupByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L580-L593) (`apps/web/src/utils/moduleAlerts.ts:580-593`) [Tipe: `function`]
-    - *Signature:* `(
-  items: readonly ModuleAlertItem[],
-  cap = 5,
-): Array<{ level: AlertLevel; items: ModuleAlertItem[]; total: number; hidden: number }>`
-  - [`bannerDisplay`](file://apps/web/src/utils/moduleAlerts.ts#L549-L559) (`apps/web/src/utils/moduleAlerts.ts:549-559`) [Tipe: `function`]
-    - *Signature:* `(
-  items: ModuleAlertItem[],
-  expanded: boolean,
-): { items: ModuleAlertItem[]; remaining: number }`
+  - [`normalizeRole`](file://services/api/src/policy.ts#L53-L73) (`services/api/src/policy.ts:53-73`) [Tipe: `function`]
+    - *Signature:* `(raw: unknown): Role`
+  - [`permissionsFor`](file://services/api/src/policy.ts#L410-L413) (`services/api/src/policy.ts:410-413`) [Tipe: `function`]
+    - *Signature:* `(role: unknown): Record<string, Action[]>`
+  - [`canApproveService`](file://services/api/src/serviceApproval.ts#L38-L40) (`services/api/src/serviceApproval.ts:38-40`) [Tipe: `function`]
+    - *Signature:* `(role: string | undefined): boolean`
+  - [`issueDemoToken`](file://services/api/src/routes/demoSwitch.ts#L51-L78) (`services/api/src/routes/demoSwitch.ts:51-78`) [Tipe: `function`]
+    - *Signature:* `(role: string): Promise<DemoIssue>`
+    - *Deskripsi:* /** Token untuk akun seed sebuah peran. Dipakai "lihat sebagai peran" dan login demo. */
+  - [`roleRank`](file://services/api/src/policy.ts#L75-L78) (`services/api/src/policy.ts:75-78`) [Tipe: `function`]
+    - *Signature:* `(role: unknown): number`
 
-### Sub-sistem: `accordion:commit:setopen` (Klaster #331)
+### Sub-sistem: `demo:akun:role` (Klaster #249)
+- **Kepadatan Simbol:** 7 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`run`](file://apps/web/src/components/DemoRoleSwitcher.tsx#L30-L36) (`apps/web/src/components/DemoRoleSwitcher.tsx:30-36`) [Tipe: `function`]
+    - *Signature:* `(fn: () => Promise<void>)`
+  - [`readOrigin`](file://apps/web/src/auth/demoSwitch.ts#L19-L24) (`apps/web/src/auth/demoSwitch.ts:19-24`) [Tipe: `function`]
+    - *Signature:* `(): Origin | null`
+  - [`authHeader`](file://apps/web/src/auth/demoSwitch.ts#L31-L34) (`apps/web/src/auth/demoSwitch.ts:31-34`) [Tipe: `function`]
+    - *Signature:* `(): Record<string, string>`
+    - *Deskripsi:* /** Sedang memakai akun peran demo (bukan akun asal). */
+  - [`switchToRole`](file://apps/web/src/auth/demoSwitch.ts#L58-L76) (`apps/web/src/auth/demoSwitch.ts:58-76`) [Tipe: `function`]
+    - *Signature:* `(role: string): Promise<void>`
+  - [`isImpersonating`](file://apps/web/src/auth/demoSwitch.ts#L27-L29) (`apps/web/src/auth/demoSwitch.ts:27-29`) [Tipe: `function`]
+    - *Signature:* `(): boolean`
+
+### Sub-sistem: `file:preview:ondownload` (Klaster #424)
+- **Kepadatan Simbol:** 7 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`stripQuery`](file://apps/web/src/services/files.ts#L16-L18) (`apps/web/src/services/files.ts:16-18`) [Tipe: `function`]
+    - *Signature:* `(url: string): string`
+    - *Deskripsi:* /** Timeout unduh/pratinjau berkas (file lampiran bisa besar). */
+  - [`fileNameOf`](file://apps/web/src/services/files.ts#L68-L78) (`apps/web/src/services/files.ts:68-78`) [Tipe: `function`]
+    - *Signature:* `(url: string, fallback = "dokumen"): string`
+  - [`fileKindOf`](file://apps/web/src/services/files.ts#L57-L64) (`apps/web/src/services/files.ts:57-64`) [Tipe: `function`]
+    - *Signature:* `(url: string): FileKind`
+  - [`fileExtOf`](file://apps/web/src/services/files.ts#L51-L54) (`apps/web/src/services/files.ts:51-54`) [Tipe: `function`]
+    - *Signature:* `(url: string): string`
+  - [`onDownload`](file://apps/web/src/components/DocumentPreview.tsx#L153-L166) (`apps/web/src/components/DocumentPreview.tsx:153-166`) [Tipe: `function`]
+    - *Signature:* `(): void`
+
+### Sub-sistem: `accordion:commit:setopen` (Klaster #324)
 - **Kepadatan Simbol:** 7 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setOpen`](file://apps/web/src/components/ui.tsx#L1159-L1165) (`apps/web/src/components/ui.tsx:1159-1165`) [Tipe: `function`]
@@ -1275,7 +1260,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   children: ReactNode;
 })`
 
-### Sub-sistem: `pager:muka:strip` (Klaster #411)
+### Sub-sistem: `pager:muka:strip` (Klaster #406)
 - **Kepadatan Simbol:** 7 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`useT`](file://apps/web/src/i18n/LanguageContext.tsx#L48-L50) (`apps/web/src/i18n/LanguageContext.tsx:48-50`) [Tipe: `function`]
@@ -1313,7 +1298,34 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   prefix: string;
 })`
 
-### Sub-sistem: `invalidate:sync:generation` (Klaster #346)
+### Sub-sistem: `pdf:render:downloadbloburl` (Klaster #437)
+- **Kepadatan Simbol:** 7 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`isPdfHead`](file://apps/web/src/services/pdfClient.ts#L35-L41) (`apps/web/src/services/pdfClient.ts:35-41`) [Tipe: `function`]
+    - *Signature:* `(head: ArrayLike<number>): boolean`
+  - [`renderPdfFrom`](file://apps/web/src/services/pdfClient.ts#L107-L158) (`apps/web/src/services/pdfClient.ts:107-158`) [Tipe: `function`]
+    - *Signature:* `(
+  base: string,
+  jwt: string,
+  req: PdfRequest,
+): Promise<PdfRenderResult>`
+  - [`usePdfDoc`](file://apps/web/src/components/usePdfDoc.ts#L40-L145) (`apps/web/src/components/usePdfDoc.ts:40-145`) [Tipe: `function`]
+    - *Signature:* `(): {
+  state: PdfDocState;
+  /** Minta dokumen; memunculkan popup bila `open` true. */
+  request: (req: PdfRequest, filename: string, open: boolean) => Promise<boolean>;
+  /** Cetak ulang snapshot sebelumnya; hasil tetap melewati popup/unduh yang sama. */
+  reprint: (modelId: string, filename: string, open: boolean) => Promise<boolean>;
+  download: (filename: string) => void;
+  close: () => void;
+  reset: () => void;
+}`
+  - [`cjkWarning`](file://apps/web/src/components/usePdfDoc.ts#L36-L38) (`apps/web/src/components/usePdfDoc.ts:36-38`) [Tipe: `function`]
+    - *Signature:* `(count: number): string`
+  - [`downloadBlobUrl`](file://apps/web/src/services/pdfClient.ts#L230-L238) (`apps/web/src/services/pdfClient.ts:230-238`) [Tipe: `function`]
+    - *Signature:* `(url: string, filename: string): void`
+
+### Sub-sistem: `invalidate:sync:generation` (Klaster #340)
 - **Kepadatan Simbol:** 7 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`invalidate`](file://apps/web/src/data/collectionSyncCache.ts#L81-L86) (`apps/web/src/data/collectionSyncCache.ts:81-86`) [Tipe: `method`]
@@ -1332,26 +1344,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`invalidateAll`](file://apps/web/src/data/collectionSyncCache.ts#L92-L96) (`apps/web/src/data/collectionSyncCache.ts:92-96`) [Tipe: `method`]
     - *Signature:* `(): void`
 
-### Sub-sistem: `token:satu:bengkel` (Klaster #689)
-- **Kepadatan Simbol:** 7 simbol.
+### Sub-sistem: `disconnect:heal:watermark` (Klaster #413)
+- **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`sha`](file://services/api/src/routes/publicLeave.ts#L64-L64) (`services/api/src/routes/publicLeave.ts:64-64`) [Tipe: `function`]
-    - *Signature:* `(v: string): string`
-    - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
-  - [`getValue`](file://services/api/src/routes/publicLeave.ts#L50-L53) (`services/api/src/routes/publicLeave.ts:50-53`) [Tipe: `function`]
-    - *Signature:* `(key: string): Promise<string | null>`
-    - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
-  - [`setValue`](file://services/api/src/routes/publicLeave.ts#L54-L58) (`services/api/src/routes/publicLeave.ts:54-58`) [Tipe: `function`]
-    - *Signature:* `(key: string, value: string): Promise<void>`
-    - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
-  - [`readQr`](file://services/api/src/routes/publicLeave.ts#L68-L73) (`services/api/src/routes/publicLeave.ts:68-73`) [Tipe: `function`]
-    - *Signature:* `(): Promise<{ record: QrRecord | null; legacy: string | null }>`
-    - *Deskripsi:* /** Baris `qr:token`: JSON berisi hash (baru) atau token polos (sebelum ADR-0019). */
-  - [`sameToken`](file://services/api/src/routes/publicLeave.ts#L59-L63) (`services/api/src/routes/publicLeave.ts:59-63`) [Tipe: `function`]
-    - *Signature:* `(a: string, b: string): boolean`
-    - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
+  - [`parseDevice`](file://apps/web/src/security/watermark.tsx#L11-L25) (`apps/web/src/security/watermark.tsx:11-25`) [Tipe: `function`]
+    - *Signature:* `(): string`
+  - [`fmtWita`](file://apps/web/src/security/watermark.tsx#L29-L40) (`apps/web/src/security/watermark.tsx:29-40`) [Tipe: `function`]
+    - *Signature:* `(d: Date): string`
+  - [`guardBroken`](file://apps/web/src/security/watermark.tsx#L126-L133) (`apps/web/src/security/watermark.tsx:126-133`) [Tipe: `function`]
+    - *Signature:* `(): boolean`
+  - [`disconnect`](file://apps/web/scripts/browser-shims.ts#L59-L59) (`apps/web/scripts/browser-shims.ts:59-59`) [Tipe: `method`]
+    - *Signature:* `()`
+  - [`heal`](file://apps/web/src/security/watermark.tsx#L183-L185) (`apps/web/src/security/watermark.tsx:183-185`) [Tipe: `function`]
+    - *Signature:* `()`
 
-### Sub-sistem: `react:galat:modul` (Klaster #778)
+### Sub-sistem: `react:galat:modul` (Klaster #760)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`load`](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L20-L22) (`apps/web/src/pages/pengaturan/ModuleAccessCard.tsx:20-22`) [Tipe: `function`]
@@ -1368,21 +1375,28 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ModuleAccessCard`](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L14-L104) (`apps/web/src/pages/pengaturan/ModuleAccessCard.tsx:14-104`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `disconnect:heal:watermark` (Klaster #456)
+### Sub-sistem: `test:matchhist:kasasofreport` (Klaster #733)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`parseDevice`](file://apps/web/src/security/watermark.tsx#L11-L25) (`apps/web/src/security/watermark.tsx:11-25`) [Tipe: `function`]
-    - *Signature:* `(): string`
-  - [`fmtWita`](file://apps/web/src/security/watermark.tsx#L29-L40) (`apps/web/src/security/watermark.tsx:29-40`) [Tipe: `function`]
-    - *Signature:* `(d: Date): string`
-  - [`guardBroken`](file://apps/web/src/security/watermark.tsx#L126-L133) (`apps/web/src/security/watermark.tsx:126-133`) [Tipe: `function`]
-    - *Signature:* `(): boolean`
-  - [`disconnect`](file://apps/web/scripts/browser-shims.ts#L59-L59) (`apps/web/scripts/browser-shims.ts:59-59`) [Tipe: `method`]
-    - *Signature:* `()`
-  - [`heal`](file://apps/web/src/security/watermark.tsx#L183-L185) (`apps/web/src/security/watermark.tsx:183-185`) [Tipe: `function`]
-    - *Signature:* `()`
+  - [`test`](file://services/api/scripts/env-probe.ts#L23-L33) (`services/api/scripts/env-probe.ts:23-33`) [Tipe: `function`]
+    - *Signature:* `(name: string, fn: () => void)`
+    - *Deskripsi:* // Simpan process.env asli
+  - [`matchHist`](file://apps/web/src/pages/keuangan/Finance.tsx#L151-L160) (`apps/web/src/pages/keuangan/Finance.tsx:151-160`) [Tipe: `function`]
+    - *Signature:* `(dateISO: unknown, f: HistFilter): boolean`
+  - [`isIgnorableMigrationError`](file://services/api/src/migrate.ts#L11-L27) (`services/api/src/migrate.ts:11-27`) [Tipe: `function`]
+    - *Signature:* `(sql: string, err: unknown): boolean`
+  - [`kasAsOfReport`](file://apps/web/src/pages/keuangan/Finance.tsx#L480-L510) (`apps/web/src/pages/keuangan/Finance.tsx:480-510`) [Tipe: `function`]
+    - *Signature:* `(
+  list: StoreItem[],
+  end: string,
+  f: HistFilter,
+  opening: Record<string, number>,
+  kodeRe: RegExp,
+): { saldo: Record<string, number>; masuk: Record<string, number>; keluar: Record<string, number>; hitung: number }`
+  - [`isSideMapConflictKey`](file://apps/web/src/data/sideMapConflictHolds.ts#L9-L12) (`apps/web/src/data/sideMapConflictHolds.ts:9-12`) [Tipe: `function`]
+    - *Signature:* `(value: unknown): value is string`
 
-### Sub-sistem: `normalized:conversion:closeenough` (Klaster #166)
+### Sub-sistem: `normalized:conversion:closeenough` (Klaster #160)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normalized`](file://services/api/src/inventoryConversion.ts#L22-L24) (`services/api/src/inventoryConversion.ts:22-24`) [Tipe: `function`]
@@ -1399,7 +1413,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`conversionStateChanged`](file://services/api/src/inventoryConversion.ts#L75-L80) (`services/api/src/inventoryConversion.ts:75-80`) [Tipe: `function`]
     - *Signature:* `(previous: Record<string, unknown>, next: Record<string, unknown>): boolean`
 
-### Sub-sistem: `require:collection:write` (Klaster #208)
+### Sub-sistem: `require:collection:write` (Klaster #202)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`requirePermission`](file://services/api/src/policy.ts#L418-L430) (`services/api/src/policy.ts:418-430`) [Tipe: `function`]
@@ -1413,7 +1427,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`requireCollectionDelete`](file://services/api/src/policy.ts#L441-L443) (`services/api/src/policy.ts:441-443`) [Tipe: `function`]
     - *Signature:* `(collection: string)`
 
-### Sub-sistem: `klik:cto:okt` (Klaster #422)
+### Sub-sistem: `klik:langsung:masuk` (Klaster #421)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`enterAsRole`](file://apps/web/src/pages/Login.tsx#L42-L52) (`apps/web/src/pages/Login.tsx:42-52`) [Tipe: `function`]
@@ -1430,7 +1444,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(e: React.FormEvent)`
     - *Deskripsi:* // Satu klik pada tombol peran = langsung masuk (catatan CTO 14 Okt).
 
-### Sub-sistem: `upload:timeout:ocr` (Klaster #452)
+### Sub-sistem: `sum:payroll:allowancesum` (Klaster #878)
+- **Kepadatan Simbol:** 6 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`allowanceSum`](file://apps/web/src/utils/payrollReports.ts#L8-L9) (`apps/web/src/utils/payrollReports.ts:8-9`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): number`
+  - [`nameOf`](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L30-L30) (`apps/web/src/pages/keuangan/tabs/PayrollTab.tsx:30-30`) [Tipe: `function`]
+    - *Signature:* `(id: string): string`
+  - [`sum`](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L31-L31) (`apps/web/src/pages/keuangan/tabs/PayrollTab.tsx:31-31`) [Tipe: `function`]
+    - *Signature:* `(list: StoreItem[]): number`
+  - [`exportPphReport`](file://apps/web/src/utils/payrollReports.ts#L11-L22) (`apps/web/src/utils/payrollReports.ts:11-22`) [Tipe: `function`]
+    - *Signature:* `(rows: StoreItem[], nameOf: (id: string) => string, period: string): Promise<void>`
+  - [`canPayPayroll`](file://apps/web/src/components/PayrollPayModal.tsx#L14-L14) (`apps/web/src/components/PayrollPayModal.tsx:14-14`) [Tipe: `function`]
+    - *Signature:* `(role: string | undefined): boolean`
+
+### Sub-sistem: `upload:timeout:ocr` (Klaster #451)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`text`](file://services/api/src/pdf/documents/shared.ts#L306-L309) (`services/api/src/pdf/documents/shared.ts:306-309`) [Tipe: `function`]
@@ -1446,7 +1474,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ocrImageUrl`](file://apps/web/src/services/upload.ts#L77-L117) (`apps/web/src/services/upload.ts:77-117`) [Tipe: `function`]
     - *Signature:* `(url: string): Promise<string>`
 
-### Sub-sistem: `price:vendor:qty` (Klaster #401)
+### Sub-sistem: `price:vendor:qty` (Klaster #396)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/data/usePoActions.ts#L11-L11) (`apps/web/src/data/usePoActions.ts:11-11`) [Tipe: `function`]
@@ -1461,24 +1489,24 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`itemPriceTrack`](file://apps/web/src/data/usePoActions.ts#L321-L331) (`apps/web/src/data/usePoActions.ts:321-331`) [Tipe: `function`]
     - *Signature:* `(pos: StoreItem[], item: string): { po: string; vendor: string; unitPrice: number; qty: number; date: string }[]`
 
-### Sub-sistem: `excel:berbahaya:injeksi` (Klaster #486)
+### Sub-sistem: `month:key:posummarycharts` (Klaster #514)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`exportExcel`](file://apps/web/src/utils/export.ts#L35-L54) (`apps/web/src/utils/export.ts:35-54`) [Tipe: `function`]
-    - *Signature:* `(data: unknown[][], filename: string, sheetName = "Export", opts: { kop?: boolean } = {}): Promise<void>`
-  - [`sanitizeCell`](file://apps/web/src/utils/export.ts#L8-L11) (`apps/web/src/utils/export.ts:8-11`) [Tipe: `function`]
-    - *Signature:* `(v: string): string`
-  - [`cleanSheetName`](file://apps/web/src/utils/export.ts#L65-L67) (`apps/web/src/utils/export.ts:65-67`) [Tipe: `function`]
-    - *Signature:* `(name: string): string`
-    - *Deskripsi:* /** Awalan sel berbahaya untuk injeksi formula Excel saat dibuka. */
-  - [`normalizeCell`](file://apps/web/src/utils/export.ts#L15-L19) (`apps/web/src/utils/export.ts:15-19`) [Tipe: `function`]
-    - *Signature:* `(c: unknown): CellRaw`
-    - *Deskripsi:* /** Awalan sel berbahaya untuk injeksi formula Excel saat dibuka. */
-  - [`kopImage`](file://apps/web/src/utils/export.ts#L25-L33) (`apps/web/src/utils/export.ts:25-33`) [Tipe: `function`]
-    - *Signature:* `(): Promise<{ content: ArrayBuffer; contentType: string; width: number; height: number; dpi: number; anchor: { row: number; column: number } } | null>`
-    - *Deskripsi:* /** Awalan sel berbahaya untuk injeksi formula Excel saat dibuka. */
+  - [`monthAxis`](file://apps/web/src/utils/monthAxis.ts#L103-L131) (`apps/web/src/utils/monthAxis.ts:103-131`) [Tipe: `function`]
+    - *Signature:* `(opts: MonthAxisOptions = {}): MonthPoint[]`
+  - [`monthKeyOfDate`](file://apps/web/src/utils/monthAxis.ts#L47-L49) (`apps/web/src/utils/monthAxis.ts:47-49`) [Tipe: `function`]
+    - *Signature:* `(d: Date): string`
+  - [`shiftMonthKey`](file://apps/web/src/utils/monthAxis.ts#L55-L60) (`apps/web/src/utils/monthAxis.ts:55-60`) [Tipe: `function`]
+    - *Signature:* `(key: string, delta: number): string`
+  - [`rebindLegacyMonthSeries`](file://apps/web/src/utils/monthAxis.ts#L212-L242) (`apps/web/src/utils/monthAxis.ts:212-242`) [Tipe: `function`]
+    - *Signature:* `(
+  rows: T[],
+  opts: MonthAxisOptions = {},
+): (T & { bln: string; key: string; isCurrent: boolean })[]`
+  - [`fmtMonthRange`](file://apps/web/src/utils/monthAxis.ts#L253-L259) (`apps/web/src/utils/monthAxis.ts:253-259`) [Tipe: `function`]
+    - *Signature:* `(axis: MonthPoint[]): string`
 
-### Sub-sistem: `warehouses:name:kecuali` (Klaster #594)
+### Sub-sistem: `warehouses:name:kecuali` (Klaster #587)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`sameName`](file://apps/web/src/utils/names.ts#L5-L7) (`apps/web/src/utils/names.ts:5-7`) [Tipe: `function`]
@@ -1498,7 +1526,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`vesselMatch`](file://apps/web/src/utils/names.ts#L10-L15) (`apps/web/src/utils/names.ts:10-15`) [Tipe: `function`]
     - *Signature:* `(slotVessel: unknown, vesselName: unknown): boolean`
 
-### Sub-sistem: `tagih:fee:del` (Klaster #803)
+### Sub-sistem: `tagih:fee:del` (Klaster #785)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`run`](file://apps/web/src/pages/proyek/FeeProjectCard.tsx#L35-L38) (`apps/web/src/pages/proyek/FeeProjectCard.tsx:35-38`) [Tipe: `function`]
@@ -1512,7 +1540,48 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`normFees`](file://apps/web/src/utils/projectFee.ts#L15-L29) (`apps/web/src/utils/projectFee.ts:15-29`) [Tipe: `function`]
     - *Signature:* `(v: unknown): ProjectFee[]`
 
-### Sub-sistem: `loan:pinjaman:terjadwal` (Klaster #722)
+### Sub-sistem: `unit:material:catalogmaterialform` (Klaster #578)
+- **Kepadatan Simbol:** 6 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`sackKgOf`](file://apps/web/src/utils/unitConversion.ts#L54-L58) (`apps/web/src/utils/unitConversion.ts:54-58`) [Tipe: `function`]
+    - *Signature:* `(unit: unknown): number | null`
+  - [`suggestedBaseUnit`](file://apps/web/src/utils/unitConversion.ts#L62-L67) (`apps/web/src/utils/unitConversion.ts:62-67`) [Tipe: `function`]
+    - *Signature:* `(purchaseUnit: unknown): string`
+  - [`numericField`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L76-L82) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:76-82`) [Tipe: `function`]
+    - *Signature:* `(value: string, onChange: (value: string) => void, label: string, step = "any")`
+  - [`materialTypeLabel`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L70-L74) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:70-74`) [Tipe: `function`]
+    - *Signature:* `(value: string, strings: typeof n_inv.id): string`
+  - [`buildUnitConversion`](file://apps/web/src/utils/unitConversion.ts#L162-L203) (`apps/web/src/utils/unitConversion.ts:162-203`) [Tipe: `function`]
+    - *Signature:* `(
+  category: unknown,
+  purchaseUnit: string,
+  draft: UnitConversionDraft,
+): UnitConversion | null`
+
+### Sub-sistem: `parsial:divalidasi:sengaja` (Klaster #664)
+- **Kepadatan Simbol:** 6 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`drydockDay`](file://services/api/src/routes/crud.ts#L265-L270) (`services/api/src/routes/crud.ts:265-270`) [Tipe: `function`]
+    - *Signature:* `(value: unknown): number | null`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
+  - [`witaTodayDay`](file://services/api/src/routes/crud.ts#L272-L277) (`services/api/src/routes/crud.ts:272-277`) [Tipe: `function`]
+    - *Signature:* `(): number`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
+  - [`drydockRange`](file://services/api/src/routes/crud.ts#L293-L301) (`services/api/src/routes/crud.ts:293-301`) [Tipe: `function`]
+    - *Signature:* `(data: Record<string, unknown>, today: number): DrydockRange | null`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
+  - [`drydockOverlapError`](file://services/api/src/routes/crud.ts#L311-L333) (`services/api/src/routes/crud.ts:311-333`) [Tipe: `function`]
+    - *Signature:* `(
+  data: Record<string, unknown>,
+  branch: string,
+  selfId: string | null,
+): Promise<string | null>`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
+  - [`drydockDateError`](file://services/api/src/routes/crud.ts#L279-L289) (`services/api/src/routes/crud.ts:279-289`) [Tipe: `function`]
+    - *Signature:* `(data: Record<string, unknown>): string | null`
+    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
+
+### Sub-sistem: `loan:pinjaman:terjadwal` (Klaster #704)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`cancelLoan`](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L83-L88) (`apps/web/src/pages/equipment/DelegationPanel.tsx:83-88`) [Tipe: `function`]
@@ -1528,7 +1597,24 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`saveLoan`](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L50-L61) (`apps/web/src/pages/equipment/DelegationPanel.tsx:50-61`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `gabungkan:expandedkeys:expanded` (Klaster #891)
+### Sub-sistem: `tanggal:rentang:fin` (Klaster #732)
+- **Kepadatan Simbol:** 6 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`hariValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L129-L136) (`apps/web/src/pages/keuangan/Finance.tsx:129-136`) [Tipe: `function`]
+    - *Signature:* `(v: string): boolean`
+    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
+  - [`rentangValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L121-L123) (`apps/web/src/pages/keuangan/Finance.tsx:121-123`) [Tipe: `function`]
+    - *Signature:* `(f: HistFilter): boolean`
+    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
+  - [`bulanValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L124-L128) (`apps/web/src/pages/keuangan/Finance.tsx:124-128`) [Tipe: `function`]
+    - *Signature:* `(v: string): boolean`
+    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
+  - [`matchHistPeriod`](file://apps/web/src/pages/keuangan/Finance.tsx#L161-L171) (`apps/web/src/pages/keuangan/Finance.tsx:161-171`) [Tipe: `function`]
+    - *Signature:* `(periodYM: unknown, f: HistFilter): boolean`
+  - [`histToParam`](file://apps/web/src/pages/keuangan/Finance.tsx#L96-L102) (`apps/web/src/pages/keuangan/Finance.tsx:96-102`) [Tipe: `function`]
+    - *Signature:* `(f: HistFilter): string`
+
+### Sub-sistem: `gabungkan:expandedkeys:expanded` (Klaster #876)
 - **Kepadatan Simbol:** 6 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`visit`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L228-L233) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:228-233`) [Tipe: `function`]
@@ -1545,7 +1631,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(kode: string)`
     - *Deskripsi:* // Gabungkan expandedKeys pengguna dengan auto-expanded jika sedang mencari
 
-### Sub-sistem: `equal:probe:runprobe` (Klaster #115)
+### Sub-sistem: `equal:probe:runprobe` (Klaster #112)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`equal`](file://apps/web/scripts/drydock-dates-probe.ts#L24-L28) (`apps/web/scripts/drydock-dates-probe.ts:24-28`) [Tipe: `function`]
@@ -1559,7 +1645,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/security-probe-isolation-probe.ts#L64-L125) (`services/api/scripts/security-probe-isolation-probe.ts:64-125`) [Tipe: `function`]
     - *Signature:* `(): void`
 
-### Sub-sistem: `simulasi:moneyinput:sanitasi` (Klaster #25)
+### Sub-sistem: `simulasi:moneyinput:sanitasi` (Klaster #24)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`run`](file://apps/web/scripts/money-probe.ts#L30-L74) (`apps/web/scripts/money-probe.ts:30-74`) [Tipe: `function`]
@@ -1577,7 +1663,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(raw: string): string`
     - *Deskripsi:* // Simulasi logika formatting MoneyInput
 
-### Sub-sistem: `ins:main:assert` (Klaster #66)
+### Sub-sistem: `ins:main:assert` (Klaster #65)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tokenOf`](file://services/api/scripts/change-order-probe.ts#L16-L20) (`services/api/scripts/change-order-probe.ts:16-20`) [Tipe: `function`]
@@ -1591,7 +1677,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/change-order-probe.ts#L7-L83) (`services/api/scripts/change-order-probe.ts:7-83`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `login:demo:saklar` (Klaster #69)
+### Sub-sistem: `login:demo:saklar` (Klaster #68)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`login`](file://services/api/scripts/demo-roles-probe.ts#L74-L74) (`services/api/scripts/demo-roles-probe.ts:74-74`) [Tipe: `function`]
@@ -1606,7 +1692,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/demo-roles-probe.ts#L11-L98) (`services/api/scripts/demo-roles-probe.ts:11-98`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `alloc:call:jumlah` (Klaster #70)
+### Sub-sistem: `alloc:call:jumlah` (Klaster #69)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`alloc`](file://services/api/scripts/domain-guards-probe.ts#L109-L109) (`services/api/scripts/domain-guards-probe.ts:109-109`) [Tipe: `function`]
@@ -1621,7 +1707,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/domain-guards-probe.ts#L9-L177) (`services/api/scripts/domain-guards-probe.ts:9-177`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `listen:stream:jalankan` (Klaster #75)
+### Sub-sistem: `listen:stream:jalankan` (Klaster #74)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`write`](file://services/api/scripts/events-probe.ts#L48-L48) (`services/api/scripts/events-probe.ts:48-48`) [Tipe: `function`]
@@ -1637,23 +1723,28 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/events-probe.ts#L7-L68) (`services/api/scripts/events-probe.ts:7-68`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `ringkasan:pagination:minimal` (Klaster #108)
+### Sub-sistem: `geometry:benar:check` (Klaster #104)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`fontsEmbedded`](file://services/api/src/pdf/font.ts#L178-L180) (`services/api/src/pdf/font.ts:178-180`) [Tipe: `function`]
-    - *Signature:* `(): boolean`
   - [`ok`](file://services/api/scripts/pdf-probe.ts#L58-L66) (`services/api/scripts/pdf-probe.ts:58-66`) [Tipe: `function`]
     - *Signature:* `(name: string, cond: boolean, detail = ""): void`
-  - [`ringkasan`](file://services/api/scripts/pdf-probe.ts#L1038-L1054) (`services/api/scripts/pdf-probe.ts:1038-1054`) [Tipe: `function`]
+  - [`checkGeometry`](file://services/api/src/pdf/document.ts#L374-L398) (`services/api/src/pdf/document.ts:374-398`) [Tipe: `function`]
+    - *Signature:* `(
+  res: RenderResult,
+  margin: number,
+  page: { width: number; height: number },
+  opts: { footerZoneMm?: number } = {},
+): GeometryProblem[]`
+  - [`knownTables`](file://services/api/scripts/pdf-probe.ts#L361-L371) (`services/api/scripts/pdf-probe.ts:361-371`) [Tipe: `function`]
+    - *Signature:* `(): Set<string>`
+    - *Deskripsi:* /** Tabel yang benar-benar ada, dibaca dari berkas migrasi (sumber kebenaran). */
+  - [`registryIntegrity`](file://services/api/scripts/pdf-probe.ts#L906-L950) (`services/api/scripts/pdf-probe.ts:906-950`) [Tipe: `function`]
     - *Signature:* `(): void`
     - *Deskripsi:* /** Model minimal per kind - cukup panjang untuk menguji pagination. */
   - [`geometryCheck`](file://services/api/scripts/pdf-probe.ts#L72-L81) (`services/api/scripts/pdf-probe.ts:72-81`) [Tipe: `function`]
     - *Signature:* `(name: string, d: ReturnType<typeof doc>, orientation: "portrait" | "landscape" = "portrait"): void`
-  - [`branchAuthChecks`](file://services/api/scripts/pdf-probe.ts#L967-L1036) (`services/api/scripts/pdf-probe.ts:967-1036`) [Tipe: `function`]
-    - *Signature:* `(): void`
-    - *Deskripsi:* /** Model minimal per kind - cukup panjang untuk menguji pagination. */
 
-### Sub-sistem: `submit:check:main` (Klaster #110)
+### Sub-sistem: `submit:check:main` (Klaster #107)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/public-leave-probe.ts#L17-L20) (`services/api/scripts/public-leave-probe.ts:17-20`) [Tipe: `function`]
@@ -1667,7 +1758,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/public-leave-probe.ts#L12-L108) (`services/api/scripts/public-leave-probe.ts:12-108`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `probe:keamanan:fase` (Klaster #119)
+### Sub-sistem: `probe:keamanan:fase` (Klaster #116)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`login`](file://services/api/scripts/security-probe.ts#L162-L176) (`services/api/scripts/security-probe.ts:162-176`) [Tipe: `function`]
@@ -1715,7 +1806,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * dinaikkan menjadi gate CI yang memvalidasi perbaikan celah keamanan.
  */
 
-### Sub-sistem: `auth:ids:main` (Klaster #121)
+### Sub-sistem: `auth:ids:main` (Klaster #118)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`auth`](file://services/api/scripts/team-scope-probe.ts#L16-L16) (`services/api/scripts/team-scope-probe.ts:16-16`) [Tipe: `function`]
@@ -1729,7 +1820,21 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/team-scope-probe.ts#L6-L40) (`services/api/scripts/team-scope-probe.ts:6-40`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `env:set:cat` (Klaster #221)
+### Sub-sistem: `token:getsecret:secret` (Klaster #132)
+- **Kepadatan Simbol:** 5 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`getSecret`](file://services/api/src/auth.ts#L28-L31) (`services/api/src/auth.ts:28-31`) [Tipe: `function`]
+    - *Signature:* `(): string`
+  - [`signToken`](file://services/api/src/auth.ts#L41-L54) (`services/api/src/auth.ts:41-54`) [Tipe: `function`]
+    - *Signature:* `(payload: AuthUser): string`
+  - [`verifyToken`](file://services/api/src/auth.ts#L56-L70) (`services/api/src/auth.ts:56-70`) [Tipe: `function`]
+    - *Signature:* `(token: string): AuthUser`
+  - [`branchOfUser`](file://services/api/src/auth.ts#L97-L112) (`services/api/src/auth.ts:97-112`) [Tipe: `function`]
+    - *Signature:* `(user: { employee_id?: string | null }): Promise<string>`
+  - [`requireAuth`](file://services/api/src/auth.ts#L144-L231) (`services/api/src/auth.ts:144-231`) [Tipe: `function`]
+    - *Signature:* `(req: FastifyRequest, reply: FastifyReply): Promise<void>`
+
+### Sub-sistem: `env:set:cat` (Klaster #215)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`load`](file://services/api/src/seedBulk.ts#L18-L20) (`services/api/src/seedBulk.ts:18-20`) [Tipe: `function`]
@@ -1748,25 +1853,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(): Promise<void>`
     - *Deskripsi:* // Butuh .env produksi: set -a; source <(sudo cat .env); set +a
 
-### Sub-sistem: `fmtjumlah:haspermission:wbsmaterialmodal` (Klaster #819)
-- **Kepadatan Simbol:** 5 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`hasPermission`](file://apps/web/src/auth/auth.tsx#L38-L51) (`apps/web/src/auth/auth.tsx:38-51`) [Tipe: `function`]
-    - *Signature:* `(
-  permissions: PermissionsMap | undefined | null,
-  collection: string,
-  action: PermissionAction = "r",
-): boolean`
-  - [`fmtJumlah`](file://apps/web/src/utils/format.ts#L94-L97) (`apps/web/src/utils/format.ts:94-97`) [Tipe: `function`]
-    - *Signature:* `(n: number): string`
-  - [`removeRow`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L77-L85) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:77-85`) [Tipe: `function`]
-    - *Signature:* `(bom: StoreItem): Promise<void>`
-  - [`save`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L46-L75) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:46-75`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-  - [`WbsMaterialModal`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L30-L136) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:30-136`) [Tipe: `function`]
-    - *Signature:* `({ projectId, task, onClose }: { projectId: string; task: string | null; onClose: () => void })`
-
-### Sub-sistem: `sinkronkan:dimuat:auth` (Klaster #252)
+### Sub-sistem: `sinkronkan:dimuat:auth` (Klaster #246)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`initialsOf`](file://apps/web/src/auth/auth.tsx#L98-L104) (`apps/web/src/auth/auth.tsx:98-104`) [Tipe: `function`]
@@ -1783,22 +1870,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`AuthProvider`](file://apps/web/src/auth/auth.tsx#L124-L271) (`apps/web/src/auth/auth.tsx:124-271`) [Tipe: `function`]
     - *Signature:* `({ children }: { children: ReactNode })`
 
-### Sub-sistem: `akun:demo:switchtorole` (Klaster #255)
-- **Kepadatan Simbol:** 5 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`readOrigin`](file://apps/web/src/auth/demoSwitch.ts#L19-L24) (`apps/web/src/auth/demoSwitch.ts:19-24`) [Tipe: `function`]
-    - *Signature:* `(): Origin | null`
-  - [`authHeader`](file://apps/web/src/auth/demoSwitch.ts#L31-L34) (`apps/web/src/auth/demoSwitch.ts:31-34`) [Tipe: `function`]
-    - *Signature:* `(): Record<string, string>`
-    - *Deskripsi:* /** Sedang memakai akun peran demo (bukan akun asal). */
-  - [`switchToRole`](file://apps/web/src/auth/demoSwitch.ts#L58-L76) (`apps/web/src/auth/demoSwitch.ts:58-76`) [Tipe: `function`]
-    - *Signature:* `(role: string): Promise<void>`
-  - [`isImpersonating`](file://apps/web/src/auth/demoSwitch.ts#L27-L29) (`apps/web/src/auth/demoSwitch.ts:27-29`) [Tipe: `function`]
-    - *Signature:* `(): boolean`
-  - [`fetchDemoRoles`](file://apps/web/src/auth/demoSwitch.ts#L37-L40) (`apps/web/src/auth/demoSwitch.ts:37-40`) [Tipe: `function`]
-    - *Signature:* `(): Promise<DemoRole[]>`
-
-### Sub-sistem: `projectaddmodal:tahaplabel:project` (Klaster #288)
+### Sub-sistem: `projectaddmodal:tahaplabel:project` (Klaster #281)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setF`](file://apps/web/src/components/ProjectAddModal.tsx#L72-L72) (`apps/web/src/components/ProjectAddModal.tsx:72-72`) [Tipe: `function`]
@@ -1832,7 +1904,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   add: (collection: any, item: any, meta?: any) => Promise<StoreItem>;
 })`
 
-### Sub-sistem: `proyek:galat:render` (Klaster #322)
+### Sub-sistem: `proyek:galat:render` (Klaster #315)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`render`](file://apps/web/src/components/ui.tsx#L739-L776) (`apps/web/src/components/ui.tsx:739-776`) [Tipe: `method`]
@@ -1876,21 +1948,22 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ErrorBoundary`](file://apps/web/src/components/ui.tsx#L697-L777) (`apps/web/src/components/ui.tsx:697-777`) [Tipe: `class`]
     - *Signature:* `class ErrorBoundary`
 
-### Sub-sistem: `base:issue:totalbase` (Klaster #569)
+### Sub-sistem: `file:url:blob` (Klaster #426)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`round3`](file://apps/web/src/utils/stockIssue.ts#L14-L14) (`apps/web/src/utils/stockIssue.ts:14-14`) [Tipe: `function`]
-    - *Signature:* `(n: number): number`
-  - [`totalBase`](file://apps/web/src/utils/stockIssue.ts#L16-L18) (`apps/web/src/utils/stockIssue.ts:16-18`) [Tipe: `function`]
-    - *Signature:* `(s: StockState, perUnit: number): number`
-  - [`issueBase`](file://apps/web/src/utils/stockIssue.ts#L23-L34) (`apps/web/src/utils/stockIssue.ts:23-34`) [Tipe: `function`]
-    - *Signature:* `(s: StockState, perUnit: number, qty: number): IssueResult`
-  - [`plateCutKg`](file://apps/web/src/utils/stockIssue.ts#L37-L44) (`apps/web/src/utils/stockIssue.ts:37-44`) [Tipe: `function`]
-    - *Signature:* `(conv: UnitConversion, lengthMm: number, widthMm: number): number | null`
-  - [`useStockIssue`](file://apps/web/src/data/useStockIssue.ts#L19-L46) (`apps/web/src/data/useStockIssue.ts:19-46`) [Tipe: `function`]
-    - *Signature:* `(): (a: StockIssueArgs) => Promise<{ baseQty: number; baseUnit: string }>`
+  - [`toAbsoluteUrl`](file://apps/web/src/services/files.ts#L37-L48) (`apps/web/src/services/files.ts:37-48`) [Tipe: `function`]
+    - *Signature:* `(url: unknown, base: string = BASE): string`
+  - [`fetchFileBlob`](file://apps/web/src/services/files.ts#L97-L119) (`apps/web/src/services/files.ts:97-119`) [Tipe: `function`]
+    - *Signature:* `(url: string): Promise<Blob>`
+  - [`downloadFileUrl`](file://apps/web/src/services/files.ts#L190-L214) (`apps/web/src/services/files.ts:190-214`) [Tipe: `function`]
+    - *Signature:* `(url: string, filename?: string): Promise<void>`
+  - [`clickDownload`](file://apps/web/src/services/files.ts#L121-L129) (`apps/web/src/services/files.ts:121-129`) [Tipe: `function`]
+    - *Signature:* `(href: string, name: string): void`
+    - *Deskripsi:* /** Ambil berkas sebagai Blob; kirim JWT bila ada (file backend terproteksi). */
+  - [`openFileUrl`](file://apps/web/src/services/files.ts#L144-L163) (`apps/web/src/services/files.ts:144-163`) [Tipe: `function`]
+    - *Signature:* `(url: string): Promise<void>`
 
-### Sub-sistem: `envelope:bearer:dikirim` (Klaster #435)
+### Sub-sistem: `envelope:bearer:dikirim` (Klaster #434)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isEnvelope`](file://apps/web/src/services/http.ts#L126-L128) (`apps/web/src/services/http.ts:126-128`) [Tipe: `function`]
@@ -1909,7 +1982,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(v: unknown): unknown`
     - *Deskripsi:* // - JWT dikirim sebagai `Authorization: Bearer <token>` bila ada.
 
-### Sub-sistem: `doc:url:name` (Klaster #475)
+### Sub-sistem: `doc:url:read` (Klaster #469)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`docAttachment`](file://apps/web/src/utils/docAttachment.ts#L62-L82) (`apps/web/src/utils/docAttachment.ts:62-82`) [Tipe: `function`]
@@ -1923,12 +1996,12 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`docUrlOf`](file://apps/web/src/utils/docAttachment.ts#L85-L87) (`apps/web/src/utils/docAttachment.ts:85-87`) [Tipe: `function`]
     - *Signature:* `(row: unknown): string`
 
-### Sub-sistem: `muncul:banner:lupa` (Klaster #515)
+### Sub-sistem: `muncul:dekat:kapan` (Klaster #509)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`todayISO`](file://apps/web/src/utils/moduleAlerts.ts#L93-L96) (`apps/web/src/utils/moduleAlerts.ts:93-96`) [Tipe: `function`]
-    - *Signature:* `(): string`
-    - *Deskripsi:* /** Warna banner/ikon per level. Satu sumber, dipakai banner + dashboard. */
+  - [`isAlertLevel`](file://apps/web/src/utils/moduleAlerts.ts#L497-L499) (`apps/web/src/utils/moduleAlerts.ts:497-499`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): v is AlertLevel`
+    - *Deskripsi:* /** Umur kondisi: dari field yang paling dekat ke "kapan ini muncul". */
   - [`isStamp`](file://apps/web/src/utils/moduleAlerts.ts#L501-L503) (`apps/web/src/utils/moduleAlerts.ts:501-503`) [Tipe: `function`]
     - *Signature:* `(v: unknown): boolean`
     - *Deskripsi:* /** Umur kondisi: dari field yang paling dekat ke "kapan ini muncul". */
@@ -1950,7 +2023,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`buildModuleAlertItemsFor`](file://apps/web/src/utils/moduleAlerts.ts#L596-L598) (`apps/web/src/utils/moduleAlerts.ts:596-598`) [Tipe: `function`]
     - *Signature:* `(data: StoreShape, key: ModuleAlertKey): ModuleAlertItem[]`
 
-### Sub-sistem: `riwayat:termasuk:dianggap` (Klaster #794)
+### Sub-sistem: `riwayat:termasuk:dianggap` (Klaster #776)
 - **Kepadatan Simbol:** 5 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`approve`](file://apps/web/src/pages/procurement/ServiceApprovalsTab.tsx#L44-L49) (`apps/web/src/pages/procurement/ServiceApprovalsTab.tsx:44-49`) [Tipe: `function`]
@@ -1968,7 +2041,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ServiceApprovalsTab`](file://apps/web/src/pages/procurement/ServiceApprovalsTab.tsx#L16-L154) (`apps/web/src/pages/procurement/ServiceApprovalsTab.tsx:16-154`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `offline:pengujian:isolasi` (Klaster #355)
+### Sub-sistem: `offline:pengujian:isolasi` (Klaster #349)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`run`](file://apps/web/scripts/auth-cache-probe.ts#L18-L57) (`apps/web/scripts/auth-cache-probe.ts:18-57`) [Tipe: `function`]
@@ -1982,7 +2055,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(name: string, ok: boolean, details?: string)`
     - *Deskripsi:* // Probe pengujian isolasi cache dan pembersihan offline (F2-07)
 
-### Sub-sistem: `call:main:assert` (Klaster #63)
+### Sub-sistem: `call:main:assert` (Klaster #62)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`docRow`](file://services/api/scripts/boq-docs-probe.ts#L43-L46) (`services/api/scripts/boq-docs-probe.ts:43-46`) [Tipe: `function`]
@@ -1994,7 +2067,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/boq-docs-probe.ts#L8-L95) (`services/api/scripts/boq-docs-probe.ts:8-95`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `cachestats:main:stats` (Klaster #65)
+### Sub-sistem: `cachestats:main:stats` (Klaster #64)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/cache-probe.ts#L13-L16) (`services/api/scripts/cache-probe.ts:13-16`) [Tipe: `function`]
@@ -2006,19 +2079,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/cache-probe.ts#L8-L64) (`services/api/scripts/cache-probe.ts:8-64`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `create:witadate:main` (Klaster #72)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`create`](file://services/api/scripts/drydock-booking-probe.ts#L46-L61) (`services/api/scripts/drydock-booking-probe.ts:46-61`) [Tipe: `function`]
-    - *Signature:* `(dockId: string, startDate: string, endDate: string, branch?: string)`
-  - [`assert`](file://services/api/scripts/drydock-booking-probe.ts#L29-L33) (`services/api/scripts/drydock-booking-probe.ts:29-33`) [Tipe: `function`]
-    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
-  - [`witaDate`](file://services/api/scripts/drydock-booking-probe.ts#L8-L14) (`services/api/scripts/drydock-booking-probe.ts:8-14`) [Tipe: `function`]
-    - *Signature:* `(offset: number): string`
-  - [`main`](file://services/api/scripts/drydock-booking-probe.ts#L16-L160) (`services/api/scripts/drydock-booking-probe.ts:16-160`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-
-### Sub-sistem: `walk:mark:envvars` (Klaster #78)
+### Sub-sistem: `walk:mark:envvars` (Klaster #77)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`mark`](file://services/api/scripts/gen-bruno.ts#L77-L77) (`services/api/scripts/gen-bruno.ts:77-77`) [Tipe: `function`]
@@ -2030,7 +2091,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/gen-bruno.ts#L51-L170) (`services/api/scripts/gen-bruno.ts:51-170`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `issue:stateof:main` (Klaster #83)
+### Sub-sistem: `issue:stateof:main` (Klaster #82)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`issue`](file://services/api/scripts/inventory-issue-probe.ts#L24-L24) (`services/api/scripts/inventory-issue-probe.ts:24-24`) [Tipe: `function`]
@@ -2042,19 +2103,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/inventory-issue-probe.ts#L7-L47) (`services/api/scripts/inventory-issue-probe.ts:7-47`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `call:parse:main` (Klaster #114)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`parse`](file://services/api/scripts/relations-probe.ts#L32-L32) (`services/api/scripts/relations-probe.ts:32-32`) [Tipe: `function`]
-    - *Signature:* `(d: string): Record<string, unknown>`
-  - [`assert`](file://services/api/scripts/relations-probe.ts#L16-L19) (`services/api/scripts/relations-probe.ts:16-19`) [Tipe: `function`]
-    - *Signature:* `(name: string, cond: boolean, detail = ""): void`
-  - [`call`](file://services/api/scripts/relations-probe.ts#L25-L26) (`services/api/scripts/relations-probe.ts:25-26`) [Tipe: `function`]
-    - *Signature:* `(method: "GET" | "POST" | "DELETE", url: string, payload?: unknown)`
-  - [`main`](file://services/api/scripts/relations-probe.ts#L11-L96) (`services/api/scripts/relations-probe.ts:11-96`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-
-### Sub-sistem: `patch:main:assert` (Klaster #124)
+### Sub-sistem: `patch:main:assert` (Klaster #121)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`patch`](file://services/api/scripts/wo-spk-probe.ts#L30-L30) (`services/api/scripts/wo-spk-probe.ts:30-30`) [Tipe: `function`]
@@ -2066,7 +2115,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/wo-spk-probe.ts#L7-L47) (`services/api/scripts/wo-spk-probe.ts:7-47`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `keepsrecord:keeps:foto` (Klaster #155)
+### Sub-sistem: `keepsrecord:keeps:foto` (Klaster #150)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`photoUrls`](file://services/api/src/domainGuards.ts#L24-L25) (`services/api/src/domainGuards.ts:24-25`) [Tipe: `function`]
@@ -2080,7 +2129,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`wbsRuleError`](file://services/api/src/domainGuards.ts#L42-L65) (`services/api/src/domainGuards.ts:42-65`) [Tipe: `function`]
     - *Signature:* `(before: unknown, after: unknown): { code: "STAGE_IN_USE" | "PHOTO_REQUIRED"; message: string } | null`
 
-### Sub-sistem: `stablejson:asrecord:effectiveconversionfingerprint` (Klaster #167)
+### Sub-sistem: `stablejson:asrecord:effectiveconversionfingerprint` (Klaster #161)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`asRecord`](file://services/api/src/inventoryConversion.ts#L41-L45) (`services/api/src/inventoryConversion.ts:41-45`) [Tipe: `function`]
@@ -2092,7 +2141,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stableJson`](file://services/api/src/inventoryConversion.ts#L47-L54) (`services/api/src/inventoryConversion.ts:47-54`) [Tipe: `function`]
     - *Signature:* `(value: unknown): string`
 
-### Sub-sistem: `clear:cache:forgetdeletedates` (Klaster #379)
+### Sub-sistem: `clear:cache:forgetdeletedates` (Klaster #373)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`clear`](file://apps/web/src/data/sideMapEpochs.ts#L93-L96) (`apps/web/src/data/sideMapEpochs.ts:93-96`) [Tipe: `method`]
@@ -2104,7 +2153,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`clearCache`](file://services/api/src/pdf/measure.ts#L160-L162) (`services/api/src/pdf/measure.ts:160-162`) [Tipe: `function`]
     - *Signature:* `(): void`
 
-### Sub-sistem: `mulai:sumber:selesai` (Klaster #235)
+### Sub-sistem: `mulai:sumber:selesai` (Klaster #229)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`n`](file://services/api/src/seedReprice.ts#L96-L100) (`services/api/src/seedReprice.ts:96-100`) [Tipe: `function`]
@@ -2153,7 +2202,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * ada yang bisa mengetahuinya, jadi lebih baik baris itu dilaporkan.
  */
 
-### Sub-sistem: `persetujuan:service:proyek` (Klaster #242)
+### Sub-sistem: `persetujuan:service:proyek` (Klaster #236)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`approvalOf`](file://services/api/src/serviceApproval.ts#L33-L36) (`services/api/src/serviceApproval.ts:33-36`) [Tipe: `function`]
@@ -2169,7 +2218,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`serviceGuardError`](file://services/api/src/serviceApproval.ts#L77-L109) (`services/api/src/serviceApproval.ts:77-109`) [Tipe: `function`]
     - *Signature:* `(table: string, before: Data | null, after: Data | null): Promise<string | null>`
 
-### Sub-sistem: `benar:notif:firstpresent` (Klaster #263)
+### Sub-sistem: `benar:notif:firstpresent` (Klaster #257)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`notifRowId`](file://apps/web/src/components/AlertBanner.tsx#L33-L35) (`apps/web/src/components/AlertBanner.tsx:33-35`) [Tipe: `function`]
@@ -2187,7 +2236,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   pickMany: (rowIds: string[], index: number, goToPage: (p: number) => void, size: number) => void;
 }`
 
-### Sub-sistem: `formattime:displayvalue:changehistory` (Klaster #271)
+### Sub-sistem: `formattime:displayvalue:changehistory` (Klaster #265)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`formatTime`](file://apps/web/src/components/ChangeHistory.tsx#L39-L48) (`apps/web/src/components/ChangeHistory.tsx:39-48`) [Tipe: `function`]
@@ -2220,7 +2269,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   entries?: HistoryEntryItem[];
 })`
 
-### Sub-sistem: `num:clientmodal:save` (Klaster #272)
+### Sub-sistem: `num:clientmodal:save` (Klaster #266)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/components/ClientModal.tsx#L40-L40) (`apps/web/src/components/ClientModal.tsx:40-40`) [Tipe: `function`]
@@ -2240,20 +2289,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onSaved: (name: string) => void;
 })`
 
-### Sub-sistem: `file:stripquery:unduh` (Klaster #425)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`stripQuery`](file://apps/web/src/services/files.ts#L16-L18) (`apps/web/src/services/files.ts:16-18`) [Tipe: `function`]
-    - *Signature:* `(url: string): string`
-    - *Deskripsi:* /** Timeout unduh/pratinjau berkas (file lampiran bisa besar). */
-  - [`fileKindOf`](file://apps/web/src/services/files.ts#L57-L64) (`apps/web/src/services/files.ts:57-64`) [Tipe: `function`]
-    - *Signature:* `(url: string): FileKind`
-  - [`fileExtOf`](file://apps/web/src/services/files.ts#L51-L54) (`apps/web/src/services/files.ts:51-54`) [Tipe: `function`]
-    - *Signature:* `(url: string): string`
-  - [`InlineDocPreview`](file://apps/web/src/components/DocumentPreview.tsx#L249-L317) (`apps/web/src/components/DocumentPreview.tsx:249-317`) [Tipe: `function`]
-    - *Signature:* `({ url, height = "h-40" }: { url: string; height?: string })`
-
-### Sub-sistem: `toggle:branch:allids` (Klaster #279)
+### Sub-sistem: `toggle:branch:allids` (Klaster #272)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toggle`](file://apps/web/src/components/FlowTree.tsx#L96-L96) (`apps/web/src/components/FlowTree.tsx:96-96`) [Tipe: `function`]
@@ -2271,19 +2307,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   nodes: FlowNode[]; defaultOpen?: string[]; labels: { expand: string; collapse: string; expandAll: string; collapseAll: string };
 })`
 
-### Sub-sistem: `sum:payroll:payrolltab` (Klaster #893)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`nameOf`](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L30-L30) (`apps/web/src/pages/keuangan/tabs/PayrollTab.tsx:30-30`) [Tipe: `function`]
-    - *Signature:* `(id: string): string`
-  - [`sum`](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L31-L31) (`apps/web/src/pages/keuangan/tabs/PayrollTab.tsx:31-31`) [Tipe: `function`]
-    - *Signature:* `(list: StoreItem[]): number`
-  - [`canPayPayroll`](file://apps/web/src/components/PayrollPayModal.tsx#L14-L14) (`apps/web/src/components/PayrollPayModal.tsx:14-14`) [Tipe: `function`]
-    - *Signature:* `(role: string | undefined): boolean`
-  - [`PayrollTab`](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L15-L94) (`apps/web/src/pages/keuangan/tabs/PayrollTab.tsx:15-94`) [Tipe: `function`]
-    - *Signature:* `()`
-
-### Sub-sistem: `pay:kaskodeof:confirmpay` (Klaster #283)
+### Sub-sistem: `pay:kaskodeof:confirmpay` (Klaster #276)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`kasKodeOf`](file://apps/web/src/services/autoJournal.ts#L25-L31) (`apps/web/src/services/autoJournal.ts:25-31`) [Tipe: `function`]
@@ -2298,7 +2322,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`PayrollPayModal`](file://apps/web/src/components/PayrollPayModal.tsx#L18-L105) (`apps/web/src/components/PayrollPayModal.tsx:18-105`) [Tipe: `function`]
     - *Signature:* `({ target, onClose }: { target: StoreItem | null; onClose: () => void })`
 
-### Sub-sistem: `form:unggahan:menempel` (Klaster #287)
+### Sub-sistem: `form:unggahan:menempel` (Klaster #280)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`updateCaption`](file://apps/web/src/components/PhotoUploader.tsx#L119-L123) (`apps/web/src/components/PhotoUploader.tsx:119-123`) [Tipe: `function`]
@@ -2328,7 +2352,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onBusyChange?: (busy: boolean) => void;
 })`
 
-### Sub-sistem: `clean:block:numinput` (Klaster #338)
+### Sub-sistem: `clean:block:numinput` (Klaster #332)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`stripLeadingZero`](file://apps/web/src/components/ui.tsx#L1713-L1718) (`apps/web/src/components/ui.tsx:1713-1718`) [Tipe: `function`]
@@ -2342,7 +2366,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`NumInput`](file://apps/web/src/components/ui.tsx#L1722-L1749) (`apps/web/src/components/ui.tsx:1722-1749`) [Tipe: `function`]
     - *Signature:* `({ integer = false, allowNegative = false, onKeyDown, onChange, inputMode, ...rest }: InputHTMLAttributes<HTMLInputElement> & { integer?: boolean; allowNegative?: boolean })`
 
-### Sub-sistem: `collections:berakhir:403` (Klaster #393)
+### Sub-sistem: `collections:berakhir:403` (Klaster #389)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isCurrentScope`](file://apps/web/src/data/store.tsx#L1425-L1425) (`apps/web/src/data/store.tsx:1425-1425`) [Tipe: `function`]
@@ -2367,7 +2391,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Dulu keduanya diberi pesan "Sesi berakhir" sehingga 403 menyesatkan
  *  (K17-UMUM-01). */
 
-### Sub-sistem: `koleksi:replace:epoch` (Klaster #391)
+### Sub-sistem: `koleksi:replace:epoch` (Klaster #387)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`majorOf`](file://apps/web/src/data/store.tsx#L961-L967) (`apps/web/src/data/store.tsx:961-967`) [Tipe: `function`]
@@ -2403,20 +2427,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * koleksi menjadi dirty di tengah jalan (tulis offline belum terkirim).
  */
 
-### Sub-sistem: `remote:poismultiitem:usepoactions` (Klaster #406)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`remote`](file://apps/web/src/data/usePoActions.ts#L49-L49) (`apps/web/src/data/usePoActions.ts:49-49`) [Tipe: `function`]
-    - *Signature:* `()`
-  - [`poIsMultiItem`](file://apps/web/src/data/usePoActions.ts#L21-L25) (`apps/web/src/data/usePoActions.ts:21-25`) [Tipe: `function`]
-    - *Signature:* `(po: StoreItem): boolean`
-  - [`prIdsOf`](file://apps/web/src/data/usePoActions.ts#L39-L40) (`apps/web/src/data/usePoActions.ts:39-40`) [Tipe: `function`]
-    - *Signature:* `(po: StoreItem): string[]`
-    - *Deskripsi:* /** Qty yang dinyatakan vendor tidak sanggup dan belum dialihkan. */
-  - [`usePoActions`](file://apps/web/src/data/usePoActions.ts#L47-L302) (`apps/web/src/data/usePoActions.ts:47-302`) [Tipe: `function`]
-    - *Signature:* `()`
-
-### Sub-sistem: `bell:perhatian:dashboard` (Klaster #459)
+### Sub-sistem: `bell:perhatian:perlu` (Klaster #453)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`getSetting`](file://apps/web/src/utils/settings.ts#L6-L10) (`apps/web/src/utils/settings.ts:6-10`) [Tipe: `function`]
@@ -2430,7 +2441,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(end: string | null | undefined): number | null`
     - *Deskripsi:* // Dipakai AppShell (bell) + Dashboard (strip Perlu Perhatian).
 
-### Sub-sistem: `delete:hapus:cache` (Klaster #461)
+### Sub-sistem: `delete:hapus:cache` (Klaster #455)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`deleteDateOf`](file://apps/web/src/utils/audit.ts#L58-L71) (`apps/web/src/utils/audit.ts:58-71`) [Tipe: `function`]
@@ -2462,7 +2473,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   rowIds: readonly string[],
 ): Promise<Record<string, string | null>>`
 
-### Sub-sistem: `dead:legacynoteof:penjelasan` (Klaster #472)
+### Sub-sistem: `dead:legacynoteof:penjelasan` (Klaster #466)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`legacyNoteOf`](file://apps/web/src/utils/deadStock.ts#L228-L234) (`apps/web/src/utils/deadStock.ts:228-234`) [Tipe: `function`]
@@ -2478,7 +2489,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   ctx: { hasOut: (item: StoreItem) => boolean; daysSinceLastOut: (item: StoreItem) => number },
 ): DeadStockRow[]`
 
-### Sub-sistem: `fmt:yyyy:iso` (Klaster #487)
+### Sub-sistem: `fmt:yyyy:iso` (Klaster #481)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`parseISO`](file://apps/web/src/utils/format.ts#L8-L13) (`apps/web/src/utils/format.ts:8-13`) [Tipe: `function`]
@@ -2491,7 +2502,19 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`fmtRentang`](file://apps/web/src/utils/format.ts#L49-L59) (`apps/web/src/utils/format.ts:49-59`) [Tipe: `function`]
     - *Signature:* `(a: string | null | undefined, b: string | null | undefined): string`
 
-### Sub-sistem: `warn:warnrankof:warnlevelof` (Klaster #495)
+### Sub-sistem: `fmtjumlah:wbsmaterialmodal:save` (Klaster #801)
+- **Kepadatan Simbol:** 4 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`fmtJumlah`](file://apps/web/src/utils/format.ts#L94-L97) (`apps/web/src/utils/format.ts:94-97`) [Tipe: `function`]
+    - *Signature:* `(n: number): string`
+  - [`removeRow`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L77-L85) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:77-85`) [Tipe: `function`]
+    - *Signature:* `(bom: StoreItem): Promise<void>`
+  - [`save`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L46-L75) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:46-75`) [Tipe: `function`]
+    - *Signature:* `(): Promise<void>`
+  - [`WbsMaterialModal`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L30-L136) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:30-136`) [Tipe: `function`]
+    - *Signature:* `({ projectId, task, onClose }: { projectId: string; task: string | null; onClose: () => void })`
+
+### Sub-sistem: `warn:warnrankof:warnlevelof` (Klaster #489)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`warnLevelOf`](file://apps/web/src/utils/inventoryWarn.ts#L153-L179) (`apps/web/src/utils/inventoryWarn.ts:153-179`) [Tipe: `function`]
@@ -2503,7 +2526,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`needsAction`](file://apps/web/src/utils/inventoryWarn.ts#L182-L185) (`apps/web/src/utils/inventoryWarn.ts:182-185`) [Tipe: `function`]
     - *Signature:* `(item: StoreItem, warehouse?: string): boolean`
 
-### Sub-sistem: `stable:blank:comparestabletiebreaker` (Klaster #501)
+### Sub-sistem: `stable:blank:comparestabletiebreaker` (Klaster #495)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`stableSortRows`](file://apps/web/src/utils/listPersistence.ts#L41-L64) (`apps/web/src/utils/listPersistence.ts:41-64`) [Tipe: `function`]
@@ -2527,7 +2550,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   filterPredicate?: (row: T) => boolean;
 }): ReconcileResult`
 
-### Sub-sistem: `boq:task:progress` (Klaster #542)
+### Sub-sistem: `boq:task:progress` (Klaster #536)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`calcProjectProgress`](file://apps/web/src/utils/projectProgress.ts#L38-L78) (`apps/web/src/utils/projectProgress.ts:38-78`) [Tipe: `function`]
@@ -2552,7 +2575,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   boqList?: StoreItem[],
 ): number`
 
-### Sub-sistem: `xml:text:readxlsxrows` (Klaster #550)
+### Sub-sistem: `xml:text:readxlsxrows` (Klaster #544)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`readXlsxRows`](file://apps/web/src/utils/readSheet.ts#L66-L95) (`apps/web/src/utils/readSheet.ts:66-95`) [Tipe: `function`]
@@ -2567,57 +2590,19 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(xml: string): string`
     - *Deskripsi:* /** Teks dari semua <t> di dalam potongan XML (rich text dipecah per run). */
 
-### Sub-sistem: `wbstask:existing:risiko` (Klaster #554)
+### Sub-sistem: `base:totalbase:issuebase` (Klaster #562)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`existingId`](file://apps/web/src/utils/riskAuto.ts#L88-L97) (`apps/web/src/utils/riskAuto.ts:88-97`) [Tipe: `function`]
-    - *Signature:* `(
-  existing: readonly StoreItem[],
-  source: "WBS" | "WO",
-  wbsTask: string,
-): string | null`
-    - *Deskripsi:* /** ID risiko yang terkait dengan source+wbsTask tertentu. */
-  - [`hasExisting`](file://apps/web/src/utils/riskAuto.ts#L77-L85) (`apps/web/src/utils/riskAuto.ts:77-85`) [Tipe: `function`]
-    - *Signature:* `(
-  existing: readonly StoreItem[],
-  source: "WBS" | "WO",
-  wbsTask: string,
-): boolean`
-    - *Deskripsi:* /** Deduplikasi: apakah risiko dengan source+wbsTask yang sama sudah ada? */
-  - [`daysUntilMonthEnd`](file://apps/web/src/utils/riskAuto.ts#L43-L49) (`apps/web/src/utils/riskAuto.ts:43-49`) [Tipe: `function`]
-    - *Signature:* `(month: string, today: string): number | null`
-    - *Deskripsi:* /** Selisih hari dari hari ini ke akhir bulan `YYYY-MM`; negatif = lewat. */
-  - [`generateRisksFromWbs`](file://apps/web/src/utils/riskAuto.ts#L119-L190) (`apps/web/src/utils/riskAuto.ts:119-190`) [Tipe: `function`]
-    - *Signature:* `(
-  projectId: string,
-  wbs: readonly WbsTaskLike[],
-  existingRisks: readonly StoreItem[],
-  today: string,
-  milestoneDays: number,
-): RiskAutoResult`
+  - [`round3`](file://apps/web/src/utils/stockIssue.ts#L14-L14) (`apps/web/src/utils/stockIssue.ts:14-14`) [Tipe: `function`]
+    - *Signature:* `(n: number): number`
+  - [`totalBase`](file://apps/web/src/utils/stockIssue.ts#L16-L18) (`apps/web/src/utils/stockIssue.ts:16-18`) [Tipe: `function`]
+    - *Signature:* `(s: StockState, perUnit: number): number`
+  - [`issueBase`](file://apps/web/src/utils/stockIssue.ts#L23-L34) (`apps/web/src/utils/stockIssue.ts:23-34`) [Tipe: `function`]
+    - *Signature:* `(s: StockState, perUnit: number, qty: number): IssueResult`
+  - [`plateCutKg`](file://apps/web/src/utils/stockIssue.ts#L37-L44) (`apps/web/src/utils/stockIssue.ts:37-44`) [Tipe: `function`]
+    - *Signature:* `(conv: UnitConversion, lengthMm: number, widthMm: number): number | null`
 
-### Sub-sistem: `likelihood:hari:selisih` (Klaster #555)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`impactFromWeight`](file://apps/web/src/utils/riskAuto.ts#L70-L74) (`apps/web/src/utils/riskAuto.ts:70-74`) [Tipe: `function`]
-    - *Signature:* `(weight: number): "Rendah" | "Sedang" | "Tinggi"`
-    - *Deskripsi:* /** Impact berdasarkan bobot WBS atau persentase milestone WO. */
-  - [`likelihoodFromDays`](file://apps/web/src/utils/riskAuto.ts#L63-L67) (`apps/web/src/utils/riskAuto.ts:63-67`) [Tipe: `function`]
-    - *Signature:* `(days: number): "Rendah" | "Sedang" | "Tinggi"`
-    - *Deskripsi:* /** Likelihood berdasarkan selisih hari ke jatuh tempo. */
-  - [`daysUntilDate`](file://apps/web/src/utils/riskAuto.ts#L52-L60) (`apps/web/src/utils/riskAuto.ts:52-60`) [Tipe: `function`]
-    - *Signature:* `(date: string, today: string): number | null`
-    - *Deskripsi:* /** Selisih hari dari hari ini ke tanggal `YYYY-MM-DD`; negatif = lewat. */
-  - [`generateRisksFromWo`](file://apps/web/src/utils/riskAuto.ts#L202-L271) (`apps/web/src/utils/riskAuto.ts:202-271`) [Tipe: `function`]
-    - *Signature:* `(
-  projectId: string,
-  wos: readonly StoreItem[],
-  existingRisks: readonly StoreItem[],
-  today: string,
-  milestoneDays: number,
-): RiskAutoResult`
-
-### Sub-sistem: `jam:cmpjam:jamof` (Klaster #576)
+### Sub-sistem: `jam:cmpjam:jamof` (Klaster #569)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toMinutes`](file://apps/web/src/utils/time24.ts#L49-L53) (`apps/web/src/utils/time24.ts:49-53`) [Tipe: `function`]
@@ -2629,54 +2614,45 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`jamOf`](file://apps/web/src/utils/time24.ts#L103-L106) (`apps/web/src/utils/time24.ts:103-106`) [Tipe: `function`]
     - *Signature:* `(t: unknown): number | null`
 
-### Sub-sistem: `created:tabel:data` (Klaster #579)
+### Sub-sistem: `category:purchase:per` (Klaster #579)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`isStamp`](file://apps/web/src/utils/timestamps.ts#L17-L19) (`apps/web/src/utils/timestamps.ts:17-19`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): v is string`
-    - *Deskripsi:* /**
- * Satu-satunya sumber nama field tanggal rekam. Dipakai store saat menulis,
- * tabel saat menampilkan, dan probe saat memverifikasi.
- *
- * Kenapa BUKAN kolom `created_at` di SQL: setiap tabel hanya punya
- * `id, branch, data, updated_at`, dan seluruh isi rekam disimpan sebagai JSON
- * di kolom `data`. Menambah kolom berarti ALTER di ~25 tabel untuk data yang
- * sebenarnya sudah muat di dalam `data` - dan `updated_at` yang ada sekarang
- * tidak bisa dipakai karena nilainya ditimpa setiap PATCH (hanya concurrency
- * token, bukan "terakhir diubah").
- */
-  - [`createdAtOf`](file://apps/web/src/utils/timestamps.ts#L58-L60) (`apps/web/src/utils/timestamps.ts:58-60`) [Tipe: `function`]
-    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
-  - [`createdAtRaw`](file://apps/web/src/utils/timestamps.ts#L63-L66) (`apps/web/src/utils/timestamps.ts:63-66`) [Tipe: `function`]
-    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
-  - [`stampCreated`](file://apps/web/src/utils/timestamps.ts#L84-L88) (`apps/web/src/utils/timestamps.ts:84-88`) [Tipe: `function`]
-    - *Signature:* `(row: T): T`
+  - [`normalizedCategory`](file://apps/web/src/utils/unitConversion.ts#L69-L71) (`apps/web/src/utils/unitConversion.ts:69-71`) [Tipe: `function`]
+    - *Signature:* `(value: unknown): string`
+    - *Deskripsi:* /** Satuan dasar yang lazim untuk kemasan tanpa aturan kategori: roll dikeluarkan
+ *  per meter, drum/galon/kaleng per liter. Dipakai sebagai isian awal. */
+  - [`conversionRuleForCategory`](file://apps/web/src/utils/unitConversion.ts#L83-L85) (`apps/web/src/utils/unitConversion.ts:83-85`) [Tipe: `function`]
+    - *Signature:* `(category: unknown): UnitConversionRule | null`
+  - [`purchaseUnitsForCategory`](file://apps/web/src/utils/unitConversion.ts#L87-L95) (`apps/web/src/utils/unitConversion.ts:87-95`) [Tipe: `function`]
+    - *Signature:* `(category: unknown, currentUnit = ""): string[]`
+  - [`defaultPurchaseUnitForCategory`](file://apps/web/src/utils/unitConversion.ts#L97-L102) (`apps/web/src/utils/unitConversion.ts:97-102`) [Tipe: `function`]
+    - *Signature:* `(category: unknown, currentUnit: string): string`
 
-### Sub-sistem: `2026:updated:tanggal` (Klaster #580)
+### Sub-sistem: `required:unit:conversion` (Klaster #581)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`asComparable`](file://apps/web/src/utils/timestamps.ts#L33-L37) (`apps/web/src/utils/timestamps.ts:33-37`) [Tipe: `function`]
-    - *Signature:* `(v: string | null): string | null`
-    - *Deskripsi:* /**
- * Menyeragamkan bentuk tanggal supaya bisa diurutkan dengan perbandingan
- * leksikografis.
- *
- * Tanpa ini, kolom tanggal yang bisa disortir diam-diam menampilkan urutan
- * terbalik: `updated_at` dari server adalah ISO penuh
- * ("2026-10-04T08:00:00.000Z") sementara `createdAt` bisa "2026-10-04" atau
- * "2026-1-5". Dibandingkan sebagai teks, "2026-1-5" lebih kecil dari
- * "2026-10-2" padahal Januari lebih dulu - jadi tanggal paling awal justru
- * turun paling bawah. Semua bentuk yang bisa diparse diubah ke ISO penuh
- * supaya urutannya benar.
- */
-  - [`lastTouchedAt`](file://apps/web/src/utils/timestamps.ts#L102-L109) (`apps/web/src/utils/timestamps.ts:102-109`) [Tipe: `function`]
-    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
-  - [`updatedAtOf`](file://apps/web/src/utils/timestamps.ts#L69-L71) (`apps/web/src/utils/timestamps.ts:69-71`) [Tipe: `function`]
-    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
-  - [`updatedAtRaw`](file://apps/web/src/utils/timestamps.ts#L74-L77) (`apps/web/src/utils/timestamps.ts:74-77`) [Tipe: `function`]
-    - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
+  - [`hasUnitConversionDraft`](file://apps/web/src/utils/unitConversion.ts#L104-L113) (`apps/web/src/utils/unitConversion.ts:104-113`) [Tipe: `function`]
+    - *Signature:* `(draft: UnitConversionDraft): boolean`
+  - [`eceranEnabled`](file://apps/web/src/utils/unitConversion.ts#L132-L134) (`apps/web/src/utils/unitConversion.ts:132-134`) [Tipe: `function`]
+    - *Signature:* `(value: unknown): boolean`
+    - *Deskripsi:* /** Satuan dasar yang lazim untuk kemasan tanpa aturan kategori: roll dikeluarkan
+ *  per meter, drum/galon/kaleng per liter. Dipakai sebagai isian awal. */
+  - [`unitConversionRequired`](file://apps/web/src/utils/unitConversion.ts#L115-L121) (`apps/web/src/utils/unitConversion.ts:115-121`) [Tipe: `function`]
+    - *Signature:* `(
+  category: unknown,
+  eceran: boolean,
+  draft: UnitConversionDraft,
+): boolean`
+  - [`unitConversionRequiredForEdit`](file://apps/web/src/utils/unitConversion.ts#L137-L159) (`apps/web/src/utils/unitConversion.ts:137-159`) [Tipe: `function`]
+    - *Signature:* `(
+  category: unknown,
+  purchaseUnit: string,
+  eceran: boolean,
+  draft: UnitConversionDraft,
+  existing?: ExistingUnitConversionState | null,
+): boolean`
 
-### Sub-sistem: `movement:movementfromwh:movementflow` (Klaster #599)
+### Sub-sistem: `movement:movementfromwh:movementflow` (Klaster #591)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`movementFlow`](file://apps/web/src/utils/warehouse.ts#L214-L262) (`apps/web/src/utils/warehouse.ts:214-262`) [Tipe: `function`]
@@ -2688,22 +2664,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`movementToWh`](file://apps/web/src/utils/warehouse.ts#L269-L271) (`apps/web/src/utils/warehouse.ts:269-271`) [Tipe: `function`]
     - *Signature:* `(m: StoreItem): string`
 
-### Sub-sistem: `push:milestone:womilestonebytitle` (Klaster #605)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`push`](file://apps/web/src/utils/woMilestones.ts#L120-L125) (`apps/web/src/utils/woMilestones.ts:120-125`) [Tipe: `function`]
-    - *Signature:* `(m: WoMilestone): void`
-  - [`woMilestonesOf`](file://apps/web/src/utils/woMilestones.ts#L32-L53) (`apps/web/src/utils/woMilestones.ts:32-53`) [Tipe: `function`]
-    - *Signature:* `(wo: StoreItem | null | undefined): WoMilestone[]`
-  - [`terminMilestoneOptions`](file://apps/web/src/utils/woMilestones.ts#L114-L136) (`apps/web/src/utils/woMilestones.ts:114-136`) [Tipe: `function`]
-    - *Signature:* `(
-  sub: StoreItem | null | undefined,
-  wo: StoreItem | null | undefined,
-): WoMilestone[]`
-  - [`woMilestoneByTitle`](file://apps/web/src/utils/woMilestones.ts#L102-L104) (`apps/web/src/utils/woMilestones.ts:102-104`) [Tipe: `function`]
-    - *Signature:* `(wo: StoreItem | null | undefined, title: string): WoMilestone | undefined`
-
-### Sub-sistem: `dimensiplanned:blocks:chartblock` (Klaster #631)
+### Sub-sistem: `dimensiplanned:chartblock:blocks` (Klaster #622)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`chartHeight`](file://services/api/src/pdf/chart.ts#L264-L278) (`services/api/src/pdf/chart.ts:264-278`) [Tipe: `function`]
@@ -2718,7 +2679,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`planChartHeight`](file://services/api/src/pdf/chart.ts#L240-L242) (`services/api/src/pdf/chart.ts:240-242`) [Tipe: `function`]
     - *Signature:* `(spec: ChartSpec, width: number): { height: number }`
 
-### Sub-sistem: `cabang:load:laporan` (Klaster #648)
+### Sub-sistem: `cabang:load:laporan` (Klaster #637)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadMany`](file://services/api/src/pdf/documents/shared.ts#L267-L285) (`services/api/src/pdf/documents/shared.ts:267-285`) [Tipe: `function`]
@@ -2736,7 +2697,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(ctx: RenderContext, fields: string[]): Promise<Collections>`
     - *Deskripsi:* /** Koleksi laporan + penyaring cabang. */
 
-### Sub-sistem: `docs:operation:csp` (Klaster #669)
+### Sub-sistem: `docs:operation:csp` (Klaster #657)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tagOf`](file://services/api/src/routes/apiDocs.ts#L54-L58) (`services/api/src/routes/apiDocs.ts:54-58`) [Tipe: `function`]
@@ -2750,7 +2711,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`registerApiDocs`](file://services/api/src/routes/apiDocs.ts#L137-L142) (`services/api/src/routes/apiDocs.ts:137-142`) [Tipe: `function`]
     - *Signature:* `(app: FastifyInstance): void`
 
-### Sub-sistem: `parse:registerauditroutes:parsediff` (Klaster #673)
+### Sub-sistem: `parse:registerauditroutes:parsediff` (Klaster #660)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`parseLimit`](file://services/api/src/routes/audit.ts#L18-L22) (`services/api/src/routes/audit.ts:18-22`) [Tipe: `function`]
@@ -2762,23 +2723,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`registerAuditRoutes`](file://services/api/src/routes/audit.ts#L38-L92) (`services/api/src/routes/audit.ts:38-92`) [Tipe: `function`]
     - *Signature:* `(app: FastifyInstance): void`
 
-### Sub-sistem: `parsial:divalidasi:sengaja` (Klaster #679)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`drydockDay`](file://services/api/src/routes/crud.ts#L265-L270) (`services/api/src/routes/crud.ts:265-270`) [Tipe: `function`]
-    - *Signature:* `(value: unknown): number | null`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-  - [`witaTodayDay`](file://services/api/src/routes/crud.ts#L272-L277) (`services/api/src/routes/crud.ts:272-277`) [Tipe: `function`]
-    - *Signature:* `(): number`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-  - [`drydockDateError`](file://services/api/src/routes/crud.ts#L279-L289) (`services/api/src/routes/crud.ts:279-289`) [Tipe: `function`]
-    - *Signature:* `(data: Record<string, unknown>): string | null`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-  - [`normalizeDrydockOffsets`](file://services/api/src/routes/crud.ts#L303-L309) (`services/api/src/routes/crud.ts:303-309`) [Tipe: `function`]
-    - *Signature:* `(data: Record<string, unknown>): Record<string, unknown>`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-
-### Sub-sistem: `related:listwhere:getrow` (Klaster #693)
+### Sub-sistem: `related:listwhere:getrow` (Klaster #677)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`listWhere`](file://services/api/src/routes/relations.ts#L68-L69) (`services/api/src/routes/relations.ts:68-69`) [Tipe: `function`]
@@ -2791,7 +2736,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`registerRelations`](file://services/api/src/routes/relations.ts#L65-L156) (`services/api/src/routes/relations.ts:65-156`) [Tipe: `function`]
     - *Signature:* `(app: FastifyInstance): void`
 
-### Sub-sistem: `tick:start:scanmodal` (Klaster #731)
+### Sub-sistem: `tick:start:scanmodal` (Klaster #712)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`start`](file://apps/web/src/pages/inventori/Inventory.tsx#L207-L246) (`apps/web/src/pages/inventori/Inventory.tsx:207-246`) [Tipe: `function`]
@@ -2803,23 +2748,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ScanModal`](file://apps/web/src/pages/inventori/Inventory.tsx#L191-L269) (`apps/web/src/pages/inventori/Inventory.tsx:191-269`) [Tipe: `function`]
     - *Signature:* `({ onDetect, onClose }: { onDetect: (value: string) => void; onClose: () => void })`
 
-### Sub-sistem: `amt:txt:sptfilingform` (Klaster #760)
-- **Kepadatan Simbol:** 4 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`amt`](file://apps/web/src/pages/keuangan/Finance.tsx#L699-L711) (`apps/web/src/pages/keuangan/Finance.tsx:699-711`) [Tipe: `function`]
-    - *Signature:* `(f: SptNumField, label: string): ReactElement`
-  - [`txt`](file://apps/web/src/pages/keuangan/Finance.tsx#L687-L698) (`apps/web/src/pages/keuangan/Finance.tsx:687-698`) [Tipe: `function`]
-    - *Signature:* `(f: SptNumField, label: string, ph = ""): ReactElement`
-  - [`save`](file://apps/web/src/pages/keuangan/Finance.tsx#L679-L685) (`apps/web/src/pages/keuangan/Finance.tsx:679-685`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-  - [`SptFilingForm`](file://apps/web/src/pages/keuangan/Finance.tsx#L652-L846) (`apps/web/src/pages/keuangan/Finance.tsx:652-846`) [Tipe: `function`]
-    - *Signature:* `({ period, locked, onSave }: {
-  period: StoreItem;
-  locked: boolean;
-  onSave: (patch: Record<string, unknown>) => Promise<void>;
-})`
-
-### Sub-sistem: `init:iso:dockplancard` (Klaster #801)
+### Sub-sistem: `init:iso:dockplancard` (Klaster #783)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`init`](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L24-L24) (`apps/web/src/pages/proyek/DockPlanCard.tsx:24-24`) [Tipe: `function`]
@@ -2832,7 +2761,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`DockPlanCard`](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L21-L80) (`apps/web/src/pages/proyek/DockPlanCard.tsx:21-80`) [Tipe: `function`]
     - *Signature:* `({ project, drydocks, canEdit, onSave }: Props)`
 
-### Sub-sistem: `thumbs:wbstree:phaseof` (Klaster #821)
+### Sub-sistem: `thumbs:wbstree:phaseof` (Klaster #803)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`thumbs`](file://apps/web/src/pages/proyek/WbsTree.tsx#L43-L52) (`apps/web/src/pages/proyek/WbsTree.tsx:43-52`) [Tipe: `function`]
@@ -2845,7 +2774,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`WbsTree`](file://apps/web/src/pages/proyek/WbsTree.tsx#L38-L121) (`apps/web/src/pages/proyek/WbsTree.tsx:38-121`) [Tipe: `function`]
     - *Signature:* `({ wbs }: { wbs: WbsItem[] })`
 
-### Sub-sistem: `belum:dikenali:lookup` (Klaster #823)
+### Sub-sistem: `belum:dikenali:lookup` (Klaster #805)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`lookup`](file://apps/web/src/pages/publik/CutiQr.tsx#L50-L61) (`apps/web/src/pages/publik/CutiQr.tsx:50-61`) [Tipe: `function`]
@@ -2860,7 +2789,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`CutiQr`](file://apps/web/src/pages/publik/CutiQr.tsx#L25-L146) (`apps/web/src/pages/publik/CutiQr.tsx:25-146`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `coa:buildcoatree:setlevels` (Klaster #890)
+### Sub-sistem: `coa:buildcoatree:setlevels` (Klaster #875)
 - **Kepadatan Simbol:** 4 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setLevels`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L134-L139) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:134-139`) [Tipe: `function`]
@@ -2872,7 +2801,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`buildCoaTree`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L98-L144) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:98-144`) [Tipe: `function`]
     - *Signature:* `(rows: StoreItem[]): CoaTreeNode[]`
 
-### Sub-sistem: `observe:apply:installicontooltips` (Klaster #490)
+### Sub-sistem: `observe:apply:installicontooltips` (Klaster #484)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`apply`](file://apps/web/src/utils/iconTooltips.ts#L12-L18) (`apps/web/src/utils/iconTooltips.ts:12-18`) [Tipe: `function`]
@@ -2882,7 +2811,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`installIconTooltips`](file://apps/web/src/utils/iconTooltips.ts#L20-L30) (`apps/web/src/utils/iconTooltips.ts:20-30`) [Tipe: `function`]
     - *Signature:* `(): void`
 
-### Sub-sistem: `cleanup:0003:main` (Klaster #64)
+### Sub-sistem: `cleanup:0003:main` (Klaster #63)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/branch-scope-probe.ts#L30-L39) (`services/api/scripts/branch-scope-probe.ts:30-39`) [Tipe: `function`]
@@ -2893,7 +2822,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `()`
     - *Deskripsi:* // Security Probe: Scope Cabang di Server (F2-06 / ADR-0003 Jalur A)
 
-### Sub-sistem: `patch:main:assert` (Klaster #68)
+### Sub-sistem: `patch:main:assert` (Klaster #67)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`patch`](file://services/api/scripts/concurrency-probe.ts#L20-L20) (`services/api/scripts/concurrency-probe.ts:20-20`) [Tipe: `function`]
@@ -2903,7 +2832,17 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/concurrency-probe.ts#L7-L46) (`services/api/scripts/concurrency-probe.ts:7-46`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `loan:main:assert` (Klaster #74)
+### Sub-sistem: `create:main:assert` (Klaster #71)
+- **Kepadatan Simbol:** 3 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`create`](file://services/api/scripts/drydock-booking-probe.ts#L46-L61) (`services/api/scripts/drydock-booking-probe.ts:46-61`) [Tipe: `function`]
+    - *Signature:* `(dockId: string, startDate: string, endDate: string, branch?: string)`
+  - [`assert`](file://services/api/scripts/drydock-booking-probe.ts#L29-L33) (`services/api/scripts/drydock-booking-probe.ts:29-33`) [Tipe: `function`]
+    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
+  - [`main`](file://services/api/scripts/drydock-booking-probe.ts#L16-L160) (`services/api/scripts/drydock-booking-probe.ts:16-160`) [Tipe: `function`]
+    - *Signature:* `(): Promise<void>`
+
+### Sub-sistem: `loan:main:assert` (Klaster #73)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loan`](file://services/api/scripts/equipment-loan-probe.ts#L21-L25) (`services/api/scripts/equipment-loan-probe.ts:21-25`) [Tipe: `function`]
@@ -2913,7 +2852,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/equipment-loan-probe.ts#L7-L48) (`services/api/scripts/equipment-loan-probe.ts:7-48`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `main:assert:headersfor` (Klaster #76)
+### Sub-sistem: `main:assert:headersfor` (Klaster #75)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/files-privacy-probe.ts#L11-L14) (`services/api/scripts/files-privacy-probe.ts:11-14`) [Tipe: `function`]
@@ -2923,7 +2862,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/files-privacy-probe.ts#L6-L50) (`services/api/scripts/files-privacy-probe.ts:6-50`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `bru:put:ispublicroute` (Klaster #77)
+### Sub-sistem: `bru:put:ispublicroute` (Klaster #76)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`put`](file://services/api/scripts/gen-bruno.ts#L25-L25) (`services/api/scripts/gen-bruno.ts:25-25`) [Tipe: `function`]
@@ -2933,7 +2872,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`bru`](file://services/api/scripts/gen-bruno.ts#L30-L49) (`services/api/scripts/gen-bruno.ts:30-49`) [Tipe: `function`]
     - *Signature:* `(folder: string, name: string, method: string, path: string, opts: { body?: string; docs?: string; script?: string; query?: Record<string, string> } = {}): void`
 
-### Sub-sistem: `tok:main:assert` (Klaster #81)
+### Sub-sistem: `tok:main:assert` (Klaster #80)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tok`](file://services/api/scripts/hr-letter-probe.ts#L40-L43) (`services/api/scripts/hr-letter-probe.ts:40-43`) [Tipe: `function`]
@@ -2943,7 +2882,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/hr-letter-probe.ts#L11-L66) (`services/api/scripts/hr-letter-probe.ts:11-66`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `runhelperchecks:main:helper` (Klaster #82)
+### Sub-sistem: `runhelperchecks:main:helper` (Klaster #81)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/inventory-conversion-probe.ts#L14-L21) (`services/api/scripts/inventory-conversion-probe.ts:14-21`) [Tipe: `function`]
@@ -2953,7 +2892,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/inventory-conversion-probe.ts#L243-L249) (`services/api/scripts/inventory-conversion-probe.ts:243-249`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `buildplan:stringfield:stabledocid` (Klaster #91)
+### Sub-sistem: `buildplan:stringfield:stabledocid` (Klaster #90)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`buildPlan`](file://services/api/scripts/migrate-boq-docs.ts#L73-L152) (`services/api/scripts/migrate-boq-docs.ts:73-152`) [Tipe: `function`]
@@ -2963,36 +2902,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stableDocId`](file://services/api/scripts/migrate-boq-docs.ts#L64-L67) (`services/api/scripts/migrate-boq-docs.ts:64-67`) [Tipe: `function`]
     - *Signature:* `(projectId: string): string`
 
-### Sub-sistem: `diuji:asal:aplikasi` (Klaster #102)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`reportRuns`](file://services/api/scripts/pdf-audit-probe.ts#L36-L46) (`services/api/scripts/pdf-audit-probe.ts:36-46`) [Tipe: `function`]
-    - *Signature:* `(kind: string): Promise<Run[]>`
-    - *Deskripsi:* /** Laporan tidak punya baris asal: diuji dengan filter yang dipakai aplikasi. */
-  - [`idsFor`](file://services/api/scripts/pdf-audit-probe.ts#L24-L31) (`services/api/scripts/pdf-audit-probe.ts:24-31`) [Tipe: `function`]
-    - *Signature:* `(kind: string, field: string): Promise<string[]>`
-  - [`main`](file://services/api/scripts/pdf-audit-probe.ts#L48-L90) (`services/api/scripts/pdf-audit-probe.ts:48-90`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-    - *Deskripsi:* /** Laporan tidak punya baris asal: diuji dengan filter yang dipakai aplikasi. */
-
-### Sub-sistem: `benar:knowntables:kebenaran` (Klaster #107)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`checkGeometry`](file://services/api/src/pdf/document.ts#L374-L398) (`services/api/src/pdf/document.ts:374-398`) [Tipe: `function`]
-    - *Signature:* `(
-  res: RenderResult,
-  margin: number,
-  page: { width: number; height: number },
-  opts: { footerZoneMm?: number } = {},
-): GeometryProblem[]`
-  - [`knownTables`](file://services/api/scripts/pdf-probe.ts#L361-L371) (`services/api/scripts/pdf-probe.ts:361-371`) [Tipe: `function`]
-    - *Signature:* `(): Set<string>`
-    - *Deskripsi:* /** Tabel yang benar-benar ada, dibaca dari berkas migrasi (sumber kebenaran). */
-  - [`registryIntegrity`](file://services/api/scripts/pdf-probe.ts#L906-L950) (`services/api/scripts/pdf-probe.ts:906-950`) [Tipe: `function`]
-    - *Signature:* `(): void`
-    - *Deskripsi:* /** Model minimal per kind - cukup panjang untuk menguji pagination. */
-
-### Sub-sistem: `main:assert:headersfor` (Klaster #113)
+### Sub-sistem: `main:assert:headersfor` (Klaster #110)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/read-models-probe.ts#L13-L16) (`services/api/scripts/read-models-probe.ts:13-16`) [Tipe: `function`]
@@ -3002,7 +2912,17 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/read-models-probe.ts#L8-L69) (`services/api/scripts/read-models-probe.ts:8-69`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `visit:snapshotdirectory:directory` (Klaster #116)
+### Sub-sistem: `call:main:assert` (Klaster #111)
+- **Kepadatan Simbol:** 3 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://services/api/scripts/relations-probe.ts#L16-L19) (`services/api/scripts/relations-probe.ts:16-19`) [Tipe: `function`]
+    - *Signature:* `(name: string, cond: boolean, detail = ""): void`
+  - [`call`](file://services/api/scripts/relations-probe.ts#L25-L26) (`services/api/scripts/relations-probe.ts:25-26`) [Tipe: `function`]
+    - *Signature:* `(method: "GET" | "POST" | "DELETE", url: string, payload?: unknown)`
+  - [`main`](file://services/api/scripts/relations-probe.ts#L11-L96) (`services/api/scripts/relations-probe.ts:11-96`) [Tipe: `function`]
+    - *Signature:* `(): Promise<void>`
+
+### Sub-sistem: `visit:snapshotdirectory:directory` (Klaster #113)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`visit`](file://services/api/scripts/security-probe-isolation-probe.ts#L15-L28) (`services/api/scripts/security-probe-isolation-probe.ts:15-28`) [Tipe: `function`]
@@ -3012,7 +2932,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`snapshotDirectory`](file://services/api/scripts/security-probe-isolation-probe.ts#L13-L31) (`services/api/scripts/security-probe-isolation-probe.ts:13-31`) [Tipe: `function`]
     - *Signature:* `(root: string): string[]`
 
-### Sub-sistem: `pickstring:findduplicates:main` (Klaster #129)
+### Sub-sistem: `pickstring:findduplicates:main` (Klaster #126)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`findDuplicates`](file://services/api/src/auditDuplicates.ts#L48-L72) (`services/api/src/auditDuplicates.ts:48-72`) [Tipe: `function`]
@@ -3022,17 +2942,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/src/auditDuplicates.ts#L74-L114) (`services/api/src/auditDuplicates.ts:74-114`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `token:getsecret:secret` (Klaster #132)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`getSecret`](file://services/api/src/auth.ts#L28-L31) (`services/api/src/auth.ts:28-31`) [Tipe: `function`]
-    - *Signature:* `(): string`
-  - [`signToken`](file://services/api/src/auth.ts#L41-L54) (`services/api/src/auth.ts:41-54`) [Tipe: `function`]
-    - *Signature:* `(payload: AuthUser): string`
-  - [`verifyToken`](file://services/api/src/auth.ts#L56-L70) (`services/api/src/auth.ts:56-70`) [Tipe: `function`]
-    - *Signature:* `(token: string): AuthUser`
-
-### Sub-sistem: `real:loan:isactiveloan` (Klaster #138)
+### Sub-sistem: `real:loan:isactiveloan` (Klaster #135)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`real`](file://services/api/src/bookingGuard.ts#L23-L23) (`services/api/src/bookingGuard.ts:23-23`) [Tipe: `function`]
@@ -3043,7 +2953,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`loanOverlapError`](file://services/api/src/bookingGuard.ts#L14-L40) (`services/api/src/bookingGuard.ts:14-40`) [Tipe: `function`]
     - *Signature:* `(table: string, id: string | null, after: Data | null): Promise<string | null>`
 
-### Sub-sistem: `islocked:boqlockerror:checkdocunique` (Klaster #143)
+### Sub-sistem: `islocked:boqlockerror:checkdocunique` (Klaster #139)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isLocked`](file://services/api/src/boqDocs.ts#L54-L56) (`services/api/src/boqDocs.ts:54-56`) [Tipe: `function`]
@@ -3053,19 +2963,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`boqLockError`](file://services/api/src/boqDocs.ts#L96-L120) (`services/api/src/boqDocs.ts:96-120`) [Tipe: `function`]
     - *Signature:* `(table: string, before: Data | null, after: Data | null): Promise<string | null>`
 
-### Sub-sistem: `diterapkan:keputusan:bukti` (Klaster #148)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`loadCo`](file://services/api/src/changeOrders.ts#L63-L67) (`services/api/src/changeOrders.ts:63-67`) [Tipe: `function`]
-    - *Signature:* `(id: string): Promise<{ row: Row; data: Data }>`
-    - *Deskripsi:* /** DELETE: CO yang sudah disetujui/diterapkan adalah bukti keputusan — tidak boleh dihapus. */
-  - [`saveCo`](file://services/api/src/changeOrders.ts#L69-L74) (`services/api/src/changeOrders.ts:69-74`) [Tipe: `function`]
-    - *Signature:* `(row: Row, data: Data, now: string): Promise<void>`
-    - *Deskripsi:* /** DELETE: CO yang sudah disetujui/diterapkan adalah bukti keputusan — tidak boleh dihapus. */
-  - [`decideChangeOrder`](file://services/api/src/changeOrders.ts#L77-L88) (`services/api/src/changeOrders.ts:77-88`) [Tipe: `function`]
-    - *Signature:* `(id: string, decision: "Disetujui" | "Ditolak", role: unknown, actor: string, note: string): Promise<Data>`
-
-### Sub-sistem: `fit:one:dock` (Klaster #153)
+### Sub-sistem: `fit:one:dock` (Klaster #148)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`dockFitIssue`](file://services/api/src/dockFit.ts#L16-L25) (`services/api/src/dockFit.ts:16-25`) [Tipe: `function`]
@@ -3076,7 +2974,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`dockFitError`](file://services/api/src/dockFit.ts#L34-L50) (`services/api/src/dockFit.ts:34-50`) [Tipe: `function`]
     - *Signature:* `(table: string, after: Data | null, role: string | undefined): Promise<string | null>`
 
-### Sub-sistem: `stages:stamp:stampwbsroles` (Klaster #156)
+### Sub-sistem: `stages:stamp:stampwbsroles` (Klaster #151)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`stages`](file://services/api/src/domainGuards.ts#L23-L23) (`services/api/src/domainGuards.ts:23-23`) [Tipe: `function`]
@@ -3087,7 +2985,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stampWbsRoles`](file://services/api/src/domainGuards.ts#L77-L89) (`services/api/src/domainGuards.ts:77-89`) [Tipe: `function`]
     - *Signature:* `(before: unknown, after: unknown, role: string): unknown`
 
-### Sub-sistem: `generation:cache:samegeneration` (Klaster #174)
+### Sub-sistem: `generation:cache:samegeneration` (Klaster #168)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`cacheGeneration`](file://services/api/src/listCache.ts#L43-L45) (`services/api/src/listCache.ts:43-45`) [Tipe: `function`]
@@ -3102,7 +3000,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   generationAtStart?: CacheGeneration,
 ): Entry`
 
-### Sub-sistem: `checklist:checklisthook:hook` (Klaster #220)
+### Sub-sistem: `checklist:checklisthook:hook` (Klaster #214)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normalizedValue`](file://services/api/src/scoring.ts#L14-L26) (`services/api/src/scoring.ts:14-26`) [Tipe: `function`]
@@ -3112,7 +3010,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`checklistHook`](file://services/api/src/scoring.ts#L49-L77) (`services/api/src/scoring.ts:49-77`) [Tipe: `function`]
     - *Signature:* `(table: string, data: Data): Promise<{ data: Data } | { error: string }>`
 
-### Sub-sistem: `voucher:voucherprefix:prefix` (Klaster #244)
+### Sub-sistem: `voucher:voucherprefix:prefix` (Klaster #238)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`voucherPrefix`](file://services/api/src/voucher.ts#L14-L17) (`services/api/src/voucher.ts:14-17`) [Tipe: `function`]
@@ -3122,17 +3020,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`withVoucherNo`](file://services/api/src/voucher.ts#L35-L44) (`services/api/src/voucher.ts:35-44`) [Tipe: `function`]
     - *Signature:* `(data: Data): Promise<Data>`
 
-### Sub-sistem: `run:useauth:demoroleswitcher` (Klaster #275)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`run`](file://apps/web/src/components/DemoRoleSwitcher.tsx#L30-L36) (`apps/web/src/components/DemoRoleSwitcher.tsx:30-36`) [Tipe: `function`]
-    - *Signature:* `(fn: () => Promise<void>)`
-  - [`useAuth`](file://apps/web/src/auth/auth.tsx#L273-L275) (`apps/web/src/auth/auth.tsx:273-275`) [Tipe: `function`]
-    - *Signature:* `()`
-  - [`DemoRoleSwitcher`](file://apps/web/src/components/DemoRoleSwitcher.tsx#L12-L65) (`apps/web/src/components/DemoRoleSwitcher.tsx:12-65`) [Tipe: `function`]
-    - *Signature:* `()`
-
-### Sub-sistem: `alert:handleclose:rendericon` (Klaster #260)
+### Sub-sistem: `alert:handleclose:rendericon` (Klaster #254)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`renderIcon`](file://apps/web/src/components/Alert.tsx#L115-L121) (`apps/web/src/components/Alert.tsx:115-121`) [Tipe: `function`]
@@ -3152,7 +3040,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className = "",
 }: AlertProps)`
 
-### Sub-sistem: `handle:handleconfirm:alertmodal` (Klaster #262)
+### Sub-sistem: `handle:handleconfirm:alertmodal` (Klaster #256)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`handleConfirm`](file://apps/web/src/components/Alert.tsx#L247-L252) (`apps/web/src/components/Alert.tsx:247-252`) [Tipe: `function`]
@@ -3174,7 +3062,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onCancel,
 }: AlertModalProps)`
 
-### Sub-sistem: `umur:fill:meta` (Klaster #266)
+### Sub-sistem: `umur:fill:meta` (Klaster #260)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`fill`](file://apps/web/src/components/AlertBanner.tsx#L146-L148) (`apps/web/src/components/AlertBanner.tsx:146-148`) [Tipe: `function`]
@@ -3191,7 +3079,28 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `({ item }: { item: ModuleAlertItem })`
     - *Deskripsi:* /** Baris meta kecil: dampak + umur + tenggat. Tidak ada isinya, tidak tampil. */
 
-### Sub-sistem: `notes:remove:notesof` (Klaster #294)
+### Sub-sistem: `level:alertbannerview:countbylevel` (Klaster #510)
+- **Kepadatan Simbol:** 3 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`countByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L562-L566) (`apps/web/src/utils/moduleAlerts.ts:562-566`) [Tipe: `function`]
+    - *Signature:* `(items: readonly ModuleAlertItem[]): Record<AlertLevel, number>`
+  - [`groupByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L580-L593) (`apps/web/src/utils/moduleAlerts.ts:580-593`) [Tipe: `function`]
+    - *Signature:* `(
+  items: readonly ModuleAlertItem[],
+  cap = 5,
+): Array<{ level: AlertLevel; items: ModuleAlertItem[]; total: number; hidden: number }>`
+  - [`AlertBannerView`](file://apps/web/src/components/AlertBanner.tsx#L243-L372) (`apps/web/src/components/AlertBanner.tsx:243-372`) [Tipe: `function`]
+    - *Signature:* `({
+  items,
+  onPick,
+  dismiss,
+}: {
+  items: ModuleAlertItem[];
+  onPick?: (rowId: string) => void;
+  dismiss?: BannerDismiss;
+})`
+
+### Sub-sistem: `notes:remove:notesof` (Klaster #287)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`remove`](file://apps/web/src/components/ServiceNotes.tsx#L107-L119) (`apps/web/src/components/ServiceNotes.tsx:107-119`) [Tipe: `function`]
@@ -3201,31 +3110,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ServiceNotesModal`](file://apps/web/src/components/ServiceNotes.tsx#L74-L221) (`apps/web/src/components/ServiceNotes.tsx:74-221`) [Tipe: `function`]
     - *Signature:* `({ equip, labels, onClose, onSave }: ServiceNotesProps)`
 
-### Sub-sistem: `fmtjam24:timeinput24:norm24` (Klaster #577)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`norm24`](file://apps/web/src/utils/time24.ts#L27-L46) (`apps/web/src/utils/time24.ts:27-46`) [Tipe: `function`]
-    - *Signature:* `(t: unknown): string`
-  - [`fmtJam24`](file://apps/web/src/utils/time24.ts#L73-L83) (`apps/web/src/utils/time24.ts:73-83`) [Tipe: `function`]
-    - *Signature:* `(jam: unknown): string`
-  - [`TimeInput24`](file://apps/web/src/components/TimeInput24.tsx#L5-L30) (`apps/web/src/components/TimeInput24.tsx:5-30`) [Tipe: `function`]
-    - *Signature:* `({
-  value,
-  onChange,
-  ariaLabel,
-  disabled = false,
-  className,
-  placeholder,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  ariaLabel: string;
-  disabled?: boolean;
-  className?: string;
-  placeholder?: string;
-})`
-
-### Sub-sistem: `toast:mouse:success` (Klaster #302)
+### Sub-sistem: `toast:mouse:success` (Klaster #295)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`handleMouseLeave`](file://apps/web/src/components/Toast.tsx#L219-L223) (`apps/web/src/components/Toast.tsx:219-223`) [Tipe: `function`]
@@ -3240,7 +3125,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * serta mendukung options tambahan dan method pembantu (toast.success, toast.error, dll).
  */
 
-### Sub-sistem: `toaster:ontoast:ondismiss` (Klaster #303)
+### Sub-sistem: `toaster:ontoast:ondismiss` (Klaster #296)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onDismiss`](file://apps/web/src/components/Toast.tsx#L332-L335) (`apps/web/src/components/Toast.tsx:332-335`) [Tipe: `function`]
@@ -3250,7 +3135,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`Toaster`](file://apps/web/src/components/Toast.tsx#L291-L358) (`apps/web/src/components/Toast.tsx:291-358`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `blank:cmpval:sortrows` (Klaster #333)
+### Sub-sistem: `blank:cmpval:sortrows` (Klaster #326)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`cmpVal`](file://apps/web/src/components/ui.tsx#L1345-L1358) (`apps/web/src/components/ui.tsx:1345-1358`) [Tipe: `function`]
@@ -3260,7 +3145,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`sortRows`](file://apps/web/src/components/ui.tsx#L1360-L1384) (`apps/web/src/components/ui.tsx:1360-1384`) [Tipe: `function`]
     - *Signature:* `(rows: T[], sort: SortState, get: (row: T, key: string) => string | number | null | undefined): T[]`
 
-### Sub-sistem: `time:masktimedigits:mask` (Klaster #578)
+### Sub-sistem: `reset:usepager:pager` (Klaster #329)
+- **Kepadatan Simbol:** 3 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`reset`](file://apps/web/src/components/ui.tsx#L1616-L1616) (`apps/web/src/components/ui.tsx:1616-1616`) [Tipe: `function`]
+    - *Signature:* `()`
+  - [`go`](file://apps/web/src/components/ui.tsx#L1617-L1617) (`apps/web/src/components/ui.tsx:1617-1617`) [Tipe: `function`]
+    - *Signature:* `(p: number)`
+  - [`usePager`](file://apps/web/src/components/ui.tsx#L1602-L1620) (`apps/web/src/components/ui.tsx:1602-1620`) [Tipe: `function`]
+    - *Signature:* `(total: number, defaultSize = 25): {
+  page: number;
+  size: number;
+  pages: number;
+  slice: <T>(rows: T[]) => T[];
+  reset: () => void;
+  go: (p: number) => void;
+  bar: ReactNode;
+}`
+
+### Sub-sistem: `time:masktimedigits:mask` (Klaster #570)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`maskTimeDigits`](file://apps/web/src/utils/timeMask.ts#L20-L23) (`apps/web/src/utils/timeMask.ts:20-23`) [Tipe: `function`]
@@ -3286,7 +3189,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   ariaLabel?: string;
 })`
 
-### Sub-sistem: `url:absurl:isbackendurl` (Klaster #340)
+### Sub-sistem: `url:absurl:isbackendurl` (Klaster #334)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isBackendUrl`](file://apps/web/src/services/files.ts#L22-L24) (`apps/web/src/services/files.ts:22-24`) [Tipe: `function`]
@@ -3306,7 +3209,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className?: string;
 })`
 
-### Sub-sistem: `idb:idbclearall:idbavailable` (Klaster #352)
+### Sub-sistem: `idb:idbclearall:idbavailable` (Klaster #346)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`openDb`](file://apps/web/src/data/idb.ts#L31-L67) (`apps/web/src/data/idb.ts:31-67`) [Tipe: `function`]
@@ -3316,7 +3219,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`idbAvailable`](file://apps/web/src/data/idb.ts#L70-L72) (`apps/web/src/data/idb.ts:70-72`) [Tipe: `function`]
     - *Signature:* `(): Promise<boolean>`
 
-### Sub-sistem: `clone:buildseeds:sanitizestore` (Klaster #386)
+### Sub-sistem: `clone:buildseeds:sanitizestore` (Klaster #380)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`buildSeeds`](file://apps/web/src/data/store.tsx#L307-L381) (`apps/web/src/data/store.tsx:307-381`) [Tipe: `function`]
@@ -3326,7 +3229,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`sanitizeStore`](file://apps/web/src/data/store.tsx#L543-L555) (`apps/web/src/data/store.tsx:543-555`) [Tipe: `function`]
     - *Signature:* `(parsed: Partial<StoreShape>): StoreShape`
 
-### Sub-sistem: `persisted:berakhir:403` (Klaster #387)
+### Sub-sistem: `persisted:berakhir:403` (Klaster #381)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`notifyStorageFull`](file://apps/web/src/data/store.tsx#L775-L788) (`apps/web/src/data/store.tsx:775-788`) [Tipe: `function`]
@@ -3340,7 +3243,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`saveTombstonesPersisted`](file://apps/web/src/data/store.tsx#L445-L456) (`apps/web/src/data/store.tsx:445-456`) [Tipe: `function`]
     - *Signature:* `(map: Map<string, Set<string>>): void`
 
-### Sub-sistem: `flush:run:userealtime` (Klaster #407)
+### Sub-sistem: `flush:run:userealtime` (Klaster #401)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`run`](file://apps/web/src/data/useRealtime.ts#L43-L75) (`apps/web/src/data/useRealtime.ts:43-75`) [Tipe: `function`]
@@ -3350,17 +3253,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`useRealtime`](file://apps/web/src/data/useRealtime.ts#L14-L83) (`apps/web/src/data/useRealtime.ts:14-83`) [Tipe: `function`]
     - *Signature:* `(enabled: boolean): void`
 
-### Sub-sistem: `file:url:toabsoluteurl` (Klaster #427)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`toAbsoluteUrl`](file://apps/web/src/services/files.ts#L37-L48) (`apps/web/src/services/files.ts:37-48`) [Tipe: `function`]
-    - *Signature:* `(url: unknown, base: string = BASE): string`
-  - [`fetchFileBlob`](file://apps/web/src/services/files.ts#L97-L119) (`apps/web/src/services/files.ts:97-119`) [Tipe: `function`]
-    - *Signature:* `(url: string): Promise<Blob>`
-  - [`openFileUrl`](file://apps/web/src/services/files.ts#L144-L163) (`apps/web/src/services/files.ts:144-163`) [Tipe: `function`]
-    - *Signature:* `(url: string): Promise<void>`
-
-### Sub-sistem: `usedeterrent:deterrent:securityguards` (Klaster #457)
+### Sub-sistem: `usedeterrent:deterrent:securityguards` (Klaster #414)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onKey`](file://apps/web/src/security/watermark.tsx#L207-L213) (`apps/web/src/security/watermark.tsx:207-213`) [Tipe: `function`]
@@ -3370,7 +3263,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`SecurityGuards`](file://apps/web/src/security/watermark.tsx#L221-L224) (`apps/web/src/security/watermark.tsx:221-224`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `level:dismisslevel:restorelevel` (Klaster #463)
+### Sub-sistem: `level:dismisslevel:restorelevel` (Klaster #457)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`dismissedFor`](file://apps/web/src/utils/bannerDismiss.ts#L60-L62) (`apps/web/src/utils/bannerDismiss.ts:60-62`) [Tipe: `function`]
@@ -3380,7 +3273,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`restoreLevel`](file://apps/web/src/utils/bannerDismiss.ts#L72-L80) (`apps/web/src/utils/bannerDismiss.ts:72-80`) [Tipe: `function`]
     - *Signature:* `(map: DismissMap, moduleKey: string, level: AlertLevel): DismissMap`
 
-### Sub-sistem: `hascontract:isclassapprovalsatisfied:satisfied` (Klaster #469)
+### Sub-sistem: `hascontract:isclassapprovalsatisfied:satisfied` (Klaster #463)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isClassApprovalSatisfied`](file://apps/web/src/utils/classApprovalBlockers.ts#L45-L56) (`apps/web/src/utils/classApprovalBlockers.ts:45-56`) [Tipe: `function`]
@@ -3396,7 +3289,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   locale: "id" | "en" = "id",
 ): StageBlocker[]`
 
-### Sub-sistem: `dead:num:deadvalueof` (Klaster #470)
+### Sub-sistem: `dead:num:deadvalueof` (Klaster #464)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/utils/deadStock.ts#L18-L21) (`apps/web/src/utils/deadStock.ts:18-21`) [Tipe: `function`]
@@ -3407,18 +3300,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`derivedDeadCode`](file://apps/web/src/utils/deadStock.ts#L161-L166) (`apps/web/src/utils/deadStock.ts:161-166`) [Tipe: `function`]
     - *Signature:* `(item: StoreItem, hasAnyOut: boolean, lastOutDays: number): string`
 
-### Sub-sistem: `iso:addyearsiso:normcerts` (Klaster #836)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`todayISO`](file://apps/web/src/utils/format.ts#L104-L109) (`apps/web/src/utils/format.ts:104-109`) [Tipe: `function`]
-    - *Signature:* `(): string`
-  - [`addYearsISO`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L77-L81) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:77-81`) [Tipe: `function`]
-    - *Signature:* `(iso: string, years = 2): string`
-  - [`normCerts`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L104-L124) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:104-124`) [Tipe: `function`]
-    - *Signature:* `(e: StoreItem): EmpCert[]`
-    - *Deskripsi:* /** Total tunjangan: dukung number (lama) maupun array [{label,amount}] (Payroll). */
-
-### Sub-sistem: `num:categorywarnings:warnings` (Klaster #494)
+### Sub-sistem: `num:categorywarnings:warnings` (Klaster #488)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/utils/inventoryWarn.ts#L123-L126) (`apps/web/src/utils/inventoryWarn.ts:123-126`) [Tipe: `function`]
@@ -3432,7 +3314,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   opts: { maxUrgentPerCategory?: number; onlyWithAction?: boolean } = {},
 ): CategoryWarningSummary[]`
 
-### Sub-sistem: `kasbon:norm:normkasbon` (Klaster #772)
+### Sub-sistem: `kasbon:norm:normkasbon` (Klaster #754)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normKasbonList`](file://apps/web/src/utils/kasbon.ts#L24-L40) (`apps/web/src/utils/kasbon.ts:24-40`) [Tipe: `function`]
@@ -3442,7 +3324,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`kasbonSisa`](file://apps/web/src/pages/payroll/Payroll.tsx#L153-L155) (`apps/web/src/pages/payroll/Payroll.tsx:153-155`) [Tipe: `function`]
     - *Signature:* `(e: StoreItem): number`
 
-### Sub-sistem: `cost:materialscost:workdaysof` (Klaster #510)
+### Sub-sistem: `cost:materialscost:workdaysof` (Klaster #504)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`materialsCost`](file://apps/web/src/utils/maintenance.ts#L122-L124) (`apps/web/src/utils/maintenance.ts:122-124`) [Tipe: `function`]
@@ -3455,7 +3337,20 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   opts: { laborRatePerDay?: number; otherCost?: number } = {},
 ): MaintCostBreakdown`
 
-### Sub-sistem: `month:yearsin:bucketbymonth` (Klaster #522)
+### Sub-sistem: `banner:bannerdisplay:sortbylevel` (Klaster #511)
+- **Kepadatan Simbol:** 3 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`sortByLevel`](file://apps/web/src/utils/moduleAlerts.ts#L529-L539) (`apps/web/src/utils/moduleAlerts.ts:529-539`) [Tipe: `function`]
+    - *Signature:* `(items: ModuleAlertItem[]): ModuleAlertItem[]`
+  - [`bannerDisplay`](file://apps/web/src/utils/moduleAlerts.ts#L549-L559) (`apps/web/src/utils/moduleAlerts.ts:549-559`) [Tipe: `function`]
+    - *Signature:* `(
+  items: ModuleAlertItem[],
+  expanded: boolean,
+): { items: ModuleAlertItem[]; remaining: number }`
+  - [`bannerPreview`](file://apps/web/src/utils/moduleAlerts.ts#L544-L546) (`apps/web/src/utils/moduleAlerts.ts:544-546`) [Tipe: `function`]
+    - *Signature:* `(items: ModuleAlertItem[]): ModuleAlertItem[]`
+
+### Sub-sistem: `month:yearsin:bucketbymonth` (Klaster #513)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`monthKeyOf`](file://apps/web/src/utils/monthAxis.ts#L40-L44) (`apps/web/src/utils/monthAxis.ts:40-44`) [Tipe: `function`]
@@ -3471,17 +3366,17 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`yearsIn`](file://apps/web/src/utils/monthAxis.ts#L262-L270) (`apps/web/src/utils/monthAxis.ts:262-270`) [Tipe: `function`]
     - *Signature:* `(rows: T[], dateOf: (row: T) => unknown): number[]`
 
-### Sub-sistem: `allowancesum:exportpphreport:allowance` (Klaster #526)
+### Sub-sistem: `sum:exportbpjscompanyreport:company` (Klaster #521)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`n`](file://apps/web/src/utils/payrollReports.ts#L7-L7) (`apps/web/src/utils/payrollReports.ts:7-7`) [Tipe: `function`]
     - *Signature:* `(v: unknown): number`
-  - [`allowanceSum`](file://apps/web/src/utils/payrollReports.ts#L8-L9) (`apps/web/src/utils/payrollReports.ts:8-9`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): number`
-  - [`exportPphReport`](file://apps/web/src/utils/payrollReports.ts#L11-L22) (`apps/web/src/utils/payrollReports.ts:11-22`) [Tipe: `function`]
+  - [`sum`](file://apps/web/src/utils/payrollReports.ts#L34-L34) (`apps/web/src/utils/payrollReports.ts:34-34`) [Tipe: `function`]
+    - *Signature:* `(i: number): number`
+  - [`exportBpjsCompanyReport`](file://apps/web/src/utils/payrollReports.ts#L24-L40) (`apps/web/src/utils/payrollReports.ts:24-40`) [Tipe: `function`]
     - *Signature:* `(rows: StoreItem[], nameOf: (id: string) => string, period: string): Promise<void>`
 
-### Sub-sistem: `cost:equipment:equipmentcostbyproject` (Klaster #534)
+### Sub-sistem: `cost:equipment:equipmentcostbyproject` (Klaster #528)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`equipmentCostSummary`](file://apps/web/src/utils/projectCost.ts#L200-L223) (`apps/web/src/utils/projectCost.ts:200-223`) [Tipe: `function`]
@@ -3504,7 +3399,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   equipment: StoreItem[],
 ): { projectId: string; projectName: string; cost: number }[]`
 
-### Sub-sistem: `delay:days:projectdelaydetailsof` (Klaster #536)
+### Sub-sistem: `delay:days:projectdelaydetailsof` (Klaster #530)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`endInDays`](file://apps/web/src/utils/projectDelay.ts#L11-L19) (`apps/web/src/utils/projectDelay.ts:11-19`) [Tipe: `function`]
@@ -3519,7 +3414,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   isLate: boolean,
 ): ProjectDelayDetails`
 
-### Sub-sistem: `ptkp:clampdependents:dependents` (Klaster #545)
+### Sub-sistem: `ptkp:clampdependents:dependents` (Klaster #539)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`clampDependents`](file://apps/web/src/utils/ptkp.ts#L5-L8) (`apps/web/src/utils/ptkp.ts:5-8`) [Tipe: `function`]
@@ -3529,7 +3424,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ptkpCode`](file://apps/web/src/utils/ptkp.ts#L10-L13) (`apps/web/src/utils/ptkp.ts:10-13`) [Tipe: `function`]
     - *Signature:* `(marital: unknown, dependents: unknown): string`
 
-### Sub-sistem: `labor:day:rate` (Klaster #547)
+### Sub-sistem: `labor:day:rate` (Klaster #541)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`minimumDailyWage`](file://apps/web/src/utils/rates.ts#L86-L88) (`apps/web/src/utils/rates.ts:86-88`) [Tipe: `function`]
@@ -3539,7 +3434,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`billedLaborRatePerDay`](file://apps/web/src/utils/rates.ts#L105-L107) (`apps/web/src/utils/rates.ts:105-107`) [Tipe: `function`]
     - *Signature:* `(role: SkillRole): number`
 
-### Sub-sistem: `csv:rows:read` (Klaster #551)
+### Sub-sistem: `csv:read:rows` (Klaster #545)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`splitCsvRow`](file://apps/web/src/utils/readSheet.ts#L98-L114) (`apps/web/src/utils/readSheet.ts:98-114`) [Tipe: `function`]
@@ -3549,7 +3444,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`readSheetRows`](file://apps/web/src/utils/readSheet.ts#L124-L128) (`apps/web/src/utils/readSheet.ts:124-128`) [Tipe: `function`]
     - *Signature:* `(file: File, sheet?: RegExp): Promise<string[][]>`
 
-### Sub-sistem: `risiko:milestone:doneat` (Klaster #557)
+### Sub-sistem: `risiko:milestone:doneat` (Klaster #550)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`claimKey`](file://apps/web/src/utils/riskAuto.ts#L278-L279) (`apps/web/src/utils/riskAuto.ts:278-279`) [Tipe: `function`]
@@ -3569,7 +3464,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`claimAutoRisk`](file://apps/web/src/utils/riskAuto.ts#L282-L287) (`apps/web/src/utils/riskAuto.ts:282-287`) [Tipe: `function`]
     - *Signature:* `(projectId: string, draft: { source?: unknown; wbsTask?: unknown; title?: unknown }): boolean`
 
-### Sub-sistem: `per:positive:dasar` (Klaster #588)
+### Sub-sistem: `per:positive:dasar` (Klaster #580)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`positiveNumber`](file://apps/web/src/utils/unitConversion.ts#L73-L76) (`apps/web/src/utils/unitConversion.ts:73-76`) [Tipe: `function`]
@@ -3583,7 +3478,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Satuan dasar yang lazim untuk kemasan tanpa aturan kategori: roll dikeluarkan
  *  per meter, drum/galon/kaleng per liter. Dipakai sebagai isian awal. */
 
-### Sub-sistem: `uom2:conversion:mengubah` (Klaster #590)
+### Sub-sistem: `uom2:conversion:mengubah` (Klaster #583)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`numberText`](file://apps/web/src/utils/unitConversion.ts#L238-L242) (`apps/web/src/utils/unitConversion.ts:238-242`) [Tipe: `function`]
@@ -3599,7 +3494,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   locale: "id" | "en",
 ): string`
 
-### Sub-sistem: `warehouse:warehousenames:warehousename` (Klaster #595)
+### Sub-sistem: `warehouse:warehousenames:warehousename` (Klaster #588)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`warehouseName`](file://apps/web/src/utils/warehouse.ts#L66-L68) (`apps/web/src/utils/warehouse.ts:66-68`) [Tipe: `function`]
@@ -3609,7 +3504,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`warehouseNames`](file://apps/web/src/utils/warehouse.ts#L100-L111) (`apps/web/src/utils/warehouse.ts:100-111`) [Tipe: `function`]
     - *Signature:* `(warehouses: (StoreItem | Warehouse)[]): string[]`
 
-### Sub-sistem: `100:milestone:tahap` (Klaster #604)
+### Sub-sistem: `100:milestone:tahap` (Klaster #596)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`woProgressOf`](file://apps/web/src/utils/woMilestones.ts#L73-L83) (`apps/web/src/utils/woMilestones.ts:73-83`) [Tipe: `function`]
@@ -3637,7 +3532,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`woProgressLabel`](file://apps/web/src/utils/woMilestones.ts#L96-L99) (`apps/web/src/utils/woMilestones.ts:96-99`) [Tipe: `function`]
     - *Signature:* `(wo: StoreItem | null | undefined): string`
 
-### Sub-sistem: `files:font:loadfontfiles` (Klaster #639)
+### Sub-sistem: `files:font:loadfontfiles` (Klaster #629)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadFontFiles`](file://services/api/src/pdf/font.ts#L64-L85) (`services/api/src/pdf/font.ts:64-85`) [Tipe: `function`]
@@ -3647,7 +3542,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`fontFilesAvailable`](file://services/api/src/pdf/font.ts#L88-L91) (`services/api/src/pdf/font.ts:88-91`) [Tipe: `function`]
     - *Signature:* `(): boolean`
 
-### Sub-sistem: `surat:hrletterkindof:rendersurathrdraft` (Klaster #647)
+### Sub-sistem: `surat:hrletterkindof:rendersurathrdraft` (Klaster #636)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`hrLetterKindOf`](file://services/api/src/pdf/documents/hrLetter.ts#L351-L361) (`services/api/src/pdf/documents/hrLetter.ts:351-361`) [Tipe: `function`]
@@ -3659,27 +3554,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`renderSuratHrDraft`](file://services/api/src/pdf/registry.ts#L362-L365) (`services/api/src/pdf/registry.ts:362-365`) [Tipe: `function`]
     - *Signature:* `(row: Record<string, unknown>, ctx: RenderContext): Promise<ReturnType<Document["render"]>>`
 
-### Sub-sistem: `payroll:payrollnet:allowancetotal` (Klaster #657)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`allowanceTotal`](file://services/api/src/pdf/reports.ts#L106-L111) (`services/api/src/pdf/reports.ts:106-111`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): number`
-  - [`payrollNet`](file://services/api/src/pdf/reports.ts#L100-L104) (`services/api/src/pdf/reports.ts:100-104`) [Tipe: `function`]
-    - *Signature:* `(r: Row): number`
-  - [`payrollRecap`](file://services/api/src/pdf/reports.ts#L476-L516) (`services/api/src/pdf/reports.ts:476-516`) [Tipe: `function`]
-    - *Signature:* `(cols: Collections, period: string, kind: "Gaji" | "THR" | "Bonus" = "Gaji"): PayrollRecap`
-
-### Sub-sistem: `mergepunch:applypunches:punches` (Klaster #671)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`mergePunch`](file://services/api/src/routes/attendanceIngest.ts#L40-L45) (`services/api/src/routes/attendanceIngest.ts:40-45`) [Tipe: `function`]
-    - *Signature:* `(row: { checkIn?: string; checkOut?: string }, type: "in" | "out", time: string): { checkIn: string; checkOut: string }`
-  - [`witaParts`](file://services/api/src/routes/attendanceIngest.ts#L32-L37) (`services/api/src/routes/attendanceIngest.ts:32-37`) [Tipe: `function`]
-    - *Signature:* `(timestamp: string): { date: string; time: string } | null`
-  - [`applyPunches`](file://services/api/src/routes/attendanceIngest.ts#L49-L91) (`services/api/src/routes/attendanceIngest.ts:49-91`) [Tipe: `function`]
-    - *Signature:* `(punches: z.infer<typeof Punch>[], source: string): Promise<IngestResult>`
-
-### Sub-sistem: `enabled:demo:demoswitchenabled` (Klaster #682)
+### Sub-sistem: `enabled:demo:demoswitchenabled` (Klaster #668)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`flagOn`](file://services/api/src/routes/demoSwitch.ts#L26-L29) (`services/api/src/routes/demoSwitch.ts:26-29`) [Tipe: `function`]
@@ -3689,7 +3564,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`demoLoginEnabled`](file://services/api/src/routes/demoSwitch.ts#L85-L87) (`services/api/src/routes/demoSwitch.ts:85-87`) [Tipe: `function`]
     - *Signature:* `(): boolean`
 
-### Sub-sistem: `flush:onwrite:registereventroutes` (Klaster #684)
+### Sub-sistem: `flush:onwrite:registereventroutes` (Klaster #669)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onWrite`](file://services/api/src/routes/events.ts#L48-L52) (`services/api/src/routes/events.ts:48-52`) [Tipe: `function`]
@@ -3699,18 +3574,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`registerEventRoutes`](file://services/api/src/routes/events.ts#L19-L61) (`services/api/src/routes/events.ts:19-61`) [Tipe: `function`]
     - *Signature:* `(app: FastifyInstance): void`
 
-### Sub-sistem: `read:syncedby:synced` (Klaster #703)
-- **Kepadatan Simbol:** 3 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`read`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L29-L29) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:29-29`) [Tipe: `function`]
-    - *Signature:* `(p: string): string`
-  - [`listIn`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L37-L40) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:37-40`) [Tipe: `function`]
-    - *Signature:* `(src: string, name: string): string[] | null`
-  - [`syncedBy`](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L52-L63) (`apps/web/src/data/__tests__/moduleSyncCoverage.test.ts:52-63`) [Tipe: `function`]
-    - *Signature:* `(page: string, src: string): Set<string>`
-    - *Deskripsi:* /** Daftar koleksi yang di-sync halaman (literal lokal, impor, atau fungsi per-tab Keuangan). */
-
-### Sub-sistem: `register:deviceimport:importcsv` (Klaster #707)
+### Sub-sistem: `register:deviceimport:importcsv` (Klaster #692)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`register`](file://apps/web/src/pages/absensi/DeviceImport.tsx#L51-L57) (`apps/web/src/pages/absensi/DeviceImport.tsx:51-57`) [Tipe: `function`]
@@ -3720,7 +3584,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`DeviceImport`](file://apps/web/src/pages/absensi/DeviceImport.tsx#L27-L72) (`apps/web/src/pages/absensi/DeviceImport.tsx:27-72`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `handle:excel:boqdetailmodal` (Klaster #717)
+### Sub-sistem: `handle:excel:boqdetailmodal` (Klaster #699)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`handleExportExcel`](file://apps/web/src/pages/dokumen/BoqDetailModal.tsx#L127-L181) (`apps/web/src/pages/dokumen/BoqDetailModal.tsx:127-181`) [Tipe: `function`]
@@ -3741,7 +3605,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onSelectDoc,
 }: BoqDetailModalProps)`
 
-### Sub-sistem: `active:delegationstatus:activemaintof` (Klaster #721)
+### Sub-sistem: `active:delegationstatus:activemaintof` (Klaster #703)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`activeMaintOf`](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L20-L23) (`apps/web/src/pages/equipment/DelegationPanel.tsx:20-23`) [Tipe: `function`]
@@ -3751,7 +3615,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`delegationStatus`](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L25-L28) (`apps/web/src/pages/equipment/DelegationPanel.tsx:25-28`) [Tipe: `function`]
     - *Signature:* `(eq: StoreItem, bookings: StoreItem[], maintenances: StoreItem[], today: string): "Maintenance" | "Dipinjam" | "Tersedia"`
 
-### Sub-sistem: `reserved:availof:avail` (Klaster #732)
+### Sub-sistem: `reserved:availof:avail` (Klaster #713)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`reservedOf`](file://apps/web/src/pages/inventori/Inventory.tsx#L271-L273) (`apps/web/src/pages/inventori/Inventory.tsx:271-273`) [Tipe: `function`]
@@ -3761,37 +3625,39 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`availOf`](file://apps/web/src/pages/inventori/Inventory.tsx#L279-L281) (`apps/web/src/pages/inventori/Inventory.tsx:279-281`) [Tipe: `function`]
     - *Signature:* `(it: StoreItem): number`
 
-### Sub-sistem: `rentang:hist:tanggal` (Klaster #751)
+### Sub-sistem: `neto:inv:invoice` (Klaster #740)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`rentangValid`](file://apps/web/src/pages/keuangan/Finance.tsx#L121-L123) (`apps/web/src/pages/keuangan/Finance.tsx:121-123`) [Tipe: `function`]
-    - *Signature:* `(f: HistFilter): boolean`
-    - *Deskripsi:* /** Rentang tanggal (FIN: filter dari-sampai) sah bila kedua tanggal nyata dan berurutan. */
-  - [`matchHistPeriod`](file://apps/web/src/pages/keuangan/Finance.tsx#L161-L171) (`apps/web/src/pages/keuangan/Finance.tsx:161-171`) [Tipe: `function`]
-    - *Signature:* `(periodYM: unknown, f: HistFilter): boolean`
-  - [`histToParam`](file://apps/web/src/pages/keuangan/Finance.tsx#L96-L102) (`apps/web/src/pages/keuangan/Finance.tsx:96-102`) [Tipe: `function`]
-    - *Signature:* `(f: HistFilter): string`
+  - [`invSisa`](file://apps/web/src/pages/keuangan/Finance.tsx#L354-L354) (`apps/web/src/pages/keuangan/Finance.tsx:354-354`) [Tipe: `function`]
+    - *Signature:* `(inv: StoreItem): number`
+    - *Deskripsi:* // #275: invoice bisa dibayar bertahap; `paidTotal` = jumlah semua pembayaran.
+  - [`invNeto`](file://apps/web/src/pages/keuangan/Finance.tsx#L348-L352) (`apps/web/src/pages/keuangan/Finance.tsx:348-352`) [Tipe: `function`]
+    - *Signature:* `(inv: StoreItem): number`
+    - *Deskripsi:* // Neto invoice: grandTotal bila ada, else amount dikurangi retensi yang ditahan.
+  - [`arOutAsOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L533-L549) (`apps/web/src/pages/keuangan/Finance.tsx:533-549`) [Tipe: `function`]
+    - *Signature:* `(list: StoreItem[], end: string): { c: string; total: number; count: number }[]`
+    - *Deskripsi:* // payroll) - tidak ada snapshot hardcode per bulan.
 
-### Sub-sistem: `bulan:liveasof:live` (Klaster #757)
+### Sub-sistem: `bulan:liveasof:live` (Klaster #739)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`liveAsOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L452-L463) (`apps/web/src/pages/keuangan/Finance.tsx:452-463`) [Tipe: `function`]
+  - [`liveAsOf`](file://apps/web/src/pages/keuangan/Finance.tsx#L454-L465) (`apps/web/src/pages/keuangan/Finance.tsx:454-465`) [Tipe: `function`]
     - *Signature:* `(f: HistFilter, lastDate = ""): string`
-  - [`akhirBulan`](file://apps/web/src/pages/keuangan/Finance.tsx#L446-L451) (`apps/web/src/pages/keuangan/Finance.tsx:446-451`) [Tipe: `function`]
+  - [`akhirBulan`](file://apps/web/src/pages/keuangan/Finance.tsx#L448-L453) (`apps/web/src/pages/keuangan/Finance.tsx:448-453`) [Tipe: `function`]
     - *Signature:* `(ym: string): string`
     - *Deskripsi:* // payroll) - tidak ada snapshot hardcode per bulan.
-  - [`asOfOrToday`](file://apps/web/src/pages/keuangan/Finance.tsx#L465-L467) (`apps/web/src/pages/keuangan/Finance.tsx:465-467`) [Tipe: `function`]
+  - [`asOfOrToday`](file://apps/web/src/pages/keuangan/Finance.tsx#L467-L469) (`apps/web/src/pages/keuangan/Finance.tsx:467-469`) [Tipe: `function`]
     - *Signature:* `(f: HistFilter, lastDate = ""): string`
 
-### Sub-sistem: `init:manualtaxform:save` (Klaster #759)
+### Sub-sistem: `init:manualtaxform:save` (Klaster #742)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`save`](file://apps/web/src/pages/keuangan/Finance.tsx#L630-L635) (`apps/web/src/pages/keuangan/Finance.tsx:630-635`) [Tipe: `function`]
+  - [`save`](file://apps/web/src/pages/keuangan/Finance.tsx#L632-L637) (`apps/web/src/pages/keuangan/Finance.tsx:632-637`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
     - *Deskripsi:* // eslint-disable-line react-hooks/exhaustive-deps
-  - [`init`](file://apps/web/src/pages/keuangan/Finance.tsx#L621-L626) (`apps/web/src/pages/keuangan/Finance.tsx:621-626`) [Tipe: `function`]
+  - [`init`](file://apps/web/src/pages/keuangan/Finance.tsx#L623-L628) (`apps/web/src/pages/keuangan/Finance.tsx:623-628`) [Tipe: `function`]
     - *Signature:* `(): Record<TaxManualKey, string>`
-  - [`ManualTaxForm`](file://apps/web/src/pages/keuangan/Finance.tsx#L612-L650) (`apps/web/src/pages/keuangan/Finance.tsx:612-650`) [Tipe: `function`]
+  - [`ManualTaxForm`](file://apps/web/src/pages/keuangan/Finance.tsx#L614-L652) (`apps/web/src/pages/keuangan/Finance.tsx:614-652`) [Tipe: `function`]
     - *Signature:* `({ period, locked, labels, auto, onSave }: {
   period: StoreItem;
   locked: boolean;
@@ -3800,7 +3666,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onSave: (patch: Record<string, unknown>) => Promise<void>;
 })`
 
-### Sub-sistem: `toisodate:mondayof:monday` (Klaster #763)
+### Sub-sistem: `toisodate:mondayof:monday` (Klaster #745)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toISODate`](file://apps/web/src/pages/laporan/Laporan.tsx#L51-L53) (`apps/web/src/pages/laporan/Laporan.tsx:51-53`) [Tipe: `function`]
@@ -3810,7 +3676,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`mondayOf`](file://apps/web/src/pages/laporan/Laporan.tsx#L55-L61) (`apps/web/src/pages/laporan/Laporan.tsx:55-61`) [Tipe: `function`]
     - *Signature:* `(iso: string): string`
 
-### Sub-sistem: `pph:calc:calcpphprogressive` (Klaster #773)
+### Sub-sistem: `pph:calc:calcpphprogressive` (Klaster #755)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`annualPph`](file://apps/web/src/pages/payroll/Payroll.tsx#L170-L192) (`apps/web/src/pages/payroll/Payroll.tsx:170-192`) [Tipe: `function`]
@@ -3820,7 +3686,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`calcPphIrregular`](file://apps/web/src/pages/payroll/Payroll.tsx#L201-L209) (`apps/web/src/pages/payroll/Payroll.tsx:201-209`) [Tipe: `function`]
     - *Signature:* `(baseMonthly: number, irregular: number, emp: StoreItem, r: PayrollRates): number`
 
-### Sub-sistem: `kop:server:parsekop` (Klaster #775)
+### Sub-sistem: `kop:server:parsekop` (Klaster #757)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`parseKop`](file://apps/web/src/pages/pengaturan/KopCard.tsx#L13-L21) (`apps/web/src/pages/pengaturan/KopCard.tsx:13-21`) [Tipe: `function`]
@@ -3832,7 +3698,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`KopCard`](file://apps/web/src/pages/pengaturan/KopCard.tsx#L23-L58) (`apps/web/src/pages/pengaturan/KopCard.tsx:23-58`) [Tipe: `function`]
     - *Signature:* `({ canWrite }: { canWrite: boolean })`
 
-### Sub-sistem: `nextlevel:needlevels:need` (Klaster #791)
+### Sub-sistem: `nextlevel:needlevels:need` (Klaster #773)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`needLevels`](file://apps/web/src/pages/procurement/Procurement.tsx#L132-L139) (`apps/web/src/pages/procurement/Procurement.tsx:132-139`) [Tipe: `function`]
@@ -3842,7 +3708,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`nextLevel`](file://apps/web/src/pages/procurement/Procurement.tsx#L152-L156) (`apps/web/src/pages/procurement/Procurement.tsx:152-156`) [Tipe: `function`]
     - *Signature:* `(po: StoreItem, financeLimit = 1000000): string | null`
 
-### Sub-sistem: `ext:docbasename:docextof` (Klaster #810)
+### Sub-sistem: `ext:doc:docbasename` (Klaster #792)
 - **Kepadatan Simbol:** 3 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`withExt`](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L108-L113) (`apps/web/src/pages/proyek/ProjectDetail.tsx:108-113`) [Tipe: `function`]
@@ -3852,15 +3718,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`docBaseName`](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L105-L119) (`apps/web/src/pages/proyek/ProjectDetail.tsx:105-119`) [Tipe: `function`]
     - *Signature:* `(d: StoreItem, url: string): string`
 
-### Sub-sistem: `main:assert` (Klaster #62)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://services/api/scripts/attendance-ingest-probe.ts#L12-L15) (`services/api/scripts/attendance-ingest-probe.ts:12-15`) [Tipe: `function`]
-    - *Signature:* `(name: string, cond: boolean, detail = ""): void`
-  - [`main`](file://services/api/scripts/attendance-ingest-probe.ts#L7-L60) (`services/api/scripts/attendance-ingest-probe.ts:7-60`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-
-### Sub-sistem: `main:assert` (Klaster #67)
+### Sub-sistem: `main:assert` (Klaster #66)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/checklist-probe.ts#L13-L16) (`services/api/scripts/checklist-probe.ts:13-16`) [Tipe: `function`]
@@ -3868,7 +3726,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/checklist-probe.ts#L8-L50) (`services/api/scripts/checklist-probe.ts:8-50`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `legacy:legacytotal:legacynumber` (Klaster #90)
+### Sub-sistem: `legacy:legacytotal:legacynumber` (Klaster #89)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`legacyNumber`](file://services/api/scripts/migrate-boq-docs.ts#L40-L51) (`services/api/scripts/migrate-boq-docs.ts:40-51`) [Tipe: `function`]
@@ -3876,7 +3734,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`legacyTotal`](file://services/api/scripts/migrate-boq-docs.ts#L53-L62) (`services/api/scripts/migrate-boq-docs.ts:53-62`) [Tipe: `function`]
     - *Signature:* `(data: Data, id: string): number`
 
-### Sub-sistem: `byte:dibandingkan:identik` (Klaster #105)
+### Sub-sistem: `byte:dibandingkan:identik` (Klaster #102)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normalizePdf`](file://services/api/scripts/pdf-db-probe.ts#L88-L93) (`services/api/scripts/pdf-db-probe.ts:88-93`) [Tipe: `function`]
@@ -3902,7 +3760,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * punya probe. Yang dibandingkan isi dokumennya, bukan stempel waktunya.
  */
 
-### Sub-sistem: `walk:benar:frontendkinds` (Klaster #106)
+### Sub-sistem: `walk:benar:frontendkinds` (Klaster #105)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`walk`](file://services/api/scripts/pdf-probe.ts#L377-L388) (`services/api/scripts/pdf-probe.ts:377-388`) [Tipe: `function`]
@@ -3911,7 +3769,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(): Map<string, string>`
     - *Deskripsi:* /** Kind PDF yang benar-benar dipanggil di FE. */
 
-### Sub-sistem: `probe:keamanan:fase` (Klaster #117)
+### Sub-sistem: `probe:keamanan:fase` (Klaster #114)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`probePassword`](file://services/api/scripts/security-probe.ts#L22-L24) (`services/api/scripts/security-probe.ts:22-24`) [Tipe: `function`]
@@ -3935,7 +3793,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * dinaikkan menjadi gate CI yang memvalidasi perbaikan celah keamanan.
  */
 
-### Sub-sistem: `main:assert` (Klaster #122)
+### Sub-sistem: `main:assert` (Klaster #119)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/token-revocation-probe.ts#L13-L22) (`services/api/scripts/token-revocation-probe.ts:13-22`) [Tipe: `function`]
@@ -3943,7 +3801,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/token-revocation-probe.ts#L5-L110) (`services/api/scripts/token-revocation-probe.ts:5-110`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `main:assert` (Klaster #123)
+### Sub-sistem: `main:assert` (Klaster #120)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/user-hierarchy-probe.ts#L24-L33) (`services/api/scripts/user-hierarchy-probe.ts:24-33`) [Tipe: `function`]
@@ -3951,7 +3809,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`main`](file://services/api/scripts/user-hierarchy-probe.ts#L5-L101) (`services/api/scripts/user-hierarchy-probe.ts:5-101`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `norm:branchallowed:allowed` (Klaster #133)
+### Sub-sistem: `norm:branchallowed:allowed` (Klaster #129)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`norm`](file://services/api/src/auth.ts#L81-L81) (`services/api/src/auth.ts:81-81`) [Tipe: `function`]
@@ -3959,7 +3817,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`branchAllowed`](file://services/api/src/auth.ts#L80-L88) (`services/api/src/auth.ts:80-88`) [Tipe: `function`]
     - *Signature:* `(user: AuthUser | undefined, asked: string): boolean`
 
-### Sub-sistem: `constructor:branchscoperesolutionerror:resolution` (Klaster #134)
+### Sub-sistem: `constructor:branchscoperesolutionerror:resolution` (Klaster #130)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/auth.ts#L91-L94) (`services/api/src/auth.ts:91-94`) [Tipe: `method`]
@@ -3967,7 +3825,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`BranchScopeResolutionError`](file://services/api/src/auth.ts#L90-L95) (`services/api/src/auth.ts:90-95`) [Tipe: `class`]
     - *Signature:* `class BranchScopeResolutionError`
 
-### Sub-sistem: `constructor:boqerror:boq` (Klaster #140)
+### Sub-sistem: `constructor:boqerror:boq` (Klaster #137)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/boqDocs.ts#L33-L35) (`services/api/src/boqDocs.ts:33-35`) [Tipe: `method`]
@@ -3975,7 +3833,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`BoqError`](file://services/api/src/boqDocs.ts#L32-L36) (`services/api/src/boqDocs.ts:32-36`) [Tipe: `class`]
     - *Signature:* `class BoqError`
 
-### Sub-sistem: `constructor:coerror:error` (Klaster #146)
+### Sub-sistem: `constructor:coerror:error` (Klaster #142)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/changeOrders.ts#L20-L20) (`services/api/src/changeOrders.ts:20-20`) [Tipe: `method`]
@@ -3983,7 +3841,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`CoError`](file://services/api/src/changeOrders.ts#L19-L21) (`services/api/src/changeOrders.ts:19-21`) [Tipe: `class`]
     - *Signature:* `class CoError`
 
-### Sub-sistem: `len:stagehasdata:stage` (Klaster #154)
+### Sub-sistem: `len:stagehasdata:stage` (Klaster #149)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`len`](file://services/api/src/domainGuards.ts#L9-L9) (`services/api/src/domainGuards.ts:9-9`) [Tipe: `function`]
@@ -3991,7 +3849,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stageHasData`](file://services/api/src/domainGuards.ts#L13-L16) (`services/api/src/domainGuards.ts:13-16`) [Tipe: `function`]
     - *Signature:* `(stage: Data): boolean`
 
-### Sub-sistem: `manager:isprojectmanagertitle:projectmanagererror` (Klaster #157)
+### Sub-sistem: `manager:isprojectmanagertitle:projectmanagererror` (Klaster #152)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isProjectManagerTitle`](file://services/api/src/domainGuards.ts#L94-L97) (`services/api/src/domainGuards.ts:94-97`) [Tipe: `function`]
@@ -3999,7 +3857,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`projectManagerError`](file://services/api/src/domainGuards.ts#L101-L112) (`services/api/src/domainGuards.ts:101-112`) [Tipe: `function`]
     - *Signature:* `(table: string, before: Data | null, after: Data): Promise<string | null>`
 
-### Sub-sistem: `bom:bomitemerror:bomallocationerror` (Klaster #158)
+### Sub-sistem: `bom:bomitemerror:bomallocationerror` (Klaster #153)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`bomAllocationError`](file://services/api/src/domainGuards.ts#L138-L154) (`services/api/src/domainGuards.ts:138-154`) [Tipe: `function`]
@@ -4007,7 +3865,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`bomItemError`](file://services/api/src/domainGuards.ts#L156-L170) (`services/api/src/domainGuards.ts:156-170`) [Tipe: `function`]
     - *Signature:* `(table: string, id: string | null, data: Data): Promise<string | null>`
 
-### Sub-sistem: `paid:payableapprovalerror:payable` (Klaster #159)
+### Sub-sistem: `paid:payableapprovalerror:payable` (Klaster #154)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`paid`](file://services/api/src/domainGuards.ts#L204-L204) (`services/api/src/domainGuards.ts:204-204`) [Tipe: `function`]
@@ -4015,23 +3873,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`payableApprovalError`](file://services/api/src/domainGuards.ts#L201-L213) (`services/api/src/domainGuards.ts:201-213`) [Tipe: `function`]
     - *Signature:* `(table: string, before: Data, after: Data): string | null`
 
-### Sub-sistem: `parseorigins:origins:loadenv` (Klaster #161)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`loadEnv`](file://services/api/src/env.ts#L29-L153) (`services/api/src/env.ts:29-153`) [Tipe: `function`]
-    - *Signature:* `(): Env`
-  - [`parseOrigins`](file://services/api/src/env.ts#L19-L27) (`services/api/src/env.ts:19-27`) [Tipe: `function`]
-    - *Signature:* `(): string[]`
-
-### Sub-sistem: `initfonts:main:fonts` (Klaster #640)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`initFonts`](file://services/api/src/pdf/font.ts#L134-L138) (`services/api/src/pdf/font.ts:134-138`) [Tipe: `function`]
-    - *Signature:* `(dir: string): void`
-  - [`main`](file://services/api/src/index.ts#L6-L23) (`services/api/src/index.ts:6-23`) [Tipe: `function`]
-    - *Signature:* `(): Promise<void>`
-
-### Sub-sistem: `constructor:additionalerror:additional` (Klaster #163)
+### Sub-sistem: `constructor:additionalerror:additional` (Klaster #157)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/inventoryAdditional.ts#L13-L13) (`services/api/src/inventoryAdditional.ts:13-13`) [Tipe: `method`]
@@ -4039,7 +3881,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`AdditionalError`](file://services/api/src/inventoryAdditional.ts#L12-L14) (`services/api/src/inventoryAdditional.ts:12-14`) [Tipe: `class`]
     - *Signature:* `class AdditionalError`
 
-### Sub-sistem: `constructor:issueerror:issue` (Klaster #169)
+### Sub-sistem: `constructor:issueerror:issue` (Klaster #163)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/inventoryIssue.ts#L12-L12) (`services/api/src/inventoryIssue.ts:12-12`) [Tipe: `method`]
@@ -4047,7 +3889,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`IssueError`](file://services/api/src/inventoryIssue.ts#L11-L13) (`services/api/src/inventoryIssue.ts:11-13`) [Tipe: `class`]
     - *Signature:* `class IssueError`
 
-### Sub-sistem: `constructor:materialerror:material` (Klaster #175)
+### Sub-sistem: `constructor:materialerror:material` (Klaster #169)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/materialRequests.ts#L20-L22) (`services/api/src/materialRequests.ts:20-22`) [Tipe: `method`]
@@ -4055,7 +3897,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`MaterialError`](file://services/api/src/materialRequests.ts#L19-L23) (`services/api/src/materialRequests.ts:19-23`) [Tipe: `class`]
     - *Signature:* `class MaterialError`
 
-### Sub-sistem: `constructor:poerror:error` (Klaster #183)
+### Sub-sistem: `constructor:poerror:error` (Klaster #177)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/poFulfillment.ts#L24-L26) (`services/api/src/poFulfillment.ts:24-26`) [Tipe: `method`]
@@ -4063,7 +3905,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`PoError`](file://services/api/src/poFulfillment.ts#L23-L27) (`services/api/src/poFulfillment.ts:23-27`) [Tipe: `class`]
     - *Signature:* `class PoError`
 
-### Sub-sistem: `matrix:sensitif:operasional` (Klaster #206)
+### Sub-sistem: `matrix:sensitif:operasional` (Klaster #200)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeFinanceMatrix`](file://services/api/src/policy.ts#L141-L166) (`services/api/src/policy.ts:141-166`) [Tipe: `function`]
@@ -4073,7 +3915,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `tabel:checkrefs:idcolumn` (Klaster #213)
+### Sub-sistem: `tabel:checkrefs:idcolumn` (Klaster #207)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`idColumn`](file://services/api/src/refs.ts#L98-L100) (`services/api/src/refs.ts:98-100`) [Tipe: `function`]
@@ -4082,7 +3924,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`checkRefs`](file://services/api/src/refs.ts#L113-L147) (`services/api/src/refs.ts:113-147`) [Tipe: `function`]
     - *Signature:* `(table: string, data: Record<string, unknown>): Promise<string | null>`
 
-### Sub-sistem: `jsoneq:findusages:usages` (Klaster #214)
+### Sub-sistem: `jsoneq:findusages:usages` (Klaster #208)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`jsonEq`](file://services/api/src/refs.ts#L105-L110) (`services/api/src/refs.ts:105-110`) [Tipe: `function`]
@@ -4090,7 +3932,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`findUsages`](file://services/api/src/refs.ts#L150-L185) (`services/api/src/refs.ts:150-185`) [Tipe: `function`]
     - *Signature:* `(table: string, id: string): Promise<string[]>`
 
-### Sub-sistem: `routelist:parseroutes:routes` (Klaster #217)
+### Sub-sistem: `routelist:parseroutes:routes` (Klaster #211)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`parseRoutes`](file://services/api/src/routeList.ts#L9-L23) (`services/api/src/routeList.ts:9-23`) [Tipe: `function`]
@@ -4098,7 +3940,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`routeList`](file://services/api/src/routeList.ts#L25-L27) (`services/api/src/routeList.ts:25-27`) [Tipe: `function`]
     - *Signature:* `(app: FastifyInstance): RouteEntry[]`
 
-### Sub-sistem: `constructor:serviceerror:service` (Klaster #240)
+### Sub-sistem: `constructor:serviceerror:service` (Klaster #234)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://services/api/src/serviceApproval.ts#L26-L28) (`services/api/src/serviceApproval.ts:26-28`) [Tipe: `method`]
@@ -4106,7 +3948,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ServiceError`](file://services/api/src/serviceApproval.ts#L25-L29) (`services/api/src/serviceApproval.ts:25-29`) [Tipe: `class`]
     - *Signature:* `class ServiceError`
 
-### Sub-sistem: `normalizenewservice:hasproject:normalize` (Klaster #241)
+### Sub-sistem: `normalizenewservice:hasproject:normalize` (Klaster #235)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`hasProject`](file://services/api/src/serviceApproval.ts#L45-L47) (`services/api/src/serviceApproval.ts:45-47`) [Tipe: `function`]
@@ -4114,7 +3956,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`normalizeNewService`](file://services/api/src/serviceApproval.ts#L51-L55) (`services/api/src/serviceApproval.ts:51-55`) [Tipe: `function`]
     - *Signature:* `(data: Data): Data`
 
-### Sub-sistem: `spk:spklockerror:caneditspk` (Klaster #245)
+### Sub-sistem: `spk:spklockerror:caneditspk` (Klaster #239)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`canEditSpk`](file://services/api/src/workOrderGuard.ts#L11-L13) (`services/api/src/workOrderGuard.ts:11-13`) [Tipe: `function`]
@@ -4122,7 +3964,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`spkLockError`](file://services/api/src/workOrderGuard.ts#L16-L24) (`services/api/src/workOrderGuard.ts:16-24`) [Tipe: `function`]
     - *Signature:* `(table: string, before: Data | null, after: Data | null, role: unknown): string | null`
 
-### Sub-sistem: `loadsession:getrole:segmen` (Klaster #249)
+### Sub-sistem: `loadsession:getrole:segmen` (Klaster #243)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadSession`](file://apps/web/src/auth/auth.tsx#L84-L91) (`apps/web/src/auth/auth.tsx:84-91`) [Tipe: `function`]
@@ -4131,7 +3973,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`getRole`](file://apps/web/src/auth/auth.tsx#L94-L96) (`apps/web/src/auth/auth.tsx:94-96`) [Tipe: `function`]
     - *Signature:* `(): string | null`
 
-### Sub-sistem: `confirmdroppending:drop:restoreoriginal` (Klaster #257)
+### Sub-sistem: `confirmdroppending:drop:restoreoriginal` (Klaster #251)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`confirmDropPending`](file://apps/web/src/auth/demoSwitch.ts#L44-L51) (`apps/web/src/auth/demoSwitch.ts:44-51`) [Tipe: `function`]
@@ -4140,7 +3982,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`restoreOriginal`](file://apps/web/src/auth/demoSwitch.ts#L78-L92) (`apps/web/src/auth/demoSwitch.ts:78-92`) [Tipe: `function`]
     - *Signature:* `(): Promise<void>`
 
-### Sub-sistem: `loginasrole:resetcachefor:dipilih` (Klaster #256)
+### Sub-sistem: `loginasrole:resetcachefor:dipilih` (Klaster #250)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`resetCacheFor`](file://apps/web/src/auth/demoSwitch.ts#L53-L56) (`apps/web/src/auth/demoSwitch.ts:53-56`) [Tipe: `function`]
@@ -4149,7 +3991,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`loginAsRole`](file://apps/web/src/auth/demoSwitch.ts#L106-L121) (`apps/web/src/auth/demoSwitch.ts:106-121`) [Tipe: `function`]
     - *Signature:* `(role: string, to = "/dashboard"): Promise<void>`
 
-### Sub-sistem: `confirm:importpreviewmodal:preview` (Klaster #282)
+### Sub-sistem: `confirm:importpreviewmodal:preview` (Klaster #275)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`confirm`](file://apps/web/src/components/ImportPreviewModal.tsx#L34-L37) (`apps/web/src/components/ImportPreviewModal.tsx:34-37`) [Tipe: `function`]
@@ -4157,7 +3999,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ImportPreviewModal`](file://apps/web/src/components/ImportPreviewModal.tsx#L28-L77) (`apps/web/src/components/ImportPreviewModal.tsx:28-77`) [Tipe: `function`]
     - *Signature:* `({ open, title, fileName, columns, rows, onCancel, onConfirm }: Props)`
 
-### Sub-sistem: `select:search:mapsearchselectoptions` (Klaster #290)
+### Sub-sistem: `select:search:mapsearchselectoptions` (Klaster #283)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`mapSearchSelectOptions`](file://apps/web/src/components/SearchSelect.tsx#L11-L13) (`apps/web/src/components/SearchSelect.tsx:11-13`) [Tipe: `function`]
@@ -4191,7 +4033,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onOpenChange?: (open: boolean) => void;
 })`
 
-### Sub-sistem: `compactmoney:kpicard:compact` (Klaster #313)
+### Sub-sistem: `compactmoney:kpicard:compact` (Klaster #306)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`compactMoney`](file://apps/web/src/components/ui.tsx#L340-L345) (`apps/web/src/components/ui.tsx:340-345`) [Tipe: `function`]
@@ -4220,7 +4062,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   chip?: keyof typeof gradientChip;
 })`
 
-### Sub-sistem: `modal:onkey:key` (Klaster #324)
+### Sub-sistem: `modal:onkey:key` (Klaster #317)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onKey`](file://apps/web/src/components/ui.tsx#L816-L829) (`apps/web/src/components/ui.tsx:816-829`) [Tipe: `function`]
@@ -4249,7 +4091,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   fullWidth?: boolean;
 })`
 
-### Sub-sistem: `field:onvalidate:validate` (Klaster #326)
+### Sub-sistem: `field:onvalidate:validate` (Klaster #319)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`onValidate`](file://apps/web/src/components/ui.tsx#L990-L995) (`apps/web/src/components/ui.tsx:990-995`) [Tipe: `function`]
@@ -4269,7 +4111,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   error?: string | null;
 })`
 
-### Sub-sistem: `001:inv:search` (Klaster #328)
+### Sub-sistem: `001:inv:search` (Klaster #321)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`searchText`](file://apps/web/src/components/ui.tsx#L1033-L1045) (`apps/web/src/components/ui.tsx:1033-1045`) [Tipe: `function`]
@@ -4287,7 +4129,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   fields: readonly (keyof T & string)[],
 ): boolean`
 
-### Sub-sistem: `use:uselistsearch:usedebouncedvalue` (Klaster #329)
+### Sub-sistem: `use:uselistsearch:usedebouncedvalue` (Klaster #322)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`useDebouncedValue`](file://apps/web/src/components/ui.tsx#L2125-L2132) (`apps/web/src/components/ui.tsx:2125-2132`) [Tipe: `function`]
@@ -4295,7 +4137,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`useListSearch`](file://apps/web/src/components/ui.tsx#L1061-L1071) (`apps/web/src/components/ui.tsx:1061-1071`) [Tipe: `function`]
     - *Signature:* `(delay = 200)`
 
-### Sub-sistem: `useserverpager:pager:use` (Klaster #337)
+### Sub-sistem: `useserverpager:pager:use` (Klaster #331)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`go`](file://apps/web/src/components/ui.tsx#L1704-L1704) (`apps/web/src/components/ui.tsx:1704-1704`) [Tipe: `function`]
@@ -4317,7 +4159,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   bar: ReactNode;
 }`
 
-### Sub-sistem: `format:moneyinput:money` (Klaster #342)
+### Sub-sistem: `format:moneyinput:money` (Klaster #336)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`format`](file://apps/web/src/components/ui.tsx#L2062-L2066) (`apps/web/src/components/ui.tsx:2062-2066`) [Tipe: `function`]
@@ -4328,7 +4170,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onChange: (v: string) => void;
 })`
 
-### Sub-sistem: `splithighlight:usedeeplinkparams:params` (Klaster #344)
+### Sub-sistem: `splithighlight:usedeeplinkparams:params` (Klaster #338)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`splitHighlight`](file://apps/web/src/components/useDeepLink.ts#L52-L59) (`apps/web/src/components/useDeepLink.ts:52-59`) [Tipe: `function`]
@@ -4336,7 +4178,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`useDeepLinkParams`](file://apps/web/src/components/useDeepLink.ts#L37-L45) (`apps/web/src/components/useDeepLink.ts:37-45`) [Tipe: `function`]
     - *Signature:* `(): DeepLinkParams`
 
-### Sub-sistem: `scopealertstoredata:rowsinbranch:alert` (Klaster #373)
+### Sub-sistem: `scopealertstoredata:rowsinbranch:alert` (Klaster #367)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`rowsInBranch`](file://apps/web/src/data/branchScope.ts#L2-L10) (`apps/web/src/data/branchScope.ts:2-10`) [Tipe: `function`]
@@ -4344,7 +4186,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`scopeAlertStoreData`](file://apps/web/src/data/scopeAlertData.ts#L6-L21) (`apps/web/src/data/scopeAlertData.ts:6-21`) [Tipe: `function`]
     - *Signature:* `(data: StoreShape, branch: string): StoreShape`
 
-### Sub-sistem: `idbput:indexeddb:localstorage` (Klaster #353)
+### Sub-sistem: `idbput:indexeddb:localstorage` (Klaster #347)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tx`](file://apps/web/src/data/idb.ts#L74-L96) (`apps/web/src/data/idb.ts:74-96`) [Tipe: `function`]
@@ -4353,7 +4195,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`idbPut`](file://apps/web/src/data/idb.ts#L99-L102) (`apps/web/src/data/idb.ts:99-102`) [Tipe: `function`]
     - *Signature:* `(col: string, value: unknown): Promise<boolean>`
 
-### Sub-sistem: `finish:idbgetall:idb` (Klaster #354)
+### Sub-sistem: `finish:idbgetall:idb` (Klaster #348)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`finish`](file://apps/web/src/data/idb.ts#L116-L126) (`apps/web/src/data/idb.ts:116-126`) [Tipe: `function`]
@@ -4361,7 +4203,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`idbGetAll`](file://apps/web/src/data/idb.ts#L105-L135) (`apps/web/src/data/idb.ts:105-135`) [Tipe: `function`]
     - *Signature:* `(): Promise<Record<string, unknown> | null>`
 
-### Sub-sistem: `isprojectarraymap:mergeofflinevalues:values` (Klaster #371)
+### Sub-sistem: `isprojectarraymap:mergeofflinevalues:values` (Klaster #365)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isProjectArrayMap`](file://apps/web/src/data/offlinePersistence.ts#L10-L15) (`apps/web/src/data/offlinePersistence.ts:10-15`) [Tipe: `function`]
@@ -4372,7 +4214,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   cached: Record<string, unknown>,
 ): T`
 
-### Sub-sistem: `createsessionfence:iscurrent:fence` (Klaster #376)
+### Sub-sistem: `createsessionfence:iscurrent:fence` (Klaster #370)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isCurrent`](file://apps/web/src/data/sessionFence.ts#L8-L8) (`apps/web/src/data/sessionFence.ts:8-8`) [Tipe: `function`]
@@ -4380,7 +4222,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`createSessionFence`](file://apps/web/src/data/sessionFence.ts#L7-L15) (`apps/web/src/data/sessionFence.ts:7-15`) [Tipe: `function`]
     - *Signature:* `(expectedScope: string, readCurrentScope: () => string): SessionFence`
 
-### Sub-sistem: `read:biar:loadstore` (Klaster #388)
+### Sub-sistem: `read:biar:loadstore` (Klaster #382)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`read`](file://apps/web/src/data/store.tsx#L562-L573) (`apps/web/src/data/store.tsx:562-573`) [Tipe: `function`]
@@ -4389,7 +4231,32 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`loadStore`](file://apps/web/src/data/store.tsx#L557-L584) (`apps/web/src/data/store.tsx:557-584`) [Tipe: `function`]
     - *Signature:* `(): StoreShape`
 
-### Sub-sistem: `berakhir:403:sesi` (Klaster #390)
+### Sub-sistem: `session:initialstoreforsession:currentsessionownerid` (Klaster #384)
+- **Kepadatan Simbol:** 2 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`currentSessionOwnerId`](file://apps/web/src/data/store.tsx#L586-L595) (`apps/web/src/data/store.tsx:586-595`) [Tipe: `function`]
+    - *Signature:* `(): string | null`
+  - [`initialStoreForSession`](file://apps/web/src/data/store.tsx#L632-L637) (`apps/web/src/data/store.tsx:632-637`) [Tipe: `function`]
+    - *Signature:* `(): StoreShape`
+    - *Deskripsi:* /** Username akun yang sedang login, untuk kolom "Aktor" jejak aktivitas.
+ *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
+ *  pelakunya (catatan CTO 15 Okt). */
+
+### Sub-sistem: `trail:menunjukkan:siapa` (Klaster #383)
+- **Kepadatan Simbol:** 2 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`storedCacheOwnerId`](file://apps/web/src/data/store.tsx#L613-L619) (`apps/web/src/data/store.tsx:613-619`) [Tipe: `function`]
+    - *Signature:* `(): string | null`
+    - *Deskripsi:* /** Username akun yang sedang login, untuk kolom "Aktor" jejak aktivitas.
+ *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
+ *  pelakunya (catatan CTO 15 Okt). */
+  - [`sessionScopeKey`](file://apps/web/src/data/store.tsx#L639-L641) (`apps/web/src/data/store.tsx:639-641`) [Tipe: `function`]
+    - *Signature:* `(generation: number): string`
+    - *Deskripsi:* /** Username akun yang sedang login, untuk kolom "Aktor" jejak aktivitas.
+ *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
+ *  pelakunya (catatan CTO 15 Okt). */
+
+### Sub-sistem: `berakhir:403:sesi` (Klaster #386)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`notifyStore`](file://apps/web/src/data/store.tsx#L735-L743) (`apps/web/src/data/store.tsx:735-743`) [Tipe: `function`]
@@ -4405,7 +4272,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Dulu keduanya diberi pesan "Sesi berakhir" sehingga 403 menyesatkan
  *  (K17-UMUM-01). */
 
-### Sub-sistem: `batch:sia:efek` (Klaster #400)
+### Sub-sistem: `batch:sia:efek` (Klaster #395)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`setSyncActive`](file://apps/web/src/data/useModuleSync.ts#L48-L52) (`apps/web/src/data/useModuleSync.ts:48-52`) [Tipe: `function`]
@@ -4427,18 +4294,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   projectIds: string[],
 ): { syncing: boolean; byProject: Record<string, WbsItem[]> }`
 
-### Sub-sistem: `batch:berjalan:halaman` (Klaster #398)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`publishFailed`](file://apps/web/src/data/useModuleSync.ts#L77-L82) (`apps/web/src/data/useModuleSync.ts:77-82`) [Tipe: `function`]
-    - *Signature:* `(batch: string[], failed: string[]): void`
-    - *Deskripsi:* /** true bila ada batch modul yang sedang berjalan (semua halaman).
- *  Dipakai AppShell untuk badge topbar; halaman juga bisa memakainya untuk
- *  menonaktifkan tombol ekspor selama batch berjalan. */
-  - [`useModuleSync`](file://apps/web/src/data/useModuleSync.ts#L111-L197) (`apps/web/src/data/useModuleSync.ts:111-197`) [Tipe: `function`]
-    - *Signature:* `(cols: CollectionKey[], deps: unknown[] = []): ModuleSync`
-
-### Sub-sistem: `loadlocale:languageprovider:language` (Klaster #410)
+### Sub-sistem: `loadlocale:languageprovider:language` (Klaster #405)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadLocale`](file://apps/web/src/i18n/LanguageContext.tsx#L11-L18) (`apps/web/src/i18n/LanguageContext.tsx:11-18`) [Tipe: `function`]
@@ -4447,7 +4303,23 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`LanguageProvider`](file://apps/web/src/i18n/LanguageContext.tsx#L28-L46) (`apps/web/src/i18n/LanguageContext.tsx:28-46`) [Tipe: `function`]
     - *Signature:* `({ children }: { children: ReactNode })`
 
-### Sub-sistem: `misclocale:misc:exportchartpng` (Klaster #417)
+### Sub-sistem: `tileuri:tile:uri` (Klaster #411)
+- **Kepadatan Simbol:** 2 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`escapeXml`](file://apps/web/src/security/watermark.tsx#L61-L63) (`apps/web/src/security/watermark.tsx:61-63`) [Tipe: `function`]
+    - *Signature:* `(s: string): string`
+  - [`tileUri`](file://apps/web/src/security/watermark.tsx#L65-L80) (`apps/web/src/security/watermark.tsx:65-80`) [Tipe: `function`]
+    - *Signature:* `(lines: string[]): string`
+
+### Sub-sistem: `paintlayer:paint:layer` (Klaster #412)
+- **Kepadatan Simbol:** 2 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`paintLayer`](file://apps/web/src/security/watermark.tsx#L84-L92) (`apps/web/src/security/watermark.tsx:84-92`) [Tipe: `function`]
+    - *Signature:* `(el: HTMLElement, bg: string)`
+  - [`ensureDom`](file://apps/web/src/security/watermark.tsx#L94-L124) (`apps/web/src/security/watermark.tsx:94-124`) [Tipe: `function`]
+    - *Signature:* `(bg: string, printText: string)`
+
+### Sub-sistem: `misclocale:misc:exportchartpng` (Klaster #416)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`miscLocale`](file://apps/web/src/pages/Analytics.tsx#L122-L126) (`apps/web/src/pages/Analytics.tsx:122-126`) [Tipe: `function`]
@@ -4455,7 +4327,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`exportChartPNG`](file://apps/web/src/pages/Analytics.tsx#L128-L159) (`apps/web/src/pages/Analytics.tsx:128-159`) [Tipe: `function`]
     - *Signature:* `(chartId: string, filename: string): void`
 
-### Sub-sistem: `num:postcashjournal:unik` (Klaster #424)
+### Sub-sistem: `num:postcashjournal:unik` (Klaster #423)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/services/autoJournal.ts#L22-L22) (`apps/web/src/services/autoJournal.ts:22-22`) [Tipe: `function`]
@@ -4464,7 +4336,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`postCashJournal`](file://apps/web/src/services/autoJournal.ts#L34-L59) (`apps/web/src/services/autoJournal.ts:34-59`) [Tipe: `function`]
     - *Signature:* `(args: CashJournalArgs): Promise<boolean>`
 
-### Sub-sistem: `constructor:filehttperror:http` (Klaster #426)
+### Sub-sistem: `constructor:filehttperror:http` (Klaster #425)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://apps/web/src/services/files.ts#L89-L93) (`apps/web/src/services/files.ts:89-93`) [Tipe: `method`]
@@ -4472,7 +4344,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`FileHttpError`](file://apps/web/src/services/files.ts#L87-L94) (`apps/web/src/services/files.ts:87-94`) [Tipe: `class`]
     - *Signature:* `class FileHttpError`
 
-### Sub-sistem: `constructor:apinotconfigured:not` (Klaster #428)
+### Sub-sistem: `constructor:apinotconfigured:not` (Klaster #427)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://apps/web/src/services/http.ts#L14-L17) (`apps/web/src/services/http.ts:14-17`) [Tipe: `method`]
@@ -4480,7 +4352,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ApiNotConfigured`](file://apps/web/src/services/http.ts#L13-L18) (`apps/web/src/services/http.ts:13-18`) [Tipe: `class`]
     - *Signature:* `class ApiNotConfigured`
 
-### Sub-sistem: `constructor:apierror:api` (Klaster #429)
+### Sub-sistem: `constructor:apierror:api` (Klaster #428)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://apps/web/src/services/http.ts#L25-L32) (`apps/web/src/services/http.ts:25-32`) [Tipe: `method`]
@@ -4488,7 +4360,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ApiError`](file://apps/web/src/services/http.ts#L20-L33) (`apps/web/src/services/http.ts:20-33`) [Tipe: `class`]
     - *Signature:* `class ApiError`
 
-### Sub-sistem: `jwt:setjwt:safestorage` (Klaster #430)
+### Sub-sistem: `jwt:setjwt:safestorage` (Klaster #429)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`safeStorage`](file://apps/web/src/services/http.ts#L39-L46) (`apps/web/src/services/http.ts:39-46`) [Tipe: `function`]
@@ -4497,7 +4369,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`setJwt`](file://apps/web/src/services/http.ts#L56-L63) (`apps/web/src/services/http.ts:56-63`) [Tipe: `function`]
     - *Signature:* `(token: string): void`
 
-### Sub-sistem: `jwt:notifysessionchange:clearjwt` (Klaster #431)
+### Sub-sistem: `jwt:notifysessionchange:clearjwt` (Klaster #430)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`notifySessionChange`](file://apps/web/src/services/http.ts#L48-L54) (`apps/web/src/services/http.ts:48-54`) [Tipe: `function`]
@@ -4506,7 +4378,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`clearJwt`](file://apps/web/src/services/http.ts#L73-L80) (`apps/web/src/services/http.ts:73-80`) [Tipe: `function`]
     - *Signature:* `(): void`
 
-### Sub-sistem: `bearer:dikirim:authorization` (Klaster #436)
+### Sub-sistem: `bearer:dikirim:authorization` (Klaster #435)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`notifyAuthExpired`](file://apps/web/src/services/http.ts#L138-L153) (`apps/web/src/services/http.ts:138-153`) [Tipe: `function`]
@@ -4524,7 +4396,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`PdfRenderError`](file://apps/web/src/services/pdfClient.ts#L61-L68) (`apps/web/src/services/pdfClient.ts:61-68`) [Tipe: `class`]
     - *Signature:* `class PdfRenderError`
 
-### Sub-sistem: `2026:key:dinormalkan` (Klaster #449)
+### Sub-sistem: `2026:key:dinormalkan` (Klaster #448)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`key`](file://apps/web/src/services/repositories.ts#L130-L130) (`apps/web/src/services/repositories.ts:130-130`) [Tipe: `function`]
@@ -4533,7 +4405,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stableOrder`](file://apps/web/src/services/repositories.ts#L128-L132) (`apps/web/src/services/repositories.ts:128-132`) [Tipe: `function`]
     - *Signature:* `(rows: StoreItem[]): StoreItem[]`
 
-### Sub-sistem: `constructor:uploadnotconfigured:not` (Klaster #451)
+### Sub-sistem: `constructor:uploadnotconfigured:not` (Klaster #450)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://apps/web/src/services/upload.ts#L10-L13) (`apps/web/src/services/upload.ts:10-13`) [Tipe: `method`]
@@ -4541,23 +4413,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`UploadNotConfigured`](file://apps/web/src/services/upload.ts#L9-L14) (`apps/web/src/services/upload.ts:9-14`) [Tipe: `class`]
     - *Signature:* `class UploadNotConfigured`
 
-### Sub-sistem: `tileuri:tile:uri` (Klaster #454)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`escapeXml`](file://apps/web/src/security/watermark.tsx#L61-L63) (`apps/web/src/security/watermark.tsx:61-63`) [Tipe: `function`]
-    - *Signature:* `(s: string): string`
-  - [`tileUri`](file://apps/web/src/security/watermark.tsx#L65-L80) (`apps/web/src/security/watermark.tsx:65-80`) [Tipe: `function`]
-    - *Signature:* `(lines: string[]): string`
-
-### Sub-sistem: `paintlayer:paint:layer` (Klaster #455)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`paintLayer`](file://apps/web/src/security/watermark.tsx#L84-L92) (`apps/web/src/security/watermark.tsx:84-92`) [Tipe: `function`]
-    - *Signature:* `(el: HTMLElement, bg: string)`
-  - [`ensureDom`](file://apps/web/src/security/watermark.tsx#L94-L124) (`apps/web/src/security/watermark.tsx:94-124`) [Tipe: `function`]
-    - *Signature:* `(bg: string, printText: string)`
-
-### Sub-sistem: `hiddencount:visibleitems:hidden` (Klaster #465)
+### Sub-sistem: `hiddencount:visibleitems:hidden` (Klaster #459)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`visibleItems`](file://apps/web/src/utils/bannerDismiss.ts#L91-L95) (`apps/web/src/utils/bannerDismiss.ts:91-95`) [Tipe: `function`]
@@ -4565,7 +4421,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`hiddenCount`](file://apps/web/src/utils/bannerDismiss.ts#L98-L100) (`apps/web/src/utils/bannerDismiss.ts:98-100`) [Tipe: `function`]
     - *Signature:* `(items: ModuleAlertItem[], dismissed: readonly AlertLevel[]): number`
 
-### Sub-sistem: `draft:usedraftstate:loaddraft` (Klaster #476)
+### Sub-sistem: `draft:usedraftstate:loaddraft` (Klaster #470)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadDraft`](file://apps/web/src/utils/draft.ts#L6-L14) (`apps/web/src/utils/draft.ts:6-14`) [Tipe: `function`]
@@ -4573,7 +4429,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`useDraftState`](file://apps/web/src/utils/draft.ts#L16-L29) (`apps/web/src/utils/draft.ts:16-29`) [Tipe: `function`]
     - *Signature:* `(key: string, initial: T | (() => T)): [T, Dispatch<SetStateAction<T>>]`
 
-### Sub-sistem: `markprojectscheduledatesedited:iscalendardate:calendar` (Klaster #479)
+### Sub-sistem: `markprojectscheduledatesedited:iscalendardate:calendar` (Klaster #473)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isCalendarDate`](file://apps/web/src/utils/drydockBookingDates.ts#L30-L32) (`apps/web/src/utils/drydockBookingDates.ts:30-32`) [Tipe: `function`]
@@ -4585,7 +4441,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   endDate: unknown,
 ): BookingDateEdits`
 
-### Sub-sistem: `fmttanggaljam:jam:fmt` (Klaster #488)
+### Sub-sistem: `fmttanggaljam:jam:fmt` (Klaster #482)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`g`](file://apps/web/src/utils/format.ts#L36-L36) (`apps/web/src/utils/format.ts:36-36`) [Tipe: `function`]
@@ -4593,7 +4449,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`fmtTanggalJam`](file://apps/web/src/utils/format.ts#L27-L39) (`apps/web/src/utils/format.ts:27-39`) [Tipe: `function`]
     - *Signature:* `(v: string | null | undefined): string`
 
-### Sub-sistem: `rupiah:fmt:fmtrupiahshort` (Klaster #489)
+### Sub-sistem: `rupiah:fmt:fmtrupiahshort` (Klaster #483)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`fmtRupiah`](file://apps/web/src/utils/format.ts#L63-L66) (`apps/web/src/utils/format.ts:63-66`) [Tipe: `function`]
@@ -4601,7 +4457,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`fmtRupiahShort`](file://apps/web/src/utils/format.ts#L70-L80) (`apps/web/src/utils/format.ts:70-80`) [Tipe: `function`]
     - *Signature:* `(n: number): string`
 
-### Sub-sistem: `stampupdated:nowiso:now` (Klaster #581)
+### Sub-sistem: `stampupdated:nowiso:now` (Klaster #572)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`nowIso`](file://apps/web/src/utils/format.ts#L117-L119) (`apps/web/src/utils/format.ts:117-119`) [Tipe: `function`]
@@ -4609,7 +4465,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stampUpdated`](file://apps/web/src/utils/timestamps.ts#L91-L94) (`apps/web/src/utils/timestamps.ts:91-94`) [Tipe: `function`]
     - *Signature:* `(patch: T): T`
 
-### Sub-sistem: `minstok:stok:rasio` (Klaster #493)
+### Sub-sistem: `minstok:stok:rasio` (Klaster #487)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normKey`](file://apps/web/src/utils/inventoryWarn.ts#L98-L100) (`apps/web/src/utils/inventoryWarn.ts:98-100`) [Tipe: `function`]
@@ -4628,7 +4484,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ruleOf`](file://apps/web/src/utils/inventoryWarn.ts#L103-L113) (`apps/web/src/utils/inventoryWarn.ts:103-113`) [Tipe: `function`]
     - *Signature:* `(category: unknown): CategoryRule`
 
-### Sub-sistem: `counts:empty:leveltally` (Klaster #497)
+### Sub-sistem: `counts:empty:leveltally` (Klaster #491)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EMPTY_COUNTS`](file://apps/web/src/utils/inventoryWarn.ts#L204-L206) (`apps/web/src/utils/inventoryWarn.ts:204-206`) [Tipe: `function`]
@@ -4637,7 +4493,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`levelTally`](file://apps/web/src/utils/inventoryWarn.ts#L217-L224) (`apps/web/src/utils/inventoryWarn.ts:217-224`) [Tipe: `function`]
     - *Signature:* `(inventory: StoreItem[], warehouse?: string): Record<WarnLevel, number>`
 
-### Sub-sistem: `ismaintstatus:status:statusof` (Klaster #504)
+### Sub-sistem: `ismaintstatus:status:statusof` (Klaster #498)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isMaintStatus`](file://apps/web/src/utils/maintenance.ts#L29-L31) (`apps/web/src/utils/maintenance.ts:29-31`) [Tipe: `function`]
@@ -4645,7 +4501,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`statusOf`](file://apps/web/src/utils/maintenance.ts#L33-L36) (`apps/web/src/utils/maintenance.ts:33-36`) [Tipe: `function`]
     - *Signature:* `(m: Partial<StoreItem>): MaintStatus`
 
-### Sub-sistem: `cantransition:nextstatuses:statuses` (Klaster #505)
+### Sub-sistem: `cantransition:nextstatuses:statuses` (Klaster #499)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`nextStatuses`](file://apps/web/src/utils/maintenance.ts#L44-L49) (`apps/web/src/utils/maintenance.ts:44-49`) [Tipe: `function`]
@@ -4653,7 +4509,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`canTransition`](file://apps/web/src/utils/maintenance.ts#L51-L53) (`apps/web/src/utils/maintenance.ts:51-53`) [Tipe: `function`]
     - *Signature:* `(from: MaintStatus, to: MaintStatus): boolean`
 
-### Sub-sistem: `materials:stockmaterials:materialsof` (Klaster #508)
+### Sub-sistem: `materials:stockmaterials:materialsof` (Klaster #502)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`materialsOf`](file://apps/web/src/utils/maintenance.ts#L97-L115) (`apps/web/src/utils/maintenance.ts:97-115`) [Tipe: `function`]
@@ -4661,7 +4517,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stockMaterials`](file://apps/web/src/utils/maintenance.ts#L118-L120) (`apps/web/src/utils/maintenance.ts:118-120`) [Tipe: `function`]
     - *Signature:* `(m: Partial<StoreItem>): MaintMaterial[]`
 
-### Sub-sistem: `canrestorestock:markdeducted:deducted` (Klaster #512)
+### Sub-sistem: `canrestorestock:markdeducted:deducted` (Klaster #506)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`canRestoreStock`](file://apps/web/src/utils/maintenance.ts#L227-L229) (`apps/web/src/utils/maintenance.ts:227-229`) [Tipe: `function`]
@@ -4669,7 +4525,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`markDeducted`](file://apps/web/src/utils/maintenance.ts#L231-L233) (`apps/web/src/utils/maintenance.ts:231-233`) [Tipe: `function`]
     - *Signature:* `(m: Partial<StoreItem>): boolean`
 
-### Sub-sistem: `fmtmonthkey:monthsof:berasal` (Klaster #521)
+### Sub-sistem: `fmtmonthkey:monthsof:berasal` (Klaster #517)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`monthsOf`](file://apps/web/src/utils/monthAxis.ts#L35-L37) (`apps/web/src/utils/monthAxis.ts:35-37`) [Tipe: `function`]
@@ -4678,15 +4534,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`fmtMonthKey`](file://apps/web/src/utils/monthAxis.ts#L245-L250) (`apps/web/src/utils/monthAxis.ts:245-250`) [Tipe: `function`]
     - *Signature:* `(key: string, locale: Locale = "id"): string`
 
-### Sub-sistem: `month:key:monthkeyofdate` (Klaster #518)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`monthKeyOfDate`](file://apps/web/src/utils/monthAxis.ts#L47-L49) (`apps/web/src/utils/monthAxis.ts:47-49`) [Tipe: `function`]
-    - *Signature:* `(d: Date): string`
-  - [`shiftMonthKey`](file://apps/web/src/utils/monthAxis.ts#L55-L60) (`apps/web/src/utils/monthAxis.ts:55-60`) [Tipe: `function`]
-    - *Signature:* `(key: string, delta: number): string`
-
-### Sub-sistem: `mod:seen:savemodseen` (Klaster #523)
+### Sub-sistem: `mod:seen:savemodseen` (Klaster #518)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadModSeen`](file://apps/web/src/utils/notifRead.ts#L31-L46) (`apps/web/src/utils/notifRead.ts:31-46`) [Tipe: `function`]
@@ -4694,7 +4542,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`saveModSeen`](file://apps/web/src/utils/notifRead.ts#L48-L56) (`apps/web/src/utils/notifRead.ts:48-56`) [Tipe: `function`]
     - *Signature:* `(key: string, ids: string[]): void`
 
-### Sub-sistem: `workedhours:tominutes:worked` (Klaster #525)
+### Sub-sistem: `workedhours:tominutes:worked` (Klaster #520)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toMinutes`](file://apps/web/src/utils/overtime.ts#L6-L12) (`apps/web/src/utils/overtime.ts:6-12`) [Tipe: `function`]
@@ -4702,15 +4550,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`workedHours`](file://apps/web/src/utils/overtime.ts#L15-L21) (`apps/web/src/utils/overtime.ts:15-21`) [Tipe: `function`]
     - *Signature:* `(checkIn: string, checkOut: string): number`
 
-### Sub-sistem: `sum:exportbpjscompanyreport:company` (Klaster #527)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`sum`](file://apps/web/src/utils/payrollReports.ts#L34-L34) (`apps/web/src/utils/payrollReports.ts:34-34`) [Tipe: `function`]
-    - *Signature:* `(i: number): number`
-  - [`exportBpjsCompanyReport`](file://apps/web/src/utils/payrollReports.ts#L24-L40) (`apps/web/src/utils/payrollReports.ts:24-40`) [Tipe: `function`]
-    - *Signature:* `(rows: StoreItem[], nameOf: (id: string) => string, period: string): Promise<void>`
-
-### Sub-sistem: `modul:num:maintenancedowntimehours` (Klaster #528)
+### Sub-sistem: `modul:num:maintenancedowntimehours` (Klaster #526)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/utils/projectCost.ts#L18-L21) (`apps/web/src/utils/projectCost.ts:18-21`) [Tipe: `function`]
@@ -4719,7 +4559,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`maintenanceDowntimeHours`](file://apps/web/src/utils/projectCost.ts#L171-L177) (`apps/web/src/utils/projectCost.ts:171-177`) [Tipe: `function`]
     - *Signature:* `(m: StoreItem): number`
 
-### Sub-sistem: `booking:isbillablebooking:billable` (Klaster #529)
+### Sub-sistem: `booking:isbillablebooking:billable` (Klaster #522)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`bookingCostRows`](file://apps/web/src/utils/projectCost.ts#L83-L110) (`apps/web/src/utils/projectCost.ts:83-110`) [Tipe: `function`]
@@ -4731,7 +4571,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`isBillableBooking`](file://apps/web/src/utils/projectCost.ts#L30-L32) (`apps/web/src/utils/projectCost.ts:30-32`) [Tipe: `function`]
     - *Signature:* `(b: StoreItem): boolean`
 
-### Sub-sistem: `resolveequipment:bookingcost:booking` (Klaster #530)
+### Sub-sistem: `resolveequipment:bookingcost:booking` (Klaster #523)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`resolveEquipment`](file://apps/web/src/utils/projectCost.ts#L40-L48) (`apps/web/src/utils/projectCost.ts:40-48`) [Tipe: `function`]
@@ -4739,7 +4579,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`bookingCost`](file://apps/web/src/utils/projectCost.ts#L59-L68) (`apps/web/src/utils/projectCost.ts:59-68`) [Tipe: `function`]
     - *Signature:* `(b: StoreItem, equipment: StoreItem[]): number`
 
-### Sub-sistem: `tahap:tahaplistof:tahapakhirof` (Klaster #543)
+### Sub-sistem: `tahap:tahaplistof:tahapakhirof` (Klaster #537)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tahapListOf`](file://apps/web/src/utils/projectStages.ts#L18-L20) (`apps/web/src/utils/projectStages.ts:18-20`) [Tipe: `function`]
@@ -4747,7 +4587,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`tahapAkhirOf`](file://apps/web/src/utils/projectStages.ts#L23-L26) (`apps/web/src/utils/projectStages.ts:23-26`) [Tipe: `function`]
     - *Signature:* `(p: StoreItem): string`
 
-### Sub-sistem: `tahap:tahapkolom:tahapof` (Klaster #544)
+### Sub-sistem: `tahap:tahapkolom:tahapof` (Klaster #538)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tahapOf`](file://apps/web/src/utils/projectStages.ts#L47-L49) (`apps/web/src/utils/projectStages.ts:47-49`) [Tipe: `function`]
@@ -4755,7 +4595,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`tahapKolom`](file://apps/web/src/utils/projectStages.ts#L29-L34) (`apps/web/src/utils/projectStages.ts:29-34`) [Tipe: `function`]
     - *Signature:* `(projects: StoreItem[]): string[]`
 
-### Sub-sistem: `unzip:inflateraw:inflate` (Klaster #549)
+### Sub-sistem: `unzip:inflateraw:inflate` (Klaster #543)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`inflateRaw`](file://apps/web/src/utils/readSheet.ts#L11-L14) (`apps/web/src/utils/readSheet.ts:11-14`) [Tipe: `function`]
@@ -4764,7 +4604,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(buf: ArrayBuffer, wanted: (name: string) => boolean): Promise<Map<string, string>>`
     - *Deskripsi:* /** Isi file di dalam zip, berdasarkan nama. */
 
-### Sub-sistem: `scope:scopelist:scopenames` (Klaster #561)
+### Sub-sistem: `scope:scopelist:scopenames` (Klaster #554)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`scopeList`](file://apps/web/src/utils/scope.ts#L9-L29) (`apps/web/src/utils/scope.ts:9-29`) [Tipe: `function`]
@@ -4772,7 +4612,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`scopeNames`](file://apps/web/src/utils/scope.ts#L32-L34) (`apps/web/src/utils/scope.ts:32-34`) [Tipe: `function`]
     - *Signature:* `(scope: unknown): string[]`
 
-### Sub-sistem: `scorechecklist:normalizedvalue:normalized` (Klaster #564)
+### Sub-sistem: `scorechecklist:normalizedvalue:normalized` (Klaster #557)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normalizedValue`](file://apps/web/src/utils/scoring.ts#L6-L18) (`apps/web/src/utils/scoring.ts:6-18`) [Tipe: `function`]
@@ -4780,7 +4620,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`scoreChecklist`](file://apps/web/src/utils/scoring.ts#L20-L33) (`apps/web/src/utils/scoring.ts:20-33`) [Tipe: `function`]
     - *Signature:* `(template: ScTemplate, answers: Record<string, unknown>): { score: number; answered: number; total: number }`
 
-### Sub-sistem: `briefof:brief:safetext` (Klaster #566)
+### Sub-sistem: `briefof:brief:safetext` (Klaster #559)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`safeText`](file://apps/web/src/utils/series.ts#L48-L52) (`apps/web/src/utils/series.ts:48-52`) [Tipe: `function`]
@@ -4788,7 +4628,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`briefOf`](file://apps/web/src/utils/series.ts#L62-L65) (`apps/web/src/utils/series.ts:62-65`) [Tipe: `function`]
     - *Signature:* `(value: unknown, words = 2): string`
 
-### Sub-sistem: `bahasa:terbilang:rupiah` (Klaster #570)
+### Sub-sistem: `bahasa:terbilang:rupiah` (Klaster #563)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`angkaKeKataId`](file://apps/web/src/utils/terbilang.ts#L21-L32) (`apps/web/src/utils/terbilang.ts:21-32`) [Tipe: `function`]
@@ -4800,7 +4640,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`terbilangRupiah`](file://apps/web/src/utils/terbilang.ts#L34-L39) (`apps/web/src/utils/terbilang.ts:34-39`) [Tipe: `function`]
     - *Signature:* `(amount: number): string`
 
-### Sub-sistem: `bahasa:spelledoutcurrency:spelled` (Klaster #571)
+### Sub-sistem: `bahasa:spelledoutcurrency:spelled` (Klaster #564)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`numToWordsEn`](file://apps/web/src/utils/terbilang.ts#L44-L52) (`apps/web/src/utils/terbilang.ts:44-52`) [Tipe: `function`]
@@ -4812,7 +4652,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`spelledOutCurrency`](file://apps/web/src/utils/terbilang.ts#L54-L58) (`apps/web/src/utils/terbilang.ts:54-58`) [Tipe: `function`]
     - *Signature:* `(amount: number): string`
 
-### Sub-sistem: `sum:buildtermins:termins` (Klaster #575)
+### Sub-sistem: `sum:buildtermins:termins` (Klaster #568)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`sum`](file://apps/web/src/utils/termin.ts#L24-L24) (`apps/web/src/utils/termin.ts:24-24`) [Tipe: `function`]
@@ -4820,7 +4660,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`buildTermins`](file://apps/web/src/utils/termin.ts#L26-L60) (`apps/web/src/utils/termin.ts:26-60`) [Tipe: `function`]
     - *Signature:* `(value: number, scheme: TerminScheme): BuildResult`
 
-### Sub-sistem: `created:derivecreatedat:stampderivedcreatedat` (Klaster #582)
+### Sub-sistem: `created:derivecreatedat:stampderivedcreatedat` (Klaster #573)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`stampDerivedCreatedAt`](file://apps/web/src/utils/timestamps.ts#L169-L195) (`apps/web/src/utils/timestamps.ts:169-195`) [Tipe: `function`]
@@ -4830,7 +4670,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`deriveCreatedAt`](file://apps/web/src/utils/timestamps.ts#L147-L161) (`apps/web/src/utils/timestamps.ts:147-161`) [Tipe: `function`]
     - *Signature:* `(row: Record<string, unknown> | null | undefined): string | null`
 
-### Sub-sistem: `rowsof:case:insensitive` (Klaster #592)
+### Sub-sistem: `rowsof:case:insensitive` (Klaster #585)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`rowsOf`](file://apps/web/src/utils/usages.ts#L7-L11) (`apps/web/src/utils/usages.ts:7-11`) [Tipe: `function`]
@@ -4839,18 +4679,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`findUsages`](file://apps/web/src/utils/usages.ts#L31-L134) (`apps/web/src/utils/usages.ts:31-134`) [Tipe: `function`]
     - *Signature:* `(data: StoreShape, collection: string, id: string): string[]`
 
-### Sub-sistem: `names:warehouse:usedwarehousenames` (Klaster #596)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`allWarehouseNames`](file://apps/web/src/utils/warehouse.ts#L124-L137) (`apps/web/src/utils/warehouse.ts:124-137`) [Tipe: `function`]
-    - *Signature:* `(
-  warehouses: (StoreItem | Warehouse)[],
-  inventory: StoreItem[],
-): string[]`
-  - [`usedWarehouseNames`](file://apps/web/src/utils/warehouse.ts#L114-L121) (`apps/web/src/utils/warehouse.ts:114-121`) [Tipe: `function`]
-    - *Signature:* `(inventory: StoreItem[]): string[]`
-
-### Sub-sistem: `ensuremetrics:standardwidth:standard` (Klaster #641)
+### Sub-sistem: `ensuremetrics:standardwidth:standard` (Klaster #630)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`standardWidth`](file://services/api/src/pdf/measure.ts#L28-L35) (`services/api/src/pdf/measure.ts:28-35`) [Tipe: `function`]
@@ -4858,7 +4687,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ensureMetrics`](file://services/api/src/pdf/measure.ts#L56-L64) (`services/api/src/pdf/measure.ts:56-64`) [Tipe: `function`]
     - *Signature:* `(pdf: jsPDF, weight: FontName, embedded: boolean, size = 100): number`
 
-### Sub-sistem: `month:shiftmonth:monthaxis` (Klaster #655)
+### Sub-sistem: `month:shiftmonth:monthaxis` (Klaster #644)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`shiftMonth`](file://services/api/src/pdf/reports.ts#L57-L62) (`services/api/src/pdf/reports.ts:57-62`) [Tipe: `function`]
@@ -4866,37 +4695,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`monthAxis`](file://services/api/src/pdf/reports.ts#L65-L70) (`services/api/src/pdf/reports.ts:65-70`) [Tipe: `function`]
     - *Signature:* `(months: number, ref = new Date()): string[]`
 
-### Sub-sistem: `parsial:divalidasi:sengaja` (Klaster #676)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`toJson`](file://services/api/src/routes/crud.ts#L251-L260) (`services/api/src/routes/crud.ts:251-260`) [Tipe: `function`]
-    - *Signature:* `(row: Row): { id: string; branch: string; data: unknown; updated_at: string }`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-  - [`checkUniqueField`](file://services/api/src/routes/crud.ts#L222-L249) (`services/api/src/routes/crud.ts:222-249`) [Tipe: `function`]
-    - *Signature:* `(
-  table: string,
-  field: string,
-  label: string,
-  value: string,
-  selfId: string | null,
-): Promise<string | null>`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-
-### Sub-sistem: `parsial:drydock:divalidasi` (Klaster #678)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`drydockRange`](file://services/api/src/routes/crud.ts#L293-L301) (`services/api/src/routes/crud.ts:293-301`) [Tipe: `function`]
-    - *Signature:* `(data: Record<string, unknown>, today: number): DrydockRange | null`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-  - [`drydockOverlapError`](file://services/api/src/routes/crud.ts#L311-L333) (`services/api/src/routes/crud.ts:311-333`) [Tipe: `function`]
-    - *Signature:* `(
-  data: Record<string, unknown>,
-  branch: string,
-  selfId: string | null,
-): Promise<string | null>`
-    - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
-
-### Sub-sistem: `filter:pdf:safefilename` (Klaster #686)
+### Sub-sistem: `filter:pdf:safefilename` (Klaster #671)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`safeFileName`](file://services/api/src/routes/pdf.ts#L333-L335) (`services/api/src/routes/pdf.ts:333-335`) [Tipe: `function`]
@@ -4919,7 +4718,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
 ): unknown`
     - *Deskripsi:* /** Header + body PDF. Satu tempat supaya render dan cetak ulang tidak berbeda. */
 
-### Sub-sistem: `reverserefs:reverse:alllinks` (Klaster #692)
+### Sub-sistem: `reverserefs:reverse:alllinks` (Klaster #676)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`allLinks`](file://services/api/src/routes/relations.ts#L46-L55) (`services/api/src/routes/relations.ts:46-55`) [Tipe: `function`]
@@ -4927,19 +4726,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`reverseRefs`](file://services/api/src/routes/relations.ts#L58-L60) (`services/api/src/routes/relations.ts:58-60`) [Tipe: `function`]
     - *Signature:* `(table: string): Link[]`
 
-### Sub-sistem: `time:jejak:lalu` (Klaster #708)
-- **Kepadatan Simbol:** 2 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`timeOf`](file://apps/web/src/pages/audit/Audit.tsx#L36-L42) (`apps/web/src/pages/audit/Audit.tsx:36-42`) [Tipe: `function`]
-    - *Signature:* `(a: Record<string, unknown>): string | null`
-    - *Deskripsi:* /** Waktu persis kejadian: `createdAt` (jejak baru), lalu `time` bila berupa
- *  tanggal, lalu `updated_at` server (saat jejak lama tersinkron). */
-  - [`timeLabel`](file://apps/web/src/pages/audit/Audit.tsx#L46-L49) (`apps/web/src/pages/audit/Audit.tsx:46-49`) [Tipe: `function`]
-    - *Signature:* `(a: Record<string, unknown>): string`
-    - *Deskripsi:* /** Tampilan kolom Waktu: tanggal + jam bila waktunya diketahui, selain itu
- *  label relatif lama apa adanya (mis. jejak seed "5 menit lalu"). */
-
-### Sub-sistem: `dock:docklengthm:dockmaxloa` (Klaster #719)
+### Sub-sistem: `dock:docklengthm:dockmaxloa` (Klaster #701)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`dockLengthM`](file://apps/web/src/pages/drydock/Drydock.tsx#L70-L73) (`apps/web/src/pages/drydock/Drydock.tsx:70-73`) [Tipe: `function`]
@@ -4947,7 +4734,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`dockMaxLoa`](file://apps/web/src/pages/drydock/Drydock.tsx#L77-L81) (`apps/web/src/pages/drydock/Drydock.tsx:77-81`) [Tipe: `function`]
     - *Signature:* `(dock: StoreItem | undefined): number | null`
 
-### Sub-sistem: `hasuom2:iseceran:uom` (Klaster #726)
+### Sub-sistem: `hasuom2:iseceran:uom` (Klaster #716)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isEceran`](file://apps/web/src/pages/inventori/Inventory.tsx#L106-L108) (`apps/web/src/pages/inventori/Inventory.tsx:106-108`) [Tipe: `function`]
@@ -4955,7 +4742,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`hasUom2`](file://apps/web/src/pages/inventori/Inventory.tsx#L300-L302) (`apps/web/src/pages/inventori/Inventory.tsx:300-302`) [Tipe: `function`]
     - *Signature:* `(it: StoreItem): boolean`
 
-### Sub-sistem: `qtyinuom2:convof:conv` (Klaster #733)
+### Sub-sistem: `qtyinuom2:convof:conv` (Klaster #714)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`convOf`](file://apps/web/src/pages/inventori/Inventory.tsx#L288-L290) (`apps/web/src/pages/inventori/Inventory.tsx:288-290`) [Tipe: `function`]
@@ -4963,7 +4750,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`qtyInUom2`](file://apps/web/src/pages/inventori/Inventory.tsx#L304-L307) (`apps/web/src/pages/inventori/Inventory.tsx:304-307`) [Tipe: `function`]
     - *Signature:* `(it: StoreItem): number`
 
-### Sub-sistem: `hasconversion:uom2of:uom` (Klaster #734)
+### Sub-sistem: `hasconversion:uom2of:uom` (Klaster #715)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`uom2Of`](file://apps/web/src/pages/inventori/Inventory.tsx#L292-L294) (`apps/web/src/pages/inventori/Inventory.tsx:292-294`) [Tipe: `function`]
@@ -4971,7 +4758,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`hasConversion`](file://apps/web/src/pages/inventori/Inventory.tsx#L296-L298) (`apps/web/src/pages/inventori/Inventory.tsx:296-298`) [Tipe: `function`]
     - *Signature:* `(it: StoreItem): boolean`
 
-### Sub-sistem: `abcmap:effcost:abc` (Klaster #735)
+### Sub-sistem: `abcmap:effcost:abc` (Klaster #717)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`effCost`](file://apps/web/src/pages/inventori/Inventory.tsx#L318-L321) (`apps/web/src/pages/inventori/Inventory.tsx:318-321`) [Tipe: `function`]
@@ -4979,7 +4766,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`abcMap`](file://apps/web/src/pages/inventori/Inventory.tsx#L330-L347) (`apps/web/src/pages/inventori/Inventory.tsx:330-347`) [Tipe: `function`]
     - *Signature:* `(items: StoreItem[]): Record<string, "A" | "B" | "C">`
 
-### Sub-sistem: `certtone:monthdiff:diff` (Klaster #737)
+### Sub-sistem: `certtone:monthdiff:diff` (Klaster #719)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`monthDiff`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L37-L43) (`apps/web/src/pages/kapal/VesselDetail.tsx:37-43`) [Tipe: `function`]
@@ -4987,7 +4774,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`certTone`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L45-L51) (`apps/web/src/pages/kapal/VesselDetail.tsx:45-51`) [Tipe: `function`]
     - *Signature:* `(expires: string, nowMonth: string): "green" | "amber" | "red"`
 
-### Sub-sistem: `diam:ber:dnv` (Klaster #745)
+### Sub-sistem: `diam:ber:dnv` (Klaster #727)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`monthDiff`](file://apps/web/src/pages/kapal/Vessels.tsx#L49-L54) (`apps/web/src/pages/kapal/Vessels.tsx:49-54`) [Tipe: `function`]
@@ -4997,7 +4784,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(expires: string, nowMonth: string): boolean`
     - *Deskripsi:* /** Kapal lama bisa ber-class lain (ABS, DNV, …): tetap jadi pilihan supaya tidak tertimpa diam-diam. */
 
-### Sub-sistem: `compliance:compliancesummary:complianceof` (Klaster #746)
+### Sub-sistem: `compliance:compliancesummary:complianceof` (Klaster #728)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`complianceOf`](file://apps/web/src/pages/kapal/Vessels.tsx#L70-L73) (`apps/web/src/pages/kapal/Vessels.tsx:70-73`) [Tipe: `function`]
@@ -5005,7 +4792,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`complianceSummary`](file://apps/web/src/pages/kapal/Vessels.tsx#L75-L81) (`apps/web/src/pages/kapal/Vessels.tsx:75-81`) [Tipe: `function`]
     - *Signature:* `(v: StoreItem): { total: number; valid: number; state: "ok" | "issue" | "empty" }`
 
-### Sub-sistem: `form:tertimpa:diam` (Klaster #747)
+### Sub-sistem: `form:tertimpa:diam` (Klaster #729)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`optNum`](file://apps/web/src/pages/kapal/Vessels.tsx#L104-L104) (`apps/web/src/pages/kapal/Vessels.tsx:104-104`) [Tipe: `function`]
@@ -5016,7 +4803,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Hanya field form. Saat edit dipakai sebagai patch, jadi field lama yang sudah
  *  tidak ada di form (IMO, GT, …) tidak ikut tertimpa. */
 
-### Sub-sistem: `hist:histfilterbar:emptyhist` (Klaster #753)
+### Sub-sistem: `hist:histfilterbar:emptyhist` (Klaster #734)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`emptyHist`](file://apps/web/src/pages/keuangan/Finance.tsx#L91-L91) (`apps/web/src/pages/keuangan/Finance.tsx:91-91`) [Tipe: `function`]
@@ -5024,30 +4811,26 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`HistFilterBar`](file://apps/web/src/pages/keuangan/Finance.tsx#L177-L229) (`apps/web/src/pages/keuangan/Finance.tsx:177-229`) [Tipe: `function`]
     - *Signature:* `({ value, onChange, idPrefix }: { value: HistFilter; onChange: (v: HistFilter) => void; idPrefix: string })`
 
-### Sub-sistem: `matchhist:kasasofreport:kas` (Klaster #752)
+### Sub-sistem: `muka:uang:num` (Klaster #736)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`matchHist`](file://apps/web/src/pages/keuangan/Finance.tsx#L151-L160) (`apps/web/src/pages/keuangan/Finance.tsx:151-160`) [Tipe: `function`]
-    - *Signature:* `(dateISO: unknown, f: HistFilter): boolean`
-  - [`kasAsOfReport`](file://apps/web/src/pages/keuangan/Finance.tsx#L478-L508) (`apps/web/src/pages/keuangan/Finance.tsx:478-508`) [Tipe: `function`]
-    - *Signature:* `(
-  list: StoreItem[],
-  end: string,
-  f: HistFilter,
-  opening: Record<string, number>,
-  kodeRe: RegExp,
-): { saldo: Record<string, number>; masuk: Record<string, number>; keluar: Record<string, number>; hitung: number }`
+  - [`num`](file://apps/web/src/pages/keuangan/Finance.tsx#L342-L345) (`apps/web/src/pages/keuangan/Finance.tsx:342-345`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): number`
+    - *Deskripsi:* /** DP = uang muka: tanpa retensi, dan menandai proyek punya uang muka. */
+  - [`lineAmount`](file://apps/web/src/pages/keuangan/Finance.tsx#L372-L375) (`apps/web/src/pages/keuangan/Finance.tsx:372-375`) [Tipe: `function`]
+    - *Signature:* `(l: InvLine, isTM: boolean): number`
+    - *Deskripsi:* // potongan = bruto - net (PPh21 + BPJS karyawan), selalu seimbang.
 
-### Sub-sistem: `esc:downloadcsv:bruto` (Klaster #756)
+### Sub-sistem: `esc:downloadcsv:bruto` (Klaster #738)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`esc`](file://apps/web/src/pages/keuangan/Finance.tsx#L394-L397) (`apps/web/src/pages/keuangan/Finance.tsx:394-397`) [Tipe: `function`]
+  - [`esc`](file://apps/web/src/pages/keuangan/Finance.tsx#L396-L399) (`apps/web/src/pages/keuangan/Finance.tsx:396-399`) [Tipe: `function`]
     - *Signature:* `(v: string | number): string`
-  - [`downloadCsv`](file://apps/web/src/pages/keuangan/Finance.tsx#L393-L408) (`apps/web/src/pages/keuangan/Finance.tsx:393-408`) [Tipe: `function`]
+  - [`downloadCsv`](file://apps/web/src/pages/keuangan/Finance.tsx#L395-L410) (`apps/web/src/pages/keuangan/Finance.tsx:395-410`) [Tipe: `function`]
     - *Signature:* `(filename: string, header: string[], rows: (string | number)[][]): void`
     - *Deskripsi:* // potongan = bruto - net (PPh21 + BPJS karyawan), selalu seimbang.
 
-### Sub-sistem: `allowances:normallowances:sumallowances` (Klaster #771)
+### Sub-sistem: `allowances:normallowances:sumallowances` (Klaster #753)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`normAllowances`](file://apps/web/src/pages/payroll/Payroll.tsx#L130-L143) (`apps/web/src/pages/payroll/Payroll.tsx:130-143`) [Tipe: `function`]
@@ -5055,7 +4838,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`sumAllowances`](file://apps/web/src/pages/payroll/Payroll.tsx#L145-L147) (`apps/web/src/pages/payroll/Payroll.tsx:145-147`) [Tipe: `function`]
     - *Signature:* `(v: unknown): number`
 
-### Sub-sistem: `fmtdatetime:tanpa:matriks` (Klaster #782)
+### Sub-sistem: `fmtdatetime:tanpa:matriks` (Klaster #764)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`p`](file://apps/web/src/pages/pengaturan/Peran.tsx#L310-L310) (`apps/web/src/pages/pengaturan/Peran.tsx:310-310`) [Tipe: `function`]
@@ -5064,7 +4847,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(v: string): string`
     - *Deskripsi:* /** Matriks RBAC display: sel yang tidak tercantum = tanpa akses. Read-only tanpa backend. */
 
-### Sub-sistem: `scoresof:scores:avgscore` (Klaster #792)
+### Sub-sistem: `scoresof:scores:avgscore` (Klaster #774)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`scoresOf`](file://apps/web/src/pages/procurement/Procurement.tsx#L159-L161) (`apps/web/src/pages/procurement/Procurement.tsx:159-161`) [Tipe: `function`]
@@ -5072,7 +4855,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`avgScore`](file://apps/web/src/pages/procurement/Procurement.tsx#L163-L167) (`apps/web/src/pages/procurement/Procurement.tsx:163-167`) [Tipe: `function`]
     - *Signature:* `(v: StoreItem): number | null`
 
-### Sub-sistem: `num:monitoringfeed:monitoring` (Klaster #808)
+### Sub-sistem: `num:monitoringfeed:monitoring` (Klaster #790)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`num`](file://apps/web/src/pages/proyek/MonitoringFeed.tsx#L38-L38) (`apps/web/src/pages/proyek/MonitoringFeed.tsx:38-38`) [Tipe: `function`]
@@ -5080,7 +4863,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`MonitoringFeed`](file://apps/web/src/pages/proyek/MonitoringFeed.tsx#L40-L164) (`apps/web/src/pages/proyek/MonitoringFeed.tsx:40-164`) [Tipe: `function`]
     - *Signature:* `({ projects, canUpdate }: Props)`
 
-### Sub-sistem: `allocationsof:allocations:stagematerialcount` (Klaster #818)
+### Sub-sistem: `allocationsof:allocations:stagematerialcount` (Klaster #800)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`allocationsOf`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L17-L23) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:17-23`) [Tipe: `function`]
@@ -5088,7 +4871,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`stageMaterialCount`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L26-L28) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:26-28`) [Tipe: `function`]
     - *Signature:* `(bomItems: readonly StoreItem[], projectId: string, task: string): number`
 
-### Sub-sistem: `addyearsiso:normcerts:years` (Klaster #831)
+### Sub-sistem: `addyearsiso:normcerts:years` (Klaster #814)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`addYearsISO`](file://apps/web/src/pages/sdm/HR.tsx#L97-L101) (`apps/web/src/pages/sdm/HR.tsx:97-101`) [Tipe: `function`]
@@ -5096,7 +4879,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`normCerts`](file://apps/web/src/pages/sdm/HR.tsx#L124-L141) (`apps/web/src/pages/sdm/HR.tsx:124-141`) [Tipe: `function`]
     - *Signature:* `(e: StoreItem): EmpCert[]`
 
-### Sub-sistem: `skills:defaultskills:getskills` (Klaster #832)
+### Sub-sistem: `skills:defaultskills:getskills` (Klaster #813)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`defaultSkills`](file://apps/web/src/pages/sdm/HR.tsx#L113-L117) (`apps/web/src/pages/sdm/HR.tsx:113-117`) [Tipe: `function`]
@@ -5104,7 +4887,16 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`getSkills`](file://apps/web/src/pages/sdm/HR.tsx#L119-L122) (`apps/web/src/pages/sdm/HR.tsx:119-122`) [Tipe: `function`]
     - *Signature:* `(e: StoreItem): string[]`
 
-### Sub-sistem: `tarif:hutang:kata` (Klaster #839)
+### Sub-sistem: `addyearsiso:normcerts:dukung` (Klaster #818)
+- **Kepadatan Simbol:** 2 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`addYearsISO`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L77-L81) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:77-81`) [Tipe: `function`]
+    - *Signature:* `(iso: string, years = 2): string`
+  - [`normCerts`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L104-L124) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:104-124`) [Tipe: `function`]
+    - *Signature:* `(e: StoreItem): EmpCert[]`
+    - *Deskripsi:* /** Total tunjangan: dukung number (lama) maupun array [{label,amount}] (Payroll). */
+
+### Sub-sistem: `tarif:hutang:kata` (Klaster #821)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`daysUntil`](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L120-L127) (`apps/web/src/pages/subkontraktor/Subcontractor.tsx:120-127`) [Tipe: `function`]
@@ -5114,7 +4906,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Signature:* `(iso: string | null | undefined): number`
     - *Deskripsi:* /** Teks tarif untuk tampilan & catatan hutang: "0.5%" atau kata "manual". */
 
-### Sub-sistem: `ribu:terbilangangka:terbilang` (Klaster #867)
+### Sub-sistem: `ribu:terbilangangka:terbilang` (Klaster #849)
 - **Kepadatan Simbol:** 2 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`terbilangAngka`](file://services/api/src/pdf/documents/kwitansi.ts#L129-L157) (`services/api/src/pdf/documents/kwitansi.ts:129-157`) [Tipe: `function`]
@@ -5122,7 +4914,389 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`ribu`](file://services/api/src/pdf/documents/kwitansi.ts#L123-L127) (`services/api/src/pdf/documents/kwitansi.ts:123-127`) [Tipe: `function`]
     - *Signature:* `(n: number): string`
 
-### Sub-sistem: `galat:modul:resetkey` (Klaster #0)
+### Sub-sistem: `assert` (Klaster #0)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/alert-probe.ts#L48-L51) (`apps/web/scripts/alert-probe.ts:48-51`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `dayoffset:day:offset` (Klaster #1)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`dayOffset`](file://apps/web/scripts/alert-probe.ts#L57-L61) (`apps/web/scripts/alert-probe.ts:57-61`) [Tipe: `function`]
+    - *Signature:* `(n: number): string`
+
+### Sub-sistem: `shape:builder:satu` (Klaster #2)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`shape`](file://apps/web/scripts/alert-probe.ts#L67-L68) (`apps/web/scripts/alert-probe.ts:67-68`) [Tipe: `function`]
+    - *Signature:* `(over: Record<string, unknown[]>): StoreShape`
+    - *Deskripsi:* /**
+ * Fixture dibuat per kasus, bukan satu data besar: kalau satu builder salah,
+ * test-nya masih bisa menunjuk builder mana.
+ */
+
+### Sub-sistem: `builder:satu:levelof` (Klaster #3)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`levelOf`](file://apps/web/scripts/alert-probe.ts#L70-L73) (`apps/web/scripts/alert-probe.ts:70-73`) [Tipe: `function`]
+    - *Signature:* `(items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG"`
+    - *Deskripsi:* /**
+ * Fixture dibuat per kasus, bukan satu data besar: kalau satu builder salah,
+ * test-nya masih bisa menunjuk builder mana.
+ */
+
+### Sub-sistem: `subsystem-4` (Klaster #4)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`es`](file://apps/web/scripts/alert-probe.ts#L337-L337) (`apps/web/scripts/alert-probe.ts:337-337`) [Tipe: `function`]
+    - *Signature:* `(d: string): StoreItem`
+
+### Sub-sistem: `norm` (Klaster #5)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`norm`](file://apps/web/scripts/alert-probe.ts#L352-L352) (`apps/web/scripts/alert-probe.ts:352-352`) [Tipe: `function`]
+    - *Signature:* `(d: string): string`
+
+### Sub-sistem: `item` (Klaster #6)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`item`](file://apps/web/scripts/alert-probe.ts#L402-L408) (`apps/web/scripts/alert-probe.ts:402-408`) [Tipe: `function`]
+    - *Signature:* `(level: AlertLevel, n: number): ModuleAlertItem`
+
+### Sub-sistem: `check` (Klaster #7)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`check`](file://apps/web/scripts/api-base-probe.ts#L7-L11) (`apps/web/scripts/api-base-probe.ts:7-11`) [Tipe: `function`]
+    - *Signature:* `(name: string, got: string, want: string): void`
+
+### Sub-sistem: `length` (Klaster #8)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`length`](file://apps/web/scripts/browser-shims.ts#L18-L20) (`apps/web/scripts/browser-shims.ts:18-20`) [Tipe: `method`]
+    - *Signature:* `()`
+
+### Sub-sistem: `noop` (Klaster #9)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`noop`](file://apps/web/scripts/browser-shims.ts#L23-L23) (`apps/web/scripts/browser-shims.ts:23-23`) [Tipe: `function`]
+    - *Signature:* `()`
+
+### Sub-sistem: `eventtarget:event:target` (Klaster #10)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`eventTarget`](file://apps/web/scripts/browser-shims.ts#L25-L30) (`apps/web/scripts/browser-shims.ts:25-30`) [Tipe: `function`]
+    - *Signature:* `()`
+
+### Sub-sistem: `define` (Klaster #11)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`define`](file://apps/web/scripts/browser-shims.ts#L34-L40) (`apps/web/scripts/browser-shims.ts:34-40`) [Tipe: `function`]
+    - *Signature:* `(key: string, value: unknown): void`
+
+### Sub-sistem: `unobserve` (Klaster #12)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`unobserve`](file://apps/web/scripts/browser-shims.ts#L59-L59) (`apps/web/scripts/browser-shims.ts:59-59`) [Tipe: `method`]
+    - *Signature:* `()`
+
+### Sub-sistem: `check` (Klaster #13)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`check`](file://apps/web/scripts/drydock-dates-probe.ts#L16-L23) (`apps/web/scripts/drydock-dates-probe.ts:16-23`) [Tipe: `function`]
+    - *Signature:* `(condition: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `collectstrings:strings:collect` (Klaster #14)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`collectStrings`](file://apps/web/scripts/em-dash-audit-probe.ts#L12-L23) (`apps/web/scripts/em-dash-audit-probe.ts:12-23`) [Tipe: `function`]
+    - *Signature:* `(obj: unknown, prefix = ""): { path: string; val: string }[]`
+
+### Sub-sistem: `cek` (Klaster #15)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`cek`](file://apps/web/scripts/employee-probe.ts#L25-L32) (`apps/web/scripts/employee-probe.ts:25-32`) [Tipe: `function`]
+    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
+
+### Sub-sistem: `assert` (Klaster #16)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/equipment-notification-probe.ts#L11-L14) (`apps/web/scripts/equipment-notification-probe.ts:11-14`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `syntheticfetch:synthetic:fetch` (Klaster #17)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`syntheticFetch`](file://apps/web/scripts/fetch-performance-probe.ts#L23-L46) (`apps/web/scripts/fetch-performance-probe.ts:23-46`) [Tipe: `function`]
+    - *Signature:* `(path: string): Promise<T>`
+
+### Sub-sistem: `assert` (Klaster #18)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/foundation-probe.ts#L22-L25) (`apps/web/scripts/foundation-probe.ts:22-25`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `aswo` (Klaster #19)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`asWo`](file://apps/web/scripts/foundation-probe.ts#L142-L142) (`apps/web/scripts/foundation-probe.ts:142-142`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): StoreItem`
+
+### Sub-sistem: `subsystem-20` (Klaster #20)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`wo`](file://apps/web/scripts/foundation-probe.ts#L235-L235) (`apps/web/scripts/foundation-probe.ts:235-235`) [Tipe: `function`]
+    - *Signature:* `(ms: unknown[], progress?: number): StoreItem`
+
+### Sub-sistem: `subsystem-21` (Klaster #21)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`m`](file://apps/web/scripts/foundation-probe.ts#L236-L236) (`apps/web/scripts/foundation-probe.ts:236-236`) [Tipe: `function`]
+    - *Signature:* `(title: string, pct: number, done: boolean)`
+
+### Sub-sistem: `assert` (Klaster #22)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/hr-rules-probe.ts#L7-L10) (`apps/web/scripts/hr-rules-probe.ts:7-10`) [Tipe: `function`]
+    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
+
+### Sub-sistem: `keysof:keys` (Klaster #23)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`keysOf`](file://apps/web/scripts/i18n-probe.ts#L6-L9) (`apps/web/scripts/i18n-probe.ts:6-9`) [Tipe: `function`]
+    - *Signature:* `(obj: unknown, prefix = ""): string[]`
+
+### Sub-sistem: `cek` (Klaster #25)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`cek`](file://apps/web/scripts/p8-probe.ts#L23-L30) (`apps/web/scripts/p8-probe.ts:23-30`) [Tipe: `function`]
+    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
+
+### Sub-sistem: `check` (Klaster #26)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`check`](file://apps/web/scripts/price-probe.ts#L36-L40) (`apps/web/scripts/price-probe.ts:36-40`) [Tipe: `function`]
+    - *Signature:* `(label: string, value: number, min: number): void`
+
+### Sub-sistem: `assert:predicated:plus` (Klaster #27)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/price-probe.ts#L43-L46) (`apps/web/scripts/price-probe.ts:43-46`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
+
+### Sub-sistem: `rows:predicated:plus` (Klaster #28)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`rows`](file://apps/web/scripts/price-probe.ts#L49-L49) (`apps/web/scripts/price-probe.ts:49-49`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): Row[]`
+    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
+
+### Sub-sistem: `predicated:plus:opsional` (Klaster #29)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`id`](file://apps/web/scripts/price-probe.ts#L56-L56) (`apps/web/scripts/price-probe.ts:56-56`) [Tipe: `function`]
+    - *Signature:* `(r: Row): string`
+    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
+
+### Sub-sistem: `assert` (Klaster #30)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/project-add-probe.tsx#L14-L17) (`apps/web/scripts/project-add-probe.tsx:14-17`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `mockadd:mock:add` (Klaster #31)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`mockAdd`](file://apps/web/scripts/project-add-probe.tsx#L56-L56) (`apps/web/scripts/project-add-probe.tsx:56-56`) [Tipe: `function`]
+    - *Signature:* `(_col: string, item: Record<string, unknown>)`
+
+### Sub-sistem: `assert` (Klaster #32)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/project-progress-probe.ts#L9-L12) (`apps/web/scripts/project-progress-probe.ts:9-12`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `assert` (Klaster #33)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/push-probe.ts#L36-L43) (`apps/web/scripts/push-probe.ts:36-43`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `model` (Klaster #34)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`Model`](file://apps/web/scripts/push-probe.ts#L47-L62) (`apps/web/scripts/push-probe.ts:47-62`) [Tipe: `interface`]
+    - *Signature:* `interface Model`
+
+### Sub-sistem: `newmodel:new:model` (Klaster #35)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`newModel`](file://apps/web/scripts/push-probe.ts#L64-L72) (`apps/web/scripts/push-probe.ts:64-72`) [Tipe: `function`]
+    - *Signature:* `(): Model`
+
+### Sub-sistem: `world` (Klaster #36)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`World`](file://apps/web/scripts/push-probe.ts#L74-L80) (`apps/web/scripts/push-probe.ts:74-80`) [Tipe: `interface`]
+    - *Signature:* `interface World`
+
+### Sub-sistem: `run:runold:old` (Klaster #37)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`runOld`](file://apps/web/scripts/push-probe.ts#L83-L104) (`apps/web/scripts/push-probe.ts:83-104`) [Tipe: `function`]
+    - *Signature:* `(w: World, m: Model): void`
+    - *Deskripsi:* /** Satu run model LAMA: kuota per koleksi, cursor hanya maju kalau semua sukses. */
+
+### Sub-sistem: `giliran:run:koleksi` (Klaster #38)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`runNew`](file://apps/web/scripts/push-probe.ts#L111-L150) (`apps/web/scripts/push-probe.ts:111-150`) [Tipe: `function`]
+    - *Signature:* `(w: World, m: Model): void`
+    - *Deskripsi:* /** Satu run model BARU: budget global, cursor selalu maju, racun punya jatah.
+ *  Setara dengan store.tsx: rotasi koleksi (`pushColCursorRef`) supaya yang
+ *  tidak kebagian giliran dapat giliran pertama di run berikutnya, dan
+ *  koleksi yang sudah tuntas DILAPAS dari antrean (clearDirty) sehingga tidak
+ *  tidak akan habis selamanya. */
+
+### Sub-sistem: `giliran:koleksi:tidak` (Klaster #39)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`mk`](file://apps/web/scripts/push-probe.ts#L152-L156) (`apps/web/scripts/push-probe.ts:152-156`) [Tipe: `function`]
+    - *Signature:* `(cols: Record<string, number>): World`
+    - *Deskripsi:* /** Satu run model BARU: budget global, cursor selalu maju, racun punya jatah.
+ *  Setara dengan store.tsx: rotasi koleksi (`pushColCursorRef`) supaya yang
+ *  tidak kebagian giliran dapat giliran pertama di run berikutnya, dan
+ *  koleksi yang sudah tuntas DILAPAS dari antrean (clearDirty) sehingga tidak
+ *  tidak akan habis selamanya. */
+
+### Sub-sistem: `triggerlama:trigger:lama` (Klaster #40)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`triggerLama`](file://apps/web/scripts/push-probe.ts#L250-L262) (`apps/web/scripts/push-probe.ts:250-262`) [Tipe: `function`]
+    - *Signature:* `(): void`
+
+### Sub-sistem: `triggerbaru:trigger:baru` (Klaster #41)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`triggerBaru`](file://apps/web/scripts/push-probe.ts#L269-L280) (`apps/web/scripts/push-probe.ts:269-280`) [Tipe: `function`]
+    - *Signature:* `(): void`
+
+### Sub-sistem: `assert` (Klaster #42)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/qc-deep-link-probe.ts#L10-L13) (`apps/web/scripts/qc-deep-link-probe.ts:10-13`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `cek` (Klaster #43)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`cek`](file://apps/web/scripts/risk-auto-probe.ts#L23-L30) (`apps/web/scripts/risk-auto-probe.ts:23-30`) [Tipe: `function`]
+    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
+
+### Sub-sistem: `firstid:first` (Klaster #44)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`firstId`](file://apps/web/scripts/ssr-probe.tsx#L59-L60) (`apps/web/scripts/ssr-probe.tsx:59-60`) [Tipe: `function`]
+    - *Signature:* `(rows: { id?: unknown }[] | undefined, fallback: string): string`
+
+### Sub-sistem: `row` (Klaster #45)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`row`](file://apps/web/scripts/ssr-probe.tsx#L254-L254) (`apps/web/scripts/ssr-probe.tsx:254-254`) [Tipe: `function`]
+    - *Signature:* `(id: string, extra: Record<string, unknown> = {})`
+
+### Sub-sistem: `subsystem-46` (Klaster #46)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`j`](file://apps/web/scripts/ssr-probe.tsx#L318-L320) (`apps/web/scripts/ssr-probe.tsx:318-320`) [Tipe: `function`]
+    - *Signature:* `(date: string, db: string, kr: string, amount: number, sumber = "Kas")`
+
+### Sub-sistem: `enc` (Klaster #47)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`enc`](file://apps/web/scripts/ssr-probe.tsx#L434-L434) (`apps/web/scripts/ssr-probe.tsx:434-434`) [Tipe: `function`]
+    - *Signature:* `(s: string): Uint8Array`
+
+### Sub-sistem: `stub` (Klaster #48)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`stub`](file://apps/web/scripts/ssr-probe.tsx#L470-L473) (`apps/web/scripts/ssr-probe.tsx:470-473`) [Tipe: `function`]
+    - *Signature:* `(body: BodyInit | null, status: number, headers: Record<string, string>): void`
+
+### Sub-sistem: `assert` (Klaster #49)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/stock-issue-probe.ts#L6-L12) (`apps/web/scripts/stock-issue-probe.ts:6-12`) [Tipe: `function`]
+    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
+
+### Sub-sistem: `assert` (Klaster #50)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/table-probe.ts#L32-L35) (`apps/web/scripts/table-probe.ts:32-35`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `asrec:rec` (Klaster #51)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`asRec`](file://apps/web/scripts/table-probe.ts#L37-L37) (`apps/web/scripts/table-probe.ts:37-37`) [Tipe: `function`]
+    - *Signature:* `(v: unknown): Record<string, unknown>`
+
+### Sub-sistem: `urut` (Klaster #52)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`urut`](file://apps/web/scripts/table-probe.ts#L124-L124) (`apps/web/scripts/table-probe.ts:124-124`) [Tipe: `function`]
+    - *Signature:* `(dir: "asc" | "desc")`
+
+### Sub-sistem: `subsystem-53` (Klaster #53)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`dalam`](file://apps/web/scripts/table-probe.ts#L250-L251) (`apps/web/scripts/table-probe.ts:250-251`) [Tipe: `function`]
+    - *Signature:* `(n: number): Record<string, unknown>`
+
+### Sub-sistem: `assert` (Klaster #54)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/termin-probe.ts#L7-L13) (`apps/web/scripts/termin-probe.ts:7-13`) [Tipe: `function`]
+    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
+
+### Sub-sistem: `total` (Klaster #55)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`total`](file://apps/web/scripts/termin-probe.ts#L14-L14) (`apps/web/scripts/termin-probe.ts:14-14`) [Tipe: `function`]
+    - *Signature:* `(r: ReturnType<typeof buildTermins>): number`
+
+### Sub-sistem: `assert` (Klaster #56)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/time-probe.ts#L26-L33) (`apps/web/scripts/time-probe.ts:26-33`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `subsystem-57` (Klaster #57)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`m`](file://apps/web/scripts/time-probe.ts#L125-L125) (`apps/web/scripts/time-probe.ts:125-125`) [Tipe: `function`]
+    - *Signature:* `(s: string): number`
+
+### Sub-sistem: `assert` (Klaster #58)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/unit-conversion-probe.ts#L18-L24) (`apps/web/scripts/unit-conversion-probe.ts:18-24`) [Tipe: `function`]
+    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
+
+### Sub-sistem: `assert` (Klaster #59)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/wbs-flow-probe.ts#L14-L17) (`apps/web/scripts/wbs-flow-probe.ts:14-17`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `assert` (Klaster #60)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`assert`](file://apps/web/scripts/wo-probe.ts#L21-L24) (`apps/web/scripts/wo-probe.ts:21-24`) [Tipe: `function`]
+    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
+
+### Sub-sistem: `galat:modul:tab` (Klaster #61)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Guard`](file://apps/web/src/main.tsx#L89-L96) (`apps/web/src/main.tsx:89-96`) [Tipe: `function`]
@@ -5144,457 +5318,75 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * sudah terisi.
  */
 
-### Sub-sistem: `assert` (Klaster #1)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/alert-probe.ts#L48-L51) (`apps/web/scripts/alert-probe.ts:48-51`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `dayoffset:day:offset` (Klaster #2)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`dayOffset`](file://apps/web/scripts/alert-probe.ts#L57-L61) (`apps/web/scripts/alert-probe.ts:57-61`) [Tipe: `function`]
-    - *Signature:* `(n: number): string`
-
-### Sub-sistem: `shape:builder:satu` (Klaster #3)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`shape`](file://apps/web/scripts/alert-probe.ts#L67-L68) (`apps/web/scripts/alert-probe.ts:67-68`) [Tipe: `function`]
-    - *Signature:* `(over: Record<string, unknown[]>): StoreShape`
-    - *Deskripsi:* /**
- * Fixture dibuat per kasus, bukan satu data besar: kalau satu builder salah,
- * test-nya masih bisa menunjuk builder mana.
- */
-
-### Sub-sistem: `builder:satu:levelof` (Klaster #4)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`levelOf`](file://apps/web/scripts/alert-probe.ts#L70-L73) (`apps/web/scripts/alert-probe.ts:70-73`) [Tipe: `function`]
-    - *Signature:* `(items: ModuleAlertItem[], idPart: string): AlertLevel | "HILANG"`
-    - *Deskripsi:* /**
- * Fixture dibuat per kasus, bukan satu data besar: kalau satu builder salah,
- * test-nya masih bisa menunjuk builder mana.
- */
-
-### Sub-sistem: `subsystem-5` (Klaster #5)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`es`](file://apps/web/scripts/alert-probe.ts#L337-L337) (`apps/web/scripts/alert-probe.ts:337-337`) [Tipe: `function`]
-    - *Signature:* `(d: string): StoreItem`
-
-### Sub-sistem: `norm` (Klaster #6)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`norm`](file://apps/web/scripts/alert-probe.ts#L352-L352) (`apps/web/scripts/alert-probe.ts:352-352`) [Tipe: `function`]
-    - *Signature:* `(d: string): string`
-
-### Sub-sistem: `item` (Klaster #7)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`item`](file://apps/web/scripts/alert-probe.ts#L402-L408) (`apps/web/scripts/alert-probe.ts:402-408`) [Tipe: `function`]
-    - *Signature:* `(level: AlertLevel, n: number): ModuleAlertItem`
-
-### Sub-sistem: `check` (Klaster #8)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`check`](file://apps/web/scripts/api-base-probe.ts#L7-L11) (`apps/web/scripts/api-base-probe.ts:7-11`) [Tipe: `function`]
-    - *Signature:* `(name: string, got: string, want: string): void`
-
-### Sub-sistem: `length` (Klaster #9)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`length`](file://apps/web/scripts/browser-shims.ts#L18-L20) (`apps/web/scripts/browser-shims.ts:18-20`) [Tipe: `method`]
-    - *Signature:* `()`
-
-### Sub-sistem: `noop` (Klaster #10)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`noop`](file://apps/web/scripts/browser-shims.ts#L23-L23) (`apps/web/scripts/browser-shims.ts:23-23`) [Tipe: `function`]
-    - *Signature:* `()`
-
-### Sub-sistem: `eventtarget:event:target` (Klaster #11)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`eventTarget`](file://apps/web/scripts/browser-shims.ts#L25-L30) (`apps/web/scripts/browser-shims.ts:25-30`) [Tipe: `function`]
-    - *Signature:* `()`
-
-### Sub-sistem: `define` (Klaster #12)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`define`](file://apps/web/scripts/browser-shims.ts#L34-L40) (`apps/web/scripts/browser-shims.ts:34-40`) [Tipe: `function`]
-    - *Signature:* `(key: string, value: unknown): void`
-
-### Sub-sistem: `unobserve` (Klaster #13)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`unobserve`](file://apps/web/scripts/browser-shims.ts#L59-L59) (`apps/web/scripts/browser-shims.ts:59-59`) [Tipe: `method`]
-    - *Signature:* `()`
-
-### Sub-sistem: `check` (Klaster #14)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`check`](file://apps/web/scripts/drydock-dates-probe.ts#L16-L23) (`apps/web/scripts/drydock-dates-probe.ts:16-23`) [Tipe: `function`]
-    - *Signature:* `(condition: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `collectstrings:strings:collect` (Klaster #15)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`collectStrings`](file://apps/web/scripts/em-dash-audit-probe.ts#L12-L23) (`apps/web/scripts/em-dash-audit-probe.ts:12-23`) [Tipe: `function`]
-    - *Signature:* `(obj: unknown, prefix = ""): { path: string; val: string }[]`
-
-### Sub-sistem: `cek` (Klaster #16)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`cek`](file://apps/web/scripts/employee-probe.ts#L25-L32) (`apps/web/scripts/employee-probe.ts:25-32`) [Tipe: `function`]
-    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
-
-### Sub-sistem: `assert` (Klaster #17)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/equipment-notification-probe.ts#L11-L14) (`apps/web/scripts/equipment-notification-probe.ts:11-14`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `syntheticfetch:synthetic:fetch` (Klaster #18)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`syntheticFetch`](file://apps/web/scripts/fetch-performance-probe.ts#L23-L46) (`apps/web/scripts/fetch-performance-probe.ts:23-46`) [Tipe: `function`]
-    - *Signature:* `(path: string): Promise<T>`
-
-### Sub-sistem: `assert` (Klaster #19)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/foundation-probe.ts#L22-L25) (`apps/web/scripts/foundation-probe.ts:22-25`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `aswo` (Klaster #20)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`asWo`](file://apps/web/scripts/foundation-probe.ts#L142-L142) (`apps/web/scripts/foundation-probe.ts:142-142`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): StoreItem`
-
-### Sub-sistem: `subsystem-21` (Klaster #21)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`wo`](file://apps/web/scripts/foundation-probe.ts#L235-L235) (`apps/web/scripts/foundation-probe.ts:235-235`) [Tipe: `function`]
-    - *Signature:* `(ms: unknown[], progress?: number): StoreItem`
-
-### Sub-sistem: `subsystem-22` (Klaster #22)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`m`](file://apps/web/scripts/foundation-probe.ts#L236-L236) (`apps/web/scripts/foundation-probe.ts:236-236`) [Tipe: `function`]
-    - *Signature:* `(title: string, pct: number, done: boolean)`
-
-### Sub-sistem: `assert` (Klaster #23)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/hr-rules-probe.ts#L7-L10) (`apps/web/scripts/hr-rules-probe.ts:7-10`) [Tipe: `function`]
-    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
-
-### Sub-sistem: `keysof:keys` (Klaster #24)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`keysOf`](file://apps/web/scripts/i18n-probe.ts#L6-L9) (`apps/web/scripts/i18n-probe.ts:6-9`) [Tipe: `function`]
-    - *Signature:* `(obj: unknown, prefix = ""): string[]`
-
-### Sub-sistem: `cek` (Klaster #26)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`cek`](file://apps/web/scripts/p8-probe.ts#L23-L30) (`apps/web/scripts/p8-probe.ts:23-30`) [Tipe: `function`]
-    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
-
-### Sub-sistem: `check` (Klaster #27)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`check`](file://apps/web/scripts/price-probe.ts#L36-L40) (`apps/web/scripts/price-probe.ts:36-40`) [Tipe: `function`]
-    - *Signature:* `(label: string, value: number, min: number): void`
-
-### Sub-sistem: `assert:predicated:plus` (Klaster #28)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/price-probe.ts#L43-L46) (`apps/web/scripts/price-probe.ts:43-46`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
-
-### Sub-sistem: `rows:predicated:plus` (Klaster #29)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`rows`](file://apps/web/scripts/price-probe.ts#L49-L49) (`apps/web/scripts/price-probe.ts:49-49`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): Row[]`
-    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
-
-### Sub-sistem: `predicated:plus:opsional` (Klaster #30)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`id`](file://apps/web/scripts/price-probe.ts#L56-L56) (`apps/web/scripts/price-probe.ts:56-56`) [Tipe: `function`]
-    - *Signature:* `(r: Row): string`
-    - *Deskripsi:* /** Bentuk umum: predicated ya/tidak plus detail opsional. */
-
-### Sub-sistem: `assert` (Klaster #31)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/project-add-probe.tsx#L14-L17) (`apps/web/scripts/project-add-probe.tsx:14-17`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `mockadd:mock:add` (Klaster #32)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`mockAdd`](file://apps/web/scripts/project-add-probe.tsx#L56-L56) (`apps/web/scripts/project-add-probe.tsx:56-56`) [Tipe: `function`]
-    - *Signature:* `(_col: string, item: Record<string, unknown>)`
-
-### Sub-sistem: `assert` (Klaster #33)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/project-progress-probe.ts#L9-L12) (`apps/web/scripts/project-progress-probe.ts:9-12`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `assert` (Klaster #34)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/push-probe.ts#L36-L43) (`apps/web/scripts/push-probe.ts:36-43`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `model` (Klaster #35)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`Model`](file://apps/web/scripts/push-probe.ts#L47-L62) (`apps/web/scripts/push-probe.ts:47-62`) [Tipe: `interface`]
-    - *Signature:* `interface Model`
-
-### Sub-sistem: `newmodel:new:model` (Klaster #36)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`newModel`](file://apps/web/scripts/push-probe.ts#L64-L72) (`apps/web/scripts/push-probe.ts:64-72`) [Tipe: `function`]
-    - *Signature:* `(): Model`
-
-### Sub-sistem: `world` (Klaster #37)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`World`](file://apps/web/scripts/push-probe.ts#L74-L80) (`apps/web/scripts/push-probe.ts:74-80`) [Tipe: `interface`]
-    - *Signature:* `interface World`
-
-### Sub-sistem: `run:runold:old` (Klaster #38)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`runOld`](file://apps/web/scripts/push-probe.ts#L83-L104) (`apps/web/scripts/push-probe.ts:83-104`) [Tipe: `function`]
-    - *Signature:* `(w: World, m: Model): void`
-    - *Deskripsi:* /** Satu run model LAMA: kuota per koleksi, cursor hanya maju kalau semua sukses. */
-
-### Sub-sistem: `giliran:run:koleksi` (Klaster #39)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`runNew`](file://apps/web/scripts/push-probe.ts#L111-L150) (`apps/web/scripts/push-probe.ts:111-150`) [Tipe: `function`]
-    - *Signature:* `(w: World, m: Model): void`
-    - *Deskripsi:* /** Satu run model BARU: budget global, cursor selalu maju, racun punya jatah.
- *  Setara dengan store.tsx: rotasi koleksi (`pushColCursorRef`) supaya yang
- *  tidak kebagian giliran dapat giliran pertama di run berikutnya, dan
- *  koleksi yang sudah tuntas DILAPAS dari antrean (clearDirty) sehingga tidak
- *  tidak akan habis selamanya. */
-
-### Sub-sistem: `giliran:koleksi:tidak` (Klaster #40)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`mk`](file://apps/web/scripts/push-probe.ts#L152-L156) (`apps/web/scripts/push-probe.ts:152-156`) [Tipe: `function`]
-    - *Signature:* `(cols: Record<string, number>): World`
-    - *Deskripsi:* /** Satu run model BARU: budget global, cursor selalu maju, racun punya jatah.
- *  Setara dengan store.tsx: rotasi koleksi (`pushColCursorRef`) supaya yang
- *  tidak kebagian giliran dapat giliran pertama di run berikutnya, dan
- *  koleksi yang sudah tuntas DILAPAS dari antrean (clearDirty) sehingga tidak
- *  tidak akan habis selamanya. */
-
-### Sub-sistem: `triggerlama:trigger:lama` (Klaster #41)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`triggerLama`](file://apps/web/scripts/push-probe.ts#L250-L262) (`apps/web/scripts/push-probe.ts:250-262`) [Tipe: `function`]
-    - *Signature:* `(): void`
-
-### Sub-sistem: `triggerbaru:trigger:baru` (Klaster #42)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`triggerBaru`](file://apps/web/scripts/push-probe.ts#L269-L280) (`apps/web/scripts/push-probe.ts:269-280`) [Tipe: `function`]
-    - *Signature:* `(): void`
-
-### Sub-sistem: `assert` (Klaster #43)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/qc-deep-link-probe.ts#L10-L13) (`apps/web/scripts/qc-deep-link-probe.ts:10-13`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `cek` (Klaster #44)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`cek`](file://apps/web/scripts/risk-auto-probe.ts#L23-L30) (`apps/web/scripts/risk-auto-probe.ts:23-30`) [Tipe: `function`]
-    - *Signature:* `(nama: string, ok: boolean, detail = ""): void`
-
-### Sub-sistem: `firstid:first` (Klaster #45)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`firstId`](file://apps/web/scripts/ssr-probe.tsx#L59-L60) (`apps/web/scripts/ssr-probe.tsx:59-60`) [Tipe: `function`]
-    - *Signature:* `(rows: { id?: unknown }[] | undefined, fallback: string): string`
-
-### Sub-sistem: `row` (Klaster #46)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`row`](file://apps/web/scripts/ssr-probe.tsx#L254-L254) (`apps/web/scripts/ssr-probe.tsx:254-254`) [Tipe: `function`]
-    - *Signature:* `(id: string, extra: Record<string, unknown> = {})`
-
-### Sub-sistem: `subsystem-47` (Klaster #47)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`j`](file://apps/web/scripts/ssr-probe.tsx#L318-L320) (`apps/web/scripts/ssr-probe.tsx:318-320`) [Tipe: `function`]
-    - *Signature:* `(date: string, db: string, kr: string, amount: number, sumber = "Kas")`
-
-### Sub-sistem: `enc` (Klaster #48)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`enc`](file://apps/web/scripts/ssr-probe.tsx#L434-L434) (`apps/web/scripts/ssr-probe.tsx:434-434`) [Tipe: `function`]
-    - *Signature:* `(s: string): Uint8Array`
-
-### Sub-sistem: `stub` (Klaster #49)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`stub`](file://apps/web/scripts/ssr-probe.tsx#L470-L473) (`apps/web/scripts/ssr-probe.tsx:470-473`) [Tipe: `function`]
-    - *Signature:* `(body: BodyInit | null, status: number, headers: Record<string, string>): void`
-
-### Sub-sistem: `assert` (Klaster #50)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/stock-issue-probe.ts#L6-L12) (`apps/web/scripts/stock-issue-probe.ts:6-12`) [Tipe: `function`]
-    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
-
-### Sub-sistem: `assert` (Klaster #51)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/table-probe.ts#L32-L35) (`apps/web/scripts/table-probe.ts:32-35`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `asrec:rec` (Klaster #52)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`asRec`](file://apps/web/scripts/table-probe.ts#L37-L37) (`apps/web/scripts/table-probe.ts:37-37`) [Tipe: `function`]
-    - *Signature:* `(v: unknown): Record<string, unknown>`
-
-### Sub-sistem: `urut` (Klaster #53)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`urut`](file://apps/web/scripts/table-probe.ts#L124-L124) (`apps/web/scripts/table-probe.ts:124-124`) [Tipe: `function`]
-    - *Signature:* `(dir: "asc" | "desc")`
-
-### Sub-sistem: `subsystem-54` (Klaster #54)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`dalam`](file://apps/web/scripts/table-probe.ts#L250-L251) (`apps/web/scripts/table-probe.ts:250-251`) [Tipe: `function`]
-    - *Signature:* `(n: number): Record<string, unknown>`
-
-### Sub-sistem: `assert` (Klaster #55)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/termin-probe.ts#L7-L13) (`apps/web/scripts/termin-probe.ts:7-13`) [Tipe: `function`]
-    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
-
-### Sub-sistem: `total` (Klaster #56)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`total`](file://apps/web/scripts/termin-probe.ts#L14-L14) (`apps/web/scripts/termin-probe.ts:14-14`) [Tipe: `function`]
-    - *Signature:* `(r: ReturnType<typeof buildTermins>): number`
-
-### Sub-sistem: `assert` (Klaster #57)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/time-probe.ts#L26-L33) (`apps/web/scripts/time-probe.ts:26-33`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `subsystem-58` (Klaster #58)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`m`](file://apps/web/scripts/time-probe.ts#L125-L125) (`apps/web/scripts/time-probe.ts:125-125`) [Tipe: `function`]
-    - *Signature:* `(s: string): number`
-
-### Sub-sistem: `assert` (Klaster #59)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/unit-conversion-probe.ts#L18-L24) (`apps/web/scripts/unit-conversion-probe.ts:18-24`) [Tipe: `function`]
-    - *Signature:* `(name: string, condition: boolean, detail = ""): void`
-
-### Sub-sistem: `assert` (Klaster #60)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/wbs-flow-probe.ts#L14-L17) (`apps/web/scripts/wbs-flow-probe.ts:14-17`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `assert` (Klaster #61)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`assert`](file://apps/web/scripts/wo-probe.ts#L21-L24) (`apps/web/scripts/wo-probe.ts:21-24`) [Tipe: `function`]
-    - *Signature:* `(ok: boolean, label: string, detail = ""): void`
-
-### Sub-sistem: `createdrow:created:row` (Klaster #71)
+### Sub-sistem: `createdrow:created:row` (Klaster #70)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CreatedRow`](file://services/api/scripts/drydock-booking-probe.ts#L6-L6) (`services/api/scripts/drydock-booking-probe.ts:6-6`) [Tipe: `interface`]
     - *Signature:* `interface CreatedRow`
 
-### Sub-sistem: `env:runwithenv:process` (Klaster #73)
+### Sub-sistem: `env:runwithenv:process` (Klaster #72)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`runWithEnv`](file://services/api/scripts/env-probe.ts#L6-L18) (`services/api/scripts/env-probe.ts:6-18`) [Tipe: `function`]
     - *Signature:* `(envOverrides: Record<string, string | undefined>, fn: () => void)`
     - *Deskripsi:* // Simpan process.env asli
 
-### Sub-sistem: `riil:mulberry32:mulberry` (Klaster #79)
+### Sub-sistem: `riil:mulberry32:mulberry` (Klaster #78)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`mulberry32`](file://services/api/scripts/gen-seed-data.ts#L14-L22) (`services/api/scripts/gen-seed-data.ts:14-22`) [Tipe: `function`]
     - *Signature:* `(seed: number)`
     - *Deskripsi:* // tanpa memuat data riil (nama orang riil, rekening riil, email riil).
 
-### Sub-sistem: `boqrow:boq:row` (Klaster #85)
+### Sub-sistem: `boqrow:boq:row` (Klaster #84)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoqRow`](file://services/api/scripts/migrate-boq-docs.ts#L5-L5) (`services/api/scripts/migrate-boq-docs.ts:5-5`) [Tipe: `interface`]
     - *Signature:* `interface BoqRow`
 
-### Sub-sistem: `docrow:doc:row` (Klaster #86)
+### Sub-sistem: `docrow:doc:row` (Klaster #85)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DocRow`](file://services/api/scripts/migrate-boq-docs.ts#L6-L6) (`services/api/scripts/migrate-boq-docs.ts:6-6`) [Tipe: `interface`]
     - *Signature:* `interface DocRow`
 
-### Sub-sistem: `planneditem:planned:item` (Klaster #87)
+### Sub-sistem: `planneditem:planned:item` (Klaster #86)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PlannedItem`](file://services/api/scripts/migrate-boq-docs.ts#L7-L7) (`services/api/scripts/migrate-boq-docs.ts:7-7`) [Tipe: `interface`]
     - *Signature:* `interface PlannedItem`
 
-### Sub-sistem: `groupplan:group:plan` (Klaster #88)
+### Sub-sistem: `groupplan:group:plan` (Klaster #87)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`GroupPlan`](file://services/api/scripts/migrate-boq-docs.ts#L8-L19) (`services/api/scripts/migrate-boq-docs.ts:8-19`) [Tipe: `interface`]
     - *Signature:* `interface GroupPlan`
 
-### Sub-sistem: `boqmigrationsummary:migration:summary` (Klaster #89)
+### Sub-sistem: `boqmigrationsummary:migration:summary` (Klaster #88)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoqMigrationSummary`](file://services/api/scripts/migrate-boq-docs.ts#L20-L25) (`services/api/scripts/migrate-boq-docs.ts:20-25`) [Tipe: `interface`]
     - *Signature:* `interface BoqMigrationSummary`
 
-### Sub-sistem: `userrow:user:row` (Klaster #92)
+### Sub-sistem: `userrow:user:row` (Klaster #91)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UserRow`](file://services/api/scripts/migrate-roles.ts#L4-L8) (`services/api/scripts/migrate-roles.ts:4-8`) [Tipe: `interface`]
     - *Signature:* `interface UserRow`
 
-### Sub-sistem: `assert` (Klaster #93)
+### Sub-sistem: `assert` (Klaster #92)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`assert`](file://services/api/scripts/page-probe.ts#L31-L38) (`services/api/scripts/page-probe.ts:31-38`) [Tipe: `function`]
     - *Signature:* `(ok: boolean, label: string, detail = ""): void`
 
-### Sub-sistem: `row` (Klaster #94)
+### Sub-sistem: `row` (Klaster #93)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/scripts/page-probe.ts#L79-L82) (`services/api/scripts/page-probe.ts:79-82`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `updated:byorder:comparator` (Klaster #95)
+### Sub-sistem: `updated:byorder:comparator` (Klaster #94)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`byOrder`](file://services/api/scripts/page-probe.ts#L89-L90) (`services/api/scripts/page-probe.ts:89-90`) [Tipe: `function`]
@@ -5602,7 +5394,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Comparator tuple yang setara dengan klausa WHERE server:
  *  (updated_at > ?) OR (updated_at = ? AND id > ?) */
 
-### Sub-sistem: `keyset:pullkeyset:opportunity` (Klaster #96)
+### Sub-sistem: `keyset:pullkeyset:opportunity` (Klaster #95)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pullKeyset`](file://services/api/scripts/page-probe.ts#L94-L107) (`services/api/scripts/page-probe.ts:94-107`) [Tipe: `function`]
@@ -5610,7 +5402,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Tarik seluruh tabel dengan keyset. Setiap "halaman" opportunity bagi
  *  penulis lain untuk mengubah satu baris di tengah pembacaan. */
 
-### Sub-sistem: `perangkat:offset:halaman` (Klaster #97)
+### Sub-sistem: `perangkat:offset:halaman` (Klaster #96)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pullOffset`](file://services/api/scripts/page-probe.ts#L112-L122) (`services/api/scripts/page-probe.ts:112-122`) [Tipe: `function`]
@@ -5619,7 +5411,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Mutasi harus terjadi SETELAH halaman dibaca; itu urutan dunia nyata:
  *  perangkat A sudah memegang halaman 1, lalu perangkat B menulis. */
 
-### Sub-sistem: `perangkat:build:halaman` (Klaster #98)
+### Sub-sistem: `perangkat:build:halaman` (Klaster #97)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`build`](file://services/api/scripts/page-probe.ts#L124-L128) (`services/api/scripts/page-probe.ts:124-128`) [Tipe: `function`]
@@ -5628,7 +5420,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Mutasi harus terjadi SETELAH halaman dibaca; itu urutan dunia nyata:
  *  perangkat A sudah memegang halaman 1, lalu perangkat B menulis. */
 
-### Sub-sistem: `perangkat:halaman:belumsentuh` (Klaster #99)
+### Sub-sistem: `perangkat:halaman:belumsentuh` (Klaster #98)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`belumSentuh`](file://services/api/scripts/page-probe.ts#L130-L130) (`services/api/scripts/page-probe.ts:130-130`) [Tipe: `function`]
@@ -5637,7 +5429,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Mutasi harus terjadi SETELAH halaman dibaca; itu urutan dunia nyata:
  *  perangkat A sudah memegang halaman 1, lalu perangkat B menulis. */
 
-### Sub-sistem: `penanda:perangkat:halaman` (Klaster #100)
+### Sub-sistem: `penanda:perangkat:halaman` (Klaster #99)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`penanda`](file://services/api/scripts/page-probe.ts#L133-L135) (`services/api/scripts/page-probe.ts:133-135`) [Tipe: `function`]
@@ -5646,31 +5438,31 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Mutasi harus terjadi SETELAH halaman dibaca; itu urutan dunia nyata:
  *  perangkat A sudah memegang halaman 1, lalu perangkat B menulis. */
 
-### Sub-sistem: `tok` (Klaster #101)
+### Sub-sistem: `tok` (Klaster #100)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tok`](file://services/api/scripts/payroll-pay-probe.ts#L17-L26) (`services/api/scripts/payroll-pay-probe.ts:17-26`) [Tipe: `function`]
     - *Signature:* `(role: string): Promise<Record<string, string>>`
 
-### Sub-sistem: `sample` (Klaster #103)
+### Sub-sistem: `sample` (Klaster #101)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Sample`](file://services/api/scripts/pdf-db-probe.ts#L40-L43) (`services/api/scripts/pdf-db-probe.ts:40-43`) [Tipe: `interface`]
     - *Signature:* `interface Sample`
 
-### Sub-sistem: `tok` (Klaster #111)
+### Sub-sistem: `tok` (Klaster #108)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`tok`](file://services/api/scripts/rbac-modules-probe.ts#L18-L27) (`services/api/scripts/rbac-modules-probe.ts:18-27`) [Tipe: `function`]
     - *Signature:* `(role: string): Promise<Record<string, string>>`
 
-### Sub-sistem: `subsystem-112` (Klaster #112)
+### Sub-sistem: `subsystem-109` (Klaster #109)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`me`](file://services/api/scripts/rbac-modules-probe.ts#L28-L28) (`services/api/scripts/rbac-modules-probe.ts:28-28`) [Tipe: `function`]
     - *Signature:* `(role: string)`
 
-### Sub-sistem: `probe:keamanan:fase` (Klaster #118)
+### Sub-sistem: `probe:keamanan:fase` (Klaster #115)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProbeResult`](file://services/api/scripts/security-probe.ts#L33-L41) (`services/api/scripts/security-probe.ts:33-41`) [Tipe: `interface`]
@@ -5684,43 +5476,43 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * dinaikkan menjadi gate CI yang memvalidasi perbaikan celah keamanan.
  */
 
-### Sub-sistem: `userrow:user:row` (Klaster #125)
+### Sub-sistem: `userrow:user:row` (Klaster #122)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UserRow`](file://services/api/src/app.ts#L46-L56) (`services/api/src/app.ts:46-56`) [Tipe: `interface`]
     - *Signature:* `interface UserRow`
 
-### Sub-sistem: `auditinput:audit:input` (Klaster #126)
+### Sub-sistem: `auditinput:audit:input` (Klaster #123)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditInput`](file://services/api/src/audit.ts#L5-L12) (`services/api/src/audit.ts:5-12`) [Tipe: `interface`]
     - *Signature:* `interface AuditInput`
 
-### Sub-sistem: `auditwriteoptions:options:write` (Klaster #127)
+### Sub-sistem: `auditwriteoptions:options:write` (Klaster #124)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditWriteOptions`](file://services/api/src/audit.ts#L14-L17) (`services/api/src/audit.ts:14-17`) [Tipe: `interface`]
     - *Signature:* `interface AuditWriteOptions`
 
-### Sub-sistem: `duprow:dup:row` (Klaster #128)
+### Sub-sistem: `duprow:dup:row` (Klaster #125)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DupRow`](file://services/api/src/auditDuplicates.ts#L29-L32) (`services/api/src/auditDuplicates.ts:29-32`) [Tipe: `interface`]
     - *Signature:* `interface DupRow`
 
-### Sub-sistem: `authuser:auth:user` (Klaster #130)
+### Sub-sistem: `authuser:auth:user` (Klaster #127)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuthUser`](file://services/api/src/auth.ts#L8-L20) (`services/api/src/auth.ts:8-20`) [Tipe: `interface`]
     - *Signature:* `interface AuthUser`
 
-### Sub-sistem: `fastifyrequest:fastify:request` (Klaster #131)
+### Sub-sistem: `fastifyrequest:fastify:request` (Klaster #128)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FastifyRequest`](file://services/api/src/auth.ts#L23-L25) (`services/api/src/auth.ts:23-25`) [Tipe: `interface`]
     - *Signature:* `interface FastifyRequest`
 
-### Sub-sistem: `spasi:huruf:cabang` (Klaster #135)
+### Sub-sistem: `spasi:huruf:cabang` (Klaster #131)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CachedUserRecord`](file://services/api/src/auth.ts#L114-L123) (`services/api/src/auth.ts:114-123`) [Tipe: `interface`]
@@ -5734,7 +5526,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * terlihat - bukan lolos diam-diam.
  */
 
-### Sub-sistem: `spasi:huruf:cabang` (Klaster #136)
+### Sub-sistem: `spasi:huruf:cabang` (Klaster #133)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SeedAccount`](file://services/api/src/auth.ts#L256-L261) (`services/api/src/auth.ts:256-261`) [Tipe: `interface`]
@@ -5748,492 +5540,492 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * terlihat - bukan lolos diam-diam.
  */
 
-### Sub-sistem: `row` (Klaster #139)
+### Sub-sistem: `row` (Klaster #136)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/boqDocs.ts#L29-L29) (`services/api/src/boqDocs.ts:29-29`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `row` (Klaster #145)
+### Sub-sistem: `row` (Klaster #141)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/changeOrders.ts#L17-L17) (`services/api/src/changeOrders.ts:17-17`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `cochange:change` (Klaster #147)
+### Sub-sistem: `cochange:change` (Klaster #143)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CoChange`](file://services/api/src/changeOrders.ts#L29-L29) (`services/api/src/changeOrders.ts:29-29`) [Tipe: `interface`]
     - *Signature:* `interface CoChange`
 
-### Sub-sistem: `applyresult:apply:result` (Klaster #149)
+### Sub-sistem: `applyresult:apply:result` (Klaster #144)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ApplyResult`](file://services/api/src/changeOrders.ts#L90-L90) (`services/api/src/changeOrders.ts:90-90`) [Tipe: `interface`]
     - *Signature:* `interface ApplyResult`
 
-### Sub-sistem: `execresult:exec:result` (Klaster #150)
+### Sub-sistem: `execresult:exec:result` (Klaster #145)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ExecResult`](file://services/api/src/db.ts#L10-L12) (`services/api/src/db.ts:10-12`) [Tipe: `interface`]
     - *Signature:* `interface ExecResult`
 
-### Sub-sistem: `txcontext:context` (Klaster #151)
+### Sub-sistem: `txcontext:context` (Klaster #146)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TxContext`](file://services/api/src/db.ts#L14-L17) (`services/api/src/db.ts:14-17`) [Tipe: `interface`]
     - *Signature:* `interface TxContext`
 
-### Sub-sistem: `env` (Klaster #160)
+### Sub-sistem: `env` (Klaster #155)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Env`](file://services/api/src/env.ts#L3-L17) (`services/api/src/env.ts:3-17`) [Tipe: `interface`]
     - *Signature:* `interface Env`
 
-### Sub-sistem: `row` (Klaster #162)
+### Sub-sistem: `row` (Klaster #156)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/inventoryAdditional.ts#L10-L10) (`services/api/src/inventoryAdditional.ts:10-10`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `additionalinput:additional:input` (Klaster #164)
+### Sub-sistem: `additionalinput:additional:input` (Klaster #158)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AdditionalInput`](file://services/api/src/inventoryAdditional.ts#L16-L23) (`services/api/src/inventoryAdditional.ts:16-23`) [Tipe: `interface`]
     - *Signature:* `interface AdditionalInput`
 
-### Sub-sistem: `conversionrule:rule:conversion` (Klaster #165)
+### Sub-sistem: `conversionrule:rule:conversion` (Klaster #159)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ConversionRule`](file://services/api/src/inventoryConversion.ts#L3-L7) (`services/api/src/inventoryConversion.ts:3-7`) [Tipe: `interface`]
     - *Signature:* `interface ConversionRule`
 
-### Sub-sistem: `row` (Klaster #168)
+### Sub-sistem: `row` (Klaster #162)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/inventoryIssue.ts#L9-L9) (`services/api/src/inventoryIssue.ts:9-9`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `issueinput:issue:input` (Klaster #170)
+### Sub-sistem: `issueinput:issue:input` (Klaster #164)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`IssueInput`](file://services/api/src/inventoryIssue.ts#L17-L24) (`services/api/src/inventoryIssue.ts:17-24`) [Tipe: `interface`]
     - *Signature:* `interface IssueInput`
 
-### Sub-sistem: `issueoutput:output:issue` (Klaster #171)
+### Sub-sistem: `issueoutput:output:issue` (Klaster #165)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`IssueOutput`](file://services/api/src/inventoryIssue.ts#L26-L26) (`services/api/src/inventoryIssue.ts:26-26`) [Tipe: `interface`]
     - *Signature:* `interface IssueOutput`
 
-### Sub-sistem: `entry` (Klaster #172)
+### Sub-sistem: `entry` (Klaster #166)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Entry`](file://services/api/src/listCache.ts#L19-L19) (`services/api/src/listCache.ts:19-19`) [Tipe: `interface`]
     - *Signature:* `interface Entry`
 
-### Sub-sistem: `cachegeneration:generation:cache` (Klaster #173)
+### Sub-sistem: `cachegeneration:generation:cache` (Klaster #167)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CacheGeneration`](file://services/api/src/listCache.ts#L20-L20) (`services/api/src/listCache.ts:20-20`) [Tipe: `interface`]
     - *Signature:* `interface CacheGeneration`
 
-### Sub-sistem: `materialrequestinput:request:material` (Klaster #176)
+### Sub-sistem: `materialrequestinput:request:material` (Klaster #170)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaterialRequestInput`](file://services/api/src/materialRequests.ts#L25-L39) (`services/api/src/materialRequests.ts:25-39`) [Tipe: `interface`]
     - *Signature:* `interface MaterialRequestInput`
 
-### Sub-sistem: `materialrequestresult:request:result` (Klaster #177)
+### Sub-sistem: `materialrequestresult:request:material` (Klaster #171)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaterialRequestResult`](file://services/api/src/materialRequests.ts#L41-L53) (`services/api/src/materialRequests.ts:41-53`) [Tipe: `interface`]
     - *Signature:* `interface MaterialRequestResult`
 
-### Sub-sistem: `row` (Klaster #178)
+### Sub-sistem: `row` (Klaster #172)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/materialRequests.ts#L64-L64) (`services/api/src/materialRequests.ts:64-64`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `fulfillresult:fulfill:result` (Klaster #179)
+### Sub-sistem: `fulfillresult:fulfill:result` (Klaster #173)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FulfillResult`](file://services/api/src/materialRequests.ts#L186-L193) (`services/api/src/materialRequests.ts:186-193`) [Tipe: `interface`]
     - *Signature:* `interface FulfillResult`
 
-### Sub-sistem: `decisionresult:decision:result` (Klaster #180)
+### Sub-sistem: `decisionresult:decision:result` (Klaster #174)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DecisionResult`](file://services/api/src/materialRequests.ts#L272-L272) (`services/api/src/materialRequests.ts:272-272`) [Tipe: `interface`]
     - *Signature:* `interface DecisionResult`
 
-### Sub-sistem: `moduleaccess:access:module` (Klaster #181)
+### Sub-sistem: `moduleaccess:access:module` (Klaster #175)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ModuleAccess`](file://services/api/src/moduleAccess.ts#L20-L25) (`services/api/src/moduleAccess.ts:20-25`) [Tipe: `interface`]
     - *Signature:* `interface ModuleAccess`
 
-### Sub-sistem: `row` (Klaster #182)
+### Sub-sistem: `row` (Klaster #176)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/poFulfillment.ts#L21-L21) (`services/api/src/poFulfillment.ts:21-21`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `receivelineinput:receive:line` (Klaster #185)
+### Sub-sistem: `receivelineinput:receive:line` (Klaster #179)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveLineInput`](file://services/api/src/poFulfillment.ts#L82-L89) (`services/api/src/poFulfillment.ts:82-89`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveLineInput`
 
-### Sub-sistem: `receiveinput:receive:input` (Klaster #186)
+### Sub-sistem: `receiveinput:receive:input` (Klaster #180)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveInput`](file://services/api/src/poFulfillment.ts#L91-L101) (`services/api/src/poFulfillment.ts:91-101`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveInput`
 
-### Sub-sistem: `receiveresult:receive:result` (Klaster #187)
+### Sub-sistem: `receiveresult:receive:result` (Klaster #181)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveResult`](file://services/api/src/poFulfillment.ts#L103-L107) (`services/api/src/poFulfillment.ts:103-107`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveResult`
 
-### Sub-sistem: `returninput:input` (Klaster #188)
+### Sub-sistem: `returninput:input` (Klaster #182)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReturnInput`](file://services/api/src/poFulfillment.ts#L319-L319) (`services/api/src/poFulfillment.ts:319-319`) [Tipe: `interface`]
     - *Signature:* `interface ReturnInput`
 
-### Sub-sistem: `returnresult:result` (Klaster #189)
+### Sub-sistem: `returnresult:result` (Klaster #183)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReturnResult`](file://services/api/src/poFulfillment.ts#L320-L320) (`services/api/src/poFulfillment.ts:320-320`) [Tipe: `interface`]
     - *Signature:* `interface ReturnResult`
 
-### Sub-sistem: `reassigninput:reassign:input` (Klaster #190)
+### Sub-sistem: `reassigninput:reassign:input` (Klaster #184)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReassignInput`](file://services/api/src/poFulfillment.ts#L424-L424) (`services/api/src/poFulfillment.ts:424-424`) [Tipe: `interface`]
     - *Signature:* `interface ReassignInput`
 
-### Sub-sistem: `makedevelopermatrix:developer:matrix` (Klaster #193)
+### Sub-sistem: `makedevelopermatrix:developer:matrix` (Klaster #187)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeDeveloperMatrix`](file://services/api/src/policy.ts#L103-L111) (`services/api/src/policy.ts:103-111`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makedirekturmatrix:direktur:matrix` (Klaster #194)
+### Sub-sistem: `makedirekturmatrix:direktur:matrix` (Klaster #188)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeDirekturMatrix`](file://services/api/src/policy.ts#L113-L121) (`services/api/src/policy.ts:113-121`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makemanagermatrix:manager:matrix` (Klaster #195)
+### Sub-sistem: `makemanagermatrix:manager:matrix` (Klaster #189)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeManagerMatrix`](file://services/api/src/policy.ts#L123-L139) (`services/api/src/policy.ts:123-139`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makehrmatrix:matrix:sensitif` (Klaster #196)
+### Sub-sistem: `makehrmatrix:matrix:sensitif` (Klaster #190)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeHrMatrix`](file://services/api/src/policy.ts#L168-L182) (`services/api/src/policy.ts:168-182`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makeprocurementmatrix:procurement:matrix` (Klaster #197)
+### Sub-sistem: `makeprocurementmatrix:procurement:matrix` (Klaster #191)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeProcurementMatrix`](file://services/api/src/policy.ts#L184-L204) (`services/api/src/policy.ts:184-204`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makegudangmatrix:gudang:matrix` (Klaster #198)
+### Sub-sistem: `makegudangmatrix:gudang:matrix` (Klaster #192)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeGudangMatrix`](file://services/api/src/policy.ts#L206-L222) (`services/api/src/policy.ts:206-222`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makeproyekmatrix:matrix:sensitif` (Klaster #199)
+### Sub-sistem: `makeproyekmatrix:matrix:sensitif` (Klaster #193)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeProyekMatrix`](file://services/api/src/policy.ts#L224-L257) (`services/api/src/policy.ts:224-257`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makemekanikmatrix:mekanik:matrix` (Klaster #200)
+### Sub-sistem: `makemekanikmatrix:mekanik:matrix` (Klaster #194)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeMekanikMatrix`](file://services/api/src/policy.ts#L259-L274) (`services/api/src/policy.ts:259-274`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makeqcmatrix:matrix:sensitif` (Klaster #201)
+### Sub-sistem: `makeqcmatrix:matrix:sensitif` (Klaster #195)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeQcMatrix`](file://services/api/src/policy.ts#L276-L297) (`services/api/src/policy.ts:276-297`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makesubkonmatrix:subkon:matrix` (Klaster #202)
+### Sub-sistem: `makesubkonmatrix:subkon:matrix` (Klaster #196)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeSubkonMatrix`](file://services/api/src/policy.ts#L299-L311) (`services/api/src/policy.ts:299-311`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makeequipmentmatrix:equipment:matrix` (Klaster #203)
+### Sub-sistem: `makeequipmentmatrix:equipment:matrix` (Klaster #197)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeEquipmentMatrix`](file://services/api/src/policy.ts#L313-L327) (`services/api/src/policy.ts:313-327`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makedrydockmatrix:drydock:matrix` (Klaster #204)
+### Sub-sistem: `makedrydockmatrix:drydock:matrix` (Klaster #198)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeDrydockMatrix`](file://services/api/src/policy.ts#L329-L341) (`services/api/src/policy.ts:329-341`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makecommercialmatrix:commercial:matrix` (Klaster #205)
+### Sub-sistem: `makecommercialmatrix:commercial:matrix` (Klaster #199)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeCommercialMatrix`](file://services/api/src/policy.ts#L345-L353) (`services/api/src/policy.ts:345-353`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `makeviewermatrix:viewer:matrix` (Klaster #207)
+### Sub-sistem: `makeviewermatrix:viewer:matrix` (Klaster #201)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`makeViewerMatrix`](file://services/api/src/policy.ts#L361-L376) (`services/api/src/policy.ts:361-376`) [Tipe: `function`]
     - *Signature:* `(): Record<string, Action[]>`
     - *Deskripsi:* // Koleksi operasional non-sensitif
 
-### Sub-sistem: `migratestage:migrate:stage` (Klaster #209)
+### Sub-sistem: `migratestage:migrate:stage` (Klaster #203)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`migrateStage`](file://services/api/src/projectStages.ts#L19-L23) (`services/api/src/projectStages.ts:19-23`) [Tipe: `function`]
     - *Signature:* `(d: Data): Data | null`
 
-### Sub-sistem: `revertstage:revert:stage` (Klaster #210)
+### Sub-sistem: `revertstage:revert:stage` (Klaster #204)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`revertStage`](file://services/api/src/projectStages.ts#L26-L30) (`services/api/src/projectStages.ts:26-30`) [Tipe: `function`]
     - *Signature:* `(d: Data): Data | null`
 
-### Sub-sistem: `ratelimitcheck:limit:rate` (Klaster #211)
+### Sub-sistem: `ratelimitcheck:limit:rate` (Klaster #205)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RateLimitCheck`](file://services/api/src/rateLimit.ts#L4-L7) (`services/api/src/rateLimit.ts:4-7`) [Tipe: `interface`]
     - *Signature:* `interface RateLimitCheck`
 
-### Sub-sistem: `refdef:ref:def` (Klaster #212)
+### Sub-sistem: `refdef:ref:def` (Klaster #206)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RefDef`](file://services/api/src/refs.ts#L8-L13) (`services/api/src/refs.ts:8-13`) [Tipe: `interface`]
     - *Signature:* `interface RefDef`
 
-### Sub-sistem: `manifest` (Klaster #215)
+### Sub-sistem: `manifest` (Klaster #209)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Manifest`](file://services/api/src/restore.ts#L7-L13) (`services/api/src/restore.ts:7-13`) [Tipe: `interface`]
     - *Signature:* `interface Manifest`
 
-### Sub-sistem: `routeentry:route:entry` (Klaster #216)
+### Sub-sistem: `routeentry:route:entry` (Klaster #210)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RouteEntry`](file://services/api/src/routeList.ts#L6-L6) (`services/api/src/routeList.ts:6-6`) [Tipe: `interface`]
     - *Signature:* `interface RouteEntry`
 
-### Sub-sistem: `checklistitem:checklist:item` (Klaster #218)
+### Sub-sistem: `checklistitem:checklist:item` (Klaster #212)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChecklistItem`](file://services/api/src/scoring.ts#L11-L11) (`services/api/src/scoring.ts:11-11`) [Tipe: `interface`]
     - *Signature:* `interface ChecklistItem`
 
-### Sub-sistem: `checklisttemplate:checklist:template` (Klaster #219)
+### Sub-sistem: `checklisttemplate:checklist:template` (Klaster #213)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChecklistTemplate`](file://services/api/src/scoring.ts#L12-L12) (`services/api/src/scoring.ts:12-12`) [Tipe: `interface`]
     - *Signature:* `interface ChecklistTemplate`
 
-### Sub-sistem: `seedrow:seed:row` (Klaster #222)
+### Sub-sistem: `seedrow:seed:row` (Klaster #216)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SeedRow`](file://services/api/src/seedData.ts#L11-L11) (`services/api/src/seedData.ts:11-11`) [Tipe: `interface`]
     - *Signature:* `interface SeedRow`
 
-### Sub-sistem: `wbsseed:seed:wbs` (Klaster #223)
+### Sub-sistem: `wbsseed:seed:wbs` (Klaster #217)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsSeed`](file://services/api/src/seedData.ts#L13-L13) (`services/api/src/seedData.ts:13-13`) [Tipe: `interface`]
     - *Signature:* `interface WbsSeed`
 
-### Sub-sistem: `teamseed:team:seed` (Klaster #224)
+### Sub-sistem: `teamseed:team:seed` (Klaster #218)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TeamSeed`](file://services/api/src/seedData.ts#L14-L14) (`services/api/src/seedData.ts:14-14`) [Tipe: `interface`]
     - *Signature:* `interface TeamSeed`
 
-### Sub-sistem: `team:2025:012` (Klaster #225)
+### Sub-sistem: `team:2025:012` (Klaster #219)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`S`](file://services/api/src/seedData.ts#L16-L17) (`services/api/src/seedData.ts:16-17`) [Tipe: `function`]
     - *Signature:* `(id: string, key: string, value: number, label: string, group: string): SeedRow`
     - *Deskripsi:* // - wbs/team: proyek NB-2025-012 + RP-2026-003 (selaras TEAM_SEED FE).
 
-### Sub-sistem: `mirrors:seedteambyproject:store` (Klaster #226)
+### Sub-sistem: `mirrors:seedteambyproject:store` (Klaster #220)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`H`](file://services/api/src/seedData.ts#L226-L229) (`services/api/src/seedData.ts:226-229`) [Tipe: `function`]
     - *Signature:* `(date: string, actor: string, from: number, to: number, note: string, photo?: string)`
     - *Deskripsi:* // Mirrors store seedTeamByProject.
 
-### Sub-sistem: `mirrorrow:mirror:row` (Klaster #228)
+### Sub-sistem: `mirrorrow:mirror:row` (Klaster #222)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MirrorRow`](file://services/api/src/seedFeMirror.ts#L3-L8) (`services/api/src/seedFeMirror.ts:3-8`) [Tipe: `interface`]
     - *Signature:* `interface MirrorRow`
 
-### Sub-sistem: `dijalankan:perubahan:item` (Klaster #229)
+### Sub-sistem: `dijalankan:perubahan:item` (Klaster #223)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Item`](file://services/api/src/seedMirror.ts#L15-L19) (`services/api/src/seedMirror.ts:15-19`) [Tipe: `interface`]
     - *Signature:* `interface Item`
     - *Deskripsi:* // Wajib dijalankan ulang setiap ada perubahan seed FE.
 
-### Sub-sistem: `mirrorrow:mirror:namaexport` (Klaster #230)
+### Sub-sistem: `mirrorrow:mirror:namaexport` (Klaster #224)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MirrorRow`](file://services/api/src/seedMirror.ts#L105-L110) (`services/api/src/seedMirror.ts:105-110`) [Tipe: `interface`]
     - *Signature:* `interface MirrorRow`
     - *Deskripsi:* // [namaExport, tabelBE]
 
-### Sub-sistem: `torows:namaexport:tabelbe` (Klaster #231)
+### Sub-sistem: `torows:namaexport:tabelbe` (Klaster #225)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toRows`](file://services/api/src/seedMirror.ts#L112-L126) (`services/api/src/seedMirror.ts:112-126`) [Tipe: `function`]
     - *Signature:* `(table: string, items: unknown): MirrorRow[]`
     - *Deskripsi:* // [namaExport, tabelBE]
 
-### Sub-sistem: `ratesmodule:rates:module` (Klaster #232)
+### Sub-sistem: `ratesmodule:rates:module` (Klaster #226)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RatesModule`](file://services/api/src/seedReprice.ts#L43-L46) (`services/api/src/seedReprice.ts:43-46`) [Tipe: `interface`]
     - *Signature:* `interface RatesModule`
 
-### Sub-sistem: `row` (Klaster #233)
+### Sub-sistem: `row` (Klaster #227)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/seedReprice.ts#L78-L83) (`services/api/src/seedReprice.ts:78-83`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `change` (Klaster #234)
+### Sub-sistem: `change` (Klaster #228)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Change`](file://services/api/src/seedReprice.ts#L85-L91) (`services/api/src/seedReprice.ts:85-91`) [Tipe: `interface`]
     - *Signature:* `interface Change`
 
-### Sub-sistem: `mulberry32:mulberry:prng` (Klaster #236)
+### Sub-sistem: `mulberry32:mulberry:prng` (Klaster #230)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`mulberry32`](file://services/api/src/seedWhatIf.ts#L11-L19) (`services/api/src/seedWhatIf.ts:11-19`) [Tipe: `function`]
     - *Signature:* `(seed: number): () => number`
     - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
 
-### Sub-sistem: `prng:stabil:deterministik` (Klaster #237)
+### Sub-sistem: `prng:stabil:deterministik` (Klaster #231)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/seedWhatIf.ts#L37-L37) (`services/api/src/seedWhatIf.ts:37-37`) [Tipe: `interface`]
     - *Signature:* `interface Row`
     - *Deskripsi:* // Deterministik (PRNG seed tetap) agar hasil stabil antar run.
 
-### Sub-sistem: `row` (Klaster #239)
+### Sub-sistem: `row` (Klaster #233)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/serviceApproval.ts#L18-L18) (`services/api/src/serviceApproval.ts:18-18`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `scopeuser:scope:user` (Klaster #243)
+### Sub-sistem: `scopeuser:scope:user` (Klaster #237)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ScopeUser`](file://services/api/src/teamScope.ts#L12-L12) (`services/api/src/teamScope.ts:12-12`) [Tipe: `interface`]
     - *Signature:* `interface ScopeUser`
 
-### Sub-sistem: `demouser:demo:user` (Klaster #246)
+### Sub-sistem: `demouser:demo:user` (Klaster #240)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DemoUser`](file://apps/web/src/auth/auth.tsx#L8-L15) (`apps/web/src/auth/auth.tsx:8-15`) [Tipe: `interface`]
     - *Signature:* `interface DemoUser`
 
-### Sub-sistem: `moduleaccess:access:module` (Klaster #247)
+### Sub-sistem: `moduleaccess:access:module` (Klaster #241)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ModuleAccess`](file://apps/web/src/auth/auth.tsx#L56-L59) (`apps/web/src/auth/auth.tsx:56-59`) [Tipe: `interface`]
     - *Signature:* `interface ModuleAccess`
 
-### Sub-sistem: `session` (Klaster #248)
+### Sub-sistem: `session` (Klaster #242)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Session`](file://apps/web/src/auth/auth.tsx#L66-L82) (`apps/web/src/auth/auth.tsx:66-82`) [Tipe: `interface`]
     - *Signature:* `interface Session`
 
-### Sub-sistem: `backendloginuser:segmen:menu` (Klaster #250)
+### Sub-sistem: `backendloginuser:segmen:menu` (Klaster #244)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BackendLoginUser`](file://apps/web/src/auth/auth.tsx#L106-L114) (`apps/web/src/auth/auth.tsx:106-114`) [Tipe: `interface`]
     - *Signature:* `interface BackendLoginUser`
     - *Deskripsi:* /** Boleh membuka modul (kunci = segmen path menu, mis. "proyek", "laporan")? */
 
-### Sub-sistem: `authctx:segmen:menu` (Klaster #251)
+### Sub-sistem: `authctx:segmen:menu` (Klaster #245)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuthCtx`](file://apps/web/src/auth/auth.tsx#L116-L120) (`apps/web/src/auth/auth.tsx:116-120`) [Tipe: `interface`]
     - *Signature:* `interface AuthCtx`
     - *Deskripsi:* /** Boleh membuka modul (kunci = segmen path menu, mis. "proyek", "laporan")? */
 
-### Sub-sistem: `demorole:demo:role` (Klaster #253)
+### Sub-sistem: `demorole:demo:role` (Klaster #247)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DemoRole`](file://apps/web/src/auth/demoSwitch.ts#L15-L15) (`apps/web/src/auth/demoSwitch.ts:15-15`) [Tipe: `interface`]
     - *Signature:* `interface DemoRole`
 
-### Sub-sistem: `origin` (Klaster #254)
+### Sub-sistem: `origin` (Klaster #248)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Origin`](file://apps/web/src/auth/demoSwitch.ts#L17-L17) (`apps/web/src/auth/demoSwitch.ts:17-17`) [Tipe: `interface`]
     - *Signature:* `interface Origin`
 
-### Sub-sistem: `loginrole:role:login` (Klaster #258)
+### Sub-sistem: `loginrole:role:login` (Klaster #252)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`LoginRole`](file://apps/web/src/auth/demoSwitch.ts#L97-L97) (`apps/web/src/auth/demoSwitch.ts:97-97`) [Tipe: `interface`]
     - *Signature:* `interface LoginRole`
 
-### Sub-sistem: `alertprops:alert:props` (Klaster #259)
+### Sub-sistem: `alertprops:alert:props` (Klaster #253)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AlertProps`](file://apps/web/src/components/Alert.tsx#L15-L34) (`apps/web/src/components/Alert.tsx:15-34`) [Tipe: `interface`]
     - *Signature:* `interface AlertProps`
 
-### Sub-sistem: `alertmodalprops:alert:props` (Klaster #261)
+### Sub-sistem: `alertmodalprops:alert:props` (Klaster #255)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AlertModalProps`](file://apps/web/src/components/Alert.tsx#L167-L179) (`apps/web/src/components/Alert.tsx:167-179`) [Tipe: `interface`]
     - *Signature:* `interface AlertModalProps`
 
-### Sub-sistem: `bannerdismiss:dismiss:banner` (Klaster #264)
+### Sub-sistem: `bannerdismiss:dismiss:banner` (Klaster #258)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BannerDismiss`](file://apps/web/src/components/AlertBanner.tsx#L168-L174) (`apps/web/src/components/AlertBanner.tsx:168-174`) [Tipe: `interface`]
     - *Signature:* `interface BannerDismiss`
 
-### Sub-sistem: `alertrow:meta:dampak` (Klaster #267)
+### Sub-sistem: `alertrow:meta:dampak` (Klaster #261)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AlertRow`](file://apps/web/src/components/AlertBanner.tsx#L386-L411) (`apps/web/src/components/AlertBanner.tsx:386-411`) [Tipe: `function`]
@@ -6248,25 +6040,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
 })`
     - *Deskripsi:* /** Baris meta kecil: dampak + umur + tenggat. Tidak ada isinya, tidak tampil. */
 
-### Sub-sistem: `auditrow:audit:row` (Klaster #268)
+### Sub-sistem: `auditrow:audit:row` (Klaster #262)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditRow`](file://apps/web/src/components/ChangeHistory.tsx#L5-L11) (`apps/web/src/components/ChangeHistory.tsx:5-11`) [Tipe: `interface`]
     - *Signature:* `interface AuditRow`
 
-### Sub-sistem: `auditchange:change:audit` (Klaster #269)
+### Sub-sistem: `auditchange:change:audit` (Klaster #263)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditChange`](file://apps/web/src/components/ChangeHistory.tsx#L13-L17) (`apps/web/src/components/ChangeHistory.tsx:13-17`) [Tipe: `interface`]
     - *Signature:* `interface AuditChange`
 
-### Sub-sistem: `historyentryitem:entry:history` (Klaster #270)
+### Sub-sistem: `historyentryitem:entry:history` (Klaster #264)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`HistoryEntryItem`](file://apps/web/src/components/ChangeHistory.tsx#L50-L59) (`apps/web/src/components/ChangeHistory.tsx:50-59`) [Tipe: `interface`]
     - *Signature:* `interface HistoryEntryItem`
 
-### Sub-sistem: `dateinput:date:input` (Klaster #273)
+### Sub-sistem: `dateinput:date:input` (Klaster #267)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DateInput`](file://apps/web/src/components/DateInput.tsx#L1-L37) (`apps/web/src/components/DateInput.tsx:1-37`) [Tipe: `function`]
@@ -6293,79 +6085,79 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className?: string;
 })`
 
-### Sub-sistem: `previewdoc:preview:doc` (Klaster #276)
+### Sub-sistem: `previewdoc:preview:doc` (Klaster #269)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PreviewDoc`](file://apps/web/src/components/DocumentPreview.tsx#L24-L31) (`apps/web/src/components/DocumentPreview.tsx:24-31`) [Tipe: `interface`]
     - *Signature:* `interface PreviewDoc`
 
-### Sub-sistem: `documentpreviewmodal:document:preview` (Klaster #277)
+### Sub-sistem: `documentpreviewmodal:document:preview` (Klaster #270)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DocumentPreviewModal`](file://apps/web/src/components/DocumentPreview.tsx#L230-L239) (`apps/web/src/components/DocumentPreview.tsx:230-239`) [Tipe: `function`]
     - *Signature:* `({ doc, onClose }: { doc: PreviewDoc | null; onClose: () => void })`
 
-### Sub-sistem: `flownode:flow:node` (Klaster #278)
+### Sub-sistem: `flownode:flow:node` (Klaster #271)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FlowNode`](file://apps/web/src/components/FlowTree.tsx#L9-L23) (`apps/web/src/components/FlowTree.tsx:9-23`) [Tipe: `interface`]
     - *Signature:* `interface FlowNode`
 
-### Sub-sistem: `importpreviewrow:preview:row` (Klaster #280)
+### Sub-sistem: `importpreviewrow:preview:row` (Klaster #273)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ImportPreviewRow`](file://apps/web/src/components/ImportPreviewModal.tsx#L10-L16) (`apps/web/src/components/ImportPreviewModal.tsx:10-16`) [Tipe: `interface`]
     - *Signature:* `interface ImportPreviewRow`
 
-### Sub-sistem: `props` (Klaster #281)
+### Sub-sistem: `props` (Klaster #274)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/components/ImportPreviewModal.tsx#L18-L26) (`apps/web/src/components/ImportPreviewModal.tsx:18-26`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `photouploaditem:upload:photo` (Klaster #284)
+### Sub-sistem: `photouploaditem:upload:photo` (Klaster #277)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PhotoUploadItem`](file://apps/web/src/components/PhotoUploader.tsx#L6-L9) (`apps/web/src/components/PhotoUploader.tsx:6-9`) [Tipe: `interface`]
     - *Signature:* `interface PhotoUploadItem`
 
-### Sub-sistem: `photouploaderlabels:uploader:labels` (Klaster #285)
+### Sub-sistem: `photouploaderlabels:uploader:labels` (Klaster #278)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PhotoUploaderLabels`](file://apps/web/src/components/PhotoUploader.tsx#L11-L19) (`apps/web/src/components/PhotoUploader.tsx:11-19`) [Tipe: `interface`]
     - *Signature:* `interface PhotoUploaderLabels`
 
-### Sub-sistem: `pendingphoto:pending:photo` (Klaster #286)
+### Sub-sistem: `pendingphoto:pending:photo` (Klaster #279)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PendingPhoto`](file://apps/web/src/components/PhotoUploader.tsx#L21-L25) (`apps/web/src/components/PhotoUploader.tsx:21-25`) [Tipe: `interface`]
     - *Signature:* `interface PendingPhoto`
 
-### Sub-sistem: `searchselectoption:select:option` (Klaster #289)
+### Sub-sistem: `searchselectoption:select:option` (Klaster #282)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SearchSelectOption`](file://apps/web/src/components/SearchSelect.tsx#L5-L9) (`apps/web/src/components/SearchSelect.tsx:5-9`) [Tipe: `interface`]
     - *Signature:* `interface SearchSelectOption`
 
-### Sub-sistem: `servicenote:note:service` (Klaster #291)
+### Sub-sistem: `servicenote:note:service` (Klaster #284)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServiceNote`](file://apps/web/src/components/ServiceNotes.tsx#L31-L36) (`apps/web/src/components/ServiceNotes.tsx:31-36`) [Tipe: `interface`]
     - *Signature:* `interface ServiceNote`
 
-### Sub-sistem: `servicenoteslabels:labels:notes` (Klaster #292)
+### Sub-sistem: `servicenoteslabels:labels:notes` (Klaster #285)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServiceNotesLabels`](file://apps/web/src/components/ServiceNotes.tsx#L43-L64) (`apps/web/src/components/ServiceNotes.tsx:43-64`) [Tipe: `interface`]
     - *Signature:* `interface ServiceNotesLabels`
 
-### Sub-sistem: `servicenotesprops:notes:props` (Klaster #293)
+### Sub-sistem: `servicenotesprops:notes:props` (Klaster #286)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServiceNotesProps`](file://apps/web/src/components/ServiceNotes.tsx#L66-L71) (`apps/web/src/components/ServiceNotes.tsx:66-71`) [Tipe: `interface`]
     - *Signature:* `interface ServiceNotesProps`
 
-### Sub-sistem: `servicenotesbutton:button:notes` (Klaster #295)
+### Sub-sistem: `servicenotesbutton:button:notes` (Klaster #288)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServiceNotesButton`](file://apps/web/src/components/ServiceNotes.tsx#L224-L241) (`apps/web/src/components/ServiceNotes.tsx:224-241`) [Tipe: `function`]
@@ -6379,13 +6171,13 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onClick: () => void;
 }): ReactNode`
 
-### Sub-sistem: `statuschipoption:chip:option` (Klaster #296)
+### Sub-sistem: `statuschipoption:chip:option` (Klaster #289)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StatusChipOption`](file://apps/web/src/components/StatusChips.tsx#L4-L8) (`apps/web/src/components/StatusChips.tsx:4-8`) [Tipe: `interface`]
     - *Signature:* `interface StatusChipOption`
 
-### Sub-sistem: `statuschips:chips:status` (Klaster #297)
+### Sub-sistem: `statuschips:chips:status` (Klaster #290)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StatusChips`](file://apps/web/src/components/StatusChips.tsx#L11-L70) (`apps/web/src/components/StatusChips.tsx:11-70`) [Tipe: `function`]
@@ -6405,25 +6197,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   disabled?: boolean;
 })`
 
-### Sub-sistem: `toastaction:action:toast` (Klaster #298)
+### Sub-sistem: `toastaction:action:toast` (Klaster #291)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ToastAction`](file://apps/web/src/components/Toast.tsx#L7-L10) (`apps/web/src/components/Toast.tsx:7-10`) [Tipe: `interface`]
     - *Signature:* `interface ToastAction`
 
-### Sub-sistem: `toastoptions:options:toast` (Klaster #299)
+### Sub-sistem: `toastoptions:options:toast` (Klaster #292)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ToastOptions`](file://apps/web/src/components/Toast.tsx#L12-L19) (`apps/web/src/components/Toast.tsx:12-19`) [Tipe: `interface`]
     - *Signature:* `interface ToastOptions`
 
-### Sub-sistem: `toastitem:toast:item` (Klaster #300)
+### Sub-sistem: `toastitem:toast:item` (Klaster #293)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ToastItem`](file://apps/web/src/components/Toast.tsx#L21-L30) (`apps/web/src/components/Toast.tsx:21-30`) [Tipe: `interface`]
     - *Signature:* `interface ToastItem`
 
-### Sub-sistem: `toast:success:toastcardprops` (Klaster #301)
+### Sub-sistem: `toast:success:toastcardprops` (Klaster #294)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ToastCardProps`](file://apps/web/src/components/Toast.tsx#L173-L176) (`apps/web/src/components/Toast.tsx:173-176`) [Tipe: `interface`]
@@ -6434,19 +6226,19 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * serta mendukung options tambahan dan method pembantu (toast.success, toast.error, dll).
  */
 
-### Sub-sistem: `flashstate:flash:state` (Klaster #304)
+### Sub-sistem: `flashstate:flash:state` (Klaster #297)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FlashState`](file://apps/web/src/components/rowHighlight.ts#L25-L30) (`apps/web/src/components/rowHighlight.ts:25-30`) [Tipe: `interface`]
     - *Signature:* `interface FlashState`
 
-### Sub-sistem: `rowhighlightinput:highlight:input` (Klaster #305)
+### Sub-sistem: `rowhighlightinput:highlight:input` (Klaster #298)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RowHighlightInput`](file://apps/web/src/components/rowHighlight.ts#L32-L41) (`apps/web/src/components/rowHighlight.ts:32-41`) [Tipe: `interface`]
     - *Signature:* `interface RowHighlightInput`
 
-### Sub-sistem: `stagger` (Klaster #306)
+### Sub-sistem: `stagger` (Klaster #299)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Stagger`](file://apps/web/src/components/ui.tsx#L36-L63) (`apps/web/src/components/ui.tsx:36-63`) [Tipe: `function`]
@@ -6466,7 +6258,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   animate?: boolean;
 })`
 
-### Sub-sistem: `staggeritem:stagger:item` (Klaster #307)
+### Sub-sistem: `staggeritem:stagger:item` (Klaster #300)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StaggerItem`](file://apps/web/src/components/ui.tsx#L65-L83) (`apps/web/src/components/ui.tsx:65-83`) [Tipe: `function`]
@@ -6478,7 +6270,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className?: string;
 })`
 
-### Sub-sistem: `card` (Klaster #308)
+### Sub-sistem: `card` (Klaster #301)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Card`](file://apps/web/src/components/ui.tsx#L87-L97) (`apps/web/src/components/ui.tsx:87-97`) [Tipe: `function`]
@@ -6492,7 +6284,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   id?: string;
 })`
 
-### Sub-sistem: `cardheader:header:card` (Klaster #309)
+### Sub-sistem: `cardheader:header:card` (Klaster #302)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CardHeader`](file://apps/web/src/components/ui.tsx#L99-L117) (`apps/web/src/components/ui.tsx:99-117`) [Tipe: `function`]
@@ -6506,7 +6298,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   action?: ReactNode;
 })`
 
-### Sub-sistem: `glowcard:glow:card` (Klaster #310)
+### Sub-sistem: `glowcard:glow:card` (Klaster #303)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`GlowCard`](file://apps/web/src/components/ui.tsx#L119-L133) (`apps/web/src/components/ui.tsx:119-133`) [Tipe: `function`]
@@ -6520,7 +6312,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className?: string;
 })`
 
-### Sub-sistem: `badge` (Klaster #311)
+### Sub-sistem: `badge` (Klaster #304)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Badge`](file://apps/web/src/components/ui.tsx#L174-L208) (`apps/web/src/components/ui.tsx:174-208`) [Tipe: `function`]
@@ -6537,13 +6329,13 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   title?: string;
 })`
 
-### Sub-sistem: `statusbadge:badge:status` (Klaster #312)
+### Sub-sistem: `statusbadge:badge:status` (Klaster #305)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StatusBadge`](file://apps/web/src/components/ui.tsx#L305-L308) (`apps/web/src/components/ui.tsx:305-308`) [Tipe: `function`]
     - *Signature:* `({ status, label }: { status: string; label?: string })`
 
-### Sub-sistem: `donut` (Klaster #314)
+### Sub-sistem: `donut` (Klaster #307)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Donut`](file://apps/web/src/components/ui.tsx#L423-L457) (`apps/web/src/components/ui.tsx:423-457`) [Tipe: `function`]
@@ -6563,7 +6355,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   centerValue?: string;
 })`
 
-### Sub-sistem: `radialgauge:radial:gauge` (Klaster #315)
+### Sub-sistem: `radialgauge:radial:gauge` (Klaster #308)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RadialGauge`](file://apps/web/src/components/ui.tsx#L459-L499) (`apps/web/src/components/ui.tsx:459-499`) [Tipe: `function`]
@@ -6581,7 +6373,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   size?: number;
 })`
 
-### Sub-sistem: `charttooltip:tooltip:chart` (Klaster #316)
+### Sub-sistem: `charttooltip:tooltip:chart` (Klaster #309)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChartTooltip`](file://apps/web/src/components/ui.tsx#L501-L533) (`apps/web/src/components/ui.tsx:501-533`) [Tipe: `function`]
@@ -6599,7 +6391,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   labelFormatter?: (label: string) => string;
 })`
 
-### Sub-sistem: `pageheader:header:page` (Klaster #317)
+### Sub-sistem: `pageheader:header:page` (Klaster #310)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PageHeader`](file://apps/web/src/components/ui.tsx#L559-L590) (`apps/web/src/components/ui.tsx:559-590`) [Tipe: `function`]
@@ -6617,7 +6409,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   gradient?: boolean;
 })`
 
-### Sub-sistem: `progressbar:bar:progress` (Klaster #318)
+### Sub-sistem: `progressbar:bar:progress` (Klaster #311)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProgressBar`](file://apps/web/src/components/ui.tsx#L593-L625) (`apps/web/src/components/ui.tsx:593-625`) [Tipe: `function`]
@@ -6633,7 +6425,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   showLabel?: boolean;
 })`
 
-### Sub-sistem: `tabs` (Klaster #319)
+### Sub-sistem: `tabs` (Klaster #312)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Tabs`](file://apps/web/src/components/ui.tsx#L627-L671) (`apps/web/src/components/ui.tsx:627-671`) [Tipe: `function`]
@@ -6650,7 +6442,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   labels?: Record<string, string>;
 })`
 
-### Sub-sistem: `emptystate:empty:state` (Klaster #320)
+### Sub-sistem: `emptystate:empty:state` (Klaster #313)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EmptyState`](file://apps/web/src/components/ui.tsx#L673-L689) (`apps/web/src/components/ui.tsx:673-689`) [Tipe: `function`]
@@ -6664,20 +6456,20 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   subtitle?: string;
 })`
 
-### Sub-sistem: `errorboundarystate:boundary:sesuai` (Klaster #321)
+### Sub-sistem: `errorboundarystate:boundary:sesuai` (Klaster #314)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ErrorBoundaryState`](file://apps/web/src/components/ui.tsx#L693-L695) (`apps/web/src/components/ui.tsx:693-695`) [Tipe: `interface`]
     - *Signature:* `interface ErrorBoundaryState`
     - *Deskripsi:* /** Teks status sesuai locale aktif (nilai data tidak diubah). */
 
-### Sub-sistem: `skeleton` (Klaster #323)
+### Sub-sistem: `skeleton` (Klaster #316)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Skeleton`](file://apps/web/src/components/ui.tsx#L779-L781) (`apps/web/src/components/ui.tsx:779-781`) [Tipe: `function`]
     - *Signature:* `({ className = "" }: { className?: string })`
 
-### Sub-sistem: `confirmmodal:modal:confirm` (Klaster #325)
+### Sub-sistem: `confirmmodal:modal:confirm` (Klaster #318)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ConfirmModal`](file://apps/web/src/components/ui.tsx#L917-L960) (`apps/web/src/components/ui.tsx:917-960`) [Tipe: `function`]
@@ -6701,25 +6493,25 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   onConfirm: () => Promise<unknown> | unknown;
 })`
 
-### Sub-sistem: `formgrid:grid:form` (Klaster #327)
+### Sub-sistem: `formgrid:grid:form` (Klaster #320)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FormGrid`](file://apps/web/src/components/ui.tsx#L1017-L1019) (`apps/web/src/components/ui.tsx:1017-1019`) [Tipe: `function`]
     - *Signature:* `({ children }: { children: ReactNode })`
 
-### Sub-sistem: `pickeroption:picker:option` (Klaster #330)
+### Sub-sistem: `pickeroption:picker:option` (Klaster #323)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PickerOption`](file://apps/web/src/components/ui.tsx#L1122-L1126) (`apps/web/src/components/ui.tsx:1122-1126`) [Tipe: `interface`]
     - *Signature:* `interface PickerOption`
 
-### Sub-sistem: `sortstate:sort:state` (Klaster #332)
+### Sub-sistem: `sortstate:sort:state` (Klaster #325)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SortState`](file://apps/web/src/components/ui.tsx#L1338-L1338) (`apps/web/src/components/ui.tsx:1338-1338`) [Tipe: `interface`]
     - *Signature:* `interface SortState`
 
-### Sub-sistem: `sortth:sort` (Klaster #334)
+### Sub-sistem: `sortth:sort` (Klaster #327)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SortTh`](file://apps/web/src/components/ui.tsx#L1386-L1419) (`apps/web/src/components/ui.tsx:1386-1419`) [Tipe: `function`]
@@ -6741,13 +6533,13 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   colSpan?: number;
 })`
 
-### Sub-sistem: `serverpage:page:server` (Klaster #336)
+### Sub-sistem: `serverpage:page:server` (Klaster #330)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServerPage`](file://apps/web/src/components/ui.tsx#L1625-L1631) (`apps/web/src/components/ui.tsx:1625-1631`) [Tipe: `interface`]
     - *Signature:* `interface ServerPage`
 
-### Sub-sistem: `rowaction:action:row` (Klaster #339)
+### Sub-sistem: `rowaction:action:row` (Klaster #333)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RowAction`](file://apps/web/src/components/ui.tsx#L1778-L1815) (`apps/web/src/components/ui.tsx:1778-1815`) [Tipe: `function`]
@@ -6774,7 +6566,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   className?: string;
 })`
 
-### Sub-sistem: `flowstrip:strip:flow` (Klaster #341)
+### Sub-sistem: `flowstrip:strip:flow` (Klaster #335)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FlowStrip`](file://apps/web/src/components/ui.tsx#L1997-L2047) (`apps/web/src/components/ui.tsx:1997-2047`) [Tipe: `function`]
@@ -6790,201 +6582,201 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   ariaLabel?: string;
 })`
 
-### Sub-sistem: `deeplinkparams:params:deep` (Klaster #343)
+### Sub-sistem: `deeplinkparams:params:deep` (Klaster #337)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DeepLinkParams`](file://apps/web/src/components/useDeepLink.ts#L28-L34) (`apps/web/src/components/useDeepLink.ts:28-34`) [Tipe: `interface`]
     - *Signature:* `interface DeepLinkParams`
 
-### Sub-sistem: `pdfdocstate:state:pdf` (Klaster #345)
+### Sub-sistem: `pdfdocstate:state:pdf` (Klaster #339)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PdfDocState`](file://apps/web/src/components/usePdfDoc.ts#L19-L30) (`apps/web/src/components/usePdfDoc.ts:19-30`) [Tipe: `interface`]
     - *Signature:* `interface PdfDocState`
 
-### Sub-sistem: `coaexcel:coa:excel` (Klaster #347)
+### Sub-sistem: `coaexcel:coa:excel` (Klaster #341)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CoaExcel`](file://apps/web/src/data/financeExcel.ts#L7-L7) (`apps/web/src/data/financeExcel.ts:7-7`) [Tipe: `interface`]
     - *Signature:* `interface CoaExcel`
 
-### Sub-sistem: `apexcel:excel` (Klaster #348)
+### Sub-sistem: `apexcel:excel` (Klaster #342)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`ApExcel`](file://apps/web/src/data/financeExcel.ts#L212-L212) (`apps/web/src/data/financeExcel.ts:212-212`) [Tipe: `interface`]
+  - [`ApExcel`](file://apps/web/src/data/financeExcel.ts#L213-L213) (`apps/web/src/data/financeExcel.ts:213-213`) [Tipe: `interface`]
     - *Signature:* `interface ApExcel`
 
-### Sub-sistem: `arexcel:excel` (Klaster #349)
+### Sub-sistem: `arexcel:excel` (Klaster #343)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`ArExcel`](file://apps/web/src/data/financeExcel.ts#L269-L269) (`apps/web/src/data/financeExcel.ts:269-269`) [Tipe: `interface`]
+  - [`ArExcel`](file://apps/web/src/data/financeExcel.ts#L270-L270) (`apps/web/src/data/financeExcel.ts:270-270`) [Tipe: `interface`]
     - *Signature:* `interface ArExcel`
 
-### Sub-sistem: `kasbankexcel:bank:kas` (Klaster #350)
+### Sub-sistem: `kasbankexcel:bank:kas` (Klaster #344)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`KasBankExcel`](file://apps/web/src/data/financeExcel.ts#L338-L338) (`apps/web/src/data/financeExcel.ts:338-338`) [Tipe: `interface`]
+  - [`KasBankExcel`](file://apps/web/src/data/financeExcel.ts#L339-L339) (`apps/web/src/data/financeExcel.ts:339-339`) [Tipe: `interface`]
     - *Signature:* `interface KasBankExcel`
 
-### Sub-sistem: `laporansnapshot:laporan:snapshot` (Klaster #351)
+### Sub-sistem: `laporansnapshot:laporan:snapshot` (Klaster #345)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`LaporanSnapshot`](file://apps/web/src/data/financeExcel.ts#L375-L377) (`apps/web/src/data/financeExcel.ts:375-377`) [Tipe: `interface`]
+  - [`LaporanSnapshot`](file://apps/web/src/data/financeExcel.ts#L376-L378) (`apps/web/src/data/financeExcel.ts:376-378`) [Tipe: `interface`]
     - *Signature:* `interface LaporanSnapshot`
 
-### Sub-sistem: `designstage:design:stage` (Klaster #356)
+### Sub-sistem: `designstage:design:stage` (Klaster #350)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DesignStage`](file://apps/web/src/data/index.ts#L13-L19) (`apps/web/src/data/index.ts:13-19`) [Tipe: `interface`]
     - *Signature:* `interface DesignStage`
 
-### Sub-sistem: `project` (Klaster #357)
+### Sub-sistem: `project` (Klaster #351)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Project`](file://apps/web/src/data/index.ts#L21-L36) (`apps/web/src/data/index.ts:21-36`) [Tipe: `interface`]
     - *Signature:* `interface Project`
 
-### Sub-sistem: `inventoryitem:inventory:item` (Klaster #358)
+### Sub-sistem: `inventoryitem:inventory:item` (Klaster #352)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`InventoryItem`](file://apps/web/src/data/index.ts#L443-L460) (`apps/web/src/data/index.ts:443-460`) [Tipe: `interface`]
     - *Signature:* `interface InventoryItem`
 
-### Sub-sistem: `servicerecord:record:service` (Klaster #359)
+### Sub-sistem: `servicerecord:record:service` (Klaster #353)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServiceRecord`](file://apps/web/src/data/index.ts#L563-L583) (`apps/web/src/data/index.ts:563-583`) [Tipe: `interface`]
     - *Signature:* `interface ServiceRecord`
 
-### Sub-sistem: `materialrequest:request:material` (Klaster #360)
+### Sub-sistem: `materialrequest:request:material` (Klaster #354)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaterialRequest`](file://apps/web/src/data/index.ts#L597-L615) (`apps/web/src/data/index.ts:597-615`) [Tipe: `interface`]
     - *Signature:* `interface MaterialRequest`
 
-### Sub-sistem: `bomitem:bom:item` (Klaster #361)
+### Sub-sistem: `bomitem:bom:item` (Klaster #355)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BomItem`](file://apps/web/src/data/index.ts#L619-L619) (`apps/web/src/data/index.ts:619-619`) [Tipe: `interface`]
     - *Signature:* `interface BomItem`
 
-### Sub-sistem: `sparepart` (Klaster #362)
+### Sub-sistem: `sparepart` (Klaster #356)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Sparepart`](file://apps/web/src/data/index.ts#L642-L655) (`apps/web/src/data/index.ts:642-655`) [Tipe: `interface`]
     - *Signature:* `interface Sparepart`
 
-### Sub-sistem: `invoice` (Klaster #363)
+### Sub-sistem: `invoice` (Klaster #357)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Invoice`](file://apps/web/src/data/index.ts#L666-L674) (`apps/web/src/data/index.ts:666-674`) [Tipe: `interface`]
     - *Signature:* `interface Invoice`
 
-### Sub-sistem: `activity` (Klaster #364)
+### Sub-sistem: `activity` (Klaster #358)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Activity`](file://apps/web/src/data/index.ts#L789-L797) (`apps/web/src/data/index.ts:789-797`) [Tipe: `interface`]
     - *Signature:* `interface Activity`
 
-### Sub-sistem: `boqitem:item` (Klaster #365)
+### Sub-sistem: `boqitem:item` (Klaster #359)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoQItem`](file://apps/web/src/data/index.ts#L996-L1014) (`apps/web/src/data/index.ts:996-1014`) [Tipe: `interface`]
     - *Signature:* `interface BoQItem`
 
-### Sub-sistem: `boqdoc:doc` (Klaster #366)
+### Sub-sistem: `boqdoc:doc` (Klaster #360)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoQDoc`](file://apps/web/src/data/index.ts#L1040-L1056) (`apps/web/src/data/index.ts:1040-1056`) [Tipe: `interface`]
     - *Signature:* `interface BoQDoc`
 
-### Sub-sistem: `orders:purchase` (Klaster #367)
+### Sub-sistem: `orders:purchase` (Klaster #361)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`mk`](file://apps/web/src/data/index.ts#L1092-L1092) (`apps/web/src/data/index.ts:1092-1092`) [Tipe: `function`]
     - *Signature:* `(vs: number[])`
     - *Deskripsi:* // Purchase orders
 
-### Sub-sistem: `checklistitemdef:def:checklist` (Klaster #368)
+### Sub-sistem: `checklistitemdef:def:checklist` (Klaster #362)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChecklistItemDef`](file://apps/web/src/data/index.ts#L1122-L1122) (`apps/web/src/data/index.ts:1122-1122`) [Tipe: `interface`]
     - *Signature:* `interface ChecklistItemDef`
 
-### Sub-sistem: `checklisttemplatedef:def:checklist` (Klaster #369)
+### Sub-sistem: `checklisttemplatedef:def:checklist` (Klaster #363)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChecklistTemplateDef`](file://apps/web/src/data/index.ts#L1123-L1123) (`apps/web/src/data/index.ts:1123-1123`) [Tipe: `interface`]
     - *Signature:* `interface ChecklistTemplateDef`
 
-### Sub-sistem: `offlinepersistenceio:persistence:offline` (Klaster #370)
+### Sub-sistem: `offlinepersistenceio:persistence:offline` (Klaster #364)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`OfflinePersistenceIO`](file://apps/web/src/data/offlinePersistence.ts#L1-L5) (`apps/web/src/data/offlinePersistence.ts:1-5`) [Tipe: `interface`]
     - *Signature:* `interface OfflinePersistenceIO`
 
-### Sub-sistem: `projectexistencechange:existence:change` (Klaster #372)
+### Sub-sistem: `projectexistencechange:existence:change` (Klaster #366)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectExistenceChange`](file://apps/web/src/data/projectPullScope.ts#L1-L5) (`apps/web/src/data/projectPullScope.ts:1-5`) [Tipe: `interface`]
     - *Signature:* `interface ProjectExistenceChange`
 
-### Sub-sistem: `smd:trm:vnd` (Klaster #374)
+### Sub-sistem: `smd:trm:vnd` (Klaster #368)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WO_MS`](file://apps/web/src/data/seeds.ts#L33-L34) (`apps/web/src/data/seeds.ts:33-34`) [Tipe: `function`]
     - *Signature:* `(...stages: WoStage[])`
     - *Deskripsi:* // TRM-SB / M-SB / DS-SB / SJ-SMD / TT-SMD / C-SB / VND-SB / V-SB / QT-SB / KTR-SB.
 
-### Sub-sistem: `sessionfence:fence:session` (Klaster #375)
+### Sub-sistem: `sessionfence:fence:session` (Klaster #369)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SessionFence`](file://apps/web/src/data/sessionFence.ts#L1-L4) (`apps/web/src/data/sessionFence.ts:1-4`) [Tipe: `interface`]
     - *Signature:* `interface SessionFence`
 
-### Sub-sistem: `conflictholdstorage:hold:conflict` (Klaster #377)
+### Sub-sistem: `conflictholdstorage:hold:conflict` (Klaster #371)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ConflictHoldStorage`](file://apps/web/src/data/sideMapConflictHolds.ts#L3-L7) (`apps/web/src/data/sideMapConflictHolds.ts:3-7`) [Tipe: `interface`]
     - *Signature:* `interface ConflictHoldStorage`
 
-### Sub-sistem: `storeitem:store:item` (Klaster #380)
+### Sub-sistem: `storeitem:store:item` (Klaster #374)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StoreItem`](file://apps/web/src/data/store.tsx#L57-L60) (`apps/web/src/data/store.tsx:57-60`) [Tipe: `interface`]
     - *Signature:* `interface StoreItem`
 
-### Sub-sistem: `wbsphoto:photo:wbs` (Klaster #381)
+### Sub-sistem: `wbsphoto:photo:wbs` (Klaster #375)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsPhoto`](file://apps/web/src/data/store.tsx#L62-L66) (`apps/web/src/data/store.tsx:62-66`) [Tipe: `interface`]
     - *Signature:* `interface WbsPhoto`
 
-### Sub-sistem: `wbsassignee:assignee:wbs` (Klaster #382)
+### Sub-sistem: `wbsassignee:assignee:wbs` (Klaster #376)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsAssignee`](file://apps/web/src/data/store.tsx#L68-L73) (`apps/web/src/data/store.tsx:68-73`) [Tipe: `interface`]
     - *Signature:* `interface WbsAssignee`
 
-### Sub-sistem: `wbshistoryitem:history:wbs` (Klaster #383)
+### Sub-sistem: `wbshistoryitem:history:wbs` (Klaster #377)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsHistoryItem`](file://apps/web/src/data/store.tsx#L75-L86) (`apps/web/src/data/store.tsx:75-86`) [Tipe: `interface`]
     - *Signature:* `interface WbsHistoryItem`
 
-### Sub-sistem: `wbsitem:wbs:item` (Klaster #384)
+### Sub-sistem: `wbsitem:wbs:item` (Klaster #378)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsItem`](file://apps/web/src/data/store.tsx#L88-L109) (`apps/web/src/data/store.tsx:88-109`) [Tipe: `interface`]
     - *Signature:* `interface WbsItem`
 
-### Sub-sistem: `storeshape:shape:store` (Klaster #385)
+### Sub-sistem: `storeshape:shape:store` (Klaster #379)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StoreShape`](file://apps/web/src/data/store.tsx#L111-L181) (`apps/web/src/data/store.tsx:111-181`) [Tipe: `interface`]
     - *Signature:* `interface StoreShape`
 
-### Sub-sistem: `storectx:trail:menunjukkan` (Klaster #389)
+### Sub-sistem: `storectx:trail:menunjukkan` (Klaster #385)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StoreCtx`](file://apps/web/src/data/store.tsx#L647-L674) (`apps/web/src/data/store.tsx:647-674`) [Tipe: `interface`]
@@ -6993,136 +6785,142 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  *  Dulu selalu "Anda", sehingga Audit Trail tidak bisa menunjukkan siapa
  *  pelakunya (catatan CTO 15 Okt). */
 
-### Sub-sistem: `materialrequestargs:args:request` (Klaster #394)
+### Sub-sistem: `materialrequestargs:args:request` (Klaster #390)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaterialRequestArgs`](file://apps/web/src/data/useMaterialRequest.ts#L15-L24) (`apps/web/src/data/useMaterialRequest.ts:15-24`) [Tipe: `interface`]
     - *Signature:* `interface MaterialRequestArgs`
 
-### Sub-sistem: `materialrequestresult:request:result` (Klaster #395)
+### Sub-sistem: `materialrequestresult:request:material` (Klaster #391)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaterialRequestResult`](file://apps/web/src/data/useMaterialRequest.ts#L26-L38) (`apps/web/src/data/useMaterialRequest.ts:26-38`) [Tipe: `interface`]
     - *Signature:* `interface MaterialRequestResult`
 
-### Sub-sistem: `materialstatus:material:status` (Klaster #396)
+### Sub-sistem: `materialstatus:material:status` (Klaster #392)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`materialStatus`](file://apps/web/src/data/useMaterialRequest.ts#L49-L51) (`apps/web/src/data/useMaterialRequest.ts:49-51`) [Tipe: `function`]
     - *Signature:* `(issued: number, shortage: number): MaterialStatus`
 
-### Sub-sistem: `fulfillresult:fulfill:result` (Klaster #397)
+### Sub-sistem: `fulfillresult:fulfill:result` (Klaster #393)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FulfillResult`](file://apps/web/src/data/useMaterialRequest.ts#L226-L232) (`apps/web/src/data/useMaterialRequest.ts:226-232`) [Tipe: `interface`]
     - *Signature:* `interface FulfillResult`
 
-### Sub-sistem: `modulesync:sync:module` (Klaster #399)
+### Sub-sistem: `modulesync:sync:module` (Klaster #394)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ModuleSync`](file://apps/web/src/data/useModuleSync.ts#L97-L108) (`apps/web/src/data/useModuleSync.ts:97-108`) [Tipe: `interface`]
     - *Signature:* `interface ModuleSync`
 
-### Sub-sistem: `receivelineargs:args:receive` (Klaster #402)
+### Sub-sistem: `receivelineargs:args:receive` (Klaster #397)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveLineArgs`](file://apps/web/src/data/usePoActions.ts#L42-L42) (`apps/web/src/data/usePoActions.ts:42-42`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveLineArgs`
 
-### Sub-sistem: `receiveargs:args:receive` (Klaster #403)
+### Sub-sistem: `receiveargs:args:receive` (Klaster #398)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveArgs`](file://apps/web/src/data/usePoActions.ts#L43-L43) (`apps/web/src/data/usePoActions.ts:43-43`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveArgs`
 
-### Sub-sistem: `receiveoutcome:outcome:receive` (Klaster #404)
+### Sub-sistem: `receiveoutcome:outcome:receive` (Klaster #399)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReceiveOutcome`](file://apps/web/src/data/usePoActions.ts#L44-L44) (`apps/web/src/data/usePoActions.ts:44-44`) [Tipe: `interface`]
     - *Signature:* `interface ReceiveOutcome`
 
-### Sub-sistem: `returnargs:args` (Klaster #405)
+### Sub-sistem: `returnargs:args` (Klaster #400)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReturnArgs`](file://apps/web/src/data/usePoActions.ts#L45-L45) (`apps/web/src/data/usePoActions.ts:45-45`) [Tipe: `interface`]
     - *Signature:* `interface ReturnArgs`
 
-### Sub-sistem: `stockissueargs:args:issue` (Klaster #408)
+### Sub-sistem: `stockissueargs:args:issue` (Klaster #402)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StockIssueArgs`](file://apps/web/src/data/useStockIssue.ts#L10-L17) (`apps/web/src/data/useStockIssue.ts:10-17`) [Tipe: `interface`]
     - *Signature:* `interface StockIssueArgs`
 
-### Sub-sistem: `langctx:lang:status` (Klaster #409)
+### Sub-sistem: `langctx:lang:status` (Klaster #404)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`LangCtx`](file://apps/web/src/i18n/LanguageContext.tsx#L20-L24) (`apps/web/src/i18n/LanguageContext.tsx:20-24`) [Tipe: `interface`]
     - *Signature:* `interface LangCtx`
     - *Deskripsi:* // Status DATA tidak diterjemahkan nilainya - pakai status.ts (label saja).
 
-### Sub-sistem: `demostep:step:demo` (Klaster #412)
+### Sub-sistem: `demostep:step:demo` (Klaster #407)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DemoStep`](file://apps/web/src/i18n/n_demo.ts#L5-L9) (`apps/web/src/i18n/n_demo.ts:5-9`) [Tipe: `interface`]
     - *Signature:* `interface DemoStep`
 
-### Sub-sistem: `demoscenario:scenario:demo` (Klaster #413)
+### Sub-sistem: `demoscenario:scenario:demo` (Klaster #408)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DemoScenario`](file://apps/web/src/i18n/n_demo.ts#L11-L17) (`apps/web/src/i18n/n_demo.ts:11-17`) [Tipe: `interface`]
     - *Signature:* `interface DemoScenario`
 
-### Sub-sistem: `dict` (Klaster #414)
+### Sub-sistem: `dict` (Klaster #409)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Dict`](file://apps/web/src/i18n/types.ts#L6-L15) (`apps/web/src/i18n/types.ts:6-15`) [Tipe: `interface`]
     - *Signature:* `interface Dict`
 
-### Sub-sistem: `scenario` (Klaster #416)
+### Sub-sistem: `geo` (Klaster #410)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`Geo`](file://apps/web/src/security/watermark.tsx#L44-L48) (`apps/web/src/security/watermark.tsx:44-48`) [Tipe: `interface`]
+    - *Signature:* `interface Geo`
+
+### Sub-sistem: `scenario` (Klaster #415)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Scenario`](file://apps/web/src/pages/Analytics.tsx#L104-L104) (`apps/web/src/pages/Analytics.tsx:104-104`) [Tipe: `interface`]
     - *Signature:* `interface Scenario`
 
-### Sub-sistem: `loadattentioncategory:attention:category` (Klaster #419)
+### Sub-sistem: `loadattentioncategory:attention:category` (Klaster #418)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`loadAttentionCategory`](file://apps/web/src/pages/Dashboard.tsx#L104-L112) (`apps/web/src/pages/Dashboard.tsx:104-112`) [Tipe: `function`]
     - *Signature:* `(): ModuleAlertKey | null`
 
-### Sub-sistem: `branchtarget:target:branch` (Klaster #420)
+### Sub-sistem: `branchtarget:target:branch` (Klaster #419)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BranchTarget`](file://apps/web/src/pages/Dashboard.tsx#L217-L217) (`apps/web/src/pages/Dashboard.tsx:217-217`) [Tipe: `interface`]
     - *Signature:* `interface BranchTarget`
 
-### Sub-sistem: `cashjournalargs:journal:cash` (Klaster #423)
+### Sub-sistem: `cashjournalargs:journal:cash` (Klaster #422)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CashJournalArgs`](file://apps/web/src/services/autoJournal.ts#L6-L20) (`apps/web/src/services/autoJournal.ts:6-20`) [Tipe: `interface`]
     - *Signature:* `interface CashJournalArgs`
 
-### Sub-sistem: `resolveapibase:base:resolve` (Klaster #432)
+### Sub-sistem: `resolveapibase:base:resolve` (Klaster #431)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`resolveApiBase`](file://apps/web/src/services/http.ts#L88-L92) (`apps/web/src/services/http.ts:88-92`) [Tipe: `function`]
     - *Signature:* `(raw: string | undefined, origin: string | undefined): string`
 
-### Sub-sistem: `okenvelope:envelope:bearer` (Klaster #433)
+### Sub-sistem: `okenvelope:envelope:bearer` (Klaster #432)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`OkEnvelope`](file://apps/web/src/services/http.ts#L103-L106) (`apps/web/src/services/http.ts:103-106`) [Tipe: `interface`]
     - *Signature:* `interface OkEnvelope`
     - *Deskripsi:* // - JWT dikirim sebagai `Authorization: Bearer <token>` bila ada.
 
-### Sub-sistem: `failenvelope:fail:envelope` (Klaster #434)
+### Sub-sistem: `failenvelope:fail:envelope` (Klaster #433)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FailEnvelope`](file://apps/web/src/services/http.ts#L108-L112) (`apps/web/src/services/http.ts:108-112`) [Tipe: `interface`]
     - *Signature:* `interface FailEnvelope`
     - *Deskripsi:* // - JWT dikirim sebagai `Authorization: Bearer <token>` bila ada.
 
-### Sub-sistem: `apifetchinit:init:fetch` (Klaster #437)
+### Sub-sistem: `apifetchinit:init:fetch` (Klaster #436)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ApiFetchInit`](file://apps/web/src/services/http.ts#L174-L182) (`apps/web/src/services/http.ts:174-182`) [Tipe: `interface`]
@@ -7140,190 +6938,184 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   - [`PdfRequest`](file://apps/web/src/services/pdfClient.ts#L77-L90) (`apps/web/src/services/pdfClient.ts:77-90`) [Tipe: `interface`]
     - *Signature:* `interface PdfRequest`
 
-### Sub-sistem: `listfilter:list:filter` (Klaster #442)
+### Sub-sistem: `listfilter:list:filter` (Klaster #441)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ListFilter`](file://apps/web/src/services/repositories.ts#L16-L19) (`apps/web/src/services/repositories.ts:16-19`) [Tipe: `interface`]
     - *Signature:* `interface ListFilter`
 
-### Sub-sistem: `pagedquery:paged:query` (Klaster #443)
+### Sub-sistem: `pagedquery:paged:query` (Klaster #442)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PagedQuery`](file://apps/web/src/services/repositories.ts#L22-L29) (`apps/web/src/services/repositories.ts:22-29`) [Tipe: `interface`]
     - *Signature:* `interface PagedQuery`
 
-### Sub-sistem: `pagedresult:paged:result` (Klaster #444)
+### Sub-sistem: `pagedresult:paged:result` (Klaster #443)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PagedResult`](file://apps/web/src/services/repositories.ts#L31-L37) (`apps/web/src/services/repositories.ts:31-37`) [Tipe: `interface`]
     - *Signature:* `interface PagedResult`
 
-### Sub-sistem: `repository` (Klaster #445)
+### Sub-sistem: `repository` (Klaster #444)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Repository`](file://apps/web/src/services/repositories.ts#L39-L50) (`apps/web/src/services/repositories.ts:39-50`) [Tipe: `interface`]
     - *Signature:* `interface Repository`
 
-### Sub-sistem: `snapshot` (Klaster #446)
+### Sub-sistem: `snapshot` (Klaster #445)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Snapshot`](file://apps/web/src/services/repositories.ts#L52-L55) (`apps/web/src/services/repositories.ts:52-55`) [Tipe: `interface`]
     - *Signature:* `interface Snapshot`
 
-### Sub-sistem: `backendrow:paginasi:limit` (Klaster #447)
+### Sub-sistem: `backendrow:paginasi:limit` (Klaster #446)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BackendRow`](file://apps/web/src/services/repositories.ts#L59-L64) (`apps/web/src/services/repositories.ts:59-64`) [Tipe: `interface`]
     - *Signature:* `interface BackendRow`
     - *Deskripsi:* /** Query paginasi server-side (GET /api/<table>?limit=&offset=). */
 
-### Sub-sistem: `backendpage:paginasi:limit` (Klaster #448)
+### Sub-sistem: `backendpage:paginasi:limit` (Klaster #447)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BackendPage`](file://apps/web/src/services/repositories.ts#L110-L117) (`apps/web/src/services/repositories.ts:110-117`) [Tipe: `interface`]
     - *Signature:* `interface BackendPage`
     - *Deskripsi:* /** Query paginasi server-side (GET /api/<table>?limit=&offset=). */
 
-### Sub-sistem: `geo` (Klaster #453)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`Geo`](file://apps/web/src/security/watermark.tsx#L44-L48) (`apps/web/src/security/watermark.tsx:44-48`) [Tipe: `interface`]
-    - *Signature:* `interface Geo`
-
-### Sub-sistem: `alert` (Klaster #458)
+### Sub-sistem: `alert` (Klaster #452)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Alert`](file://apps/web/src/utils/alerts.ts#L7-L12) (`apps/web/src/utils/alerts.ts:7-12`) [Tipe: `interface`]
     - *Signature:* `interface Alert`
 
-### Sub-sistem: `auditdeleterow:delete:audit` (Klaster #460)
+### Sub-sistem: `auditdeleterow:delete:audit` (Klaster #454)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditDeleteRow`](file://apps/web/src/utils/audit.ts#L16-L22) (`apps/web/src/utils/audit.ts:16-22`) [Tipe: `interface`]
     - *Signature:* `interface AuditDeleteRow`
 
-### Sub-sistem: `level:islevel:modulekey` (Klaster #462)
+### Sub-sistem: `level:islevel:modulekey` (Klaster #456)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`isLevel`](file://apps/web/src/utils/bannerDismiss.ts#L28-L29) (`apps/web/src/utils/bannerDismiss.ts:28-29`) [Tipe: `function`]
     - *Signature:* `(v: unknown): v is AlertLevel`
     - *Deskripsi:* /** moduleKey -> level yang ditutup di sesi ini. */
 
-### Sub-sistem: `restoreall:restore:all` (Klaster #464)
+### Sub-sistem: `restoreall:restore:all` (Klaster #458)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`restoreAll`](file://apps/web/src/utils/bannerDismiss.ts#L83-L88) (`apps/web/src/utils/bannerDismiss.ts:83-88`) [Tipe: `function`]
     - *Signature:* `(map: DismissMap, moduleKey: string): DismissMap`
 
-### Sub-sistem: `planningsubclass:planning:subclass` (Klaster #466)
+### Sub-sistem: `planningsubclass:planning:subclass` (Klaster #460)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PlanningSubclass`](file://apps/web/src/utils/classApprovalBlockers.ts#L7-L12) (`apps/web/src/utils/classApprovalBlockers.ts:7-12`) [Tipe: `interface`]
     - *Signature:* `interface PlanningSubclass`
 
-### Sub-sistem: `stageblocker:blocker:stage` (Klaster #467)
+### Sub-sistem: `stageblocker:blocker:stage` (Klaster #461)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StageBlocker`](file://apps/web/src/utils/classApprovalBlockers.ts#L27-L35) (`apps/web/src/utils/classApprovalBlockers.ts:27-35`) [Tipe: `interface`]
     - *Signature:* `interface StageBlocker`
 
-### Sub-sistem: `transitionblockerdata:transition:blocker` (Klaster #468)
+### Sub-sistem: `transitionblockerdata:transition:blocker` (Klaster #462)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TransitionBlockerData`](file://apps/web/src/utils/classApprovalBlockers.ts#L37-L43) (`apps/web/src/utils/classApprovalBlockers.ts:37-43`) [Tipe: `interface`]
     - *Signature:* `interface TransitionBlockerData`
 
-### Sub-sistem: `deadreason:reason:dead` (Klaster #471)
+### Sub-sistem: `deadreason:reason:dead` (Klaster #465)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DeadReason`](file://apps/web/src/utils/deadStock.ts#L25-L36) (`apps/web/src/utils/deadStock.ts:25-36`) [Tipe: `interface`]
     - *Signature:* `interface DeadReason`
 
-### Sub-sistem: `deadstockrow:dead:stock` (Klaster #473)
+### Sub-sistem: `deadstockrow:dead:stock` (Klaster #467)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DeadStockRow`](file://apps/web/src/utils/deadStock.ts#L187-L195) (`apps/web/src/utils/deadStock.ts:187-195`) [Tipe: `interface`]
     - *Signature:* `interface DeadStockRow`
 
-### Sub-sistem: `attachment` (Klaster #474)
+### Sub-sistem: `attachment` (Klaster #468)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Attachment`](file://apps/web/src/utils/docAttachment.ts#L39-L44) (`apps/web/src/utils/docAttachment.ts:39-44`) [Tipe: `interface`]
     - *Signature:* `interface Attachment`
 
-### Sub-sistem: `dayoffsets:offsets:day` (Klaster #477)
+### Sub-sistem: `dayoffsets:offsets:day` (Klaster #471)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DayOffsets`](file://apps/web/src/utils/drydockBookingDates.ts#L3-L6) (`apps/web/src/utils/drydockBookingDates.ts:3-6`) [Tipe: `interface`]
     - *Signature:* `interface DayOffsets`
 
-### Sub-sistem: `slotdatefields:fields:slot` (Klaster #478)
+### Sub-sistem: `slotdatefields:fields:slot` (Klaster #472)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SlotDateFields`](file://apps/web/src/utils/drydockBookingDates.ts#L8-L13) (`apps/web/src/utils/drydockBookingDates.ts:8-13`) [Tipe: `interface`]
     - *Signature:* `interface SlotDateFields`
 
-### Sub-sistem: `bookingdatevalues:values:booking` (Klaster #480)
+### Sub-sistem: `bookingdatevalues:values:booking` (Klaster #474)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BookingDateValues`](file://apps/web/src/utils/drydockBookingDates.ts#L40-L43) (`apps/web/src/utils/drydockBookingDates.ts:40-43`) [Tipe: `interface`]
     - *Signature:* `interface BookingDateValues`
 
-### Sub-sistem: `bookingdateedits:edits:booking` (Klaster #481)
+### Sub-sistem: `bookingdateedits:edits:booking` (Klaster #475)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BookingDateEdits`](file://apps/web/src/utils/drydockBookingDates.ts#L45-L48) (`apps/web/src/utils/drydockBookingDates.ts:45-48`) [Tipe: `interface`]
     - *Signature:* `interface BookingDateEdits`
 
-### Sub-sistem: `employeeoptionextra:extra:option` (Klaster #483)
+### Sub-sistem: `employeeoptionextra:extra:option` (Klaster #477)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EmployeeOptionExtra`](file://apps/web/src/utils/employeeOptions.ts#L30-L33) (`apps/web/src/utils/employeeOptions.ts:30-33`) [Tipe: `interface`]
     - *Signature:* `interface EmployeeOptionExtra`
 
-### Sub-sistem: `equipmentnotificationtarget:notification:target` (Klaster #484)
+### Sub-sistem: `equipmentnotificationtarget:notification:target` (Klaster #478)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EquipmentNotificationTarget`](file://apps/web/src/utils/equipmentNotifications.ts#L1-L4) (`apps/web/src/utils/equipmentNotifications.ts:1-4`) [Tipe: `interface`]
     - *Signature:* `interface EquipmentNotificationTarget`
 
-### Sub-sistem: `excelsheet:sheet:excel` (Klaster #485)
+### Sub-sistem: `excelsheet:sheet:excel` (Klaster #479)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`ExcelSheet`](file://apps/web/src/utils/export.ts#L56-L61) (`apps/web/src/utils/export.ts:56-61`) [Tipe: `interface`]
+  - [`ExcelSheet`](file://apps/web/src/utils/export.ts#L80-L85) (`apps/web/src/utils/export.ts:80-85`) [Tipe: `interface`]
     - *Signature:* `interface ExcelSheet`
 
-### Sub-sistem: `warntone:warn:tone` (Klaster #491)
+### Sub-sistem: `warntone:warn:tone` (Klaster #485)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WarnTone`](file://apps/web/src/utils/inventoryWarn.ts#L31-L39) (`apps/web/src/utils/inventoryWarn.ts:31-39`) [Tipe: `interface`]
     - *Signature:* `interface WarnTone`
 
-### Sub-sistem: `categoryrule:rule:category` (Klaster #492)
+### Sub-sistem: `categoryrule:rule:category` (Klaster #486)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CategoryRule`](file://apps/web/src/utils/inventoryWarn.ts#L52-L59) (`apps/web/src/utils/inventoryWarn.ts:52-59`) [Tipe: `interface`]
     - *Signature:* `interface CategoryRule`
 
-### Sub-sistem: `categorywarningsummary:warning:summary` (Klaster #496)
+### Sub-sistem: `categorywarningsummary:warning:summary` (Klaster #490)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CategoryWarningSummary`](file://apps/web/src/utils/inventoryWarn.ts#L191-L202) (`apps/web/src/utils/inventoryWarn.ts:191-202`) [Tipe: `interface`]
     - *Signature:* `interface CategoryWarningSummary`
 
-### Sub-sistem: `kasbonpotongan:kasbon:potongan` (Klaster #498)
+### Sub-sistem: `kasbonpotongan:kasbon:potongan` (Klaster #492)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KasbonPotongan`](file://apps/web/src/utils/kasbon.ts#L8-L13) (`apps/web/src/utils/kasbon.ts:8-13`) [Tipe: `interface`]
     - *Signature:* `interface KasbonPotongan`
 
-### Sub-sistem: `kasbonentry:kasbon:entry` (Klaster #499)
+### Sub-sistem: `kasbonentry:kasbon:entry` (Klaster #493)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KasbonEntry`](file://apps/web/src/utils/kasbon.ts#L15-L22) (`apps/web/src/utils/kasbon.ts:15-22`) [Tipe: `interface`]
     - *Signature:* `interface KasbonEntry`
 
-### Sub-sistem: `finditempage:find:page` (Klaster #500)
+### Sub-sistem: `finditempage:find:page` (Klaster #494)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`findItemPage`](file://apps/web/src/utils/listPersistence.ts#L15-L24) (`apps/web/src/utils/listPersistence.ts:15-24`) [Tipe: `function`]
@@ -7333,517 +7125,517 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
   pageSize: number,
 ): number | null`
 
-### Sub-sistem: `reconcileresult:reconcile:result` (Klaster #502)
+### Sub-sistem: `reconcileresult:reconcile:result` (Klaster #496)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReconcileResult`](file://apps/web/src/utils/listPersistence.ts#L66-L73) (`apps/web/src/utils/listPersistence.ts:66-73`) [Tipe: `interface`]
     - *Signature:* `interface ReconcileResult`
 
-### Sub-sistem: `preservescroll:preserve:scroll` (Klaster #503)
+### Sub-sistem: `preservescroll:preserve:scroll` (Klaster #497)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`preserveScroll`](file://apps/web/src/utils/listPersistence.ts#L133-L147) (`apps/web/src/utils/listPersistence.ts:133-147`) [Tipe: `function`]
     - *Signature:* `(action: () => Promise<R> | R): Promise<R>`
 
-### Sub-sistem: `mainthistoryentry:entry:maint` (Klaster #506)
+### Sub-sistem: `mainthistoryentry:entry:maint` (Klaster #500)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaintHistoryEntry`](file://apps/web/src/utils/maintenance.ts#L56-L62) (`apps/web/src/utils/maintenance.ts:56-62`) [Tipe: `interface`]
     - *Signature:* `interface MaintHistoryEntry`
 
-### Sub-sistem: `maintmaterial:maint:material` (Klaster #507)
+### Sub-sistem: `maintmaterial:maint:material` (Klaster #501)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaintMaterial`](file://apps/web/src/utils/maintenance.ts#L82-L90) (`apps/web/src/utils/maintenance.ts:82-90`) [Tipe: `interface`]
     - *Signature:* `interface MaintMaterial`
 
-### Sub-sistem: `maintcostbreakdown:breakdown:maint` (Klaster #509)
+### Sub-sistem: `maintcostbreakdown:breakdown:maint` (Klaster #503)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaintCostBreakdown`](file://apps/web/src/utils/maintenance.ts#L130-L138) (`apps/web/src/utils/maintenance.ts:130-138`) [Tipe: `interface`]
     - *Signature:* `interface MaintCostBreakdown`
 
-### Sub-sistem: `stockplanitem:plan:stock` (Klaster #511)
+### Sub-sistem: `stockplanitem:plan:stock` (Klaster #505)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StockPlanItem`](file://apps/web/src/utils/maintenance.ts#L174-L183) (`apps/web/src/utils/maintenance.ts:174-183`) [Tipe: `interface`]
     - *Signature:* `interface StockPlanItem`
 
-### Sub-sistem: `modulealertitem:alert:module` (Klaster #513)
+### Sub-sistem: `modulealertitem:alert:module` (Klaster #507)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ModuleAlertItem`](file://apps/web/src/utils/moduleAlerts.ts#L44-L63) (`apps/web/src/utils/moduleAlerts.ts:44-63`) [Tipe: `interface`]
     - *Signature:* `interface ModuleAlertItem`
 
-### Sub-sistem: `activitymodulekey:activity:module` (Klaster #517)
+### Sub-sistem: `activitymodulekey:activity:module` (Klaster #512)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`activityModuleKey`](file://apps/web/src/utils/moduleKey.ts#L23-L25) (`apps/web/src/utils/moduleKey.ts:23-25`) [Tipe: `function`]
     - *Signature:* `(label: unknown): string | null`
 
-### Sub-sistem: `monthpoint:point:month` (Klaster #519)
+### Sub-sistem: `monthpoint:point:month` (Klaster #515)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MonthPoint`](file://apps/web/src/utils/monthAxis.ts#L62-L78) (`apps/web/src/utils/monthAxis.ts:62-78`) [Tipe: `interface`]
     - *Signature:* `interface MonthPoint`
 
-### Sub-sistem: `monthaxisoptions:axis:options` (Klaster #520)
+### Sub-sistem: `monthaxisoptions:axis:options` (Klaster #516)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MonthAxisOptions`](file://apps/web/src/utils/monthAxis.ts#L80-L91) (`apps/web/src/utils/monthAxis.ts:80-91`) [Tipe: `interface`]
     - *Signature:* `interface MonthAxisOptions`
 
-### Sub-sistem: `overtimerules:rules:overtime` (Klaster #524)
+### Sub-sistem: `overtimerules:rules:overtime` (Klaster #519)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`OvertimeRules`](file://apps/web/src/utils/overtime.ts#L3-L3) (`apps/web/src/utils/overtime.ts:3-3`) [Tipe: `interface`]
     - *Signature:* `interface OvertimeRules`
 
-### Sub-sistem: `bookingcostrow:booking:cost` (Klaster #531)
+### Sub-sistem: `bookingcostrow:booking:cost` (Klaster #524)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BookingCostRow`](file://apps/web/src/utils/projectCost.ts#L70-L80) (`apps/web/src/utils/projectCost.ts:70-80`) [Tipe: `interface`]
     - *Signature:* `interface BookingCostRow`
 
-### Sub-sistem: `maintcostrow:maint:cost` (Klaster #532)
+### Sub-sistem: `maintcostrow:maint:cost` (Klaster #525)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaintCostRow`](file://apps/web/src/utils/projectCost.ts#L123-L141) (`apps/web/src/utils/projectCost.ts:123-141`) [Tipe: `interface`]
     - *Signature:* `interface MaintCostRow`
 
-### Sub-sistem: `equipmentcostsummary:summary:equipment` (Klaster #533)
+### Sub-sistem: `equipmentcostsummary:summary:equipment` (Klaster #527)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EquipmentCostSummary`](file://apps/web/src/utils/projectCost.ts#L183-L198) (`apps/web/src/utils/projectCost.ts:183-198`) [Tipe: `interface`]
     - *Signature:* `interface EquipmentCostSummary`
 
-### Sub-sistem: `projectcostpatch:cost:patch` (Klaster #535)
+### Sub-sistem: `projectcostpatch:cost:patch` (Klaster #529)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`projectCostPatch`](file://apps/web/src/utils/projectCost.ts#L256-L265) (`apps/web/src/utils/projectCost.ts:256-265`) [Tipe: `function`]
     - *Signature:* `(sum: EquipmentCostSummary): Record<string, number>`
 
-### Sub-sistem: `delaywbsitem:delay:wbs` (Klaster #537)
+### Sub-sistem: `delaywbsitem:delay:wbs` (Klaster #531)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DelayWbsItem`](file://apps/web/src/utils/projectDelay.ts#L35-L40) (`apps/web/src/utils/projectDelay.ts:35-40`) [Tipe: `interface`]
     - *Signature:* `interface DelayWbsItem`
 
-### Sub-sistem: `projectdelaydetails:details:delay` (Klaster #538)
+### Sub-sistem: `projectdelaydetails:details:delay` (Klaster #532)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectDelayDetails`](file://apps/web/src/utils/projectDelay.ts#L42-L49) (`apps/web/src/utils/projectDelay.ts:42-49`) [Tipe: `interface`]
     - *Signature:* `interface ProjectDelayDetails`
 
-### Sub-sistem: `target:statusoverridelike:penundaan` (Klaster #539)
+### Sub-sistem: `target:statusoverridelike:penundaan` (Klaster #533)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StatusOverrideLike`](file://apps/web/src/utils/projectDelay.ts#L97-L102) (`apps/web/src/utils/projectDelay.ts:97-102`) [Tipe: `interface`]
     - *Signature:* `interface StatusOverrideLike`
     - *Deskripsi:* /** Sumber bersama detail penundaan: target proyek, hari lewat target, dan WBS penyebab. */
 
-### Sub-sistem: `projectfee:fee:project` (Klaster #540)
+### Sub-sistem: `projectfee:fee:project` (Klaster #534)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectFee`](file://apps/web/src/utils/projectFee.ts#L4-L13) (`apps/web/src/utils/projectFee.ts:4-13`) [Tipe: `interface`]
     - *Signature:* `interface ProjectFee`
 
-### Sub-sistem: `calcprogressoptions:calc:progress` (Klaster #541)
+### Sub-sistem: `calcprogressoptions:calc:progress` (Klaster #535)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CalcProgressOptions`](file://apps/web/src/utils/projectProgress.ts#L5-L8) (`apps/web/src/utils/projectProgress.ts:5-8`) [Tipe: `interface`]
     - *Signature:* `interface CalcProgressOptions`
 
-### Sub-sistem: `marketrate:market:rate` (Klaster #546)
+### Sub-sistem: `marketrate:market:rate` (Klaster #540)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MarketRate`](file://apps/web/src/utils/rates.ts#L15-L24) (`apps/web/src/utils/rates.ts:15-24`) [Tipe: `interface`]
     - *Signature:* `interface MarketRate`
 
-### Sub-sistem: `fuelpriceperliter:fuel:liter` (Klaster #548)
+### Sub-sistem: `fuelpriceperliter:fuel:liter` (Klaster #542)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`fuelPricePerLiter`](file://apps/web/src/utils/rates.ts#L110-L112) (`apps/web/src/utils/rates.ts:110-112`) [Tipe: `function`]
     - *Signature:* `(): number`
 
-### Sub-sistem: `riskdraft:risk:draft` (Klaster #552)
+### Sub-sistem: `riskdraft:risk:draft` (Klaster #546)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RiskDraft`](file://apps/web/src/utils/riskAuto.ts#L24-L33) (`apps/web/src/utils/riskAuto.ts:24-33`) [Tipe: `interface`]
     - *Signature:* `interface RiskDraft`
 
-### Sub-sistem: `riskautoresult:risk:auto` (Klaster #553)
+### Sub-sistem: `riskautoresult:risk:auto` (Klaster #547)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RiskAutoResult`](file://apps/web/src/utils/riskAuto.ts#L35-L40) (`apps/web/src/utils/riskAuto.ts:35-40`) [Tipe: `interface`]
     - *Signature:* `interface RiskAutoResult`
 
-### Sub-sistem: `task:wbs:wbstasklike` (Klaster #556)
+### Sub-sistem: `task:wbs:wbstasklike` (Klaster #548)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsTaskLike`](file://apps/web/src/utils/riskAuto.ts#L100-L106) (`apps/web/src/utils/riskAuto.ts:100-106`) [Tipe: `interface`]
     - *Signature:* `interface WbsTaskLike`
     - *Deskripsi:* /** Task WBS — hanya butuh task, progress, weight, start, end. */
 
-### Sub-sistem: `sbinvoiceinput:invoice:input` (Klaster #558)
+### Sub-sistem: `sbinvoiceinput:invoice:input` (Klaster #551)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SbInvoiceInput`](file://apps/web/src/utils/sb.ts#L23-L31) (`apps/web/src/utils/sb.ts:23-31`) [Tipe: `interface`]
     - *Signature:* `interface SbInvoiceInput`
 
-### Sub-sistem: `sbinvoicemath:math:invoice` (Klaster #559)
+### Sub-sistem: `sbinvoicemath:math:invoice` (Klaster #552)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`SbInvoiceMath`](file://apps/web/src/utils/sb.ts#L33-L43) (`apps/web/src/utils/sb.ts:33-43`) [Tipe: `interface`]
+  - [`SbInvoiceMath`](file://apps/web/src/utils/sb.ts#L33-L45) (`apps/web/src/utils/sb.ts:33-45`) [Tipe: `interface`]
     - *Signature:* `interface SbInvoiceMath`
 
-### Sub-sistem: `scopeitem:scope:item` (Klaster #560)
+### Sub-sistem: `scopeitem:scope:item` (Klaster #553)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ScopeItem`](file://apps/web/src/utils/scope.ts#L3-L7) (`apps/web/src/utils/scope.ts:3-7`) [Tipe: `interface`]
     - *Signature:* `interface ScopeItem`
 
-### Sub-sistem: `scitem:item` (Klaster #562)
+### Sub-sistem: `scitem:item` (Klaster #555)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ScItem`](file://apps/web/src/utils/scoring.ts#L3-L3) (`apps/web/src/utils/scoring.ts:3-3`) [Tipe: `interface`]
     - *Signature:* `interface ScItem`
 
-### Sub-sistem: `sctemplate:template` (Klaster #563)
+### Sub-sistem: `sctemplate:template` (Klaster #556)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ScTemplate`](file://apps/web/src/utils/scoring.ts#L4-L4) (`apps/web/src/utils/scoring.ts:4-4`) [Tipe: `interface`]
     - *Signature:* `interface ScTemplate`
 
-### Sub-sistem: `monthseriesrow:series:month` (Klaster #565)
+### Sub-sistem: `monthseriesrow:series:month` (Klaster #558)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MonthSeriesRow`](file://apps/web/src/utils/series.ts#L22-L26) (`apps/web/src/utils/series.ts:22-26`) [Tipe: `interface`]
     - *Signature:* `interface MonthSeriesRow`
 
-### Sub-sistem: `settinglabel:setting:label` (Klaster #567)
+### Sub-sistem: `settinglabel:setting:label` (Klaster #560)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`settingLabel`](file://apps/web/src/utils/settings.ts#L12-L14) (`apps/web/src/utils/settings.ts:12-14`) [Tipe: `function`]
     - *Signature:* `(data: StoreShape, key: string): string`
 
-### Sub-sistem: `stockstate:state:stock` (Klaster #568)
+### Sub-sistem: `stockstate:state:stock` (Klaster #561)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StockState`](file://apps/web/src/utils/stockIssue.ts#L12-L12) (`apps/web/src/utils/stockIssue.ts:12-12`) [Tipe: `interface`]
     - *Signature:* `interface StockState`
 
-### Sub-sistem: `terminpart:part:termin` (Klaster #572)
+### Sub-sistem: `terminpart:part:termin` (Klaster #565)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TerminPart`](file://apps/web/src/utils/termin.ts#L7-L13) (`apps/web/src/utils/termin.ts:7-13`) [Tipe: `interface`]
     - *Signature:* `interface TerminPart`
 
-### Sub-sistem: `terminscheme:scheme:termin` (Klaster #573)
+### Sub-sistem: `terminscheme:scheme:termin` (Klaster #566)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TerminScheme`](file://apps/web/src/utils/termin.ts#L15-L18) (`apps/web/src/utils/termin.ts:15-18`) [Tipe: `interface`]
     - *Signature:* `interface TerminScheme`
 
-### Sub-sistem: `terminline:termin:line` (Klaster #574)
+### Sub-sistem: `terminline:termin:line` (Klaster #567)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TerminLine`](file://apps/web/src/utils/termin.ts#L20-L20) (`apps/web/src/utils/termin.ts:20-20`) [Tipe: `interface`]
     - *Signature:* `interface TerminLine`
 
-### Sub-sistem: `unitconversiondimensions:dimensions:unit` (Klaster #583)
+### Sub-sistem: `unitconversiondimensions:dimensions:unit` (Klaster #574)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UnitConversionDimensions`](file://apps/web/src/utils/unitConversion.ts#L3-L8) (`apps/web/src/utils/unitConversion.ts:3-8`) [Tipe: `interface`]
     - *Signature:* `interface UnitConversionDimensions`
 
-### Sub-sistem: `unitconversion:unit:conversion` (Klaster #584)
+### Sub-sistem: `unitconversion:unit:conversion` (Klaster #575)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UnitConversion`](file://apps/web/src/utils/unitConversion.ts#L11-L15) (`apps/web/src/utils/unitConversion.ts:11-15`) [Tipe: `interface`]
     - *Signature:* `interface UnitConversion`
 
-### Sub-sistem: `unitconversiondraft:unit:draft` (Klaster #585)
+### Sub-sistem: `unitconversiondraft:draft:unit` (Klaster #576)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UnitConversionDraft`](file://apps/web/src/utils/unitConversion.ts#L17-L24) (`apps/web/src/utils/unitConversion.ts:17-24`) [Tipe: `interface`]
     - *Signature:* `interface UnitConversionDraft`
 
-### Sub-sistem: `unitconversionrule:rule:unit` (Klaster #586)
+### Sub-sistem: `unitconversionrule:rule:unit` (Klaster #577)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UnitConversionRule`](file://apps/web/src/utils/unitConversion.ts#L26-L29) (`apps/web/src/utils/unitConversion.ts:26-29`) [Tipe: `interface`]
     - *Signature:* `interface UnitConversionRule`
 
-### Sub-sistem: `existingunitconversionstate:existing:unit` (Klaster #589)
+### Sub-sistem: `existingunitconversionstate:existing:unit` (Klaster #582)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ExistingUnitConversionState`](file://apps/web/src/utils/unitConversion.ts#L123-L130) (`apps/web/src/utils/unitConversion.ts:123-130`) [Tipe: `interface`]
     - *Signature:* `interface ExistingUnitConversionState`
 
-### Sub-sistem: `urlparamcodec:codec:param` (Klaster #591)
+### Sub-sistem: `urlparamcodec:codec:param` (Klaster #584)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UrlParamCodec`](file://apps/web/src/utils/urlParam.ts#L20-L25) (`apps/web/src/utils/urlParam.ts:20-25`) [Tipe: `interface`]
     - *Signature:* `interface UrlParamCodec`
 
-### Sub-sistem: `warehouse` (Klaster #593)
+### Sub-sistem: `warehouse` (Klaster #586)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Warehouse`](file://apps/web/src/utils/warehouse.ts#L20-L31) (`apps/web/src/utils/warehouse.ts:20-31`) [Tipe: `interface`]
     - *Signature:* `interface Warehouse`
 
-### Sub-sistem: `warehousestock:warehouse:stock` (Klaster #597)
+### Sub-sistem: `warehousestock:warehouse:stock` (Klaster #589)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WarehouseStock`](file://apps/web/src/utils/warehouse.ts#L139-L151) (`apps/web/src/utils/warehouse.ts:139-151`) [Tipe: `interface`]
     - *Signature:* `interface WarehouseStock`
 
-### Sub-sistem: `movementwarehouseflow:movement:flow` (Klaster #598)
+### Sub-sistem: `movementwarehouseflow:movement:flow` (Klaster #590)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MovementWarehouseFlow`](file://apps/web/src/utils/warehouse.ts#L182-L191) (`apps/web/src/utils/warehouse.ts:182-191`) [Tipe: `interface`]
     - *Signature:* `interface MovementWarehouseFlow`
 
-### Sub-sistem: `sheet:memisah:pipa` (Klaster #600)
+### Sub-sistem: `sheet:memisah:pipa` (Klaster #592)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Sheet`](file://apps/web/src/utils/warehouseReport.ts#L25-L25) (`apps/web/src/utils/warehouseReport.ts:25-25`) [Tipe: `interface`]
     - *Signature:* `interface Sheet`
     - *Deskripsi:* /** Sheet stok tempat barang ditulis: template memisah plat/pipa dan filter dari logistik umum. */
 
-### Sub-sistem: `warehouseinput:warehouse:input` (Klaster #601)
+### Sub-sistem: `warehouseinput:warehouse:input` (Klaster #593)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WarehouseInput`](file://apps/web/src/utils/warehouseReport.ts#L37-L41) (`apps/web/src/utils/warehouseReport.ts:37-41`) [Tipe: `interface`]
     - *Signature:* `interface WarehouseInput`
 
-### Sub-sistem: `womilestone:milestone` (Klaster #603)
+### Sub-sistem: `womilestone:milestone` (Klaster #595)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WoMilestone`](file://apps/web/src/utils/woMilestones.ts#L21-L27) (`apps/web/src/utils/woMilestones.ts:21-27`) [Tipe: `interface`]
     - *Signature:* `interface WoMilestone`
 
-### Sub-sistem: `pdf` (Klaster #606)
+### Sub-sistem: `pdf` (Klaster #597)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pdf`](file://services/api/src/__tests__/files.test.ts#L13-L13) (`services/api/src/__tests__/files.test.ts:13-13`) [Tipe: `function`]
     - *Signature:* `(body: string): Buffer`
 
-### Sub-sistem: `pdf` (Klaster #607)
+### Sub-sistem: `pdf` (Klaster #598)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pdf`](file://services/api/src/__tests__/pure.test.ts#L24-L24) (`services/api/src/__tests__/pure.test.ts:24-24`) [Tipe: `function`]
     - *Signature:* `(body: string): Buffer`
 
-### Sub-sistem: `ctx` (Klaster #608)
+### Sub-sistem: `ctx` (Klaster #599)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Ctx`](file://services/api/src/pdf/blocks.ts#L31-L45) (`services/api/src/pdf/blocks.ts:31-45`) [Tipe: `interface`]
     - *Signature:* `interface Ctx`
 
-### Sub-sistem: `drawrecord:draw:record` (Klaster #609)
+### Sub-sistem: `drawrecord:draw:record` (Klaster #600)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DrawRecord`](file://services/api/src/pdf/blocks.ts#L48-L60) (`services/api/src/pdf/blocks.ts:48-60`) [Tipe: `interface`]
     - *Signature:* `interface DrawRecord`
 
-### Sub-sistem: `textopts:opts:text` (Klaster #610)
+### Sub-sistem: `textopts:opts:text` (Klaster #601)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TextOpts`](file://services/api/src/pdf/blocks.ts#L62-L70) (`services/api/src/pdf/blocks.ts:62-70`) [Tipe: `interface`]
     - *Signature:* `interface TextOpts`
 
-### Sub-sistem: `segment` (Klaster #611)
+### Sub-sistem: `segment` (Klaster #602)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Segment`](file://services/api/src/pdf/blocks.ts#L158-L162) (`services/api/src/pdf/blocks.ts:158-162`) [Tipe: `interface`]
     - *Signature:* `interface Segment`
 
-### Sub-sistem: `blockplan:block:plan` (Klaster #612)
+### Sub-sistem: `blockplan:block:plan` (Klaster #603)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BlockPlan`](file://services/api/src/pdf/blocks.ts#L164-L171) (`services/api/src/pdf/blocks.ts:164-171`) [Tipe: `interface`]
     - *Signature:* `interface BlockPlan`
 
-### Sub-sistem: `block` (Klaster #613)
+### Sub-sistem: `block` (Klaster #604)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Block`](file://services/api/src/pdf/blocks.ts#L173-L182) (`services/api/src/pdf/blocks.ts:173-182`) [Tipe: `interface`]
     - *Signature:* `interface Block`
 
-### Sub-sistem: `kopspec:kop:spec` (Klaster #614)
+### Sub-sistem: `kopspec:kop:spec` (Klaster #605)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KopSpec`](file://services/api/src/pdf/blocks.ts#L188-L195) (`services/api/src/pdf/blocks.ts:188-195`) [Tipe: `interface`]
     - *Signature:* `interface KopSpec`
 
-### Sub-sistem: `paragraphspec:paragraph:spec` (Klaster #615)
+### Sub-sistem: `paragraphspec:paragraph:spec` (Klaster #606)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ParagraphSpec`](file://services/api/src/pdf/blocks.ts#L329-L338) (`services/api/src/pdf/blocks.ts:329-338`) [Tipe: `interface`]
     - *Signature:* `interface ParagraphSpec`
 
-### Sub-sistem: `kvspec:spec` (Klaster #616)
+### Sub-sistem: `kvspec:spec` (Klaster #607)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KvSpec`](file://services/api/src/pdf/blocks.ts#L375-L382) (`services/api/src/pdf/blocks.ts:375-382`) [Tipe: `interface`]
     - *Signature:* `interface KvSpec`
 
-### Sub-sistem: `tablespec:table:spec` (Klaster #617)
+### Sub-sistem: `tablespec:table:spec` (Klaster #608)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TableSpec`](file://services/api/src/pdf/blocks.ts#L442-L458) (`services/api/src/pdf/blocks.ts:442-458`) [Tipe: `interface`]
     - *Signature:* `interface TableSpec`
 
-### Sub-sistem: `laidcell:laid:dijamin` (Klaster #618)
+### Sub-sistem: `laidcell:laid:dijamin` (Klaster #609)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`LaidCell`](file://services/api/src/pdf/blocks.ts#L477-L480) (`services/api/src/pdf/blocks.ts:477-480`) [Tipe: `interface`]
     - *Signature:* `interface LaidCell`
     - *Deskripsi:* /** Lebar efektif tiap kolom; dijamin >= MIN_COL_MM. */
 
-### Sub-sistem: `laidrow:laid:dijamin` (Klaster #619)
+### Sub-sistem: `laidrow:laid:dijamin` (Klaster #610)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`LaidRow`](file://services/api/src/pdf/blocks.ts#L482-L486) (`services/api/src/pdf/blocks.ts:482-486`) [Tipe: `interface`]
     - *Signature:* `interface LaidRow`
     - *Deskripsi:* /** Lebar efektif tiap kolom; dijamin >= MIN_COL_MM. */
 
-### Sub-sistem: `signaturespec:signature:spec` (Klaster #620)
+### Sub-sistem: `signaturespec:signature:spec` (Klaster #611)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SignatureSpec`](file://services/api/src/pdf/blocks.ts#L742-L747) (`services/api/src/pdf/blocks.ts:742-747`) [Tipe: `interface`]
     - *Signature:* `interface SignatureSpec`
 
-### Sub-sistem: `imagespec:image:spec` (Klaster #621)
+### Sub-sistem: `imagespec:image:spec` (Klaster #612)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ImageSpec`](file://services/api/src/pdf/blocks.ts#L805-L813) (`services/api/src/pdf/blocks.ts:805-813`) [Tipe: `interface`]
     - *Signature:* `interface ImageSpec`
 
-### Sub-sistem: `chartctx:chart:ctx` (Klaster #622)
+### Sub-sistem: `chartctx:chart:ctx` (Klaster #613)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ChartCtx`](file://services/api/src/pdf/chart.ts#L23-L31) (`services/api/src/pdf/chart.ts:23-31`) [Tipe: `interface`]
     - *Signature:* `interface ChartCtx`
 
-### Sub-sistem: `series` (Klaster #623)
+### Sub-sistem: `series` (Klaster #614)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Series`](file://services/api/src/pdf/chart.ts#L33-L37) (`services/api/src/pdf/chart.ts:33-37`) [Tipe: `interface`]
     - *Signature:* `interface Series`
 
-### Sub-sistem: `axes:sumbu:secara` (Klaster #624)
+### Sub-sistem: `axes:sumbu:secara` (Klaster #615)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Axes`](file://services/api/src/pdf/chart.ts#L189-L196) (`services/api/src/pdf/chart.ts:189-196`) [Tipe: `interface`]
     - *Signature:* `interface Axes`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `categoryseries:series:sumbu` (Klaster #625)
+### Sub-sistem: `categoryseries:series:sumbu` (Klaster #616)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CategorySeries`](file://services/api/src/pdf/chart.ts#L198-L202) (`services/api/src/pdf/chart.ts:198-202`) [Tipe: `interface`]
     - *Signature:* `interface CategorySeries`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `stackedspec:stacked:sumbu` (Klaster #626)
+### Sub-sistem: `stackedspec:stacked:sumbu` (Klaster #617)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StackedSpec`](file://services/api/src/pdf/chart.ts#L204-L206) (`services/api/src/pdf/chart.ts:204-206`) [Tipe: `interface`]
     - *Signature:* `interface StackedSpec`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `linespec:sumbu:secara` (Klaster #627)
+### Sub-sistem: `linespec:sumbu:secara` (Klaster #618)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`LineSpec`](file://services/api/src/pdf/chart.ts#L208-L213) (`services/api/src/pdf/chart.ts:208-213`) [Tipe: `interface`]
     - *Signature:* `interface LineSpec`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `donutspec:donut:sumbu` (Klaster #628)
+### Sub-sistem: `donutspec:donut:sumbu` (Klaster #619)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DonutSpec`](file://services/api/src/pdf/chart.ts#L215-L221) (`services/api/src/pdf/chart.ts:215-221`) [Tipe: `interface`]
     - *Signature:* `interface DonutSpec`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `hbarspec:hbar:sumbu` (Klaster #629)
+### Sub-sistem: `hbarspec:hbar:sumbu` (Klaster #620)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`HbarSpec`](file://services/api/src/pdf/chart.ts#L223-L228) (`services/api/src/pdf/chart.ts:223-228`) [Tipe: `interface`]
     - *Signature:* `interface HbarSpec`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `paretospec:pareto:sumbu` (Klaster #630)
+### Sub-sistem: `paretospec:pareto:sumbu` (Klaster #621)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ParetoSpec`](file://services/api/src/pdf/chart.ts#L230-L235) (`services/api/src/pdf/chart.ts:230-235`) [Tipe: `interface`]
     - *Signature:* `interface ParetoSpec`
     - *Deskripsi:* /** Label sumbu X; secara otomatis diskip agar tidak bertumpuk. */
 
-### Sub-sistem: `docoptions:options:doc` (Klaster #633)
+### Sub-sistem: `docoptions:options:doc` (Klaster #623)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DocOptions`](file://services/api/src/pdf/document.ts#L25-L44) (`services/api/src/pdf/document.ts:25-44`) [Tipe: `interface`]
     - *Signature:* `interface DocOptions`
 
-### Sub-sistem: `renderresult:result:render` (Klaster #634)
+### Sub-sistem: `renderresult:result:render` (Klaster #624)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RenderResult`](file://services/api/src/pdf/document.ts#L46-L63) (`services/api/src/pdf/document.ts:46-63`) [Tipe: `interface`]
     - *Signature:* `interface RenderResult`
 
-### Sub-sistem: `doc` (Klaster #636)
+### Sub-sistem: `doc` (Klaster #626)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`doc`](file://services/api/src/pdf/document.ts#L343-L345) (`services/api/src/pdf/document.ts:343-345`) [Tipe: `function`]
     - *Signature:* `(opts: DocOptions = {}): Document`
 
-### Sub-sistem: `geometryproblem:problem:geometry` (Klaster #637)
+### Sub-sistem: `geometryproblem:problem:geometry` (Klaster #627)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`GeometryProblem`](file://services/api/src/pdf/document.ts#L356-L364) (`services/api/src/pdf/document.ts:356-364`) [Tipe: `interface`]
     - *Signature:* `interface GeometryProblem`
 
-### Sub-sistem: `fontspec:font:spec` (Klaster #638)
+### Sub-sistem: `fontspec:font:spec` (Klaster #628)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FontSpec`](file://services/api/src/pdf/font.ts#L27-L32) (`services/api/src/pdf/font.ts:27-32`) [Tipe: `interface`]
     - *Signature:* `interface FontSpec`
 
-### Sub-sistem: `metrics` (Klaster #642)
+### Sub-sistem: `metrics` (Klaster #631)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Metrics`](file://services/api/src/pdf/measure.ts#L44-L49) (`services/api/src/pdf/measure.ts:44-49`) [Tipe: `interface`]
     - *Signature:* `interface Metrics`
 
-### Sub-sistem: `lineheight:height:line` (Klaster #643)
+### Sub-sistem: `lineheight:height:line` (Klaster #632)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`lineHeight`](file://services/api/src/pdf/measure.ts#L151-L153) (`services/api/src/pdf/measure.ts:151-153`) [Tipe: `function`]
     - *Signature:* `(size: number): number`
 
-### Sub-sistem: `rendercontext:context:render` (Klaster #644)
+### Sub-sistem: `rendercontext:context:render` (Klaster #633)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RenderContext`](file://services/api/src/pdf/registry.ts#L86-L93) (`services/api/src/pdf/registry.ts:86-93`) [Tipe: `interface`]
     - *Signature:* `interface RenderContext`
 
-### Sub-sistem: `recipe` (Klaster #645)
+### Sub-sistem: `recipe` (Klaster #634)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Recipe`](file://services/api/src/pdf/registry.ts#L96-L111) (`services/api/src/pdf/registry.ts:96-111`) [Tipe: `interface`]
     - *Signature:* `interface Recipe`
 
-### Sub-sistem: `recipeview:recipe:view` (Klaster #649)
+### Sub-sistem: `recipeview:recipe:view` (Klaster #638)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RecipeView`](file://services/api/src/pdf/registry.ts#L1415-L1423) (`services/api/src/pdf/registry.ts:1415-1423`) [Tipe: `interface`]
     - *Signature:* `interface RecipeView`
 
-### Sub-sistem: `tipe:view:unknown` (Klaster #650)
+### Sub-sistem: `tipe:view:unknown` (Klaster #639)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`view`](file://services/api/src/pdf/registry.ts#L1425-L1427) (`services/api/src/pdf/registry.ts:1425-1427`) [Tipe: `function`]
@@ -7858,19 +7650,19 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * diketik di atas.
  */
 
-### Sub-sistem: `rendermodelrow:model:render` (Klaster #651)
+### Sub-sistem: `rendermodelrow:model:render` (Klaster #640)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RenderModelRow`](file://services/api/src/pdf/renderStore.ts#L22-L36) (`services/api/src/pdf/renderStore.ts:22-36`) [Tipe: `interface`]
     - *Signature:* `interface RenderModelRow`
 
-### Sub-sistem: `rendermodelinput:model:render` (Klaster #652)
+### Sub-sistem: `rendermodelinput:model:render` (Klaster #641)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RenderModelInput`](file://services/api/src/pdf/renderStore.ts#L38-L49) (`services/api/src/pdf/renderStore.ts:38-49`) [Tipe: `interface`]
     - *Signature:* `interface RenderModelInput`
 
-### Sub-sistem: `snapshot:rawrow:best` (Klaster #653)
+### Sub-sistem: `snapshot:rawrow:best` (Klaster #642)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RawRow`](file://services/api/src/pdf/renderStore.ts#L113-L127) (`services/api/src/pdf/renderStore.ts:113-127`) [Tipe: `interface`]
@@ -7881,169 +7673,169 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
  * dan dokumennya tetap sah karena dirakit dari DB, bukan dari model.
  */
 
-### Sub-sistem: `listrenderhistory:history:list` (Klaster #654)
+### Sub-sistem: `listrenderhistory:history:list` (Klaster #643)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`listRenderHistory`](file://services/api/src/pdf/renderStore.ts#L163-L183) (`services/api/src/pdf/renderStore.ts:163-183`) [Tipe: `function`]
     - *Signature:* `(kind: string, entityId: string, limit = 20): Promise<RenderModelRow[]>`
 
-### Sub-sistem: `stamp` (Klaster #656)
+### Sub-sistem: `stamp` (Klaster #645)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`stamp`](file://services/api/src/pdf/reports.ts#L81-L83) (`services/api/src/pdf/reports.ts:81-83`) [Tipe: `function`]
     - *Signature:* `(iso: string): string`
 
-### Sub-sistem: `monthpoint:point:month` (Klaster #658)
+### Sub-sistem: `monthpoint:point:month` (Klaster #646)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MonthPoint`](file://services/api/src/pdf/reports.ts#L129-L140) (`services/api/src/pdf/reports.ts:129-140`) [Tipe: `interface`]
     - *Signature:* `interface MonthPoint`
 
-### Sub-sistem: `collections` (Klaster #659)
+### Sub-sistem: `collections` (Klaster #647)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Collections`](file://services/api/src/pdf/reports.ts#L142-L169) (`services/api/src/pdf/reports.ts:142-169`) [Tipe: `interface`]
     - *Signature:* `interface Collections`
 
-### Sub-sistem: `portfoliokpi:portfolio:kpi` (Klaster #660)
+### Sub-sistem: `portfoliokpi:portfolio:kpi` (Klaster #648)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PortfolioKpi`](file://services/api/src/pdf/reports.ts#L195-L214) (`services/api/src/pdf/reports.ts:195-214`) [Tipe: `interface`]
     - *Signature:* `interface PortfolioKpi`
 
-### Sub-sistem: `periodcash:period:cash` (Klaster #661)
+### Sub-sistem: `periodcash:period:cash` (Klaster #649)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PeriodCash`](file://services/api/src/pdf/reports.ts#L258-L284) (`services/api/src/pdf/reports.ts:258-284`) [Tipe: `interface`]
     - *Signature:* `interface PeriodCash`
 
-### Sub-sistem: `projectreport:report:project` (Klaster #662)
+### Sub-sistem: `projectreport:report:project` (Klaster #650)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectReport`](file://services/api/src/pdf/reports.ts#L324-L353) (`services/api/src/pdf/reports.ts:324-353`) [Tipe: `interface`]
     - *Signature:* `interface ProjectReport`
 
-### Sub-sistem: `equipmentcost:equipment:cost` (Klaster #663)
+### Sub-sistem: `equipmentcost:equipment:cost` (Klaster #651)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EquipmentCost`](file://services/api/src/pdf/reports.ts#L399-L404) (`services/api/src/pdf/reports.ts:399-404`) [Tipe: `interface`]
     - *Signature:* `interface EquipmentCost`
 
-### Sub-sistem: `payrollrecap:recap:payroll` (Klaster #664)
+### Sub-sistem: `payrollrecap:recap:payroll` (Klaster #652)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PayrollRecap`](file://services/api/src/pdf/reports.ts#L457-L474) (`services/api/src/pdf/reports.ts:457-474`) [Tipe: `interface`]
     - *Signature:* `interface PayrollRecap`
 
-### Sub-sistem: `thrrecap:thr:recap` (Klaster #665)
+### Sub-sistem: `thrrecap:thr:recap` (Klaster #653)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ThrRecap`](file://services/api/src/pdf/reports.ts#L518-L524) (`services/api/src/pdf/reports.ts:518-524`) [Tipe: `interface`]
     - *Signature:* `interface ThrRecap`
 
-### Sub-sistem: `ncrbucket:bucket:ncr` (Klaster #666)
+### Sub-sistem: `ncrbucket:bucket:ncr` (Klaster #654)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`NcrBucket`](file://services/api/src/pdf/reports.ts#L558-L565) (`services/api/src/pdf/reports.ts:558-565`) [Tipe: `interface`]
     - *Signature:* `interface NcrBucket`
 
-### Sub-sistem: `profitrow:profit:row` (Klaster #667)
+### Sub-sistem: `profitrow:profit:row` (Klaster #655)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProfitRow`](file://services/api/src/pdf/reports.ts#L585-L591) (`services/api/src/pdf/reports.ts:585-591`) [Tipe: `interface`]
     - *Signature:* `interface ProfitRow`
 
-### Sub-sistem: `pagespec:page:spec` (Klaster #668)
+### Sub-sistem: `pagespec:page:spec` (Klaster #656)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PageSpec`](file://services/api/src/pdf/theme.ts#L13-L17) (`services/api/src/pdf/theme.ts:13-17`) [Tipe: `interface`]
     - *Signature:* `interface PageSpec`
 
-### Sub-sistem: `ingestresult:ingest:result` (Klaster #670)
+### Sub-sistem: `ingestresult:ingest:result` (Klaster #658)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`IngestResult`](file://services/api/src/routes/attendanceIngest.ts#L47-L47) (`services/api/src/routes/attendanceIngest.ts:47-47`) [Tipe: `interface`]
     - *Signature:* `interface IngestResult`
 
-### Sub-sistem: `auditrow:audit:row` (Klaster #672)
+### Sub-sistem: `auditrow:audit:row` (Klaster #659)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditRow`](file://services/api/src/routes/audit.ts#L7-L16) (`services/api/src/routes/audit.ts:7-16`) [Tipe: `interface`]
     - *Signature:* `interface AuditRow`
 
-### Sub-sistem: `stalewriteerror:stale:antara` (Klaster #674)
+### Sub-sistem: `stalewriteerror:stale:antara` (Klaster #661)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StaleWriteError`](file://services/api/src/routes/crud.ts#L37-L37) (`services/api/src/routes/crud.ts:37-37`) [Tipe: `class`]
     - *Signature:* `class StaleWriteError`
     - *Deskripsi:* /** Baris berubah di antara baca dan tulis (F4-01). */
 
-### Sub-sistem: `row:parsial:divalidasi` (Klaster #675)
+### Sub-sistem: `parsial:divalidasi:row` (Klaster #662)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/routes/crud.ts#L190-L195) (`services/api/src/routes/crud.ts:190-195`) [Tipe: `interface`]
     - *Signature:* `interface Row`
     - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
 
-### Sub-sistem: `drydockrange:parsial:drydock` (Klaster #677)
+### Sub-sistem: `drydockrange:parsial:divalidasi` (Klaster #663)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DrydockRange`](file://services/api/src/routes/crud.ts#L263-L263) (`services/api/src/routes/crud.ts:263-263`) [Tipe: `interface`]
     - *Signature:* `interface DrydockRange`
     - *Deskripsi:* // PATCH parsial tidak divalidasi isi (sengaja).
 
-### Sub-sistem: `pagecursor:cursor:page` (Klaster #681)
+### Sub-sistem: `pagecursor:cursor:page` (Klaster #666)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PageCursor`](file://services/api/src/routes/crudCursor.ts#L15-L18) (`services/api/src/routes/crudCursor.ts:15-18`) [Tipe: `interface`]
     - *Signature:* `interface PageCursor`
 
-### Sub-sistem: `userrow:user:row` (Klaster #683)
+### Sub-sistem: `userrow:user:row` (Klaster #667)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UserRow`](file://services/api/src/routes/demoSwitch.ts#L34-L43) (`services/api/src/routes/demoSwitch.ts:34-43`) [Tipe: `interface`]
     - *Signature:* `interface UserRow`
 
-### Sub-sistem: `renderbody:body:render` (Klaster #685)
+### Sub-sistem: `renderbody:body:render` (Klaster #670)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RenderBody`](file://services/api/src/routes/pdf.ts#L27-L37) (`services/api/src/routes/pdf.ts:27-37`) [Tipe: `interface`]
     - *Signature:* `interface RenderBody`
 
-### Sub-sistem: `realdate:satu:real` (Klaster #687)
+### Sub-sistem: `realdate:satu:real` (Klaster #672)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`realDate`](file://services/api/src/routes/publicLeave.ts#L35-L35) (`services/api/src/routes/publicLeave.ts:35-35`) [Tipe: `function`]
     - *Signature:* `(d: string): boolean`
     - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
 
-### Sub-sistem: `qrrecord:satu:bengkel` (Klaster #688)
+### Sub-sistem: `qrrecord:satu:bengkel` (Klaster #673)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`QrRecord`](file://services/api/src/routes/publicLeave.ts#L66-L66) (`services/api/src/routes/publicLeave.ts:66-66`) [Tipe: `interface`]
     - *Signature:* `interface QrRecord`
     - *Deskripsi:* // Pratinjau NIK dipisah dari kuota kirim: satu bengkel biasanya berbagi satu IP.
 
-### Sub-sistem: `wbsphotorow:photo:wbs` (Klaster #690)
+### Sub-sistem: `wbsphotorow:photo:wbs` (Klaster #674)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsPhotoRow`](file://services/api/src/routes/readModels.ts#L17-L17) (`services/api/src/routes/readModels.ts:17-17`) [Tipe: `interface`]
     - *Signature:* `interface WbsPhotoRow`
 
-### Sub-sistem: `link` (Klaster #691)
+### Sub-sistem: `link` (Klaster #675)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Link`](file://services/api/src/routes/relations.ts#L22-L22) (`services/api/src/routes/relations.ts:22-22`) [Tipe: `interface`]
     - *Signature:* `interface Link`
 
-### Sub-sistem: `userrow:jalur:lain` (Klaster #694)
+### Sub-sistem: `userrow:jalur:lain` (Klaster #678)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`UserRow`](file://services/api/src/routes/users.ts#L21-L31) (`services/api/src/routes/users.ts:21-31`) [Tipe: `interface`]
     - *Signature:* `interface UserRow`
     - *Deskripsi:* // di jalur lain).
 
-### Sub-sistem: `topublic:jalur:lain` (Klaster #695)
+### Sub-sistem: `topublic:jalur:lain` (Klaster #679)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`toPublic`](file://services/api/src/routes/users.ts#L33-L51) (`services/api/src/routes/users.ts:33-51`) [Tipe: `function`]
@@ -8058,56 +7850,43 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
 }`
     - *Deskripsi:* // di jalur lain).
 
-### Sub-sistem: `siderow:side:row` (Klaster #696)
+### Sub-sistem: `siderow:side:row` (Klaster #680)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SideRow`](file://services/api/src/routes/wbs.ts#L19-L22) (`services/api/src/routes/wbs.ts:19-22`) [Tipe: `interface`]
     - *Signature:* `interface SideRow`
 
-### Sub-sistem: `sidewriteoutcome:outcome:side` (Klaster #697)
+### Sub-sistem: `sidewriteoutcome:outcome:side` (Klaster #681)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SideWriteOutcome`](file://services/api/src/routes/wbs.ts#L24-L30) (`services/api/src/routes/wbs.ts:24-30`) [Tipe: `interface`]
     - *Signature:* `interface SideWriteOutcome`
 
-### Sub-sistem: `projectscopeuser:scope:user` (Klaster #698)
+### Sub-sistem: `projectscopeuser:scope:user` (Klaster #682)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectScopeUser`](file://services/api/src/routes/wbs.ts#L32-L36) (`services/api/src/routes/wbs.ts:32-36`) [Tipe: `interface`]
     - *Signature:* `interface ProjectScopeUser`
 
-### Sub-sistem: `nodeglobalscope:global:node` (Klaster #699)
+### Sub-sistem: `nodeglobalscope:global:node` (Klaster #683)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`NodeGlobalScope`](file://apps/web/src/components/__tests__/toastAlert.test.ts#L7-L10) (`apps/web/src/components/__tests__/toastAlert.test.ts:7-10`) [Tipe: `interface`]
     - *Signature:* `interface NodeGlobalScope`
 
-### Sub-sistem: `constructor` (Klaster #700)
+### Sub-sistem: `constructor` (Klaster #684)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`constructor`](file://apps/web/src/components/__tests__/toastAlert.test.ts#L19-L22) (`apps/web/src/components/__tests__/toastAlert.test.ts:19-22`) [Tipe: `method`]
     - *Signature:* `(type: string, init?: { detail?: T })`
 
-### Sub-sistem: `toasteventdetail:event:toast` (Klaster #701)
+### Sub-sistem: `toasteventdetail:event:toast` (Klaster #685)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ToastEventDetail`](file://apps/web/src/components/__tests__/toastAlert.test.ts#L26-L33) (`apps/web/src/components/__tests__/toastAlert.test.ts:26-33`) [Tipe: `interface`]
     - *Signature:* `interface ToastEventDetail`
 
-### Sub-sistem: `catatrow:catat:row` (Klaster #704)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`CatatRow`](file://apps/web/src/pages/absensi/Absensi.tsx#L51-L56) (`apps/web/src/pages/absensi/Absensi.tsx:51-56`) [Tipe: `interface`]
-    - *Signature:* `interface CatatRow`
-
-### Sub-sistem: `punch:dianggap:butuh` (Klaster #706)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`Punch`](file://apps/web/src/pages/absensi/DeviceImport.tsx#L12-L12) (`apps/web/src/pages/absensi/DeviceImport.tsx:12-12`) [Tipe: `interface`]
-    - *Signature:* `interface Punch`
-    - *Deskripsi:* // atau "YYYY-MM-DD HH:MM" yang dianggap WITA). Butuh server.
-
-### Sub-sistem: `serverauditrow:diketahui:selain` (Klaster #709)
+### Sub-sistem: `serverauditrow:diketahui:selain` (Klaster #686)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ServerAuditRow`](file://apps/web/src/pages/audit/Audit.tsx#L51-L58) (`apps/web/src/pages/audit/Audit.tsx:51-58`) [Tipe: `interface`]
@@ -8115,7 +7894,7 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Tampilan kolom Waktu: tanggal + jam bila waktunya diketahui, selain itu
  *  label relatif lama apa adanya (mis. jejak seed "5 menit lalu"). */
 
-### Sub-sistem: `storeitemlike:diketahui:selain` (Klaster #710)
+### Sub-sistem: `storeitemlike:diketahui:selain` (Klaster #687)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`StoreItemLike`](file://apps/web/src/pages/audit/Audit.tsx#L60-L69) (`apps/web/src/pages/audit/Audit.tsx:60-69`) [Tipe: `interface`]
@@ -8123,644 +7902,657 @@ Melalui algoritma partisi graf modularitas terarah (Leiden) dan penamaan TF-IDF 
     - *Deskripsi:* /** Tampilan kolom Waktu: tanggal + jam bila waktunya diketahui, selain itu
  *  label relatif lama apa adanya (mis. jejak seed "5 menit lalu"). */
 
-### Sub-sistem: `qline:line` (Klaster #713)
+### Sub-sistem: `catatrow:catat:row` (Klaster #689)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`CatatRow`](file://apps/web/src/pages/absensi/Absensi.tsx#L51-L56) (`apps/web/src/pages/absensi/Absensi.tsx:51-56`) [Tipe: `interface`]
+    - *Signature:* `interface CatatRow`
+
+### Sub-sistem: `punch:dianggap:butuh` (Klaster #691)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`Punch`](file://apps/web/src/pages/absensi/DeviceImport.tsx#L12-L12) (`apps/web/src/pages/absensi/DeviceImport.tsx:12-12`) [Tipe: `interface`]
+    - *Signature:* `interface Punch`
+    - *Deskripsi:* // atau "YYYY-MM-DD HH:MM" yang dianggap WITA). Butuh server.
+
+### Sub-sistem: `qline:line` (Klaster #695)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`QLine`](file://apps/web/src/pages/crm/QuotationDetail.tsx#L27-L31) (`apps/web/src/pages/crm/QuotationDetail.tsx:27-31`) [Tipe: `interface`]
     - *Signature:* `interface QLine`
 
-### Sub-sistem: `boqprintitem:print:boq` (Klaster #715)
+### Sub-sistem: `boqprintitem:print:boq` (Klaster #697)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoqPrintItem`](file://apps/web/src/pages/dokumen/BoqDetailModal.tsx#L19-L28) (`apps/web/src/pages/dokumen/BoqDetailModal.tsx:19-28`) [Tipe: `interface`]
     - *Signature:* `interface BoqPrintItem`
 
-### Sub-sistem: `boqdetailmodalprops:detail:props` (Klaster #716)
+### Sub-sistem: `boqdetailmodalprops:detail:props` (Klaster #698)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoqDetailModalProps`](file://apps/web/src/pages/dokumen/BoqDetailModal.tsx#L30-L39) (`apps/web/src/pages/dokumen/BoqDetailModal.tsx:30-39`) [Tipe: `interface`]
     - *Signature:* `interface BoqDetailModalProps`
 
-### Sub-sistem: `maintform:maint:form` (Klaster #723)
+### Sub-sistem: `maintform:maint:form` (Klaster #705)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`MaintForm`](file://apps/web/src/pages/equipment/Equipment.tsx#L98-L113) (`apps/web/src/pages/equipment/Equipment.tsx:98-113`) [Tipe: `interface`]
     - *Signature:* `interface MaintForm`
 
-### Sub-sistem: `reservation` (Klaster #727)
+### Sub-sistem: `reservation` (Klaster #708)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Reservation`](file://apps/web/src/pages/inventori/Inventory.tsx#L163-L163) (`apps/web/src/pages/inventori/Inventory.tsx:163-163`) [Tipe: `interface`]
     - *Signature:* `interface Reservation`
 
-### Sub-sistem: `batchrow:batch:row` (Klaster #728)
+### Sub-sistem: `batchrow:batch:row` (Klaster #709)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BatchRow`](file://apps/web/src/pages/inventori/Inventory.tsx#L164-L164) (`apps/web/src/pages/inventori/Inventory.tsx:164-164`) [Tipe: `interface`]
     - *Signature:* `interface BatchRow`
 
-### Sub-sistem: `detectedbarcode:detected:barcode` (Klaster #729)
+### Sub-sistem: `detectedbarcode:detected:barcode` (Klaster #710)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DetectedBarcode`](file://apps/web/src/pages/inventori/Inventory.tsx#L176-L178) (`apps/web/src/pages/inventori/Inventory.tsx:176-178`) [Tipe: `interface`]
     - *Signature:* `interface DetectedBarcode`
 
-### Sub-sistem: `barcodedetectorinstance:detector:barcode` (Klaster #730)
+### Sub-sistem: `barcodedetectorinstance:detector:barcode` (Klaster #711)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BarcodeDetectorInstance`](file://apps/web/src/pages/inventori/Inventory.tsx#L180-L182) (`apps/web/src/pages/inventori/Inventory.tsx:180-182`) [Tipe: `interface`]
     - *Signature:* `interface BarcodeDetectorInstance`
 
-### Sub-sistem: `pscrow:psc:row` (Klaster #738)
+### Sub-sistem: `pscrow:psc:row` (Klaster #720)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PscRow`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L53-L58) (`apps/web/src/pages/kapal/VesselDetail.tsx:53-58`) [Tipe: `interface`]
     - *Signature:* `interface PscRow`
 
-### Sub-sistem: `dockhistoryrow:dock:history` (Klaster #739)
+### Sub-sistem: `dockhistoryrow:dock:history` (Klaster #721)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DockHistoryRow`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L60-L66) (`apps/web/src/pages/kapal/VesselDetail.tsx:60-66`) [Tipe: `interface`]
     - *Signature:* `interface DockHistoryRow`
 
-### Sub-sistem: `planrow:plan:row` (Klaster #740)
+### Sub-sistem: `planrow:plan:row` (Klaster #722)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PlanRow`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L68-L72) (`apps/web/src/pages/kapal/VesselDetail.tsx:68-72`) [Tipe: `interface`]
     - *Signature:* `interface PlanRow`
 
-### Sub-sistem: `bunkerrow:bunker:row` (Klaster #741)
+### Sub-sistem: `bunkerrow:bunker:row` (Klaster #723)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BunkerRow`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L74-L79) (`apps/web/src/pages/kapal/VesselDetail.tsx:74-79`) [Tipe: `interface`]
     - *Signature:* `interface BunkerRow`
 
-### Sub-sistem: `crewrow:crew:row` (Klaster #742)
+### Sub-sistem: `crewrow:crew:row` (Klaster #724)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CrewRow`](file://apps/web/src/pages/kapal/VesselDetail.tsx#L81-L84) (`apps/web/src/pages/kapal/VesselDetail.tsx:81-84`) [Tipe: `interface`]
     - *Signature:* `interface CrewRow`
 
-### Sub-sistem: `diam:compliancerow:compliance` (Klaster #744)
+### Sub-sistem: `diam:compliancerow:compliance` (Klaster #726)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ComplianceRow`](file://apps/web/src/pages/kapal/Vessels.tsx#L43-L47) (`apps/web/src/pages/kapal/Vessels.tsx:43-47`) [Tipe: `interface`]
     - *Signature:* `interface ComplianceRow`
     - *Deskripsi:* /** Kapal lama bisa ber-class lain (ABS, DNV, …): tetap jadi pilihan supaya tidak tertimpa diam-diam. */
 
-### Sub-sistem: `histfilter:hist:filter` (Klaster #749)
+### Sub-sistem: `histfilter:hist:filter` (Klaster #731)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`HistFilter`](file://apps/web/src/pages/keuangan/Finance.tsx#L90-L90) (`apps/web/src/pages/keuangan/Finance.tsx:90-90`) [Tipe: `interface`]
     - *Signature:* `interface HistFilter`
 
-### Sub-sistem: `muka:uang:invline` (Klaster #754)
+### Sub-sistem: `muka:uang:invline` (Klaster #735)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`InvLine`](file://apps/web/src/pages/keuangan/Finance.tsx#L327-L335) (`apps/web/src/pages/keuangan/Finance.tsx:327-335`) [Tipe: `interface`]
     - *Signature:* `interface InvLine`
     - *Deskripsi:* /** DP = uang muka: tanpa retensi, dan menandai proyek punya uang muka. */
 
-### Sub-sistem: `allowsum:allow:bruto` (Klaster #755)
+### Sub-sistem: `allowsum:allow:bruto` (Klaster #737)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`allowSum`](file://apps/web/src/pages/keuangan/Finance.tsx#L356-L360) (`apps/web/src/pages/keuangan/Finance.tsx:356-360`) [Tipe: `function`]
+  - [`allowSum`](file://apps/web/src/pages/keuangan/Finance.tsx#L358-L362) (`apps/web/src/pages/keuangan/Finance.tsx:358-362`) [Tipe: `function`]
     - *Signature:* `(p: StoreItem): number`
     - *Deskripsi:* // potongan = bruto - net (PPh21 + BPJS karyawan), selalu seimbang.
 
-### Sub-sistem: `emptymodul:empty:modul` (Klaster #762)
+### Sub-sistem: `emptymodul:empty:modul` (Klaster #744)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EmptyModul`](file://apps/web/src/pages/laporan/Laporan.tsx#L29-L36) (`apps/web/src/pages/laporan/Laporan.tsx:29-36`) [Tipe: `function`]
     - *Signature:* `({ modul, to, label }: { modul: string; to: string; label: string })`
 
-### Sub-sistem: `reporttpl:tpl:report` (Klaster #764)
+### Sub-sistem: `reporttpl:tpl:report` (Klaster #746)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReportTpl`](file://apps/web/src/pages/laporan/Laporan.tsx#L76-L76) (`apps/web/src/pages/laporan/Laporan.tsx:76-76`) [Tipe: `interface`]
     - *Signature:* `interface ReportTpl`
 
-### Sub-sistem: `reportarc:arc:report` (Klaster #765)
+### Sub-sistem: `reportarc:arc:report` (Klaster #747)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ReportArc`](file://apps/web/src/pages/laporan/Laporan.tsx#L77-L77) (`apps/web/src/pages/laporan/Laporan.tsx:77-77`) [Tipe: `interface`]
     - *Signature:* `interface ReportArc`
 
-### Sub-sistem: `notifitem:notif:item` (Klaster #767)
+### Sub-sistem: `notifitem:notif:item` (Klaster #749)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`NotifItem`](file://apps/web/src/pages/notifikasi/Notifikasi.tsx#L18-L29) (`apps/web/src/pages/notifikasi/Notifikasi.tsx:18-29`) [Tipe: `interface`]
     - *Signature:* `interface NotifItem`
 
-### Sub-sistem: `allowanceline:allowance:line` (Klaster #769)
+### Sub-sistem: `allowanceline:allowance:line` (Klaster #751)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AllowanceLine`](file://apps/web/src/pages/payroll/Payroll.tsx#L104-L107) (`apps/web/src/pages/payroll/Payroll.tsx:104-107`) [Tipe: `interface`]
     - *Signature:* `interface AllowanceLine`
 
-### Sub-sistem: `payrollrates:rates:payroll` (Klaster #770)
+### Sub-sistem: `payrollrates:rates:payroll` (Klaster #752)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PayrollRates`](file://apps/web/src/pages/payroll/Payroll.tsx#L111-L128) (`apps/web/src/pages/payroll/Payroll.tsx:111-128`) [Tipe: `interface`]
     - *Signature:* `interface PayrollRates`
 
-### Sub-sistem: `access` (Klaster #776)
+### Sub-sistem: `access` (Klaster #758)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Access`](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L11-L11) (`apps/web/src/pages/pengaturan/ModuleAccessCard.tsx:11-11`) [Tipe: `interface`]
     - *Signature:* `interface Access`
 
-### Sub-sistem: `rbacinfo:info:rbac` (Klaster #777)
+### Sub-sistem: `rbacinfo:info:rbac` (Klaster #759)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RbacInfo`](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L12-L12) (`apps/web/src/pages/pengaturan/ModuleAccessCard.tsx:12-12`) [Tipe: `interface`]
     - *Signature:* `interface RbacInfo`
 
-### Sub-sistem: `manageduser:managed:tanpa` (Klaster #779)
+### Sub-sistem: `manageduser:managed:tanpa` (Klaster #761)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ManagedUser`](file://apps/web/src/pages/pengaturan/Peran.tsx#L251-L259) (`apps/web/src/pages/pengaturan/Peran.tsx:251-259`) [Tipe: `interface`]
     - *Signature:* `interface ManagedUser`
     - *Deskripsi:* /** Matriks RBAC display: sel yang tidak tercantum = tanpa akses. Read-only tanpa backend. */
 
-### Sub-sistem: `sessionrow:tanpa:matriks` (Klaster #780)
+### Sub-sistem: `sessionrow:tanpa:matriks` (Klaster #762)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SessionRow`](file://apps/web/src/pages/pengaturan/Peran.tsx#L261-L270) (`apps/web/src/pages/pengaturan/Peran.tsx:261-270`) [Tipe: `interface`]
     - *Signature:* `interface SessionRow`
     - *Deskripsi:* /** Matriks RBAC display: sel yang tidak tercantum = tanpa akses. Read-only tanpa backend. */
 
-### Sub-sistem: `tanpa:auditrow:matriks` (Klaster #781)
+### Sub-sistem: `tanpa:auditrow:matriks` (Klaster #763)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AuditRow`](file://apps/web/src/pages/pengaturan/Peran.tsx#L272-L277) (`apps/web/src/pages/pengaturan/Peran.tsx:272-277`) [Tipe: `interface`]
     - *Signature:* `interface AuditRow`
     - *Deskripsi:* /** Matriks RBAC display: sel yang tidak tercantum = tanpa akses. Read-only tanpa backend. */
 
-### Sub-sistem: `constinfo:info` (Klaster #784)
+### Sub-sistem: `constinfo:info` (Klaster #766)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ConstInfo`](file://apps/web/src/pages/pengaturan/Settings.tsx#L14-L14) (`apps/web/src/pages/pengaturan/Settings.tsx:14-14`) [Tipe: `interface`]
     - *Signature:* `interface ConstInfo`
 
-### Sub-sistem: `poline:line` (Klaster #787)
+### Sub-sistem: `poline:line` (Klaster #769)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`POLine`](file://apps/web/src/pages/procurement/Procurement.tsx#L48-L48) (`apps/web/src/pages/procurement/Procurement.tsx:48-48`) [Tipe: `interface`]
     - *Signature:* `interface POLine`
 
-### Sub-sistem: `quote` (Klaster #788)
+### Sub-sistem: `quote` (Klaster #770)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Quote`](file://apps/web/src/pages/procurement/Procurement.tsx#L49-L49) (`apps/web/src/pages/procurement/Procurement.tsx:49-49`) [Tipe: `interface`]
     - *Signature:* `interface Quote`
 
-### Sub-sistem: `approval` (Klaster #789)
+### Sub-sistem: `approval` (Klaster #771)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Approval`](file://apps/web/src/pages/procurement/Procurement.tsx#L50-L50) (`apps/web/src/pages/procurement/Procurement.tsx:50-50`) [Tipe: `interface`]
     - *Signature:* `interface Approval`
 
-### Sub-sistem: `vendorscore:score:vendor` (Klaster #790)
+### Sub-sistem: `vendorscore:score:vendor` (Klaster #772)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`VendorScore`](file://apps/web/src/pages/procurement/Procurement.tsx#L51-L51) (`apps/web/src/pages/procurement/Procurement.tsx:51-51`) [Tipe: `interface`]
     - *Signature:* `interface VendorScore`
 
-### Sub-sistem: `pricehist:price:hist` (Klaster #795)
+### Sub-sistem: `pricehist:price:hist` (Klaster #777)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PriceHist`](file://apps/web/src/pages/proyek/BoQSection.tsx#L52-L52) (`apps/web/src/pages/proyek/BoQSection.tsx:52-52`) [Tipe: `interface`]
     - *Signature:* `interface PriceHist`
 
-### Sub-sistem: `props` (Klaster #796)
+### Sub-sistem: `props` (Klaster #778)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/BoQSection.tsx#L114-L122) (`apps/web/src/pages/proyek/BoQSection.tsx:114-122`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `docrow:doc:row` (Klaster #798)
+### Sub-sistem: `docrow:doc:row` (Klaster #780)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DocRow`](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L30-L44) (`apps/web/src/pages/proyek/BoqDocsSection.tsx:30-44`) [Tipe: `interface`]
     - *Signature:* `interface DocRow`
 
-### Sub-sistem: `props` (Klaster #800)
+### Sub-sistem: `props` (Klaster #782)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L12-L17) (`apps/web/src/pages/proyek/DockPlanCard.tsx:12-17`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `props` (Klaster #802)
+### Sub-sistem: `props` (Klaster #784)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/FeeProjectCard.tsx#L15-L21) (`apps/web/src/pages/proyek/FeeProjectCard.tsx:15-21`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `attentionitem:attention:item` (Klaster #804)
+### Sub-sistem: `attentionitem:attention:item` (Klaster #786)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AttentionItem`](file://apps/web/src/pages/proyek/Monitoring.tsx#L36-L41) (`apps/web/src/pages/proyek/Monitoring.tsx:36-41`) [Tipe: `interface`]
     - *Signature:* `interface AttentionItem`
 
-### Sub-sistem: `feedentry:feed:entry` (Klaster #806)
+### Sub-sistem: `feedentry:feed:entry` (Klaster #788)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`FeedEntry`](file://apps/web/src/pages/proyek/MonitoringFeed.tsx#L15-L29) (`apps/web/src/pages/proyek/MonitoringFeed.tsx:15-29`) [Tipe: `interface`]
     - *Signature:* `interface FeedEntry`
 
-### Sub-sistem: `props` (Klaster #807)
+### Sub-sistem: `props` (Klaster #789)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/MonitoringFeed.tsx#L31-L36) (`apps/web/src/pages/proyek/MonitoringFeed.tsx:31-36`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `wbsbaseline:baseline:wbs` (Klaster #809)
+### Sub-sistem: `wbsbaseline:baseline:wbs` (Klaster #791)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`WbsBaseline`](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L91-L91) (`apps/web/src/pages/proyek/ProjectDetail.tsx:91-91`) [Tipe: `interface`]
     - *Signature:* `interface WbsBaseline`
 
-### Sub-sistem: `props` (Klaster #813)
+### Sub-sistem: `props` (Klaster #795)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/ReportSection.tsx#L13-L15) (`apps/web/src/pages/proyek/ReportSection.tsx:13-15`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `props` (Klaster #815)
+### Sub-sistem: `props` (Klaster #797)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Props`](file://apps/web/src/pages/proyek/SparepartServiceSection.tsx#L33-L37) (`apps/web/src/pages/proyek/SparepartServiceSection.tsx:33-37`) [Tipe: `interface`]
     - *Signature:* `interface Props`
 
-### Sub-sistem: `bomallocation:allocation:bom` (Klaster #817)
+### Sub-sistem: `bomallocation:allocation:bom` (Klaster #799)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BomAllocation`](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L15-L15) (`apps/web/src/pages/proyek/WbsMaterialModal.tsx:15-15`) [Tipe: `interface`]
     - *Signature:* `interface BomAllocation`
 
-### Sub-sistem: `photo:kembali:ditampilkan` (Klaster #820)
+### Sub-sistem: `photo:kembali:ditampilkan` (Klaster #802)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Photo`](file://apps/web/src/pages/proyek/WbsTree.tsx#L13-L13) (`apps/web/src/pages/proyek/WbsTree.tsx:13-13`) [Tipe: `interface`]
     - *Signature:* `interface Photo`
     - *Deskripsi:* // kembali dari WBS proyek dan ditampilkan sebagai thumbnail; klik = perbesar.
 
-### Sub-sistem: `preview:jabatan:departemen` (Klaster #822)
+### Sub-sistem: `preview:jabatan:departemen` (Klaster #804)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Preview`](file://apps/web/src/pages/publik/CutiQr.tsx#L13-L13) (`apps/web/src/pages/publik/CutiQr.tsx:13-13`) [Tipe: `interface`]
     - *Signature:* `interface Preview`
     - *Deskripsi:* // mengembalikan nama, jabatan, dan departemen untuk verifikasi sebelum kirim.
 
-### Sub-sistem: `edititem:edit:item` (Klaster #824)
+### Sub-sistem: `edititem:edit:item` (Klaster #806)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EditItem`](file://apps/web/src/pages/qc/ChecklistTab.tsx#L18-L18) (`apps/web/src/pages/qc/ChecklistTab.tsx:18-18`) [Tipe: `interface`]
     - *Signature:* `interface EditItem`
 
-### Sub-sistem: `editsection:section:edit` (Klaster #825)
+### Sub-sistem: `editsection:section:edit` (Klaster #807)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EditSection`](file://apps/web/src/pages/qc/ChecklistTab.tsx#L19-L19) (`apps/web/src/pages/qc/ChecklistTab.tsx:19-19`) [Tipe: `interface`]
     - *Signature:* `interface EditSection`
 
-### Sub-sistem: `edittemplate:template:edit` (Klaster #826)
+### Sub-sistem: `edittemplate:template:edit` (Klaster #808)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EditTemplate`](file://apps/web/src/pages/qc/ChecklistTab.tsx#L20-L20) (`apps/web/src/pages/qc/ChecklistTab.tsx:20-20`) [Tipe: `interface`]
     - *Signature:* `interface EditTemplate`
 
-### Sub-sistem: `uid` (Klaster #827)
+### Sub-sistem: `uid` (Klaster #809)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`uid`](file://apps/web/src/pages/qc/ChecklistTab.tsx#L22-L22) (`apps/web/src/pages/qc/ChecklistTab.tsx:22-22`) [Tipe: `function`]
     - *Signature:* `()`
 
-### Sub-sistem: `empcert:emp:cert` (Klaster #830)
+### Sub-sistem: `empcert:emp:cert` (Klaster #812)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EmpCert`](file://apps/web/src/pages/sdm/HR.tsx#L88-L91) (`apps/web/src/pages/sdm/HR.tsx:88-91`) [Tipe: `interface`]
     - *Signature:* `interface EmpCert`
 
-### Sub-sistem: `empcert:emp:cert` (Klaster #834)
+### Sub-sistem: `empcert:emp:cert` (Klaster #816)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`EmpCert`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L65-L72) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:65-72`) [Tipe: `interface`]
     - *Signature:* `interface EmpCert`
 
-### Sub-sistem: `skilllevel:skill:level` (Klaster #835)
+### Sub-sistem: `skilllevel:skill:level` (Klaster #817)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SkillLevel`](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L74-L74) (`apps/web/src/pages/sdm/KaryawanDetail.tsx:74-74`) [Tipe: `interface`]
     - *Signature:* `interface SkillLevel`
 
-### Sub-sistem: `potonganof:tarif:hutang` (Klaster #838)
+### Sub-sistem: `potonganof:tarif:hutang` (Klaster #820)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`potonganOf`](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L96-L96) (`apps/web/src/pages/subkontraktor/Subcontractor.tsx:96-96`) [Tipe: `function`]
     - *Signature:* `(p: StoreItem, pphFallback = 2): number`
     - *Deskripsi:* /** Teks tarif untuk tampilan & catatan hutang: "0.5%" atau kata "manual". */
 
-### Sub-sistem: `milestone:tarif:hutang` (Klaster #840)
+### Sub-sistem: `milestone:tarif:hutang` (Klaster #822)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Milestone`](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L134-L134) (`apps/web/src/pages/subkontraktor/Subcontractor.tsx:134-134`) [Tipe: `interface`]
     - *Signature:* `interface Milestone`
     - *Deskripsi:* /** Teks tarif untuk tampilan & catatan hutang: "0.5%" atau kata "manual". */
 
-### Sub-sistem: `row` (Klaster #842)
+### Sub-sistem: `row` (Klaster #824)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`row`](file://apps/web/src/services/__tests__/repositories.test.ts#L34-L34) (`apps/web/src/services/__tests__/repositories.test.ts:34-34`) [Tipe: `function`]
     - *Signature:* `(id: string, createdAt: string | undefined, updated_at: string)`
 
-### Sub-sistem: `listwith:list` (Klaster #843)
+### Sub-sistem: `listwith:list` (Klaster #825)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`listWith`](file://apps/web/src/services/__tests__/repositories.test.ts#L35-L39) (`apps/web/src/services/__tests__/repositories.test.ts:35-39`) [Tipe: `function`]
     - *Signature:* `(rows: unknown[]): Promise<string[]>`
 
-### Sub-sistem: `subsystem-844` (Klaster #844)
+### Sub-sistem: `subsystem-826` (Klaster #826)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`sp`](file://apps/web/src/utils/__tests__/format.test.ts#L30-L30) (`apps/web/src/utils/__tests__/format.test.ts:30-30`) [Tipe: `function`]
     - *Signature:* `(x: string)`
 
-### Sub-sistem: `pph` (Klaster #845)
+### Sub-sistem: `pph` (Klaster #827)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pph`](file://apps/web/src/utils/__tests__/grossUp.test.ts#L6-L6) (`apps/web/src/utils/__tests__/grossUp.test.ts:6-6`) [Tipe: `function`]
     - *Signature:* `(gross: number)`
 
-### Sub-sistem: `subsystem-846` (Klaster #846)
+### Sub-sistem: `subsystem-828` (Klaster #828)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`k`](file://apps/web/src/utils/__tests__/kasbon.test.ts#L4-L4) (`apps/web/src/utils/__tests__/kasbon.test.ts:4-4`) [Tipe: `function`]
     - *Signature:* `(over: Partial<KasbonEntry> = {}): KasbonEntry`
 
-### Sub-sistem: `slip` (Klaster #847)
+### Sub-sistem: `slip` (Klaster #829)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`slip`](file://apps/web/src/utils/__tests__/kasbon.test.ts#L5-L5) (`apps/web/src/utils/__tests__/kasbon.test.ts:5-5`) [Tipe: `function`]
     - *Signature:* `(id: string, period: string)`
 
-### Sub-sistem: `testpurchaseorder:purchase:test` (Klaster #848)
+### Sub-sistem: `testpurchaseorder:purchase:test` (Klaster #830)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TestPurchaseOrder`](file://apps/web/src/utils/__tests__/listPersistence.test.ts#L10-L20) (`apps/web/src/utils/__tests__/listPersistence.test.ts:10-20`) [Tipe: `interface`]
     - *Signature:* `interface TestPurchaseOrder`
 
-### Sub-sistem: `testinspection:inspection:test` (Klaster #849)
+### Sub-sistem: `testinspection:inspection:test` (Klaster #831)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TestInspection`](file://apps/web/src/utils/__tests__/listPersistence.test.ts#L22-L29) (`apps/web/src/utils/__tests__/listPersistence.test.ts:22-29`) [Tipe: `interface`]
     - *Signature:* `interface TestInspection`
 
-### Sub-sistem: `getval:val:get` (Klaster #850)
+### Sub-sistem: `getval:val:get` (Klaster #832)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`getVal`](file://apps/web/src/utils/__tests__/listPersistence.test.ts#L107-L107) (`apps/web/src/utils/__tests__/listPersistence.test.ts:107-107`) [Tipe: `function`]
     - *Signature:* `(r: TestPurchaseOrder, k: string)`
 
-### Sub-sistem: `pending:filter:filterpending` (Klaster #851)
+### Sub-sistem: `pending:filter:filterpending` (Klaster #833)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`filterPending`](file://apps/web/src/utils/__tests__/listPersistence.test.ts#L140-L140) (`apps/web/src/utils/__tests__/listPersistence.test.ts:140-140`) [Tipe: `function`]
     - *Signature:* `(i: TestInspection)`
     - *Deskripsi:* // Filter aktif: hanya yang status === 'Pending'
 
-### Sub-sistem: `subsystem-852` (Klaster #852)
+### Sub-sistem: `subsystem-834` (Klaster #834)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`p`](file://apps/web/src/utils/__tests__/projectStages.test.ts#L5-L5) (`apps/web/src/utils/__tests__/projectStages.test.ts:5-5`) [Tipe: `function`]
     - *Signature:* `(o: Record<string, unknown>): StoreItem`
 
-### Sub-sistem: `bastinput:bast:input` (Klaster #853)
+### Sub-sistem: `bastinput:bast:input` (Klaster #835)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BastInput`](file://services/api/src/pdf/documents/bast.ts#L16-L32) (`services/api/src/pdf/documents/bast.ts:16-32`) [Tipe: `interface`]
     - *Signature:* `interface BastInput`
 
-### Sub-sistem: `boqdocinput:boq:doc` (Klaster #854)
+### Sub-sistem: `boqdocinput:boq:doc` (Klaster #836)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`BoqDocInput`](file://services/api/src/pdf/documents/boq.ts#L10-L25) (`services/api/src/pdf/documents/boq.ts:10-25`) [Tipe: `interface`]
     - *Signature:* `interface BoqDocInput`
 
-### Sub-sistem: `garansiinput:garansi:input` (Klaster #855)
+### Sub-sistem: `garansiinput:garansi:input` (Klaster #837)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`GaransiInput`](file://services/api/src/pdf/documents/boq.ts#L75-L88) (`services/api/src/pdf/documents/boq.ts:75-88`) [Tipe: `interface`]
     - *Signature:* `interface GaransiInput`
 
-### Sub-sistem: `deliveryorderinput:delivery:order` (Klaster #856)
+### Sub-sistem: `deliveryorderinput:delivery:order` (Klaster #838)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DeliveryOrderInput`](file://services/api/src/pdf/documents/deliveryOrder.ts#L10-L26) (`services/api/src/pdf/documents/deliveryOrder.ts:10-26`) [Tipe: `interface`]
     - *Signature:* `interface DeliveryOrderInput`
 
-### Sub-sistem: `cutidocinput:cuti:doc` (Klaster #857)
+### Sub-sistem: `cutidocinput:cuti:doc` (Klaster #839)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CutiDocInput`](file://services/api/src/pdf/documents/hr.ts#L20-L40) (`services/api/src/pdf/documents/hr.ts:20-40`) [Tipe: `interface`]
     - *Signature:* `interface CutiDocInput`
 
-### Sub-sistem: `surathrinput:surat:input` (Klaster #858)
+### Sub-sistem: `surathrinput:surat:input` (Klaster #840)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SuratHrInput`](file://services/api/src/pdf/documents/hr.ts#L161-L190) (`services/api/src/pdf/documents/hr.ts:161-190`) [Tipe: `interface`]
     - *Signature:* `interface SuratHrInput`
 
-### Sub-sistem: `hrletterinput:letter:input` (Klaster #860)
+### Sub-sistem: `hrletterinput:letter:input` (Klaster #842)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`HrLetterInput`](file://services/api/src/pdf/documents/hrLetter.ts#L29-L52) (`services/api/src/pdf/documents/hrLetter.ts:29-52`) [Tipe: `interface`]
     - *Signature:* `interface HrLetterInput`
 
-### Sub-sistem: `run:twip` (Klaster #861)
+### Sub-sistem: `run:twip` (Klaster #843)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Run`](file://services/api/src/pdf/documents/hrLetter.ts#L60-L60) (`services/api/src/pdf/documents/hrLetter.ts:60-60`) [Tipe: `interface`]
     - *Signature:* `interface Run`
     - *Deskripsi:* // 1 twip dalam mm
 
-### Sub-sistem: `invoiceline:invoice:line` (Klaster #863)
+### Sub-sistem: `invoiceline:invoice:line` (Klaster #845)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`InvoiceLine`](file://services/api/src/pdf/documents/invoice.ts#L27-L36) (`services/api/src/pdf/documents/invoice.ts:27-36`) [Tipe: `interface`]
     - *Signature:* `interface InvoiceLine`
 
-### Sub-sistem: `invoiceinput:invoice:input` (Klaster #864)
+### Sub-sistem: `invoiceinput:invoice:input` (Klaster #846)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`InvoiceInput`](file://services/api/src/pdf/documents/invoice.ts#L38-L71) (`services/api/src/pdf/documents/invoice.ts:38-71`) [Tipe: `interface`]
     - *Signature:* `interface InvoiceInput`
 
-### Sub-sistem: `koppenawaraninput:penawaran:kop` (Klaster #865)
+### Sub-sistem: `koppenawaraninput:penawaran:kop` (Klaster #847)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KopPenawaranInput`](file://services/api/src/pdf/documents/kopPenawaran.ts#L10-L20) (`services/api/src/pdf/documents/kopPenawaran.ts:10-20`) [Tipe: `interface`]
     - *Signature:* `interface KopPenawaranInput`
 
-### Sub-sistem: `kwitansiinput:kwitansi:input` (Klaster #866)
+### Sub-sistem: `kwitansiinput:kwitansi:input` (Klaster #848)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`KwitansiInput`](file://services/api/src/pdf/documents/kwitansi.ts#L22-L35) (`services/api/src/pdf/documents/kwitansi.ts:22-35`) [Tipe: `interface`]
     - *Signature:* `interface KwitansiInput`
 
-### Sub-sistem: `finding` (Klaster #868)
+### Sub-sistem: `finding` (Klaster #850)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Finding`](file://services/api/src/pdf/documents/laporan.ts#L37-L44) (`services/api/src/pdf/documents/laporan.ts:37-44`) [Tipe: `interface`]
     - *Signature:* `interface Finding`
 
-### Sub-sistem: `cashreportmodel:cash:report` (Klaster #869)
+### Sub-sistem: `cashreportmodel:cash:report` (Klaster #851)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CashReportModel`](file://services/api/src/pdf/documents/laporan.ts#L46-L60) (`services/api/src/pdf/documents/laporan.ts:46-60`) [Tipe: `interface`]
     - *Signature:* `interface CashReportModel`
 
-### Sub-sistem: `projectreportmodel:report:model` (Klaster #870)
+### Sub-sistem: `projectreportmodel:report:model` (Klaster #852)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`ProjectReportModel`](file://services/api/src/pdf/documents/laporan.ts#L62-L71) (`services/api/src/pdf/documents/laporan.ts:62-71`) [Tipe: `interface`]
     - *Signature:* `interface ProjectReportModel`
 
-### Sub-sistem: `analyticmodel:analytic:model` (Klaster #871)
+### Sub-sistem: `analyticmodel:analytic:model` (Klaster #853)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`AnalyticModel`](file://services/api/src/pdf/documents/laporan.ts#L73-L121) (`services/api/src/pdf/documents/laporan.ts:73-121`) [Tipe: `interface`]
     - *Signature:* `interface AnalyticModel`
 
-### Sub-sistem: `payrollreportmodel:payroll:report` (Klaster #872)
+### Sub-sistem: `payrollreportmodel:payroll:report` (Klaster #854)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PayrollReportModel`](file://services/api/src/pdf/documents/laporan.ts#L123-L129) (`services/api/src/pdf/documents/laporan.ts:123-129`) [Tipe: `interface`]
     - *Signature:* `interface PayrollReportModel`
 
-### Sub-sistem: `poinput:input` (Klaster #873)
+### Sub-sistem: `poinput:input` (Klaster #855)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`PoInput`](file://services/api/src/pdf/documents/po.ts#L16-L43) (`services/api/src/pdf/documents/po.ts:16-43`) [Tipe: `interface`]
     - *Signature:* `interface PoInput`
 
-### Sub-sistem: `qty` (Klaster #874)
+### Sub-sistem: `qty` (Klaster #856)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`qty`](file://services/api/src/pdf/documents/shared.ts#L161-L166) (`services/api/src/pdf/documents/shared.ts:161-166`) [Tipe: `function`]
     - *Signature:* `(v: unknown, unit = ""): string`
 
-### Sub-sistem: `pct` (Klaster #875)
+### Sub-sistem: `pct` (Klaster #857)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`pct`](file://services/api/src/pdf/documents/shared.ts#L169-L172) (`services/api/src/pdf/documents/shared.ts:169-172`) [Tipe: `function`]
     - *Signature:* `(v: unknown, decimals = 1): string`
 
-### Sub-sistem: `row` (Klaster #876)
+### Sub-sistem: `row` (Klaster #858)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`Row`](file://services/api/src/pdf/documents/shared.ts#L185-L190) (`services/api/src/pdf/documents/shared.ts:185-190`) [Tipe: `interface`]
     - *Signature:* `interface Row`
 
-### Sub-sistem: `rowspec:spec:row` (Klaster #877)
+### Sub-sistem: `rowspec:spec:row` (Klaster #859)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`RowSpec`](file://services/api/src/pdf/documents/shared.ts#L197-L202) (`services/api/src/pdf/documents/shared.ts:197-202`) [Tipe: `interface`]
     - *Signature:* `interface RowSpec`
 
-### Sub-sistem: `trimitems:trim:items` (Klaster #878)
+### Sub-sistem: `trimitems:trim:items` (Klaster #860)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`trimItems`](file://services/api/src/pdf/documents/shared.ts#L351-L353) (`services/api/src/pdf/documents/shared.ts:351-353`) [Tipe: `function`]
     - *Signature:* `(items: Array<{ name: string; qty: string }>): Array<{ name: string; qty: string }>`
 
-### Sub-sistem: `doctitle:title:doc` (Klaster #879)
+### Sub-sistem: `doctitle:title:doc` (Klaster #861)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`DocTitle`](file://services/api/src/pdf/documents/shared.ts#L359-L364) (`services/api/src/pdf/documents/shared.ts:359-364`) [Tipe: `interface`]
     - *Signature:* `interface DocTitle`
 
-### Sub-sistem: `slipgajiinput:gaji:slip` (Klaster #880)
+### Sub-sistem: `slipgajiinput:gaji:slip` (Klaster #862)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SlipGajiInput`](file://services/api/src/pdf/documents/slipGaji.ts#L10-L20) (`services/api/src/pdf/documents/slipGaji.ts:10-20`) [Tipe: `interface`]
     - *Signature:* `interface SlipGajiInput`
 
-### Sub-sistem: `spkinput:spk:input` (Klaster #881)
+### Sub-sistem: `spkinput:spk:input` (Klaster #863)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SpkInput`](file://services/api/src/pdf/documents/spk.ts#L16-L32) (`services/api/src/pdf/documents/spk.ts:16-32`) [Tipe: `interface`]
     - *Signature:* `interface SpkInput`
 
-### Sub-sistem: `sptrow:spt:row` (Klaster #882)
+### Sub-sistem: `sptrow:spt:row` (Klaster #864)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SptRow`](file://services/api/src/pdf/documents/spt.ts#L18-L25) (`services/api/src/pdf/documents/spt.ts:18-25`) [Tipe: `interface`]
     - *Signature:* `interface SptRow`
 
-### Sub-sistem: `sptinput:spt:input` (Klaster #883)
+### Sub-sistem: `sptinput:spt:input` (Klaster #865)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SptInput`](file://services/api/src/pdf/documents/spt.ts#L27-L49) (`services/api/src/pdf/documents/spt.ts:27-49`) [Tipe: `interface`]
     - *Signature:* `interface SptInput`
 
-### Sub-sistem: `suratjalaninput:jalan:surat` (Klaster #884)
+### Sub-sistem: `suratjalaninput:jalan:surat` (Klaster #866)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`SuratJalanInput`](file://services/api/src/pdf/documents/suratJalan.ts#L11-L24) (`services/api/src/pdf/documents/suratJalan.ts:11-24`) [Tipe: `interface`]
     - *Signature:* `interface SuratJalanInput`
 
-### Sub-sistem: `tandaterimainput:tanda:terima` (Klaster #885)
+### Sub-sistem: `tandaterimainput:tanda:terima` (Klaster #867)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TandaTerimaInput`](file://services/api/src/pdf/documents/tandaTerima.ts#L10-L22) (`services/api/src/pdf/documents/tandaTerima.ts:10-22`) [Tipe: `interface`]
     - *Signature:* `interface TandaTerimaInput`
 
-### Sub-sistem: `transmittalinput:transmittal:input` (Klaster #886)
+### Sub-sistem: `transmittalinput:transmittal:input` (Klaster #868)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TransmittalInput`](file://services/api/src/pdf/documents/transmittal.ts#L10-L20) (`services/api/src/pdf/documents/transmittal.ts:10-20`) [Tipe: `interface`]
     - *Signature:* `interface TransmittalInput`
 
-### Sub-sistem: `voucherinput:voucher:input` (Klaster #887)
+### Sub-sistem: `voucherinput:voucher:input` (Klaster #869)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`VoucherInput`](file://services/api/src/pdf/documents/voucher.ts#L9-L17) (`services/api/src/pdf/documents/voucher.ts:9-17`) [Tipe: `interface`]
     - *Signature:* `interface VoucherInput`
 
-### Sub-sistem: `coatreenode:tree:coa` (Klaster #888)
+### Sub-sistem: `materialformvalues:values:material` (Klaster #870)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`MaterialFormValues`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L18-L34) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:18-34`) [Tipe: `interface`]
+    - *Signature:* `interface MaterialFormValues`
+
+### Sub-sistem: `props` (Klaster #871)
+- **Kepadatan Simbol:** 1 simbol.
+- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
+  - [`Props`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L36-L50) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:36-50`) [Tipe: `interface`]
+    - *Signature:* `interface Props`
+
+### Sub-sistem: `coatreenode:tree:coa` (Klaster #873)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CoaTreeNode`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L9-L21) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:9-21`) [Tipe: `interface`]
     - *Signature:* `interface CoaTreeNode`
 
-### Sub-sistem: `coatabprops:coa:props` (Klaster #889)
+### Sub-sistem: `coatabprops:coa:props` (Klaster #874)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`CoaTabProps`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L23-L28) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:23-28`) [Tipe: `interface`]
     - *Signature:* `interface CoaTabProps`
 
-### Sub-sistem: `treenoderowprops:bangun:pohon` (Klaster #892)
+### Sub-sistem: `treenoderowprops:bangun:pohon` (Klaster #877)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`TreeNodeRowProps`](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L346-L354) (`apps/web/src/pages/keuangan/tabs/CoaTab.tsx:346-354`) [Tipe: `interface`]
     - *Signature:* `interface TreeNodeRowProps`
     - *Deskripsi:* /** Bangun pohon hierarki lengkap dari daftar baris CoA. */
 
-### Sub-sistem: `materialformvalues:values:form` (Klaster #894)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`MaterialFormValues`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L18-L34) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:18-34`) [Tipe: `interface`]
-    - *Signature:* `interface MaterialFormValues`
-
-### Sub-sistem: `props` (Klaster #895)
-- **Kepadatan Simbol:** 1 simbol.
-- **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
-  - [`Props`](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L36-L50) (`apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx:36-50`) [Tipe: `interface`]
-    - *Signature:* `interface Props`
-
-### Sub-sistem: `resolvebranch:resolve:branch` (Klaster #897)
+### Sub-sistem: `resolvebranch:resolve:branch` (Klaster #879)
 - **Kepadatan Simbol:** 1 simbol.
 - **Komponen Inti / Simbol Penghubung (Top Centrality Hubs):**
   - [`resolveBranch`](file://apps/web/src/pages/qc/__tests__/QCChecklist.test.ts#L6-L9) (`apps/web/src/pages/qc/__tests__/QCChecklist.test.ts:6-9`) [Tipe: `function`]
@@ -8820,36 +8612,31 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 
 | Simbol | Tipe Simbol | Berkas Sumber | Baris Mulai | Baris Selesai |
 | :--- | :--- | :--- | :--- | :--- |
-| `setTab` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L870-L870) | `870` | `870` |
+| `slice` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1615-L1615) | `1615` | `1615` |
+| `parse` | `function` | [services/api/src/changeOrders.ts](file://services/api/src/changeOrders.ts#L26-L26) | `26` | `26` |
+| `parse` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L32-L32) | `32` | `32` |
+| `exec` | `function` | [services/api/src/db.ts](file://services/api/src/db.ts#L95-L97) | `95` | `97` |
+| `parse` | `function` | [services/api/src/materialRequests.ts](file://services/api/src/materialRequests.ts#L67-L69) | `67` | `69` |
+| `push` | `function` | [apps/web/src/utils/woMilestones.ts](file://apps/web/src/utils/woMilestones.ts#L120-L125) | `120` | `125` |
+| `push` | `function` | [services/api/src/routes/readModels.ts](file://services/api/src/routes/readModels.ts#L24-L29) | `24` | `29` |
+| `push` | `function` | [apps/web/src/pages/proyek/WbsTree.tsx](file://apps/web/src/pages/proyek/WbsTree.tsx#L19-L19) | `19` | `19` |
+| `push` | `function` | [apps/web/src/utils/usages.ts](file://apps/web/src/utils/usages.ts#L13-L15) | `13` | `15` |
+| `add` | `function` | [services/api/src/pdf/documents/shared.ts](file://services/api/src/pdf/documents/shared.ts#L244-L250) | `244` | `250` |
+| `setTab` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L872-L872) | `872` | `872` |
 | `allowlistedDeepLinkTab` | `function` | [apps/web/src/components/useDeepLink.ts](file://apps/web/src/components/useDeepLink.ts#L62-L65) | `62` | `65` |
-| `sptNumOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L599-L602) | `599` | `602` |
-| `nameOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L2502-L2502) | `2502` | `2502` |
-| `taxManualOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L609-L610) | `609` | `610` |
-| `can` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L400-L405) | `400` | `405` |
-| `fail` | `function` | [services/api/src/envelope.ts](file://services/api/src/envelope.ts#L8-L10) | `8` | `10` |
-| `fail` | `function` | [apps/web/src/pages/Login.tsx](file://apps/web/src/pages/Login.tsx#L54-L57) | `54` | `57` |
-| `writeAudit` | `function` | [services/api/src/audit.ts](file://services/api/src/audit.ts#L30-L45) | `30` | `45` |
-| `buildApp` | `function` | [services/api/src/app.ts](file://services/api/src/app.ts#L105-L423) | `105` | `423` |
+| `sptNumOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L601-L604) | `601` | `604` |
+| `nameOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L2598-L2598) | `2598` | `2598` |
+| `lines` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L2599-L2602) | `2599` | `2602` |
 | `setF` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L1312-L1330) | `1312` | `1330` |
 | `onPhotoFile` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L1357-L1371) | `1357` | `1371` |
 | `handleImportFile` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L1875-L1910) | `1875` | `1910` |
 | `auditOf` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L915-L919) | `915` | `919` |
 | `openEdit` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L1402-L1426) | `1402` | `1426` |
-| `push` | `function` | [services/api/src/routes/readModels.ts](file://services/api/src/routes/readModels.ts#L24-L29) | `24` | `29` |
-| `push` | `function` | [apps/web/src/pages/proyek/WbsTree.tsx](file://apps/web/src/pages/proyek/WbsTree.tsx#L19-L19) | `19` | `19` |
-| `push` | `function` | [apps/web/src/utils/usages.ts](file://apps/web/src/utils/usages.ts#L13-L15) | `13` | `15` |
-| `add` | `function` | [services/api/src/pdf/documents/shared.ts](file://services/api/src/pdf/documents/shared.ts#L244-L250) | `244` | `250` |
-| `add` | `function` | [apps/web/src/components/ServiceNotes.tsx](file://apps/web/src/components/ServiceNotes.tsx#L82-L105) | `82` | `105` |
-| `slice` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1615-L1615) | `1615` | `1615` |
-| `prepare` | `method` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1387-L1398) | `1387` | `1398` |
-| `str` | `function` | [services/api/src/domainGuards.ts](file://services/api/src/domainGuards.ts#L10-L10) | `10` | `10` |
-| `arr` | `function` | [services/api/src/pdf/documents/shared.ts](file://services/api/src/pdf/documents/shared.ts#L320-L338) | `320` | `338` |
-| `str` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L125-L125) | `125` | `125` |
+| `norm24` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L27-L46) | `27` | `46` |
 | `parseJam` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L86-L91) | `86` | `91` |
+| `fmtJam24` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L73-L83) | `73` | `83` |
 | `projOf` | `function` | [apps/web/src/pages/equipment/Equipment.tsx](file://apps/web/src/pages/equipment/Equipment.tsx#L444-L445) | `444` | `445` |
 | `saveUtilOverride` | `function` | [apps/web/src/pages/equipment/Equipment.tsx](file://apps/web/src/pages/equipment/Equipment.tsx#L1556-L1570) | `1556` | `1570` |
-| `adjustMaintMaterials` | `function` | [apps/web/src/pages/equipment/Equipment.tsx](file://apps/web/src/pages/equipment/Equipment.tsx#L1071-L1118) | `1071` | `1118` |
-| `equipKey` | `function` | [apps/web/src/pages/equipment/Equipment.tsx](file://apps/web/src/pages/equipment/Equipment.tsx#L384-L384) | `384` | `384` |
 | `signKeys` | `function` | [apps/web/src/pages/procurement/Procurement.tsx](file://apps/web/src/pages/procurement/Procurement.tsx#L1193-L1193) | `1193` | `1193` |
 | `pickNotifIds` | `function` | [apps/web/src/pages/procurement/Procurement.tsx](file://apps/web/src/pages/procurement/Procurement.tsx#L641-L658) | `641` | `658` |
 | `doPoStatus` | `function` | [apps/web/src/pages/procurement/Procurement.tsx](file://apps/web/src/pages/procurement/Procurement.tsx#L922-L932) | `922` | `932` |
@@ -8860,11 +8647,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `recordPenalty` | `function` | [apps/web/src/pages/subkontraktor/Subcontractor.tsx](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L580-L592) | `580` | `592` |
 | `removeMilestone` | `function` | [apps/web/src/pages/subkontraktor/Subcontractor.tsx](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L525-L533) | `525` | `533` |
 | `hoursByWo` | `function` | [apps/web/src/pages/subkontraktor/Subcontractor.tsx](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L447-L448) | `447` | `448` |
-| `parse` | `function` | [services/api/src/changeOrders.ts](file://services/api/src/changeOrders.ts#L26-L26) | `26` | `26` |
-| `exec` | `function` | [services/api/src/db.ts](file://services/api/src/db.ts#L95-L97) | `95` | `97` |
-| `parse` | `function` | [services/api/src/materialRequests.ts](file://services/api/src/materialRequests.ts#L67-L69) | `67` | `69` |
-| `parse` | `function` | [services/api/src/poFulfillment.ts](file://services/api/src/poFulfillment.ts#L32-L34) | `32` | `34` |
-| `exec` | `method` | [services/api/src/db.ts](file://services/api/src/db.ts#L209-L212) | `209` | `212` |
+| `prepare` | `method` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1387-L1398) | `1387` | `1398` |
+| `str` | `function` | [services/api/src/domainGuards.ts](file://services/api/src/domainGuards.ts#L10-L10) | `10` | `10` |
+| `arr` | `function` | [services/api/src/pdf/documents/shared.ts](file://services/api/src/pdf/documents/shared.ts#L320-L338) | `320` | `338` |
+| `str` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L125-L125) | `125` | `125` |
+| `str` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L226-L226) | `226` | `226` |
 | `reworkCost` | `function` | [apps/web/src/pages/qc/QCSafety.tsx](file://apps/web/src/pages/qc/QCSafety.tsx#L396-L397) | `396` | `397` |
 | `certsOfInspector` | `function` | [apps/web/src/pages/qc/QCSafety.tsx](file://apps/web/src/pages/qc/QCSafety.tsx#L379-L382) | `379` | `382` |
 | `needsFollowUp` | `function` | [apps/web/src/pages/qc/QCSafety.tsx](file://apps/web/src/pages/qc/QCSafety.tsx#L389-L393) | `389` | `393` |
@@ -8885,46 +8672,51 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `mappingStepLabel` | `function` | [apps/web/src/pages/drydock/Drydock.tsx](file://apps/web/src/pages/drydock/Drydock.tsx#L149-L150) | `149` | `150` |
 | `openMove` | `function` | [apps/web/src/pages/drydock/Drydock.tsx](file://apps/web/src/pages/drydock/Drydock.tsx#L723-L728) | `723` | `728` |
 | `overlap` | `function` | [apps/web/src/pages/drydock/Drydock.tsx](file://apps/web/src/pages/drydock/Drydock.tsx#L471-L476) | `471` | `476` |
-| `currentSessionUsername` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L600-L611) | `600` | `611` |
-| `loadSideMapConflictHolds` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L14-L21) | `14` | `21` |
-| `persistSideMapConflictHolds` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L23-L31) | `23` | `31` |
-| `storedCacheOwnerId` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L613-L619) | `613` | `619` |
-| `currentSessionOwnerId` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L586-L595) | `586` | `595` |
-| `looksLikeUrl` | `function` | [apps/web/src/utils/docAttachment.ts](file://apps/web/src/utils/docAttachment.ts#L30-L37) | `30` | `37` |
-| `setF` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L678-L678) | `678` | `678` |
-| `maxSeq` | `function` | [apps/web/src/utils/sb.ts](file://apps/web/src/utils/sb.ts#L60-L71) | `60` | `71` |
-| `flowTo` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L614-L624) | `614` | `624` |
-| `openDetail` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L465-L475) | `465` | `475` |
 | `num` | `function` | [apps/web/src/pages/crm/CRM.tsx](file://apps/web/src/pages/crm/CRM.tsx#L59-L59) | `59` | `59` |
 | `dispStage` | `function` | [apps/web/src/pages/crm/CRM.tsx](file://apps/web/src/pages/crm/CRM.tsx#L82-L82) | `82` | `82` |
 | `toggleSurvey` | `function` | [apps/web/src/pages/crm/CRM.tsx](file://apps/web/src/pages/crm/CRM.tsx#L129-L130) | `129` | `130` |
 | `nextProjectCode` | `function` | [apps/web/src/pages/crm/CRM.tsx](file://apps/web/src/pages/crm/CRM.tsx#L195-L204) | `195` | `204` |
 | `openSend` | `function` | [apps/web/src/pages/crm/CRM.tsx](file://apps/web/src/pages/crm/CRM.tsx#L313-L317) | `313` | `317` |
+| `getJwt` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L65-L71) | `65` | `71` |
+| `isBackendConfigured` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L99-L101) | `99` | `101` |
+| `todayISO` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L93-L96) | `93` | `96` |
+| `todayISO` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L104-L109) | `104` | `109` |
+| `useStore` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L2798-L2802) | `2798` | `2802` |
+| `looksLikeUrl` | `function` | [apps/web/src/utils/docAttachment.ts](file://apps/web/src/utils/docAttachment.ts#L30-L37) | `30` | `37` |
+| `setF` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L678-L678) | `678` | `678` |
+| `maxSeq` | `function` | [apps/web/src/utils/sb.ts](file://apps/web/src/utils/sb.ts#L63-L74) | `63` | `74` |
+| `flowTo` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L614-L624) | `614` | `624` |
+| `openDetail` | `function` | [apps/web/src/pages/dokumen/Documents.tsx](file://apps/web/src/pages/dokumen/Documents.tsx#L465-L475) | `465` | `475` |
+| `currentSessionUsername` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L600-L611) | `600` | `611` |
+| `loadSideMapConflictHolds` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L14-L21) | `14` | `21` |
+| `persistSideMapConflictHolds` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L23-L31) | `23` | `31` |
+| `lsGet` | `function` | [apps/web/src/data/idb.ts](file://apps/web/src/data/idb.ts#L200-L209) | `200` | `209` |
+| `setBranch` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L1208-L1210) | `1208` | `1210` |
 | `askAdvance` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L493-L501) | `493` | `501` |
 | `empNameOf` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L377-L377) | `377` | `377` |
 | `openEdit` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L565-L574) | `565` | `574` |
 | `removeKasbon` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L801-L807) | `801` | `807` |
 | `empOf` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L376-L376) | `376` | `376` |
-| `get` | `function` | [services/api/scripts/files-privacy-probe.ts](file://services/api/scripts/files-privacy-probe.ts#L36-L36) | `36` | `36` |
-| `set` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L674-L677) | `674` | `677` |
-| `num` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L342-L345) | `342` | `345` |
-| `useUrlParam` | `function` | [apps/web/src/utils/urlParam.ts](file://apps/web/src/utils/urlParam.ts#L27-L49) | `27` | `49` |
-| `branchOfUser` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L97-L112) | `97` | `112` |
+| `toJson` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L251-L260) | `251` | `260` |
 | `persist` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L755-L774) | `755` | `774` |
 | `exactBranchPredicate` | `function` | [services/api/src/routes/crudSearch.ts](file://services/api/src/routes/crudSearch.ts#L18-L20) | `18` | `20` |
 | `registerCrud` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L410-L887) | `410` | `887` |
 | `performWrite` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L775-L779) | `775` | `779` |
-| `performDelete` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L849-L863) | `849` | `863` |
-| `getJwt` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L65-L71) | `65` | `71` |
-| `isBackendConfigured` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L99-L101) | `99` | `101` |
-| `isPdfHead` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L35-L41) | `35` | `41` |
-| `apiFetch` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L189-L198) | `189` | `198` |
-| `renderPdfFrom` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L107-L158) | `107` | `158` |
+| `get` | `function` | [services/api/scripts/files-privacy-probe.ts](file://services/api/scripts/files-privacy-probe.ts#L36-L36) | `36` | `36` |
+| `set` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L676-L679) | `676` | `679` |
+| `useUrlParam` | `function` | [apps/web/src/utils/urlParam.ts](file://apps/web/src/utils/urlParam.ts#L27-L49) | `27` | `49` |
+| `weekKey` | `function` | [apps/web/src/utils/overtime.ts](file://apps/web/src/utils/overtime.ts#L29-L34) | `29` | `34` |
+| `dailyOvertime` | `function` | [apps/web/src/utils/overtime.ts](file://apps/web/src/utils/overtime.ts#L24-L26) | `24` | `26` |
 | `setCompliance` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L259-L272) | `259` | `272` |
 | `removePlan` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L332-L337) | `332` | `337` |
 | `openDockEdit` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L294-L299) | `294` | `299` |
 | `opt` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L241-L241) | `241` | `241` |
 | `removeCrew` | `function` | [apps/web/src/pages/kapal/VesselDetail.tsx](file://apps/web/src/pages/kapal/VesselDetail.tsx#L360-L365) | `360` | `365` |
+| `add` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L216-L236) | `216` | `236` |
+| `bottom` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L116-L119) | `116` | `119` |
+| `newPage` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L133-L137) | `133` | `137` |
+| `ctx` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L121-L131) | `121` | `131` |
+| `place` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L239-L294) | `239` | `294` |
 | `sinceOf` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L120-L124) | `120` | `124` |
 | `list` | `method` | [apps/web/src/services/repositories.ts](file://apps/web/src/services/repositories.ts#L160-L194) | `160` | `194` |
 | `list` | `function` | [services/api/scripts/rbac-modules-probe.ts](file://services/api/scripts/rbac-modules-probe.ts#L75-L79) | `75` | `79` |
@@ -8935,11 +8727,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `line` | `method` | [services/api/src/pdf/documents/hrLetter.ts](file://services/api/src/pdf/documents/hrLetter.ts#L94-L103) | `94` | `103` |
 | `put` | `method` | [services/api/src/pdf/documents/hrLetter.ts](file://services/api/src/pdf/documents/hrLetter.ts#L78-L92) | `78` | `92` |
 | `width` | `method` | [services/api/src/pdf/documents/hrLetter.ts](file://services/api/src/pdf/documents/hrLetter.ts#L73-L76) | `73` | `76` |
-| `measure` | `function` | [services/api/src/pdf/measure.ts](file://services/api/src/pdf/measure.ts#L67-L88) | `67` | `88` |
-| `fmt` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L48-L48) | `48` | `48` |
-| `rect` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L107-L112) | `107` | `112` |
-| `txt` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L85-L97) | `85` | `97` |
-| `line` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L99-L105) | `99` | `105` |
 | `openLeaveEdit` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L401-L411) | `401` | `411` |
 | `delRowDesc` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L476-L496) | `476` | `496` |
 | `attOtApproved` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L341-L341) | `341` | `341` |
@@ -8960,11 +8747,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `nextStatus` | `function` | [apps/web/src/pages/proyek/BoQSection.tsx](file://apps/web/src/pages/proyek/BoQSection.tsx#L188-L188) | `188` | `188` |
 | `pos` | `function` | [apps/web/src/pages/proyek/BoQSection.tsx](file://apps/web/src/pages/proyek/BoQSection.tsx#L171-L171) | `171` | `171` |
 | `openEdit` | `function` | [apps/web/src/pages/proyek/BoQSection.tsx](file://apps/web/src/pages/proyek/BoQSection.tsx#L306-L310) | `306` | `310` |
-| `add` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L216-L236) | `216` | `236` |
-| `bottom` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L116-L119) | `116` | `119` |
-| `newPage` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L133-L137) | `133` | `137` |
-| `ctx` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L121-L131) | `121` | `131` |
-| `place` | `method` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L239-L294) | `239` | `294` |
 | `num` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L22-L22) | `22` | `22` |
 | `shiftMonth` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L69-L74) | `69` | `74` |
 | `sigRows` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L252-L254) | `252` | `254` |
@@ -8990,21 +8772,21 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `slotCountFor` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L257-L257) | `257` | `257` |
 | `clientOptionsFor` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L152-L154) | `152` | `154` |
 | `closeSurveyModal` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L183-L186) | `183` | `186` |
-| `q` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L479-L479) | `479` | `479` |
-| `fmtMonthRange` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L253-L259) | `253` | `259` |
-| `income` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L313-L325) | `313` | `325` |
-| `delNote` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L577-L583) | `577` | `583` |
-| `annualFor` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L556-L556) | `556` | `556` |
+| `normalize` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L19-L27) | `19` | `27` |
+| `existsSync` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L31-L31) | `31` | `31` |
+| `resolve` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L44-L49) | `44` | `49` |
+| `resolve` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L423-L429) | `423` | `429` |
+| `dirname` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L30-L30) | `30` | `30` |
 | `markGroup` | `function` | [apps/web/src/pages/notifikasi/Notifikasi.tsx](file://apps/web/src/pages/notifikasi/Notifikasi.tsx#L171-L176) | `171` | `176` |
 | `markOne` | `function` | [apps/web/src/pages/notifikasi/Notifikasi.tsx](file://apps/web/src/pages/notifikasi/Notifikasi.tsx#L159-L164) | `159` | `164` |
 | `persist` | `function` | [apps/web/src/pages/notifikasi/Notifikasi.tsx](file://apps/web/src/pages/notifikasi/Notifikasi.tsx#L154-L157) | `154` | `157` |
 | `saveNotifRead` | `function` | [apps/web/src/utils/notifRead.ts](file://apps/web/src/utils/notifRead.ts#L15-L21) | `15` | `21` |
 | `canSeePath` | `function` | [apps/web/src/utils/moduleKey.ts](file://apps/web/src/utils/moduleKey.ts#L29-L29) | `29` | `29` |
-| `toggleSort` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1340-L1343) | `1340` | `1343` |
-| `employeeOptions` | `function` | [apps/web/src/utils/employeeOptions.ts](file://apps/web/src/utils/employeeOptions.ts#L39-L56) | `39` | `56` |
-| `openMoveEdit` | `function` | [apps/web/src/pages/inventori/BomDetail.tsx](file://apps/web/src/pages/inventori/BomDetail.tsx#L129-L138) | `129` | `138` |
-| `isKnownEmployee` | `function` | [apps/web/src/utils/employeeOptions.ts](file://apps/web/src/utils/employeeOptions.ts#L68-L72) | `68` | `72` |
-| `reservedQty` | `function` | [apps/web/src/pages/inventori/BomDetail.tsx](file://apps/web/src/pages/inventori/BomDetail.tsx#L29-L32) | `29` | `32` |
+| `q` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L479-L479) | `479` | `479` |
+| `income` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L313-L325) | `313` | `325` |
+| `delNote` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L577-L583) | `577` | `583` |
+| `annualFor` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L556-L556) | `556` | `556` |
+| `numOf` | `function` | [apps/web/src/utils/series.ts](file://apps/web/src/utils/series.ts#L56-L59) | `56` | `59` |
 | `warehouseSheets` | `function` | [apps/web/src/utils/warehouseReport.ts](file://apps/web/src/utils/warehouseReport.ts#L43-L79) | `43` | `79` |
 | `num` | `function` | [apps/web/src/utils/warehouseReport.ts](file://apps/web/src/utils/warehouseReport.ts#L28-L28) | `28` | `28` |
 | `head` | `function` | [apps/web/src/utils/warehouseReport.ts](file://apps/web/src/utils/warehouseReport.ts#L70-L70) | `70` | `70` |
@@ -9030,16 +8812,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `slotDateOffsets` | `function` | [apps/web/src/utils/drydockBookingDates.ts](file://apps/web/src/utils/drydockBookingDates.ts#L101-L114) | `101` | `114` |
 | `bookingDateOffsets` | `function` | [apps/web/src/utils/drydockBookingDates.ts](file://apps/web/src/utils/drydockBookingDates.ts#L88-L98) | `88` | `98` |
 | `dayToISO` | `function` | [apps/web/src/utils/drydockBookingDates.ts](file://apps/web/src/utils/drydockBookingDates.ts#L34-L38) | `34` | `38` |
-| `normalizedCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L69-L71) | `69` | `71` |
-| `conversionRuleForCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L83-L85) | `83` | `85` |
-| `hasUnitConversionDraft` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L104-L113) | `104` | `113` |
-| `sackKgOf` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L54-L58) | `54` | `58` |
-| `suggestedBaseUnit` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L62-L67) | `62` | `67` |
-| `toast` | `function` | [apps/web/src/components/Toast.tsx](file://apps/web/src/components/Toast.tsx#L39-L76) | `39` | `76` |
-| `run` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1473-L1483) | `1473` | `1483` |
-| `run` | `function` | [services/api/scripts/backup-restore-probe.ts](file://services/api/scripts/backup-restore-probe.ts#L18-L21) | `18` | `21` |
-| `useAsyncAction` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1492-L1510) | `1492` | `1510` |
-| `downloadFileUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L190-L214) | `190` | `214` |
+| `employeeOptions` | `function` | [apps/web/src/utils/employeeOptions.ts](file://apps/web/src/utils/employeeOptions.ts#L39-L56) | `39` | `56` |
+| `openMoveEdit` | `function` | [apps/web/src/pages/inventori/BomDetail.tsx](file://apps/web/src/pages/inventori/BomDetail.tsx#L129-L138) | `129` | `138` |
+| `isKnownEmployee` | `function` | [apps/web/src/utils/employeeOptions.ts](file://apps/web/src/utils/employeeOptions.ts#L68-L72) | `68` | `72` |
+| `reservedQty` | `function` | [apps/web/src/pages/inventori/BomDetail.tsx](file://apps/web/src/pages/inventori/BomDetail.tsx#L29-L32) | `29` | `32` |
+| `qrPayloadOf` | `function` | [apps/web/src/pages/inventori/BomDetail.tsx](file://apps/web/src/pages/inventori/BomDetail.tsx#L38-L40) | `38` | `40` |
 | `patchItem` | `function` | [apps/web/src/pages/qc/ChecklistTab.tsx](file://apps/web/src/pages/qc/ChecklistTab.tsx#L166-L168) | `166` | `168` |
 | `openEdit` | `function` | [apps/web/src/pages/qc/ChecklistTab.tsx](file://apps/web/src/pages/qc/ChecklistTab.tsx#L138-L144) | `138` | `144` |
 | `seg` | `function` | [apps/web/src/pages/qc/ChecklistTab.tsx](file://apps/web/src/pages/qc/ChecklistTab.tsx#L170-L173) | `170` | `173` |
@@ -9050,31 +8827,16 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `stockLabel` | `function` | [apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx](file://apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx#L279-L280) | `279` | `280` |
 | `onSelectProcPo` | `function` | [apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx](file://apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx#L216-L223) | `216` | `223` |
 | `onSelectAddInItem` | `function` | [apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx](file://apps/web/src/pages/inventori/tabs/ReceiveIssueTab.tsx#L121-L130) | `121` | `130` |
-| `useStore` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L2798-L2802) | `2798` | `2802` |
-| `mrStatus` | `function` | [apps/web/src/data/useMaterialRequest.ts](file://apps/web/src/data/useMaterialRequest.ts#L43-L46) | `43` | `46` |
-| `doFulfill` | `function` | [apps/web/src/pages/procurement/MaterialRequestsTab.tsx](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L129-L138) | `129` | `138` |
-| `stockOf` | `function` | [apps/web/src/pages/procurement/MaterialRequestsTab.tsx](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L60-L63) | `60` | `63` |
-| `doApprove` | `function` | [apps/web/src/pages/procurement/MaterialRequestsTab.tsx](file://apps/web/src/pages/procurement/MaterialRequestsTab.tsx#L109-L116) | `109` | `116` |
-| `normalizeRole` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L53-L73) | `53` | `73` |
-| `moduleAccessFor` | `function` | [services/api/src/moduleAccess.ts](file://services/api/src/moduleAccess.ts#L72-L79) | `72` | `79` |
-| `loadOverride` | `function` | [services/api/src/moduleAccess.ts](file://services/api/src/moduleAccess.ts#L59-L69) | `59` | `69` |
-| `clean` | `function` | [services/api/src/moduleAccess.ts](file://services/api/src/moduleAccess.ts#L44-L57) | `44` | `57` |
-| `permissionsFor` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L410-L413) | `410` | `413` |
-| `parse` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L38-L41) | `38` | `41` |
-| `loadDoc` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L48-L52) | `48` | `52` |
-| `docTotal` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L59-L71) | `59` | `71` |
-| `syncBoqDocToDocuments` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L135-L206) | `135` | `206` |
-| `statusOf` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L43-L46) | `43` | `46` |
-| `normalize` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L19-L27) | `19` | `27` |
-| `existsSync` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L31-L31) | `31` | `31` |
-| `resolve` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L44-L49) | `44` | `49` |
-| `resolve` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L423-L429) | `423` | `429` |
-| `dirname` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L30-L30) | `30` | `30` |
 | `statusLabel` | `function` | [apps/web/src/pages/proyek/BoqDocsSection.tsx](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L85-L88) | `85` | `88` |
 | `revise` | `function` | [apps/web/src/pages/proyek/BoqDocsSection.tsx](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L193-L238) | `193` | `238` |
 | `handleExportExcel` | `function` | [apps/web/src/pages/proyek/BoqDocsSection.tsx](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L295-L346) | `295` | `346` |
 | `handleEnterprisePrint` | `function` | [apps/web/src/pages/proyek/BoqDocsSection.tsx](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L291-L293) | `291` | `293` |
 | `totalOf` | `function` | [apps/web/src/pages/proyek/BoqDocsSection.tsx](file://apps/web/src/pages/proyek/BoqDocsSection.tsx#L82-L82) | `82` | `82` |
+| `findRecipe` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1455-L1457) | `1455` | `1457` |
+| `assemble` | `method` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L314-L318) | `314` | `318` |
+| `ok` | `function` | [services/api/scripts/pdf-db-probe.ts](file://services/api/scripts/pdf-db-probe.ts#L30-L38) | `30` | `38` |
+| `buildFromModel` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1479-L1481) | `1479` | `1481` |
+| `ctxWith` | `function` | [services/api/scripts/pdf-db-probe.ts](file://services/api/scripts/pdf-db-probe.ts#L47-L49) | `47` | `49` |
 | `patchPo` | `function` | [services/api/scripts/po-partial-probe.ts](file://services/api/scripts/po-partial-probe.ts#L167-L167) | `167` | `167` |
 | `mrOf` | `function` | [services/api/scripts/po-partial-probe.ts](file://services/api/scripts/po-partial-probe.ts#L65-L65) | `65` | `65` |
 | `apOf` | `function` | [services/api/scripts/po-partial-probe.ts](file://services/api/scripts/po-partial-probe.ts#L126-L127) | `126` | `127` |
@@ -9090,21 +8852,21 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `pickNotifIds` | `function` | [apps/web/src/pages/proyek/Projects.tsx](file://apps/web/src/pages/proyek/Projects.tsx#L235-L239) | `235` | `239` |
 | `isBatal` | `function` | [apps/web/src/pages/proyek/Projects.tsx](file://apps/web/src/pages/proyek/Projects.tsx#L206-L206) | `206` | `206` |
 | `shouldClearOverride` | `function` | [apps/web/src/utils/projectDelay.ts](file://apps/web/src/utils/projectDelay.ts#L124-L131) | `124` | `131` |
+| `timeOf` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L36-L42) | `36` | `42` |
+| `toggleSort` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1340-L1343) | `1340` | `1343` |
+| `auditParams` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L105-L113) | `105` | `113` |
+| `mapAuditRow` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L91-L103) | `91` | `103` |
+| `timeLabel` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L46-L49) | `46` | `49` |
 | `fulfill` | `function` | [services/api/scripts/material-flow-probe.ts](file://services/api/scripts/material-flow-probe.ts#L95-L95) | `95` | `95` |
 | `stockOf` | `function` | [services/api/scripts/material-flow-probe.ts](file://services/api/scripts/material-flow-probe.ts#L35-L38) | `35` | `38` |
 | `tokenFor` | `function` | [services/api/scripts/material-flow-probe.ts](file://services/api/scripts/material-flow-probe.ts#L17-L22) | `17` | `22` |
 | `assert` | `function` | [services/api/scripts/material-flow-probe.ts](file://services/api/scripts/material-flow-probe.ts#L13-L16) | `13` | `16` |
 | `decide` | `function` | [services/api/scripts/material-flow-probe.ts](file://services/api/scripts/material-flow-probe.ts#L45-L47) | `45` | `47` |
-| `findRecipe` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1455-L1457) | `1455` | `1457` |
-| `assemble` | `method` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L314-L318) | `314` | `318` |
-| `buildFromModel` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L1479-L1481) | `1479` | `1481` |
-| `ctxWith` | `function` | [services/api/scripts/pdf-db-probe.ts](file://services/api/scripts/pdf-db-probe.ts#L47-L49) | `47` | `49` |
-| `probeDocuments` | `function` | [services/api/scripts/pdf-db-probe.ts](file://services/api/scripts/pdf-db-probe.ts#L104-L231) | `104` | `231` |
-| `pick` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L22-L22) | `22` | `22` |
-| `put` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L41-L43) | `41` | `43` |
-| `int` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L23-L23) | `23` | `23` |
-| `iso` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L25-L26) | `25` | `26` |
-| `pad` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L24-L24) | `24` | `24` |
+| `parse` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L38-L41) | `38` | `41` |
+| `loadDoc` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L48-L52) | `48` | `52` |
+| `docTotal` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L59-L71) | `59` | `71` |
+| `syncBoqDocToDocuments` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L135-L206) | `135` | `206` |
+| `statusOf` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L43-L46) | `43` | `46` |
 | `num` | `function` | [services/api/src/poPayable.ts](file://services/api/src/poPayable.ts#L23-L23) | `23` | `23` |
 | `payableOf` | `function` | [services/api/src/poPayable.ts](file://services/api/src/poPayable.ts#L30-L37) | `30` | `37` |
 | `poKeyOf` | `function` | [services/api/src/poPayable.ts](file://services/api/src/poPayable.ts#L25-L28) | `25` | `28` |
@@ -9130,11 +8892,21 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `tablesCount` | `function` | [services/api/src/backup.ts](file://services/api/src/backup.ts#L26-L41) | `26` | `41` |
 | `argValue` | `function` | [services/api/src/backup.ts](file://services/api/src/backup.ts#L9-L15) | `9` | `15` |
 | `sanitizeTimestamp` | `function` | [services/api/src/backup.ts](file://services/api/src/backup.ts#L22-L24) | `22` | `24` |
+| `toast` | `function` | [apps/web/src/components/Toast.tsx](file://apps/web/src/components/Toast.tsx#L39-L76) | `39` | `76` |
+| `run` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1473-L1483) | `1473` | `1483` |
+| `run` | `function` | [services/api/scripts/backup-restore-probe.ts](file://services/api/scripts/backup-restore-probe.ts#L18-L21) | `18` | `21` |
+| `useAsyncAction` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1492-L1510) | `1492` | `1510` |
+| `useBusy` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1465-L1485) | `1465` | `1485` |
 | `randInt` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L26-L28) | `26` | `28` |
 | `randChoice` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L30-L32) | `30` | `32` |
 | `genFinance` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L318-L398) | `318` | `398` |
 | `genHutang` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L201-L227) | `201` | `227` |
 | `genSubkon` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L158-L199) | `158` | `199` |
+| `has` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L305-L305) | `305` | `305` |
+| `projectInScope` | `function` | [services/api/src/routes/wbs.ts](file://services/api/src/routes/wbs.ts#L52-L54) | `52` | `54` |
+| `canApproveService` | `function` | [apps/web/src/data/useServiceApproval.ts](file://apps/web/src/data/useServiceApproval.ts#L17-L19) | `17` | `19` |
+| `withBoqLineTotal` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L304-L309) | `304` | `309` |
+| `shouldRetainSideProjectData` | `function` | [apps/web/src/data/sideMapEpochs.ts](file://apps/web/src/data/sideMapEpochs.ts#L4-L19) | `4` | `19` |
 | `num` | `function` | [services/api/src/poFulfillment.ts](file://services/api/src/poFulfillment.ts#L35-L35) | `35` | `35` |
 | `loadPo` | `function` | [services/api/src/poFulfillment.ts](file://services/api/src/poFulfillment.ts#L37-L41) | `37` | `41` |
 | `multiItem` | `function` | [services/api/src/poFulfillment.ts](file://services/api/src/poFulfillment.ts#L59-L64) | `59` | `64` |
@@ -9145,36 +8917,51 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `buildSeedRows` | `function` | [services/api/src/seedData.ts](file://services/api/src/seedData.ts#L195-L222) | `195` | `222` |
 | `buildTeamSeeds` | `function` | [services/api/src/seedData.ts](file://services/api/src/seedData.ts#L276-L278) | `276` | `278` |
 | `runSeed` | `function` | [services/api/src/seed.ts](file://services/api/src/seed.ts#L8-L82) | `8` | `82` |
+| `pick` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L22-L22) | `22` | `22` |
+| `put` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L41-L43) | `41` | `43` |
+| `int` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L23-L23) | `23` | `23` |
+| `iso` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L25-L26) | `25` | `26` |
+| `pad` | `function` | [services/api/src/seedWhatIf.ts](file://services/api/src/seedWhatIf.ts#L24-L24) | `24` | `24` |
 | `serializeDismissed` | `function` | [apps/web/src/utils/bannerDismiss.ts](file://apps/web/src/utils/bannerDismiss.ts#L51-L58) | `51` | `58` |
 | `parseDismissed` | `function` | [apps/web/src/utils/bannerDismiss.ts](file://apps/web/src/utils/bannerDismiss.ts#L32-L49) | `32` | `49` |
 | `readDismissMap` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L151-L157) | `151` | `157` |
 | `writeDismissMap` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L159-L165) | `159` | `165` |
 | `onStorage` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L187-L190) | `187` | `190` |
-| `reset` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1616-L1616) | `1616` | `1616` |
-| `auditParams` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L105-L113) | `105` | `113` |
-| `mapAuditRow` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L91-L103) | `91` | `103` |
-| `actorOf` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L28-L32) | `28` | `32` |
-| `toISODateOrNull` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L16-L24) | `16` | `24` |
 | `fmtMiliar` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L89-L92) | `89` | `92` |
 | `pdfServerReady` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L57-L59) | `57` | `59` |
 | `docApprovalLabel` | `function` | [apps/web/src/pages/proyek/ReportSection.tsx](file://apps/web/src/pages/proyek/ReportSection.tsx#L66-L70) | `66` | `70` |
 | `submitReport` | `function` | [apps/web/src/pages/proyek/ReportSection.tsx](file://apps/web/src/pages/proyek/ReportSection.tsx#L72-L88) | `72` | `88` |
 | `handleExportExcel` | `function` | [apps/web/src/pages/proyek/ReportSection.tsx](file://apps/web/src/pages/proyek/ReportSection.tsx#L108-L130) | `108` | `130` |
-| `test` | `function` | [services/api/scripts/env-probe.ts](file://services/api/scripts/env-probe.ts#L23-L33) | `23` | `33` |
-| `hariValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L129-L136) | `129` | `136` |
-| `bulanValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L124-L128) | `124` | `128` |
-| `sheetDate` | `function` | [apps/web/src/utils/readSheet.ts](file://apps/web/src/utils/readSheet.ts#L141-L148) | `141` | `148` |
-| `isSideMapConflictKey` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L9-L12) | `9` | `12` |
-| `has` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L305-L305) | `305` | `305` |
-| `canApproveService` | `function` | [apps/web/src/data/useServiceApproval.ts](file://apps/web/src/data/useServiceApproval.ts#L17-L19) | `17` | `19` |
-| `withBoqLineTotal` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L304-L309) | `304` | `309` |
-| `shouldRetainSideProjectData` | `function` | [apps/web/src/data/sideMapEpochs.ts](file://apps/web/src/data/sideMapEpochs.ts#L4-L19) | `4` | `19` |
-| `requireRole` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L233-L251) | `233` | `251` |
-| `isAlertLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L497-L499) | `497` | `499` |
-| `sortByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L529-L539) | `529` | `539` |
-| `countByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L562-L566) | `562` | `566` |
-| `groupByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L580-L593) | `580` | `593` |
-| `bannerDisplay` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L549-L559) | `549` | `559` |
+| `exportExcel` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L58-L78) | `58` | `78` |
+| `asMoney` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L38-L42) | `38` | `42` |
+| `moneyColumns` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L29-L36) | `29` | `36` |
+| `sanitizeCell` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L8-L11) | `8` | `11` |
+| `cleanSheetName` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L89-L91) | `89` | `91` |
+| `existingId` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L88-L97) | `88` | `97` |
+| `impactFromWeight` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L70-L74) | `70` | `74` |
+| `likelihoodFromDays` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L63-L67) | `63` | `67` |
+| `hasExisting` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L77-L85) | `77` | `85` |
+| `daysUntilMonthEnd` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L43-L49) | `43` | `49` |
+| `isStamp` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L17-L19) | `17` | `19` |
+| `asComparable` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L33-L37) | `33` | `37` |
+| `createdAtOf` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L58-L60) | `58` | `60` |
+| `createdAtRaw` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L63-L66) | `63` | `66` |
+| `lastTouchedAt` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L102-L109) | `102` | `109` |
+| `normalizeRole` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L53-L73) | `53` | `73` |
+| `permissionsFor` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L410-L413) | `410` | `413` |
+| `canApproveService` | `function` | [services/api/src/serviceApproval.ts](file://services/api/src/serviceApproval.ts#L38-L40) | `38` | `40` |
+| `issueDemoToken` | `function` | [services/api/src/routes/demoSwitch.ts](file://services/api/src/routes/demoSwitch.ts#L51-L78) | `51` | `78` |
+| `roleRank` | `function` | [services/api/src/policy.ts](file://services/api/src/policy.ts#L75-L78) | `75` | `78` |
+| `run` | `function` | [apps/web/src/components/DemoRoleSwitcher.tsx](file://apps/web/src/components/DemoRoleSwitcher.tsx#L30-L36) | `30` | `36` |
+| `readOrigin` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L19-L24) | `19` | `24` |
+| `authHeader` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L31-L34) | `31` | `34` |
+| `switchToRole` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L58-L76) | `58` | `76` |
+| `isImpersonating` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L27-L29) | `27` | `29` |
+| `stripQuery` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L16-L18) | `16` | `18` |
+| `fileNameOf` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L68-L78) | `68` | `78` |
+| `fileKindOf` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L57-L64) | `57` | `64` |
+| `fileExtOf` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L51-L54) | `51` | `54` |
+| `onDownload` | `function` | [apps/web/src/components/DocumentPreview.tsx](file://apps/web/src/components/DocumentPreview.tsx#L153-L166) | `153` | `166` |
 | `setOpen` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1159-L1165) | `1159` | `1165` |
 | `commit` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1198-L1203) | `1198` | `1203` |
 | `onKeyDown` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1205-L1243) | `1205` | `1243` |
@@ -9185,26 +8972,31 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `InvStageStrip` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L258-L291) | `258` | `291` |
 | `SearchBox` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1073-L1118) | `1073` | `1118` |
 | `StageStrip` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L57-L96) | `57` | `96` |
+| `isPdfHead` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L35-L41) | `35` | `41` |
+| `renderPdfFrom` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L107-L158) | `107` | `158` |
+| `usePdfDoc` | `function` | [apps/web/src/components/usePdfDoc.ts](file://apps/web/src/components/usePdfDoc.ts#L40-L145) | `40` | `145` |
+| `cjkWarning` | `function` | [apps/web/src/components/usePdfDoc.ts](file://apps/web/src/components/usePdfDoc.ts#L36-L38) | `36` | `38` |
+| `downloadBlobUrl` | `function` | [apps/web/src/services/pdfClient.ts](file://apps/web/src/services/pdfClient.ts#L230-L238) | `230` | `238` |
 | `invalidate` | `method` | [apps/web/src/data/collectionSyncCache.ts](file://apps/web/src/data/collectionSyncCache.ts#L81-L86) | `81` | `86` |
 | `sync` | `method` | [apps/web/src/data/collectionSyncCache.ts](file://apps/web/src/data/collectionSyncCache.ts#L17-L79) | `17` | `79` |
 | `useScope` | `method` | [apps/web/src/data/collectionSyncCache.ts](file://apps/web/src/data/collectionSyncCache.ts#L98-L106) | `98` | `106` |
 | `generation` | `method` | [apps/web/src/data/collectionSyncCache.ts](file://apps/web/src/data/collectionSyncCache.ts#L88-L90) | `88` | `90` |
 | `invalidateAll` | `method` | [apps/web/src/data/collectionSyncCache.ts](file://apps/web/src/data/collectionSyncCache.ts#L92-L96) | `92` | `96` |
-| `sha` | `function` | [services/api/src/routes/publicLeave.ts](file://services/api/src/routes/publicLeave.ts#L64-L64) | `64` | `64` |
-| `getValue` | `function` | [services/api/src/routes/publicLeave.ts](file://services/api/src/routes/publicLeave.ts#L50-L53) | `50` | `53` |
-| `setValue` | `function` | [services/api/src/routes/publicLeave.ts](file://services/api/src/routes/publicLeave.ts#L54-L58) | `54` | `58` |
-| `readQr` | `function` | [services/api/src/routes/publicLeave.ts](file://services/api/src/routes/publicLeave.ts#L68-L73) | `68` | `73` |
-| `sameToken` | `function` | [services/api/src/routes/publicLeave.ts](file://services/api/src/routes/publicLeave.ts#L59-L63) | `59` | `63` |
-| `load` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L20-L22) | `20` | `22` |
-| `toggle` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L27-L31) | `27` | `31` |
-| `toggleTab` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L32-L38) | `32` | `38` |
-| `save` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L39-L43) | `39` | `43` |
-| `ModuleAccessCard` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L14-L104) | `14` | `104` |
 | `parseDevice` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L11-L25) | `11` | `25` |
 | `fmtWita` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L29-L40) | `29` | `40` |
 | `guardBroken` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L126-L133) | `126` | `133` |
 | `disconnect` | `method` | [apps/web/scripts/browser-shims.ts](file://apps/web/scripts/browser-shims.ts#L59-L59) | `59` | `59` |
 | `heal` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L183-L185) | `183` | `185` |
+| `load` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L20-L22) | `20` | `22` |
+| `toggle` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L27-L31) | `27` | `31` |
+| `toggleTab` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L32-L38) | `32` | `38` |
+| `save` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L39-L43) | `39` | `43` |
+| `ModuleAccessCard` | `function` | [apps/web/src/pages/pengaturan/ModuleAccessCard.tsx](file://apps/web/src/pages/pengaturan/ModuleAccessCard.tsx#L14-L104) | `14` | `104` |
+| `test` | `function` | [services/api/scripts/env-probe.ts](file://services/api/scripts/env-probe.ts#L23-L33) | `23` | `33` |
+| `matchHist` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L151-L160) | `151` | `160` |
+| `isIgnorableMigrationError` | `function` | [services/api/src/migrate.ts](file://services/api/src/migrate.ts#L11-L27) | `11` | `27` |
+| `kasAsOfReport` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L480-L510) | `480` | `510` |
+| `isSideMapConflictKey` | `function` | [apps/web/src/data/sideMapConflictHolds.ts](file://apps/web/src/data/sideMapConflictHolds.ts#L9-L12) | `9` | `12` |
 | `normalized` | `function` | [services/api/src/inventoryConversion.ts](file://services/api/src/inventoryConversion.ts#L22-L24) | `22` | `24` |
 | `inventoryConversionError` | `function` | [services/api/src/inventoryConversion.ts](file://services/api/src/inventoryConversion.ts#L90-L172) | `90` | `172` |
 | `isEceran` | `function` | [services/api/src/inventoryConversion.ts](file://services/api/src/inventoryConversion.ts#L31-L33) | `31` | `33` |
@@ -9220,6 +9012,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `takeSessionExpired` | `function` | [apps/web/src/auth/sessionExpired.ts](file://apps/web/src/auth/sessionExpired.ts#L9-L17) | `9` | `17` |
 | `fetchLoginRoles` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L99-L104) | `99` | `104` |
 | `submit` | `function` | [apps/web/src/pages/Login.tsx](file://apps/web/src/pages/Login.tsx#L70-L97) | `70` | `97` |
+| `allowanceSum` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L8-L9) | `8` | `9` |
+| `nameOf` | `function` | [apps/web/src/pages/keuangan/tabs/PayrollTab.tsx](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L30-L30) | `30` | `30` |
+| `sum` | `function` | [apps/web/src/pages/keuangan/tabs/PayrollTab.tsx](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L31-L31) | `31` | `31` |
+| `exportPphReport` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L11-L22) | `11` | `22` |
+| `canPayPayroll` | `function` | [apps/web/src/components/PayrollPayModal.tsx](file://apps/web/src/components/PayrollPayModal.tsx#L14-L14) | `14` | `14` |
 | `text` | `function` | [services/api/src/pdf/documents/shared.ts](file://services/api/src/pdf/documents/shared.ts#L306-L309) | `306` | `309` |
 | `uploadFile` | `function` | [apps/web/src/services/upload.ts](file://apps/web/src/services/upload.ts#L43-L72) | `43` | `72` |
 | `errMsg` | `function` | [apps/web/src/services/upload.ts](file://apps/web/src/services/upload.ts#L19-L26) | `19` | `26` |
@@ -9230,11 +9027,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `poPendingReassign` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L28-L30) | `28` | `30` |
 | `statusAfter` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L32-L37) | `32` | `37` |
 | `itemPriceTrack` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L321-L331) | `321` | `331` |
-| `exportExcel` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L35-L54) | `35` | `54` |
-| `sanitizeCell` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L8-L11) | `8` | `11` |
-| `cleanSheetName` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L65-L67) | `65` | `67` |
-| `normalizeCell` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L15-L19) | `15` | `19` |
-| `kopImage` | `function` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L25-L33) | `25` | `33` |
+| `monthAxis` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L103-L131) | `103` | `131` |
+| `monthKeyOfDate` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L47-L49) | `47` | `49` |
+| `shiftMonthKey` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L55-L60) | `55` | `60` |
+| `rebindLegacyMonthSeries` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L212-L242) | `212` | `242` |
+| `fmtMonthRange` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L253-L259) | `253` | `259` |
 | `sameName` | `function` | [apps/web/src/utils/names.ts](file://apps/web/src/utils/names.ts#L5-L7) | `5` | `7` |
 | `num` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L43-L46) | `43` | `46` |
 | `parseLegacyCap` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L48-L64) | `48` | `64` |
@@ -9245,11 +9042,26 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `del` | `function` | [apps/web/src/pages/proyek/FeeProjectCard.tsx](file://apps/web/src/pages/proyek/FeeProjectCard.tsx#L47-L47) | `47` | `47` |
 | `feeAmount` | `function` | [apps/web/src/utils/projectFee.ts](file://apps/web/src/utils/projectFee.ts#L32-L34) | `32` | `34` |
 | `normFees` | `function` | [apps/web/src/utils/projectFee.ts](file://apps/web/src/utils/projectFee.ts#L15-L29) | `15` | `29` |
+| `sackKgOf` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L54-L58) | `54` | `58` |
+| `suggestedBaseUnit` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L62-L67) | `62` | `67` |
+| `numericField` | `function` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L76-L82) | `76` | `82` |
+| `materialTypeLabel` | `function` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L70-L74) | `70` | `74` |
+| `buildUnitConversion` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L162-L203) | `162` | `203` |
+| `drydockDay` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L265-L270) | `265` | `270` |
+| `witaTodayDay` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L272-L277) | `272` | `277` |
+| `drydockRange` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L293-L301) | `293` | `301` |
+| `drydockOverlapError` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L311-L333) | `311` | `333` |
+| `drydockDateError` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L279-L289) | `279` | `289` |
 | `cancelLoan` | `function` | [apps/web/src/pages/equipment/DelegationPanel.tsx](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L83-L88) | `83` | `88` |
 | `finishMaint` | `function` | [apps/web/src/pages/equipment/DelegationPanel.tsx](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L89-L94) | `89` | `94` |
 | `returnLoan` | `function` | [apps/web/src/pages/equipment/DelegationPanel.tsx](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L76-L81) | `76` | `81` |
 | `saveMaint` | `function` | [apps/web/src/pages/equipment/DelegationPanel.tsx](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L62-L75) | `62` | `75` |
 | `saveLoan` | `function` | [apps/web/src/pages/equipment/DelegationPanel.tsx](file://apps/web/src/pages/equipment/DelegationPanel.tsx#L50-L61) | `50` | `61` |
+| `hariValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L129-L136) | `129` | `136` |
+| `rentangValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L121-L123) | `121` | `123` |
+| `bulanValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L124-L128) | `124` | `128` |
+| `matchHistPeriod` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L161-L171) | `161` | `171` |
+| `histToParam` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L96-L102) | `96` | `102` |
 | `visit` | `function` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L228-L233) | `228` | `233` |
 | `filterNode` | `function` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L164-L193) | `164` | `193` |
 | `expandAll` | `function` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L226-L236) | `226` | `236` |
@@ -9285,11 +9097,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `assert` | `function` | [services/api/scripts/events-probe.ts](file://services/api/scripts/events-probe.ts#L15-L18) | `15` | `18` |
 | `tokenFor` | `function` | [services/api/scripts/events-probe.ts](file://services/api/scripts/events-probe.ts#L19-L22) | `19` | `22` |
 | `main` | `function` | [services/api/scripts/events-probe.ts](file://services/api/scripts/events-probe.ts#L7-L68) | `7` | `68` |
-| `fontsEmbedded` | `function` | [services/api/src/pdf/font.ts](file://services/api/src/pdf/font.ts#L178-L180) | `178` | `180` |
 | `ok` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L58-L66) | `58` | `66` |
-| `ringkasan` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L1038-L1054) | `1038` | `1054` |
+| `checkGeometry` | `function` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L374-L398) | `374` | `398` |
+| `knownTables` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L361-L371) | `361` | `371` |
+| `registryIntegrity` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L906-L950) | `906` | `950` |
 | `geometryCheck` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L72-L81) | `72` | `81` |
-| `branchAuthChecks` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L967-L1036) | `967` | `1036` |
 | `assert` | `function` | [services/api/scripts/public-leave-probe.ts](file://services/api/scripts/public-leave-probe.ts#L17-L20) | `17` | `20` |
 | `tokenFor` | `function` | [services/api/scripts/public-leave-probe.ts](file://services/api/scripts/public-leave-probe.ts#L21-L24) | `21` | `24` |
 | `submit` | `function` | [services/api/scripts/public-leave-probe.ts](file://services/api/scripts/public-leave-probe.ts#L29-L32) | `29` | `32` |
@@ -9305,26 +9117,21 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `userOf` | `function` | [services/api/scripts/team-scope-probe.ts](file://services/api/scripts/team-scope-probe.ts#L15-L15) | `15` | `15` |
 | `ids` | `function` | [services/api/scripts/team-scope-probe.ts](file://services/api/scripts/team-scope-probe.ts#L23-L24) | `23` | `24` |
 | `main` | `function` | [services/api/scripts/team-scope-probe.ts](file://services/api/scripts/team-scope-probe.ts#L6-L40) | `6` | `40` |
+| `getSecret` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L28-L31) | `28` | `31` |
+| `signToken` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L41-L54) | `41` | `54` |
+| `verifyToken` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L56-L70) | `56` | `70` |
+| `branchOfUser` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L97-L112) | `97` | `112` |
+| `requireAuth` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L144-L231) | `144` | `231` |
 | `load` | `function` | [services/api/src/seedBulk.ts](file://services/api/src/seedBulk.ts#L18-L20) | `18` | `20` |
 | `medianOf` | `function` | [services/api/src/seedBulk.ts](file://services/api/src/seedBulk.ts#L133-L137) | `133` | `137` |
 | `defaultPriceFor` | `function` | [services/api/src/seedBulk.ts](file://services/api/src/seedBulk.ts#L153-L158) | `153` | `158` |
 | `payDate` | `function` | [services/api/src/seedBulk.ts](file://services/api/src/seedBulk.ts#L22-L27) | `22` | `27` |
 | `main` | `function` | [services/api/src/seedBulk.ts](file://services/api/src/seedBulk.ts#L61-L332) | `61` | `332` |
-| `hasPermission` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L38-L51) | `38` | `51` |
-| `fmtJumlah` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L94-L97) | `94` | `97` |
-| `removeRow` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L77-L85) | `77` | `85` |
-| `save` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L46-L75) | `46` | `75` |
-| `WbsMaterialModal` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L30-L136) | `30` | `136` |
 | `initialsOf` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L98-L104) | `98` | `104` |
 | `login` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L173-L235) | `173` | `235` |
 | `logout` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L237-L268) | `237` | `268` |
 | `verifiedBranchScope` | `function` | [apps/web/src/data/branchScope.ts](file://apps/web/src/data/branchScope.ts#L19-L21) | `19` | `21` |
 | `AuthProvider` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L124-L271) | `124` | `271` |
-| `readOrigin` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L19-L24) | `19` | `24` |
-| `authHeader` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L31-L34) | `31` | `34` |
-| `switchToRole` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L58-L76) | `58` | `76` |
-| `isImpersonating` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L27-L29) | `27` | `29` |
-| `fetchDemoRoles` | `function` | [apps/web/src/auth/demoSwitch.ts](file://apps/web/src/auth/demoSwitch.ts#L37-L40) | `37` | `40` |
 | `setF` | `function` | [apps/web/src/components/ProjectAddModal.tsx](file://apps/web/src/components/ProjectAddModal.tsx#L72-L72) | `72` | `72` |
 | `nextProjectCode` | `function` | [apps/web/src/components/ProjectAddModal.tsx](file://apps/web/src/components/ProjectAddModal.tsx#L117-L126) | `117` | `126` |
 | `tahapLabel` | `function` | [apps/web/src/utils/projectStages.ts](file://apps/web/src/utils/projectStages.ts#L38-L45) | `38` | `45` |
@@ -9335,11 +9142,11 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `componentDidCatch` | `method` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L714-L716) | `714` | `716` |
 | `getDerivedStateFromError` | `method` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L710-L712) | `710` | `712` |
 | `ErrorBoundary` | `class` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L697-L777) | `697` | `777` |
-| `round3` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L14-L14) | `14` | `14` |
-| `totalBase` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L16-L18) | `16` | `18` |
-| `issueBase` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L23-L34) | `23` | `34` |
-| `plateCutKg` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L37-L44) | `37` | `44` |
-| `useStockIssue` | `function` | [apps/web/src/data/useStockIssue.ts](file://apps/web/src/data/useStockIssue.ts#L19-L46) | `19` | `46` |
+| `toAbsoluteUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L37-L48) | `37` | `48` |
+| `fetchFileBlob` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L97-L119) | `97` | `119` |
+| `downloadFileUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L190-L214) | `190` | `214` |
+| `clickDownload` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L121-L129) | `121` | `129` |
+| `openFileUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L144-L163) | `144` | `163` |
 | `isEnvelope` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L126-L128) | `126` | `128` |
 | `apiFetchRaw` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L200-L256) | `200` | `256` |
 | `envelopeCode` | `function` | [apps/web/src/services/http.ts](file://apps/web/src/services/http.ts#L114-L119) | `114` | `119` |
@@ -9350,7 +9157,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `nameFromUrl` | `function` | [apps/web/src/utils/docAttachment.ts](file://apps/web/src/utils/docAttachment.ts#L95-L99) | `95` | `99` |
 | `docFileNameOf` | `function` | [apps/web/src/utils/docAttachment.ts](file://apps/web/src/utils/docAttachment.ts#L90-L92) | `90` | `92` |
 | `docUrlOf` | `function` | [apps/web/src/utils/docAttachment.ts](file://apps/web/src/utils/docAttachment.ts#L85-L87) | `85` | `87` |
-| `todayISO` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L93-L96) | `93` | `96` |
+| `isAlertLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L497-L499) | `497` | `499` |
 | `isStamp` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L501-L503) | `501` | `503` |
 | `normalizeItems` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L515-L526) | `515` | `526` |
 | `makeCtx` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L488-L495) | `488` | `495` |
@@ -9372,10 +9179,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `headersFor` | `function` | [services/api/scripts/cache-probe.ts](file://services/api/scripts/cache-probe.ts#L17-L20) | `17` | `20` |
 | `cacheStats` | `function` | [services/api/src/listCache.ts](file://services/api/src/listCache.ts#L79-L81) | `79` | `81` |
 | `main` | `function` | [services/api/scripts/cache-probe.ts](file://services/api/scripts/cache-probe.ts#L8-L64) | `8` | `64` |
-| `create` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L46-L61) | `46` | `61` |
-| `assert` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L29-L33) | `29` | `33` |
-| `witaDate` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L8-L14) | `8` | `14` |
-| `main` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L16-L160) | `16` | `160` |
 | `mark` | `function` | [services/api/scripts/gen-bruno.ts](file://services/api/scripts/gen-bruno.ts#L77-L77) | `77` | `77` |
 | `walk` | `function` | [services/api/scripts/gen-bruno.ts](file://services/api/scripts/gen-bruno.ts#L143-L152) | `143` | `152` |
 | `envVars` | `function` | [services/api/scripts/gen-bruno.ts](file://services/api/scripts/gen-bruno.ts#L72-L72) | `72` | `72` |
@@ -9384,10 +9187,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `assert` | `function` | [services/api/scripts/inventory-issue-probe.ts](file://services/api/scripts/inventory-issue-probe.ts#L12-L15) | `12` | `15` |
 | `stateOf` | `function` | [services/api/scripts/inventory-issue-probe.ts](file://services/api/scripts/inventory-issue-probe.ts#L25-L25) | `25` | `25` |
 | `main` | `function` | [services/api/scripts/inventory-issue-probe.ts](file://services/api/scripts/inventory-issue-probe.ts#L7-L47) | `7` | `47` |
-| `parse` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L32-L32) | `32` | `32` |
-| `assert` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L16-L19) | `16` | `19` |
-| `call` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L25-L26) | `25` | `26` |
-| `main` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L11-L96) | `11` | `96` |
 | `patch` | `function` | [services/api/scripts/wo-spk-probe.ts](file://services/api/scripts/wo-spk-probe.ts#L30-L30) | `30` | `30` |
 | `assert` | `function` | [services/api/scripts/wo-spk-probe.ts](file://services/api/scripts/wo-spk-probe.ts#L12-L15) | `12` | `15` |
 | `tokenOf` | `function` | [services/api/scripts/wo-spk-probe.ts](file://services/api/scripts/wo-spk-probe.ts#L16-L20) | `16` | `20` |
@@ -9424,18 +9223,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `setF` | `function` | [apps/web/src/components/ClientModal.tsx](file://apps/web/src/components/ClientModal.tsx#L33-L33) | `33` | `33` |
 | `save` | `function` | [apps/web/src/components/ClientModal.tsx](file://apps/web/src/components/ClientModal.tsx#L35-L65) | `35` | `65` |
 | `ClientModal` | `function` | [apps/web/src/components/ClientModal.tsx](file://apps/web/src/components/ClientModal.tsx#L13-L117) | `13` | `117` |
-| `stripQuery` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L16-L18) | `16` | `18` |
-| `fileKindOf` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L57-L64) | `57` | `64` |
-| `fileExtOf` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L51-L54) | `51` | `54` |
-| `InlineDocPreview` | `function` | [apps/web/src/components/DocumentPreview.tsx](file://apps/web/src/components/DocumentPreview.tsx#L249-L317) | `249` | `317` |
 | `toggle` | `function` | [apps/web/src/components/FlowTree.tsx](file://apps/web/src/components/FlowTree.tsx#L96-L96) | `96` | `96` |
 | `allIds` | `function` | [apps/web/src/components/FlowTree.tsx](file://apps/web/src/components/FlowTree.tsx#L97-L97) | `97` | `97` |
 | `Branch` | `function` | [apps/web/src/components/FlowTree.tsx](file://apps/web/src/components/FlowTree.tsx#L27-L89) | `27` | `89` |
 | `FlowTree` | `function` | [apps/web/src/components/FlowTree.tsx](file://apps/web/src/components/FlowTree.tsx#L92-L107) | `92` | `107` |
-| `nameOf` | `function` | [apps/web/src/pages/keuangan/tabs/PayrollTab.tsx](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L30-L30) | `30` | `30` |
-| `sum` | `function` | [apps/web/src/pages/keuangan/tabs/PayrollTab.tsx](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L31-L31) | `31` | `31` |
-| `canPayPayroll` | `function` | [apps/web/src/components/PayrollPayModal.tsx](file://apps/web/src/components/PayrollPayModal.tsx#L14-L14) | `14` | `14` |
-| `PayrollTab` | `function` | [apps/web/src/pages/keuangan/tabs/PayrollTab.tsx](file://apps/web/src/pages/keuangan/tabs/PayrollTab.tsx#L15-L94) | `15` | `94` |
 | `kasKodeOf` | `function` | [apps/web/src/services/autoJournal.ts](file://apps/web/src/services/autoJournal.ts#L25-L31) | `25` | `31` |
 | `applyKasbonPotongan` | `function` | [apps/web/src/utils/kasbon.ts](file://apps/web/src/utils/kasbon.ts#L43-L57) | `43` | `57` |
 | `confirmPay` | `function` | [apps/web/src/components/PayrollPayModal.tsx](file://apps/web/src/components/PayrollPayModal.tsx#L25-L75) | `25` | `75` |
@@ -9456,10 +9247,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `notifyVersionBlocked` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L977-L990) | `977` | `990` |
 | `minorOf` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L969-L975) | `969` | `975` |
 | `isApiCompatible` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L1001-L1023) | `1001` | `1023` |
-| `remote` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L49-L49) | `49` | `49` |
-| `poIsMultiItem` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L21-L25) | `21` | `25` |
-| `prIdsOf` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L39-L40) | `39` | `40` |
-| `usePoActions` | `function` | [apps/web/src/data/usePoActions.ts](file://apps/web/src/data/usePoActions.ts#L47-L302) | `47` | `302` |
 | `getSetting` | `function` | [apps/web/src/utils/settings.ts](file://apps/web/src/utils/settings.ts#L6-L10) | `6` | `10` |
 | `computeAlerts` | `function` | [apps/web/src/utils/alerts.ts](file://apps/web/src/utils/alerts.ts#L45-L163) | `45` | `163` |
 | `daysUntil` | `function` | [apps/web/src/utils/alerts.ts](file://apps/web/src/utils/alerts.ts#L14-L22) | `14` | `22` |
@@ -9476,6 +9263,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `fmtTanggal` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L16-L23) | `16` | `23` |
 | `fmtBulan` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L42-L46) | `42` | `46` |
 | `fmtRentang` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L49-L59) | `49` | `59` |
+| `fmtJumlah` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L94-L97) | `94` | `97` |
+| `removeRow` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L77-L85) | `77` | `85` |
+| `save` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L46-L75) | `46` | `75` |
+| `WbsMaterialModal` | `function` | [apps/web/src/pages/proyek/WbsMaterialModal.tsx](file://apps/web/src/pages/proyek/WbsMaterialModal.tsx#L30-L136) | `30` | `136` |
 | `warnLevelOf` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L153-L179) | `153` | `179` |
 | `warnRankOf` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L303-L312) | `303` | `312` |
 | `katalogBadge` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L292-L295) | `292` | `295` |
@@ -9492,34 +9283,26 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `decodeXml` | `function` | [apps/web/src/utils/readSheet.ts](file://apps/web/src/utils/readSheet.ts#L48-L52) | `48` | `52` |
 | `colIndex` | `function` | [apps/web/src/utils/readSheet.ts](file://apps/web/src/utils/readSheet.ts#L59-L64) | `59` | `64` |
 | `textOf` | `function` | [apps/web/src/utils/readSheet.ts](file://apps/web/src/utils/readSheet.ts#L55-L56) | `55` | `56` |
-| `existingId` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L88-L97) | `88` | `97` |
-| `hasExisting` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L77-L85) | `77` | `85` |
-| `daysUntilMonthEnd` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L43-L49) | `43` | `49` |
-| `generateRisksFromWbs` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L119-L190) | `119` | `190` |
-| `impactFromWeight` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L70-L74) | `70` | `74` |
-| `likelihoodFromDays` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L63-L67) | `63` | `67` |
-| `daysUntilDate` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L52-L60) | `52` | `60` |
-| `generateRisksFromWo` | `function` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L202-L271) | `202` | `271` |
+| `round3` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L14-L14) | `14` | `14` |
+| `totalBase` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L16-L18) | `16` | `18` |
+| `issueBase` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L23-L34) | `23` | `34` |
+| `plateCutKg` | `function` | [apps/web/src/utils/stockIssue.ts](file://apps/web/src/utils/stockIssue.ts#L37-L44) | `37` | `44` |
 | `toMinutes` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L49-L53) | `49` | `53` |
 | `cmpJam` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L56-L61) | `56` | `61` |
 | `durasiJam` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L94-L100) | `94` | `100` |
 | `jamOf` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L103-L106) | `103` | `106` |
-| `isStamp` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L17-L19) | `17` | `19` |
-| `createdAtOf` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L58-L60) | `58` | `60` |
-| `createdAtRaw` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L63-L66) | `63` | `66` |
-| `stampCreated` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L84-L88) | `84` | `88` |
-| `asComparable` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L33-L37) | `33` | `37` |
-| `lastTouchedAt` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L102-L109) | `102` | `109` |
-| `updatedAtOf` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L69-L71) | `69` | `71` |
-| `updatedAtRaw` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L74-L77) | `74` | `77` |
+| `normalizedCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L69-L71) | `69` | `71` |
+| `conversionRuleForCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L83-L85) | `83` | `85` |
+| `purchaseUnitsForCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L87-L95) | `87` | `95` |
+| `defaultPurchaseUnitForCategory` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L97-L102) | `97` | `102` |
+| `hasUnitConversionDraft` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L104-L113) | `104` | `113` |
+| `eceranEnabled` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L132-L134) | `132` | `134` |
+| `unitConversionRequired` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L115-L121) | `115` | `121` |
+| `unitConversionRequiredForEdit` | `function` | [apps/web/src/utils/unitConversion.ts](file://apps/web/src/utils/unitConversion.ts#L137-L159) | `137` | `159` |
 | `movementFlow` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L214-L262) | `214` | `262` |
 | `movementTouchesWh` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L274-L278) | `274` | `278` |
 | `movementFromWh` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L265-L267) | `265` | `267` |
 | `movementToWh` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L269-L271) | `269` | `271` |
-| `push` | `function` | [apps/web/src/utils/woMilestones.ts](file://apps/web/src/utils/woMilestones.ts#L120-L125) | `120` | `125` |
-| `woMilestonesOf` | `function` | [apps/web/src/utils/woMilestones.ts](file://apps/web/src/utils/woMilestones.ts#L32-L53) | `32` | `53` |
-| `terminMilestoneOptions` | `function` | [apps/web/src/utils/woMilestones.ts](file://apps/web/src/utils/woMilestones.ts#L114-L136) | `114` | `136` |
-| `woMilestoneByTitle` | `function` | [apps/web/src/utils/woMilestones.ts](file://apps/web/src/utils/woMilestones.ts#L102-L104) | `102` | `104` |
 | `chartHeight` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L264-L278) | `264` | `278` |
 | `isHbar` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L283-L285) | `283` | `285` |
 | `isDonut` | `function` | [services/api/src/pdf/chart.ts](file://services/api/src/pdf/chart.ts#L280-L282) | `280` | `282` |
@@ -9536,10 +9319,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `parseDiff` | `function` | [services/api/src/routes/audit.ts](file://services/api/src/routes/audit.ts#L30-L36) | `30` | `36` |
 | `parseOffset` | `function` | [services/api/src/routes/audit.ts](file://services/api/src/routes/audit.ts#L24-L28) | `24` | `28` |
 | `registerAuditRoutes` | `function` | [services/api/src/routes/audit.ts](file://services/api/src/routes/audit.ts#L38-L92) | `38` | `92` |
-| `drydockDay` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L265-L270) | `265` | `270` |
-| `witaTodayDay` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L272-L277) | `272` | `277` |
-| `drydockDateError` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L279-L289) | `279` | `289` |
-| `normalizeDrydockOffsets` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L303-L309) | `303` | `309` |
 | `listWhere` | `function` | [services/api/src/routes/relations.ts](file://services/api/src/routes/relations.ts#L68-L69) | `68` | `69` |
 | `getRow` | `function` | [services/api/src/routes/relations.ts](file://services/api/src/routes/relations.ts#L66-L67) | `66` | `67` |
 | `authOf` | `function` | [services/api/src/routes/relations.ts](file://services/api/src/routes/relations.ts#L62-L63) | `62` | `63` |
@@ -9548,10 +9327,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `tick` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L225-L241) | `225` | `241` |
 | `getBarcodeDetector` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L186-L188) | `186` | `188` |
 | `ScanModal` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L191-L269) | `191` | `269` |
-| `amt` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L699-L711) | `699` | `711` |
-| `txt` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L687-L698) | `687` | `698` |
-| `save` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L679-L685) | `679` | `685` |
-| `SptFilingForm` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L652-L846) | `652` | `846` |
 | `init` | `function` | [apps/web/src/pages/proyek/DockPlanCard.tsx](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L24-L24) | `24` | `24` |
 | `save` | `function` | [apps/web/src/pages/proyek/DockPlanCard.tsx](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L32-L43) | `32` | `43` |
 | `iso` | `function` | [apps/web/src/pages/proyek/DockPlanCard.tsx](file://apps/web/src/pages/proyek/DockPlanCard.tsx#L19-L19) | `19` | `19` |
@@ -9577,6 +9352,9 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `patch` | `function` | [services/api/scripts/concurrency-probe.ts](file://services/api/scripts/concurrency-probe.ts#L20-L20) | `20` | `20` |
 | `assert` | `function` | [services/api/scripts/concurrency-probe.ts](file://services/api/scripts/concurrency-probe.ts#L12-L15) | `12` | `15` |
 | `main` | `function` | [services/api/scripts/concurrency-probe.ts](file://services/api/scripts/concurrency-probe.ts#L7-L46) | `7` | `46` |
+| `create` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L46-L61) | `46` | `61` |
+| `assert` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L29-L33) | `29` | `33` |
+| `main` | `function` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L16-L160) | `16` | `160` |
 | `loan` | `function` | [services/api/scripts/equipment-loan-probe.ts](file://services/api/scripts/equipment-loan-probe.ts#L21-L25) | `21` | `25` |
 | `assert` | `function` | [services/api/scripts/equipment-loan-probe.ts](file://services/api/scripts/equipment-loan-probe.ts#L12-L15) | `12` | `15` |
 | `main` | `function` | [services/api/scripts/equipment-loan-probe.ts](file://services/api/scripts/equipment-loan-probe.ts#L7-L48) | `7` | `48` |
@@ -9595,33 +9373,24 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `buildPlan` | `function` | [services/api/scripts/migrate-boq-docs.ts](file://services/api/scripts/migrate-boq-docs.ts#L73-L152) | `73` | `152` |
 | `stringField` | `function` | [services/api/scripts/migrate-boq-docs.ts](file://services/api/scripts/migrate-boq-docs.ts#L69-L71) | `69` | `71` |
 | `stableDocId` | `function` | [services/api/scripts/migrate-boq-docs.ts](file://services/api/scripts/migrate-boq-docs.ts#L64-L67) | `64` | `67` |
-| `reportRuns` | `function` | [services/api/scripts/pdf-audit-probe.ts](file://services/api/scripts/pdf-audit-probe.ts#L36-L46) | `36` | `46` |
-| `idsFor` | `function` | [services/api/scripts/pdf-audit-probe.ts](file://services/api/scripts/pdf-audit-probe.ts#L24-L31) | `24` | `31` |
-| `main` | `function` | [services/api/scripts/pdf-audit-probe.ts](file://services/api/scripts/pdf-audit-probe.ts#L48-L90) | `48` | `90` |
-| `checkGeometry` | `function` | [services/api/src/pdf/document.ts](file://services/api/src/pdf/document.ts#L374-L398) | `374` | `398` |
-| `knownTables` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L361-L371) | `361` | `371` |
-| `registryIntegrity` | `function` | [services/api/scripts/pdf-probe.ts](file://services/api/scripts/pdf-probe.ts#L906-L950) | `906` | `950` |
 | `assert` | `function` | [services/api/scripts/read-models-probe.ts](file://services/api/scripts/read-models-probe.ts#L13-L16) | `13` | `16` |
 | `headersFor` | `function` | [services/api/scripts/read-models-probe.ts](file://services/api/scripts/read-models-probe.ts#L17-L20) | `17` | `20` |
 | `main` | `function` | [services/api/scripts/read-models-probe.ts](file://services/api/scripts/read-models-probe.ts#L8-L69) | `8` | `69` |
+| `assert` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L16-L19) | `16` | `19` |
+| `call` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L25-L26) | `25` | `26` |
+| `main` | `function` | [services/api/scripts/relations-probe.ts](file://services/api/scripts/relations-probe.ts#L11-L96) | `11` | `96` |
 | `visit` | `function` | [services/api/scripts/security-probe-isolation-probe.ts](file://services/api/scripts/security-probe-isolation-probe.ts#L15-L28) | `15` | `28` |
 | `sha256` | `function` | [services/api/scripts/security-probe-isolation-probe.ts](file://services/api/scripts/security-probe-isolation-probe.ts#L9-L11) | `9` | `11` |
 | `snapshotDirectory` | `function` | [services/api/scripts/security-probe-isolation-probe.ts](file://services/api/scripts/security-probe-isolation-probe.ts#L13-L31) | `13` | `31` |
 | `findDuplicates` | `function` | [services/api/src/auditDuplicates.ts](file://services/api/src/auditDuplicates.ts#L48-L72) | `48` | `72` |
 | `pickString` | `function` | [services/api/src/auditDuplicates.ts](file://services/api/src/auditDuplicates.ts#L43-L46) | `43` | `46` |
 | `main` | `function` | [services/api/src/auditDuplicates.ts](file://services/api/src/auditDuplicates.ts#L74-L114) | `74` | `114` |
-| `getSecret` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L28-L31) | `28` | `31` |
-| `signToken` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L41-L54) | `41` | `54` |
-| `verifyToken` | `function` | [services/api/src/auth.ts](file://services/api/src/auth.ts#L56-L70) | `56` | `70` |
 | `real` | `function` | [services/api/src/bookingGuard.ts](file://services/api/src/bookingGuard.ts#L23-L23) | `23` | `23` |
 | `isActiveLoan` | `function` | [services/api/src/bookingGuard.ts](file://services/api/src/bookingGuard.ts#L9-L11) | `9` | `11` |
 | `loanOverlapError` | `function` | [services/api/src/bookingGuard.ts](file://services/api/src/bookingGuard.ts#L14-L40) | `14` | `40` |
 | `isLocked` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L54-L56) | `54` | `56` |
 | `checkDocUnique` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L74-L89) | `74` | `89` |
 | `boqLockError` | `function` | [services/api/src/boqDocs.ts](file://services/api/src/boqDocs.ts#L96-L120) | `96` | `120` |
-| `loadCo` | `function` | [services/api/src/changeOrders.ts](file://services/api/src/changeOrders.ts#L63-L67) | `63` | `67` |
-| `saveCo` | `function` | [services/api/src/changeOrders.ts](file://services/api/src/changeOrders.ts#L69-L74) | `69` | `74` |
-| `decideChangeOrder` | `function` | [services/api/src/changeOrders.ts](file://services/api/src/changeOrders.ts#L77-L88) | `77` | `88` |
 | `dockFitIssue` | `function` | [services/api/src/dockFit.ts](file://services/api/src/dockFit.ts#L16-L25) | `16` | `25` |
 | `one` | `function` | [services/api/src/dockFit.ts](file://services/api/src/dockFit.ts#L27-L31) | `27` | `31` |
 | `dockFitError` | `function` | [services/api/src/dockFit.ts](file://services/api/src/dockFit.ts#L34-L50) | `34` | `50` |
@@ -9637,9 +9406,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `voucherPrefix` | `function` | [services/api/src/voucher.ts](file://services/api/src/voucher.ts#L14-L17) | `14` | `17` |
 | `nextVoucherNo` | `function` | [services/api/src/voucher.ts](file://services/api/src/voucher.ts#L21-L32) | `21` | `32` |
 | `withVoucherNo` | `function` | [services/api/src/voucher.ts](file://services/api/src/voucher.ts#L35-L44) | `35` | `44` |
-| `run` | `function` | [apps/web/src/components/DemoRoleSwitcher.tsx](file://apps/web/src/components/DemoRoleSwitcher.tsx#L30-L36) | `30` | `36` |
-| `useAuth` | `function` | [apps/web/src/auth/auth.tsx](file://apps/web/src/auth/auth.tsx#L273-L275) | `273` | `275` |
-| `DemoRoleSwitcher` | `function` | [apps/web/src/components/DemoRoleSwitcher.tsx](file://apps/web/src/components/DemoRoleSwitcher.tsx#L12-L65) | `12` | `65` |
 | `renderIcon` | `function` | [apps/web/src/components/Alert.tsx](file://apps/web/src/components/Alert.tsx#L115-L121) | `115` | `121` |
 | `handleClose` | `function` | [apps/web/src/components/Alert.tsx](file://apps/web/src/components/Alert.tsx#L110-L113) | `110` | `113` |
 | `Alert` | `function` | [apps/web/src/components/Alert.tsx](file://apps/web/src/components/Alert.tsx#L93-L165) | `93` | `165` |
@@ -9649,12 +9415,12 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `fill` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L146-L148) | `146` | `148` |
 | `ageDays` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L226-L231) | `226` | `231` |
 | `AlertMeta` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L375-L384) | `375` | `384` |
+| `countByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L562-L566) | `562` | `566` |
+| `groupByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L580-L593) | `580` | `593` |
+| `AlertBannerView` | `function` | [apps/web/src/components/AlertBanner.tsx](file://apps/web/src/components/AlertBanner.tsx#L243-L372) | `243` | `372` |
 | `remove` | `function` | [apps/web/src/components/ServiceNotes.tsx](file://apps/web/src/components/ServiceNotes.tsx#L107-L119) | `107` | `119` |
 | `notesOf` | `function` | [apps/web/src/components/ServiceNotes.tsx](file://apps/web/src/components/ServiceNotes.tsx#L38-L41) | `38` | `41` |
 | `ServiceNotesModal` | `function` | [apps/web/src/components/ServiceNotes.tsx](file://apps/web/src/components/ServiceNotes.tsx#L74-L221) | `74` | `221` |
-| `norm24` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L27-L46) | `27` | `46` |
-| `fmtJam24` | `function` | [apps/web/src/utils/time24.ts](file://apps/web/src/utils/time24.ts#L73-L83) | `73` | `83` |
-| `TimeInput24` | `function` | [apps/web/src/components/TimeInput24.tsx](file://apps/web/src/components/TimeInput24.tsx#L5-L30) | `5` | `30` |
 | `handleMouseLeave` | `function` | [apps/web/src/components/Toast.tsx](file://apps/web/src/components/Toast.tsx#L219-L223) | `219` | `223` |
 | `handleMouseEnter` | `function` | [apps/web/src/components/Toast.tsx](file://apps/web/src/components/Toast.tsx#L212-L217) | `212` | `217` |
 | `ToastCard` | `function` | [apps/web/src/components/Toast.tsx](file://apps/web/src/components/Toast.tsx#L178-L286) | `178` | `286` |
@@ -9664,6 +9430,9 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `cmpVal` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1345-L1358) | `1345` | `1358` |
 | `blank` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1372-L1372) | `1372` | `1372` |
 | `sortRows` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1360-L1384) | `1360` | `1384` |
+| `reset` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1616-L1616) | `1616` | `1616` |
+| `go` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1617-L1617) | `1617` | `1617` |
+| `usePager` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1602-L1620) | `1602` | `1620` |
 | `maskTimeDigits` | `function` | [apps/web/src/utils/timeMask.ts](file://apps/web/src/utils/timeMask.ts#L20-L23) | `20` | `23` |
 | `shouldEmitTime` | `function` | [apps/web/src/utils/timeMask.ts](file://apps/web/src/utils/timeMask.ts#L39-L46) | `39` | `46` |
 | `TimeInput` | `function` | [apps/web/src/components/ui.tsx](file://apps/web/src/components/ui.tsx#L1836-L1890) | `1836` | `1890` |
@@ -9682,9 +9451,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `run` | `function` | [apps/web/src/data/useRealtime.ts](file://apps/web/src/data/useRealtime.ts#L43-L75) | `43` | `75` |
 | `flush` | `function` | [apps/web/src/data/useRealtime.ts](file://apps/web/src/data/useRealtime.ts#L29-L42) | `29` | `42` |
 | `useRealtime` | `function` | [apps/web/src/data/useRealtime.ts](file://apps/web/src/data/useRealtime.ts#L14-L83) | `14` | `83` |
-| `toAbsoluteUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L37-L48) | `37` | `48` |
-| `fetchFileBlob` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L97-L119) | `97` | `119` |
-| `openFileUrl` | `function` | [apps/web/src/services/files.ts](file://apps/web/src/services/files.ts#L144-L163) | `144` | `163` |
 | `onKey` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L207-L213) | `207` | `213` |
 | `useDeterrent` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L205-L219) | `205` | `219` |
 | `SecurityGuards` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L221-L224) | `221` | `224` |
@@ -9697,9 +9463,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `num` | `function` | [apps/web/src/utils/deadStock.ts](file://apps/web/src/utils/deadStock.ts#L18-L21) | `18` | `21` |
 | `deadValueOf` | `function` | [apps/web/src/utils/deadStock.ts](file://apps/web/src/utils/deadStock.ts#L182-L185) | `182` | `185` |
 | `derivedDeadCode` | `function` | [apps/web/src/utils/deadStock.ts](file://apps/web/src/utils/deadStock.ts#L161-L166) | `161` | `166` |
-| `todayISO` | `function` | [apps/web/src/utils/format.ts](file://apps/web/src/utils/format.ts#L104-L109) | `104` | `109` |
-| `addYearsISO` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L77-L81) | `77` | `81` |
-| `normCerts` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L104-L124) | `104` | `124` |
 | `num` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L123-L126) | `123` | `126` |
 | `effectiveMinStock` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L135-L148) | `135` | `148` |
 | `categoryWarnings` | `function` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L235-L289) | `235` | `289` |
@@ -9709,12 +9472,15 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `materialsCost` | `function` | [apps/web/src/utils/maintenance.ts](file://apps/web/src/utils/maintenance.ts#L122-L124) | `122` | `124` |
 | `workDaysOf` | `function` | [apps/web/src/utils/maintenance.ts](file://apps/web/src/utils/maintenance.ts#L160-L168) | `160` | `168` |
 | `costBreakdown` | `function` | [apps/web/src/utils/maintenance.ts](file://apps/web/src/utils/maintenance.ts#L146-L157) | `146` | `157` |
+| `sortByLevel` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L529-L539) | `529` | `539` |
+| `bannerDisplay` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L549-L559) | `549` | `559` |
+| `bannerPreview` | `function` | [apps/web/src/utils/moduleAlerts.ts](file://apps/web/src/utils/moduleAlerts.ts#L544-L546) | `544` | `546` |
 | `monthKeyOf` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L40-L44) | `40` | `44` |
 | `bucketByMonth` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L140-L161) | `140` | `161` |
 | `yearsIn` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L262-L270) | `262` | `270` |
 | `n` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L7-L7) | `7` | `7` |
-| `allowanceSum` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L8-L9) | `8` | `9` |
-| `exportPphReport` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L11-L22) | `11` | `22` |
+| `sum` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L34-L34) | `34` | `34` |
+| `exportBpjsCompanyReport` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L24-L40) | `24` | `40` |
 | `equipmentCostSummary` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L200-L223) | `200` | `223` |
 | `maintenanceCostRows` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L143-L168) | `143` | `168` |
 | `equipmentCostByProject` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L229-L244) | `229` | `244` |
@@ -9751,21 +9517,12 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `hrLetterKindOf` | `function` | [services/api/src/pdf/documents/hrLetter.ts](file://services/api/src/pdf/documents/hrLetter.ts#L351-L361) | `351` | `361` |
 | `assembleSuratHr` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L447-L477) | `447` | `477` |
 | `renderSuratHrDraft` | `function` | [services/api/src/pdf/registry.ts](file://services/api/src/pdf/registry.ts#L362-L365) | `362` | `365` |
-| `allowanceTotal` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L106-L111) | `106` | `111` |
-| `payrollNet` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L100-L104) | `100` | `104` |
-| `payrollRecap` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L476-L516) | `476` | `516` |
-| `mergePunch` | `function` | [services/api/src/routes/attendanceIngest.ts](file://services/api/src/routes/attendanceIngest.ts#L40-L45) | `40` | `45` |
-| `witaParts` | `function` | [services/api/src/routes/attendanceIngest.ts](file://services/api/src/routes/attendanceIngest.ts#L32-L37) | `32` | `37` |
-| `applyPunches` | `function` | [services/api/src/routes/attendanceIngest.ts](file://services/api/src/routes/attendanceIngest.ts#L49-L91) | `49` | `91` |
 | `flagOn` | `function` | [services/api/src/routes/demoSwitch.ts](file://services/api/src/routes/demoSwitch.ts#L26-L29) | `26` | `29` |
 | `demoSwitchEnabled` | `function` | [services/api/src/routes/demoSwitch.ts](file://services/api/src/routes/demoSwitch.ts#L30-L32) | `30` | `32` |
 | `demoLoginEnabled` | `function` | [services/api/src/routes/demoSwitch.ts](file://services/api/src/routes/demoSwitch.ts#L85-L87) | `85` | `87` |
 | `onWrite` | `function` | [services/api/src/routes/events.ts](file://services/api/src/routes/events.ts#L48-L52) | `48` | `52` |
 | `flush` | `function` | [services/api/src/routes/events.ts](file://services/api/src/routes/events.ts#L42-L47) | `42` | `47` |
 | `registerEventRoutes` | `function` | [services/api/src/routes/events.ts](file://services/api/src/routes/events.ts#L19-L61) | `19` | `61` |
-| `read` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L29-L29) | `29` | `29` |
-| `listIn` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L37-L40) | `37` | `40` |
-| `syncedBy` | `function` | [apps/web/src/data/__tests__/moduleSyncCoverage.test.ts](file://apps/web/src/data/__tests__/moduleSyncCoverage.test.ts#L52-L63) | `52` | `63` |
 | `register` | `function` | [apps/web/src/pages/absensi/DeviceImport.tsx](file://apps/web/src/pages/absensi/DeviceImport.tsx#L51-L57) | `51` | `57` |
 | `importCsv` | `function` | [apps/web/src/pages/absensi/DeviceImport.tsx](file://apps/web/src/pages/absensi/DeviceImport.tsx#L35-L49) | `35` | `49` |
 | `DeviceImport` | `function` | [apps/web/src/pages/absensi/DeviceImport.tsx](file://apps/web/src/pages/absensi/DeviceImport.tsx#L27-L72) | `27` | `72` |
@@ -9778,15 +9535,15 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `reservedOf` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L271-L273) | `271` | `273` |
 | `reservedQty` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L275-L277) | `275` | `277` |
 | `availOf` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L279-L281) | `279` | `281` |
-| `rentangValid` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L121-L123) | `121` | `123` |
-| `matchHistPeriod` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L161-L171) | `161` | `171` |
-| `histToParam` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L96-L102) | `96` | `102` |
-| `liveAsOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L452-L463) | `452` | `463` |
-| `akhirBulan` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L446-L451) | `446` | `451` |
-| `asOfOrToday` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L465-L467) | `465` | `467` |
-| `save` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L630-L635) | `630` | `635` |
-| `init` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L621-L626) | `621` | `626` |
-| `ManualTaxForm` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L612-L650) | `612` | `650` |
+| `invSisa` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L354-L354) | `354` | `354` |
+| `invNeto` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L348-L352) | `348` | `352` |
+| `arOutAsOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L533-L549) | `533` | `549` |
+| `liveAsOf` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L454-L465) | `454` | `465` |
+| `akhirBulan` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L448-L453) | `448` | `453` |
+| `asOfOrToday` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L467-L469) | `467` | `469` |
+| `save` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L632-L637) | `632` | `637` |
+| `init` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L623-L628) | `623` | `628` |
+| `ManualTaxForm` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L614-L652) | `614` | `652` |
 | `toISODate` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L51-L53) | `51` | `53` |
 | `addDays` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L63-L67) | `63` | `67` |
 | `mondayOf` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L55-L61) | `55` | `61` |
@@ -9802,8 +9559,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `withExt` | `function` | [apps/web/src/pages/proyek/ProjectDetail.tsx](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L108-L113) | `108` | `113` |
 | `docExtOf` | `function` | [apps/web/src/pages/proyek/ProjectDetail.tsx](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L121-L125) | `121` | `125` |
 | `docBaseName` | `function` | [apps/web/src/pages/proyek/ProjectDetail.tsx](file://apps/web/src/pages/proyek/ProjectDetail.tsx#L105-L119) | `105` | `119` |
-| `assert` | `function` | [services/api/scripts/attendance-ingest-probe.ts](file://services/api/scripts/attendance-ingest-probe.ts#L12-L15) | `12` | `15` |
-| `main` | `function` | [services/api/scripts/attendance-ingest-probe.ts](file://services/api/scripts/attendance-ingest-probe.ts#L7-L60) | `7` | `60` |
 | `assert` | `function` | [services/api/scripts/checklist-probe.ts](file://services/api/scripts/checklist-probe.ts#L13-L16) | `13` | `16` |
 | `main` | `function` | [services/api/scripts/checklist-probe.ts](file://services/api/scripts/checklist-probe.ts#L8-L50) | `8` | `50` |
 | `legacyNumber` | `function` | [services/api/scripts/migrate-boq-docs.ts](file://services/api/scripts/migrate-boq-docs.ts#L40-L51) | `40` | `51` |
@@ -9834,10 +9589,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `bomItemError` | `function` | [services/api/src/domainGuards.ts](file://services/api/src/domainGuards.ts#L156-L170) | `156` | `170` |
 | `paid` | `function` | [services/api/src/domainGuards.ts](file://services/api/src/domainGuards.ts#L204-L204) | `204` | `204` |
 | `payableApprovalError` | `function` | [services/api/src/domainGuards.ts](file://services/api/src/domainGuards.ts#L201-L213) | `201` | `213` |
-| `loadEnv` | `function` | [services/api/src/env.ts](file://services/api/src/env.ts#L29-L153) | `29` | `153` |
-| `parseOrigins` | `function` | [services/api/src/env.ts](file://services/api/src/env.ts#L19-L27) | `19` | `27` |
-| `initFonts` | `function` | [services/api/src/pdf/font.ts](file://services/api/src/pdf/font.ts#L134-L138) | `134` | `138` |
-| `main` | `function` | [services/api/src/index.ts](file://services/api/src/index.ts#L6-L23) | `6` | `23` |
 | `constructor` | `method` | [services/api/src/inventoryAdditional.ts](file://services/api/src/inventoryAdditional.ts#L13-L13) | `13` | `13` |
 | `AdditionalError` | `class` | [services/api/src/inventoryAdditional.ts](file://services/api/src/inventoryAdditional.ts#L12-L14) | `12` | `14` |
 | `constructor` | `method` | [services/api/src/inventoryIssue.ts](file://services/api/src/inventoryIssue.ts#L12-L12) | `12` | `12` |
@@ -9898,14 +9649,20 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `createSessionFence` | `function` | [apps/web/src/data/sessionFence.ts](file://apps/web/src/data/sessionFence.ts#L7-L15) | `7` | `15` |
 | `read` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L562-L573) | `562` | `573` |
 | `loadStore` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L557-L584) | `557` | `584` |
+| `currentSessionOwnerId` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L586-L595) | `586` | `595` |
+| `initialStoreForSession` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L632-L637) | `632` | `637` |
+| `storedCacheOwnerId` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L613-L619) | `613` | `619` |
+| `sessionScopeKey` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L639-L641) | `639` | `641` |
 | `notifyStore` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L735-L743) | `735` | `743` |
 | `notifyAuthStop` | `function` | [apps/web/src/data/store.tsx](file://apps/web/src/data/store.tsx#L728-L733) | `728` | `733` |
 | `setSyncActive` | `function` | [apps/web/src/data/useModuleSync.ts](file://apps/web/src/data/useModuleSync.ts#L48-L52) | `48` | `52` |
 | `useProjectWbsSync` | `function` | [apps/web/src/data/useModuleSync.ts](file://apps/web/src/data/useModuleSync.ts#L217-L264) | `217` | `264` |
-| `publishFailed` | `function` | [apps/web/src/data/useModuleSync.ts](file://apps/web/src/data/useModuleSync.ts#L77-L82) | `77` | `82` |
-| `useModuleSync` | `function` | [apps/web/src/data/useModuleSync.ts](file://apps/web/src/data/useModuleSync.ts#L111-L197) | `111` | `197` |
 | `loadLocale` | `function` | [apps/web/src/i18n/LanguageContext.tsx](file://apps/web/src/i18n/LanguageContext.tsx#L11-L18) | `11` | `18` |
 | `LanguageProvider` | `function` | [apps/web/src/i18n/LanguageContext.tsx](file://apps/web/src/i18n/LanguageContext.tsx#L28-L46) | `28` | `46` |
+| `escapeXml` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L61-L63) | `61` | `63` |
+| `tileUri` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L65-L80) | `65` | `80` |
+| `paintLayer` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L84-L92) | `84` | `92` |
+| `ensureDom` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L94-L124) | `94` | `124` |
 | `miscLocale` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L122-L126) | `122` | `126` |
 | `exportChartPNG` | `function` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L128-L159) | `128` | `159` |
 | `num` | `function` | [apps/web/src/services/autoJournal.ts](file://apps/web/src/services/autoJournal.ts#L22-L22) | `22` | `22` |
@@ -9928,10 +9685,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `stableOrder` | `function` | [apps/web/src/services/repositories.ts](file://apps/web/src/services/repositories.ts#L128-L132) | `128` | `132` |
 | `constructor` | `method` | [apps/web/src/services/upload.ts](file://apps/web/src/services/upload.ts#L10-L13) | `10` | `13` |
 | `UploadNotConfigured` | `class` | [apps/web/src/services/upload.ts](file://apps/web/src/services/upload.ts#L9-L14) | `9` | `14` |
-| `escapeXml` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L61-L63) | `61` | `63` |
-| `tileUri` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L65-L80) | `65` | `80` |
-| `paintLayer` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L84-L92) | `84` | `92` |
-| `ensureDom` | `function` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L94-L124) | `94` | `124` |
 | `visibleItems` | `function` | [apps/web/src/utils/bannerDismiss.ts](file://apps/web/src/utils/bannerDismiss.ts#L91-L95) | `91` | `95` |
 | `hiddenCount` | `function` | [apps/web/src/utils/bannerDismiss.ts](file://apps/web/src/utils/bannerDismiss.ts#L98-L100) | `98` | `100` |
 | `loadDraft` | `function` | [apps/web/src/utils/draft.ts](file://apps/web/src/utils/draft.ts#L6-L14) | `6` | `14` |
@@ -9958,14 +9711,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `markDeducted` | `function` | [apps/web/src/utils/maintenance.ts](file://apps/web/src/utils/maintenance.ts#L231-L233) | `231` | `233` |
 | `monthsOf` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L35-L37) | `35` | `37` |
 | `fmtMonthKey` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L245-L250) | `245` | `250` |
-| `monthKeyOfDate` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L47-L49) | `47` | `49` |
-| `shiftMonthKey` | `function` | [apps/web/src/utils/monthAxis.ts](file://apps/web/src/utils/monthAxis.ts#L55-L60) | `55` | `60` |
 | `loadModSeen` | `function` | [apps/web/src/utils/notifRead.ts](file://apps/web/src/utils/notifRead.ts#L31-L46) | `31` | `46` |
 | `saveModSeen` | `function` | [apps/web/src/utils/notifRead.ts](file://apps/web/src/utils/notifRead.ts#L48-L56) | `48` | `56` |
 | `toMinutes` | `function` | [apps/web/src/utils/overtime.ts](file://apps/web/src/utils/overtime.ts#L6-L12) | `6` | `12` |
 | `workedHours` | `function` | [apps/web/src/utils/overtime.ts](file://apps/web/src/utils/overtime.ts#L15-L21) | `15` | `21` |
-| `sum` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L34-L34) | `34` | `34` |
-| `exportBpjsCompanyReport` | `function` | [apps/web/src/utils/payrollReports.ts](file://apps/web/src/utils/payrollReports.ts#L24-L40) | `24` | `40` |
 | `num` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L18-L21) | `18` | `21` |
 | `maintenanceDowntimeHours` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L171-L177) | `171` | `177` |
 | `bookingCostRows` | `function` | [apps/web/src/utils/projectCost.ts](file://apps/web/src/utils/projectCost.ts#L83-L110) | `83` | `110` |
@@ -9994,22 +9743,14 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `deriveCreatedAt` | `function` | [apps/web/src/utils/timestamps.ts](file://apps/web/src/utils/timestamps.ts#L147-L161) | `147` | `161` |
 | `rowsOf` | `function` | [apps/web/src/utils/usages.ts](file://apps/web/src/utils/usages.ts#L7-L11) | `7` | `11` |
 | `findUsages` | `function` | [apps/web/src/utils/usages.ts](file://apps/web/src/utils/usages.ts#L31-L134) | `31` | `134` |
-| `allWarehouseNames` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L124-L137) | `124` | `137` |
-| `usedWarehouseNames` | `function` | [apps/web/src/utils/warehouse.ts](file://apps/web/src/utils/warehouse.ts#L114-L121) | `114` | `121` |
 | `standardWidth` | `function` | [services/api/src/pdf/measure.ts](file://services/api/src/pdf/measure.ts#L28-L35) | `28` | `35` |
 | `ensureMetrics` | `function` | [services/api/src/pdf/measure.ts](file://services/api/src/pdf/measure.ts#L56-L64) | `56` | `64` |
 | `shiftMonth` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L57-L62) | `57` | `62` |
 | `monthAxis` | `function` | [services/api/src/pdf/reports.ts](file://services/api/src/pdf/reports.ts#L65-L70) | `65` | `70` |
-| `toJson` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L251-L260) | `251` | `260` |
-| `checkUniqueField` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L222-L249) | `222` | `249` |
-| `drydockRange` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L293-L301) | `293` | `301` |
-| `drydockOverlapError` | `function` | [services/api/src/routes/crud.ts](file://services/api/src/routes/crud.ts#L311-L333) | `311` | `333` |
 | `safeFileName` | `function` | [services/api/src/routes/pdf.ts](file://services/api/src/routes/pdf.ts#L333-L335) | `333` | `335` |
 | `sendPdf` | `function` | [services/api/src/routes/pdf.ts](file://services/api/src/routes/pdf.ts#L278-L302) | `278` | `302` |
 | `allLinks` | `function` | [services/api/src/routes/relations.ts](file://services/api/src/routes/relations.ts#L46-L55) | `46` | `55` |
 | `reverseRefs` | `function` | [services/api/src/routes/relations.ts](file://services/api/src/routes/relations.ts#L58-L60) | `58` | `60` |
-| `timeOf` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L36-L42) | `36` | `42` |
-| `timeLabel` | `function` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L46-L49) | `46` | `49` |
 | `dockLengthM` | `function` | [apps/web/src/pages/drydock/Drydock.tsx](file://apps/web/src/pages/drydock/Drydock.tsx#L70-L73) | `70` | `73` |
 | `dockMaxLoa` | `function` | [apps/web/src/pages/drydock/Drydock.tsx](file://apps/web/src/pages/drydock/Drydock.tsx#L77-L81) | `77` | `81` |
 | `isEceran` | `function` | [apps/web/src/pages/inventori/Inventory.tsx](file://apps/web/src/pages/inventori/Inventory.tsx#L106-L108) | `106` | `108` |
@@ -10030,10 +9771,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `formToPayload` | `function` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L110-L122) | `110` | `122` |
 | `emptyHist` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L91-L91) | `91` | `91` |
 | `HistFilterBar` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L177-L229) | `177` | `229` |
-| `matchHist` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L151-L160) | `151` | `160` |
-| `kasAsOfReport` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L478-L508) | `478` | `508` |
-| `esc` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L394-L397) | `394` | `397` |
-| `downloadCsv` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L393-L408) | `393` | `408` |
+| `num` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L342-L345) | `342` | `345` |
+| `lineAmount` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L372-L375) | `372` | `375` |
+| `esc` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L396-L399) | `396` | `399` |
+| `downloadCsv` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L395-L410) | `395` | `410` |
 | `normAllowances` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L130-L143) | `130` | `143` |
 | `sumAllowances` | `function` | [apps/web/src/pages/payroll/Payroll.tsx](file://apps/web/src/pages/payroll/Payroll.tsx#L145-L147) | `145` | `147` |
 | `p` | `function` | [apps/web/src/pages/pengaturan/Peran.tsx](file://apps/web/src/pages/pengaturan/Peran.tsx#L310-L310) | `310` | `310` |
@@ -10048,11 +9789,12 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `normCerts` | `function` | [apps/web/src/pages/sdm/HR.tsx](file://apps/web/src/pages/sdm/HR.tsx#L124-L141) | `124` | `141` |
 | `defaultSkills` | `function` | [apps/web/src/pages/sdm/HR.tsx](file://apps/web/src/pages/sdm/HR.tsx#L113-L117) | `113` | `117` |
 | `getSkills` | `function` | [apps/web/src/pages/sdm/HR.tsx](file://apps/web/src/pages/sdm/HR.tsx#L119-L122) | `119` | `122` |
+| `addYearsISO` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L77-L81) | `77` | `81` |
+| `normCerts` | `function` | [apps/web/src/pages/sdm/KaryawanDetail.tsx](file://apps/web/src/pages/sdm/KaryawanDetail.tsx#L104-L124) | `104` | `124` |
 | `daysUntil` | `function` | [apps/web/src/pages/subkontraktor/Subcontractor.tsx](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L120-L127) | `120` | `127` |
 | `daysLate` | `function` | [apps/web/src/pages/subkontraktor/Subcontractor.tsx](file://apps/web/src/pages/subkontraktor/Subcontractor.tsx#L129-L132) | `129` | `132` |
 | `terbilangAngka` | `function` | [services/api/src/pdf/documents/kwitansi.ts](file://services/api/src/pdf/documents/kwitansi.ts#L129-L157) | `129` | `157` |
 | `ribu` | `function` | [services/api/src/pdf/documents/kwitansi.ts](file://services/api/src/pdf/documents/kwitansi.ts#L123-L127) | `123` | `127` |
-| `Guard` | `function` | [apps/web/src/main.tsx](file://apps/web/src/main.tsx#L89-L96) | `89` | `96` |
 | `assert` | `function` | [apps/web/scripts/alert-probe.ts](file://apps/web/scripts/alert-probe.ts#L48-L51) | `48` | `51` |
 | `dayOffset` | `function` | [apps/web/scripts/alert-probe.ts](file://apps/web/scripts/alert-probe.ts#L57-L61) | `57` | `61` |
 | `shape` | `function` | [apps/web/scripts/alert-probe.ts](file://apps/web/scripts/alert-probe.ts#L67-L68) | `67` | `68` |
@@ -10113,6 +9855,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `assert` | `function` | [apps/web/scripts/unit-conversion-probe.ts](file://apps/web/scripts/unit-conversion-probe.ts#L18-L24) | `18` | `24` |
 | `assert` | `function` | [apps/web/scripts/wbs-flow-probe.ts](file://apps/web/scripts/wbs-flow-probe.ts#L14-L17) | `14` | `17` |
 | `assert` | `function` | [apps/web/scripts/wo-probe.ts](file://apps/web/scripts/wo-probe.ts#L21-L24) | `21` | `24` |
+| `Guard` | `function` | [apps/web/src/main.tsx](file://apps/web/src/main.tsx#L89-L96) | `89` | `96` |
 | `CreatedRow` | `interface` | [services/api/scripts/drydock-booking-probe.ts](file://services/api/scripts/drydock-booking-probe.ts#L6-L6) | `6` | `6` |
 | `runWithEnv` | `function` | [services/api/scripts/env-probe.ts](file://services/api/scripts/env-probe.ts#L6-L18) | `6` | `18` |
 | `mulberry32` | `function` | [services/api/scripts/gen-seed-data.ts](file://services/api/scripts/gen-seed-data.ts#L14-L22) | `14` | `22` |
@@ -10273,10 +10016,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `DeepLinkParams` | `interface` | [apps/web/src/components/useDeepLink.ts](file://apps/web/src/components/useDeepLink.ts#L28-L34) | `28` | `34` |
 | `PdfDocState` | `interface` | [apps/web/src/components/usePdfDoc.ts](file://apps/web/src/components/usePdfDoc.ts#L19-L30) | `19` | `30` |
 | `CoaExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L7-L7) | `7` | `7` |
-| `ApExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L212-L212) | `212` | `212` |
-| `ArExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L269-L269) | `269` | `269` |
-| `KasBankExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L338-L338) | `338` | `338` |
-| `LaporanSnapshot` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L375-L377) | `375` | `377` |
+| `ApExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L213-L213) | `213` | `213` |
+| `ArExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L270-L270) | `270` | `270` |
+| `KasBankExcel` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L339-L339) | `339` | `339` |
+| `LaporanSnapshot` | `interface` | [apps/web/src/data/financeExcel.ts](file://apps/web/src/data/financeExcel.ts#L376-L378) | `376` | `378` |
 | `DesignStage` | `interface` | [apps/web/src/data/index.ts](file://apps/web/src/data/index.ts#L13-L19) | `13` | `19` |
 | `Project` | `interface` | [apps/web/src/data/index.ts](file://apps/web/src/data/index.ts#L21-L36) | `21` | `36` |
 | `InventoryItem` | `interface` | [apps/web/src/data/index.ts](file://apps/web/src/data/index.ts#L443-L460) | `443` | `460` |
@@ -10317,6 +10060,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `DemoStep` | `interface` | [apps/web/src/i18n/n_demo.ts](file://apps/web/src/i18n/n_demo.ts#L5-L9) | `5` | `9` |
 | `DemoScenario` | `interface` | [apps/web/src/i18n/n_demo.ts](file://apps/web/src/i18n/n_demo.ts#L11-L17) | `11` | `17` |
 | `Dict` | `interface` | [apps/web/src/i18n/types.ts](file://apps/web/src/i18n/types.ts#L6-L15) | `6` | `15` |
+| `Geo` | `interface` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L44-L48) | `44` | `48` |
 | `Scenario` | `interface` | [apps/web/src/pages/Analytics.tsx](file://apps/web/src/pages/Analytics.tsx#L104-L104) | `104` | `104` |
 | `loadAttentionCategory` | `function` | [apps/web/src/pages/Dashboard.tsx](file://apps/web/src/pages/Dashboard.tsx#L104-L112) | `104` | `112` |
 | `BranchTarget` | `interface` | [apps/web/src/pages/Dashboard.tsx](file://apps/web/src/pages/Dashboard.tsx#L217-L217) | `217` | `217` |
@@ -10334,7 +10078,6 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `Snapshot` | `interface` | [apps/web/src/services/repositories.ts](file://apps/web/src/services/repositories.ts#L52-L55) | `52` | `55` |
 | `BackendRow` | `interface` | [apps/web/src/services/repositories.ts](file://apps/web/src/services/repositories.ts#L59-L64) | `59` | `64` |
 | `BackendPage` | `interface` | [apps/web/src/services/repositories.ts](file://apps/web/src/services/repositories.ts#L110-L117) | `110` | `117` |
-| `Geo` | `interface` | [apps/web/src/security/watermark.tsx](file://apps/web/src/security/watermark.tsx#L44-L48) | `44` | `48` |
 | `Alert` | `interface` | [apps/web/src/utils/alerts.ts](file://apps/web/src/utils/alerts.ts#L7-L12) | `7` | `12` |
 | `AuditDeleteRow` | `interface` | [apps/web/src/utils/audit.ts](file://apps/web/src/utils/audit.ts#L16-L22) | `16` | `22` |
 | `isLevel` | `function` | [apps/web/src/utils/bannerDismiss.ts](file://apps/web/src/utils/bannerDismiss.ts#L28-L29) | `28` | `29` |
@@ -10351,7 +10094,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `BookingDateEdits` | `interface` | [apps/web/src/utils/drydockBookingDates.ts](file://apps/web/src/utils/drydockBookingDates.ts#L45-L48) | `45` | `48` |
 | `EmployeeOptionExtra` | `interface` | [apps/web/src/utils/employeeOptions.ts](file://apps/web/src/utils/employeeOptions.ts#L30-L33) | `30` | `33` |
 | `EquipmentNotificationTarget` | `interface` | [apps/web/src/utils/equipmentNotifications.ts](file://apps/web/src/utils/equipmentNotifications.ts#L1-L4) | `1` | `4` |
-| `ExcelSheet` | `interface` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L56-L61) | `56` | `61` |
+| `ExcelSheet` | `interface` | [apps/web/src/utils/export.ts](file://apps/web/src/utils/export.ts#L80-L85) | `80` | `85` |
 | `WarnTone` | `interface` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L31-L39) | `31` | `39` |
 | `CategoryRule` | `interface` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L52-L59) | `52` | `59` |
 | `CategoryWarningSummary` | `interface` | [apps/web/src/utils/inventoryWarn.ts](file://apps/web/src/utils/inventoryWarn.ts#L191-L202) | `191` | `202` |
@@ -10384,7 +10127,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `RiskAutoResult` | `interface` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L35-L40) | `35` | `40` |
 | `WbsTaskLike` | `interface` | [apps/web/src/utils/riskAuto.ts](file://apps/web/src/utils/riskAuto.ts#L100-L106) | `100` | `106` |
 | `SbInvoiceInput` | `interface` | [apps/web/src/utils/sb.ts](file://apps/web/src/utils/sb.ts#L23-L31) | `23` | `31` |
-| `SbInvoiceMath` | `interface` | [apps/web/src/utils/sb.ts](file://apps/web/src/utils/sb.ts#L33-L43) | `33` | `43` |
+| `SbInvoiceMath` | `interface` | [apps/web/src/utils/sb.ts](file://apps/web/src/utils/sb.ts#L33-L45) | `33` | `45` |
 | `ScopeItem` | `interface` | [apps/web/src/utils/scope.ts](file://apps/web/src/utils/scope.ts#L3-L7) | `3` | `7` |
 | `ScItem` | `interface` | [apps/web/src/utils/scoring.ts](file://apps/web/src/utils/scoring.ts#L3-L3) | `3` | `3` |
 | `ScTemplate` | `interface` | [apps/web/src/utils/scoring.ts](file://apps/web/src/utils/scoring.ts#L4-L4) | `4` | `4` |
@@ -10478,10 +10221,10 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `NodeGlobalScope` | `interface` | [apps/web/src/components/__tests__/toastAlert.test.ts](file://apps/web/src/components/__tests__/toastAlert.test.ts#L7-L10) | `7` | `10` |
 | `constructor` | `method` | [apps/web/src/components/__tests__/toastAlert.test.ts](file://apps/web/src/components/__tests__/toastAlert.test.ts#L19-L22) | `19` | `22` |
 | `ToastEventDetail` | `interface` | [apps/web/src/components/__tests__/toastAlert.test.ts](file://apps/web/src/components/__tests__/toastAlert.test.ts#L26-L33) | `26` | `33` |
-| `CatatRow` | `interface` | [apps/web/src/pages/absensi/Absensi.tsx](file://apps/web/src/pages/absensi/Absensi.tsx#L51-L56) | `51` | `56` |
-| `Punch` | `interface` | [apps/web/src/pages/absensi/DeviceImport.tsx](file://apps/web/src/pages/absensi/DeviceImport.tsx#L12-L12) | `12` | `12` |
 | `ServerAuditRow` | `interface` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L51-L58) | `51` | `58` |
 | `StoreItemLike` | `interface` | [apps/web/src/pages/audit/Audit.tsx](file://apps/web/src/pages/audit/Audit.tsx#L60-L69) | `60` | `69` |
+| `CatatRow` | `interface` | [apps/web/src/pages/absensi/Absensi.tsx](file://apps/web/src/pages/absensi/Absensi.tsx#L51-L56) | `51` | `56` |
+| `Punch` | `interface` | [apps/web/src/pages/absensi/DeviceImport.tsx](file://apps/web/src/pages/absensi/DeviceImport.tsx#L12-L12) | `12` | `12` |
 | `QLine` | `interface` | [apps/web/src/pages/crm/QuotationDetail.tsx](file://apps/web/src/pages/crm/QuotationDetail.tsx#L27-L31) | `27` | `31` |
 | `BoqPrintItem` | `interface` | [apps/web/src/pages/dokumen/BoqDetailModal.tsx](file://apps/web/src/pages/dokumen/BoqDetailModal.tsx#L19-L28) | `19` | `28` |
 | `BoqDetailModalProps` | `interface` | [apps/web/src/pages/dokumen/BoqDetailModal.tsx](file://apps/web/src/pages/dokumen/BoqDetailModal.tsx#L30-L39) | `30` | `39` |
@@ -10498,7 +10241,7 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `ComplianceRow` | `interface` | [apps/web/src/pages/kapal/Vessels.tsx](file://apps/web/src/pages/kapal/Vessels.tsx#L43-L47) | `43` | `47` |
 | `HistFilter` | `interface` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L90-L90) | `90` | `90` |
 | `InvLine` | `interface` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L327-L335) | `327` | `335` |
-| `allowSum` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L356-L360) | `356` | `360` |
+| `allowSum` | `function` | [apps/web/src/pages/keuangan/Finance.tsx](file://apps/web/src/pages/keuangan/Finance.tsx#L358-L362) | `358` | `362` |
 | `EmptyModul` | `function` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L29-L36) | `29` | `36` |
 | `ReportTpl` | `interface` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L76-L76) | `76` | `76` |
 | `ReportArc` | `interface` | [apps/web/src/pages/laporan/Laporan.tsx](file://apps/web/src/pages/laporan/Laporan.tsx#L77-L77) | `77` | `77` |
@@ -10581,9 +10324,9 @@ Daftar lengkap seluruh simbol yang dikutip dalam dokumen ini beserta koordinat p
 | `TandaTerimaInput` | `interface` | [services/api/src/pdf/documents/tandaTerima.ts](file://services/api/src/pdf/documents/tandaTerima.ts#L10-L22) | `10` | `22` |
 | `TransmittalInput` | `interface` | [services/api/src/pdf/documents/transmittal.ts](file://services/api/src/pdf/documents/transmittal.ts#L10-L20) | `10` | `20` |
 | `VoucherInput` | `interface` | [services/api/src/pdf/documents/voucher.ts](file://services/api/src/pdf/documents/voucher.ts#L9-L17) | `9` | `17` |
+| `MaterialFormValues` | `interface` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L18-L34) | `18` | `34` |
+| `Props` | `interface` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L36-L50) | `36` | `50` |
 | `CoaTreeNode` | `interface` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L9-L21) | `9` | `21` |
 | `CoaTabProps` | `interface` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L23-L28) | `23` | `28` |
 | `TreeNodeRowProps` | `interface` | [apps/web/src/pages/keuangan/tabs/CoaTab.tsx](file://apps/web/src/pages/keuangan/tabs/CoaTab.tsx#L346-L354) | `346` | `354` |
-| `MaterialFormValues` | `interface` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L18-L34) | `18` | `34` |
-| `Props` | `interface` | [apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx](file://apps/web/src/pages/inventori/tabs/CatalogMaterialForm.tsx#L36-L50) | `36` | `50` |
 | `resolveBranch` | `function` | [apps/web/src/pages/qc/__tests__/QCChecklist.test.ts](file://apps/web/src/pages/qc/__tests__/QCChecklist.test.ts#L6-L9) | `6` | `9` |
