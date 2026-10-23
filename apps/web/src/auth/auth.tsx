@@ -52,6 +52,17 @@ export function hasPermission(
 
 const SESSION_KEY = "isms.session";
 
+/** Akses modul dari server (moduleAccess.ts): modul terlarang + tab Keuangan. */
+export interface ModuleAccess {
+  deny: string[];
+  finTabs: string[] | null;
+}
+
+/** Boleh membuka modul (kunci = segmen path menu, mis. "proyek", "laporan")? */
+export function canOpenModule(user: { modules?: ModuleAccess } | null | undefined, key: string): boolean {
+  return !user?.modules || !user.modules.deny.includes(key);
+}
+
 export interface Session {
   id?: string;
   name: string;
@@ -64,6 +75,8 @@ export interface Session {
   branch?: string;
   /** Peta izin koleksi dari /api/auth/me */
   permissions?: PermissionsMap;
+  /** Akses modul/menu per role (#289/#287) dari server; undefined = semua. */
+  modules?: ModuleAccess;
   /** Karyawan yang tertaut ke akun (keanggotaan tim proyek, F3-E-02). */
   employeeId?: string | null;
 }
@@ -118,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sessionAtStart = loadSession();
     if (!isBackendConfigured() || !tokenAtStart || !sessionAtStart) return;
     let active = true;
-    void apiFetch<{ user?: BackendLoginUser; permissions?: PermissionsMap }>("/api/auth/me")
+    void apiFetch<{ user?: BackendLoginUser; permissions?: PermissionsMap; modules?: ModuleAccess }>("/api/auth/me")
       .then(async (res) => {
         if (!active || getJwt() !== tokenAtStart || !res.permissions) return;
         const currentSession = loadSession();
@@ -145,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // null dari server = tautan karyawan dicabut → kosongkan; undefined = tak dikirim.
             employeeId: res.user?.employeeId !== undefined ? res.user.employeeId : prev.employeeId ?? null,
             permissions: res.permissions,
+            modules: res.modules ?? prev.modules,
           };
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
           return updated;
@@ -160,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const uname = username.trim();
     if (isBackendConfigured()) {
       try {
-        const res = await apiFetch<{ token: string; permissions?: PermissionsMap; user: BackendLoginUser }>(`/api/auth/login`, {
+        const res = await apiFetch<{ token: string; permissions?: PermissionsMap; modules?: ModuleAccess; user: BackendLoginUser }>(`/api/auth/login`, {
           method: "POST",
           body: JSON.stringify({ username: uname, password }),
         });
@@ -180,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           branch,
           employeeId: bu.employeeId ?? null,
           permissions: res.permissions,
+          modules: res.modules,
         };
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         setBranch(branch);

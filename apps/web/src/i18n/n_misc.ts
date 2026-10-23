@@ -1,5 +1,7 @@
 export const n_misc = {
   id: {
+    noModuleAccess: "Anda tidak punya akses ke modul ini",
+    noModuleAccessHint: "Hak akses diatur per peran. Hubungi developer/administrator bila perlu akses.",
     fieldRequired: "{n} wajib diisi",
     formInvalid: "Lengkapi isian yang ditandai merah",
     rangeFrom: "Dari bulan",
@@ -517,6 +519,8 @@ export const n_misc = {
     cardSearchPh: "Cari di daftar ini...",
   },
   en: {
+    noModuleAccess: "You do not have access to this module",
+    noModuleAccessHint: "Access is set per role. Contact the developer/administrator if you need access.",
     fieldRequired: "{n} is required",
     formInvalid: "Complete the fields marked in red",
     rangeFrom: "From month",

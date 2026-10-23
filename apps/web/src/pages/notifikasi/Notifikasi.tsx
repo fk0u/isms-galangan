@@ -1,3 +1,5 @@
+import { useAuth } from "../../auth/auth";
+import { canSeePath, canSeeActivity } from "../../utils/moduleKey";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Bell, Check, CheckCheck, Download, Info } from "lucide-react";
@@ -112,7 +114,9 @@ export default function Notifikasi() {
   const [read, setRead] = useState<Set<string>>(() => loadNotifRead());
   const [params] = useSearchParams();
 
-  const alerts = useMemo(() => computeAlerts(data), [data]);
+  // #288: hanya notifikasi & aktivitas modul yang boleh dibuka role ini.
+  const { user } = useAuth();
+  const alerts = useMemo(() => computeAlerts(data).filter((al) => canSeePath(user, al.to)), [data, user]);
 
   const items: NotifItem[] = useMemo(() => {
     const fromAlerts: NotifItem[] = alerts.map((al) => ({
@@ -127,7 +131,7 @@ export default function Notifikasi() {
       minAgo: 0,
       to: al.to,
     }));
-    const fromActs: NotifItem[] = (data.activities ?? []).slice(0, 30).map((x) => ({
+    const fromActs: NotifItem[] = (data.activities ?? []).filter((x) => canSeeActivity(user, x.module)).slice(0, 30).map((x) => ({
       id: `act-${String(x.id)}`,
       kind: "info",
       tone: normTone(x.tone),
@@ -140,7 +144,7 @@ export default function Notifikasi() {
       to: MODULE_LINK[String(x.module ?? "")] ?? "/dashboard",
     }));
     return [...fromAlerts, ...fromActs];
-  }, [alerts, data.activities]);
+  }, [alerts, data.activities, user]);
 
   const modules = useMemo(
     () => ["Semua", ...Array.from(new Set(items.map((i) => i.module))).sort()],

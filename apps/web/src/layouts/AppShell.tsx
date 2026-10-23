@@ -35,7 +35,8 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
-import { useAuth, hasPermission } from "../auth/auth";
+import { useAuth, hasPermission, canOpenModule } from "../auth/auth";
+import { moduleKeyOf, canSeePath, canSeeActivity } from "../utils/moduleKey";
 import { useStore } from "../data/store";
 import DemoGuide from "../components/DemoGuide";
 import { Badge, Modal, Field, Toaster, toast } from "../components/ui";
@@ -172,12 +173,14 @@ export default function AppShell() {
   const [q, setQ] = useState("");
 
   const scopedAlertData = useMemo(() => scopeAlertStoreData(data, branch), [data, branch]);
-  const alerts = useMemo(() => computeAlerts(scopedAlertData), [scopedAlertData]);
+  // #288: notifikasi hanya untuk modul yang boleh dibuka role ini.
+  const alerts = useMemo(() => computeAlerts(scopedAlertData).filter((al) => canSeePath(user, al.to)), [scopedAlertData, user]);
+  const visibleActs = useMemo(() => (data.activities ?? []).filter((a) => canSeeActivity(user, a.module)), [data.activities, user]);
 
   /* Badge bell = item belum dibaca beneran (alert + 30 aktivitas terakhir - yang sudah dibaca). */
   const notifIds = useMemo(
-    () => [...alerts.map((al) => `alert-${al.id}`), ...(data.activities ?? []).slice(0, 30).map((a) => `act-${String(a.id)}`)],
-    [alerts, data.activities]
+    () => [...alerts.map((al) => `alert-${al.id}`), ...visibleActs.slice(0, 30).map((a) => `act-${String(a.id)}`)],
+    [alerts, visibleActs]
   );
   const [readTick, setReadTick] = useState(0);
   const unreadCount = useMemo(() => {
@@ -208,7 +211,7 @@ export default function AppShell() {
     const seen = loadModSeen();
     const all = buildModuleAlertItems(scopedAlertData);
     const out = {} as Record<ModuleAlertKey, number>;
-    (Object.keys(all) as ModuleAlertKey[]).forEach((k) => {
+    (Object.keys(all) as ModuleAlertKey[]).filter((k) => canOpenModule(user, k)).forEach((k) => {
       const s = new Set(seen[k] ?? []);
       /* Badge = KRITIS + PERHATIAN saja. `info` selalu tampil di banner,
          jadi menghitungnya di sini hanya menambah angka yang tidak bisa
@@ -287,12 +290,14 @@ export default function AppShell() {
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
+          // #289: modul yang tidak diizinkan untuk role ini tidak tampil.
+          if (!canOpenModule(user, moduleKeyOf(item.to))) return false;
           if (!item.col || !user?.permissions) return true;
           return hasPermission(user.permissions, item.col, "r");
         }),
       }))
       .filter((group) => group.items.length > 0);
-  }, [navGroups, user?.permissions]);
+  }, [navGroups, user]);
 
   const doLogout = () => {
     const ok = logout();
@@ -720,7 +725,7 @@ export default function AppShell() {
                     <p className="border-b border-steel-100 px-4 py-2 text-xs font-medium text-steel-400">
                       {t.notif.activities}
                     </p>
-                    {data.activities.slice(0, 5).map((a) => (
+                    {visibleActs.slice(0, 5).map((a) => (
                       <Link
                         key={a.id}
                         to="/notifikasi"
@@ -835,7 +840,13 @@ export default function AppShell() {
         )}
 
         <main className="p-4 lg:p-6">
-          <Outlet />
+          {canOpenModule(user, moduleKeyOf(location.pathname)) ? <Outlet /> : (
+            <div className="mx-auto mt-16 max-w-md rounded-2xl border border-steel-200 bg-white p-6 text-center">
+              <ShieldCheck className="mx-auto h-8 w-8 text-steel-400" />
+              <p className="mt-3 text-base font-semibold text-navy-900">{S.noModuleAccess}</p>
+              <p className="mt-1 text-sm text-steel-500">{S.noModuleAccessHint}</p>
+            </div>
+          )}
           {/* Panduan demo presentasi (Shift + D). Matikan dengan VITE_DEMO_GUIDE=false. */}
           {import.meta.env.VITE_DEMO_GUIDE !== "false" && <DemoGuide />}
         </main>

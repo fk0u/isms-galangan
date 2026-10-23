@@ -18,6 +18,7 @@ import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, t
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
+import { hiddenDocTypes } from "../moduleAccess.js";
 import { cacheGeneration, cacheGet, cachePut } from "../listCache.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
@@ -366,6 +367,12 @@ async function rowVisibleToUser(table: string, row: Row, user: Parameters<typeof
     const scope = await scopedProjectIds(user);
     if (scope !== null && !scope.has(String(row.id))) return false;
   }
+  if (table === "documents") {
+    // #288: dokumen hanya untuk role terkait jenisnya.
+    let type = "";
+    try { type = String((JSON.parse(row.data) as { type?: unknown }).type ?? ""); } catch { /* data rusak: biarkan */ }
+    if ((await hiddenDocTypes((user as { role?: string } | undefined)?.role)).includes(type)) return false;
+  }
   return true;
 }
 
@@ -419,7 +426,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
        lingkup tim/cabang, sehingga pengguna berbeda scope tidak berbagi respons. */
     const scopeForKey = table === "projects" ? await scopedProjectIds(req.user) : null;
     const branchForKey = branchScoped ? ownBranch : "*";
-    const cacheKey = `${table}|${req.url}|branch:${branchForKey}|${scopeForKey === null ? "*" : [...scopeForKey].sort().join(",")}`;
+    const hiddenDocs = table === "documents" ? await hiddenDocTypes(req.user?.role) : [];
+    const cacheKey = `${table}|${req.url}|branch:${branchForKey}|${scopeForKey === null ? "*" : [...scopeForKey].sort().join(",")}|doc:${hiddenDocs.join(",")}`;
     const sendCached = (e: { etag: string; json: string }) => {
       reply.header("ETag", e.etag).header("Cache-Control", "private, no-cache");
       if (req.headers["if-none-match"] === e.etag) return reply.status(304).send();
@@ -442,6 +450,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (query.q !== undefined && query.q !== "") {
       where.push(searchContainsPredicate(getDialect()));
       params.push(query.q);
+    }
+    // #288: jenis dokumen yang tidak terkait role ini disaring di query.
+    if (hiddenDocs.length > 0) {
+      // COALESCE: dokumen tanpa jenis tetap tampil (NOT (NULL = ?) bernilai NULL → baris hilang).
+      const typeExpr = getDialect() === "mysql" ? "JSON_UNQUOTE(JSON_EXTRACT(data, '$.type'))" : "json_extract(data, '$.type')";
+      where.push(`COALESCE(${typeExpr}, '') NOT IN (${hiddenDocs.map(() => "?").join(", ")})`);
+      params.push(...hiddenDocs);
     }
     /* Filter kesetaraan per field: `?where.projectId=PRJ-001&where.status=Draft`
        (REST API, revisi 18 Okt). Nama field divalidasi ketat sebelum masuk path JSON. */
@@ -563,6 +578,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
     const ruleCreate = transferError(table, rowData) ?? projectFeeError(table, null, rowData) ?? await projectManagerError(table, null, rowData) ?? await bomItemError(table, null, rowData);
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
+    if (table === "settings" && userRole === "pajak") return reply.status(403).send(fail("Role Pajak hanya boleh mengubah setting nilai pajak", "FORBIDDEN"));
     const loanCreate = await loanOverlapError(table, null, rowData);
     if (loanCreate) return reply.status(409).send(fail(loanCreate, "CONFLICT"));
     const limitCreate = await dockLimitError(table, null, null, rowData);
@@ -698,6 +714,10 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       ?? await projectManagerError(table, oldData, merged as Record<string, unknown>)
       ?? await bomItemError(table, id, merged as Record<string, unknown>);
     if (rulePatch) return reply.status(422).send(fail(rulePatch, "UNPROCESSABLE"));
+    // #289: role Pajak hanya boleh mengubah setting bergrup "Pajak" (tarif PPN/PPh).
+    if (table === "settings" && normalizeRole(req.user?.role) === "pajak" && String(oldData.group ?? "") !== "Pajak") {
+      return reply.status(403).send(fail("Role Pajak hanya boleh mengubah setting nilai pajak", "FORBIDDEN"));
+    }
     const limitPatch = await dockLimitError(table, id, oldData, merged as Record<string, unknown>);
     if (limitPatch) return reply.status(limitPatch.status).send(fail(limitPatch.message, limitPatch.status === 409 ? "CONFLICT" : "UNPROCESSABLE"));
     const loanPatch = await loanOverlapError(table, id, merged);

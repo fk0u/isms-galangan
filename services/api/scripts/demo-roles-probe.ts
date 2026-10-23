@@ -44,7 +44,7 @@ async function main(): Promise<void> {
 
     const list = await app.inject({ method: "GET", url: "/api/auth/demo-switch", headers: { authorization: `Bearer ${dir}` } });
     const roles = (list.json().data as { roles: { role: string }[] }).roles.map((r) => r.role);
-    assert("semua 14 peran tersedia untuk direktur", roles.length === 14 && new Set(roles).size === 14, JSON.stringify(roles));
+    assert("semua 16 peran tersedia untuk direktur", roles.length === 16 && new Set(roles).size === 16, JSON.stringify(roles));
 
     // Setiap peran: pindah lewat demo-switch, baca modul sendiri 200, modul terlarang 403.
     for (const account of SEED_ACCOUNTS) {

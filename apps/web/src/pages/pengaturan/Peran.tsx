@@ -9,6 +9,9 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_roles } from "../../i18n/n_roles";
 import { apiFetch, isBackendConfigured } from "../../services/http";
 import { exportExcel } from "../../utils/export";
+import ModuleAccessCard from "./ModuleAccessCard";
+
+const isDeveloper = (r: unknown): boolean => String(r ?? "").toLowerCase() === "developer";
 
 const ACTIONS = ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"] as const;
 type RoleAction = (typeof ACTIONS)[number];
@@ -49,6 +52,8 @@ export const ROLES = [
   "subkon",
   "equipment",
   "drydock",
+  "commercial",
+  "pajak",
   "viewer",
 ] as const;
 
@@ -66,6 +71,8 @@ export const ROLE_LABELS: Record<string, string> = {
   subkon: "Subkontraktor",
   equipment: "Equipment & Alat",
   drydock: "Drydock & Slot",
+  commercial: "Commercial",
+  pajak: "Pajak",
   viewer: "Client / Viewer",
 };
 
@@ -208,6 +215,23 @@ const ROLE_MATRIX: Record<string, Record<string, RoleAction[]>> = {
     Kapal: ["Lihat", "Buat", "Ubah", "Ekspor"],
     Proyek: ["Lihat"],
     Dokumen: ["Lihat"],
+    Notifikasi: ["Lihat"],
+  },
+  commercial: {
+    CRM: ["Lihat", "Buat", "Ubah", "Hapus", "Ekspor"],
+    Keuangan: ["Lihat", "Buat", "Ubah", "Ekspor"],
+    Proyek: ["Lihat"],
+    Kapal: ["Lihat"],
+    Dokumen: ["Lihat", "Buat"],
+    Notifikasi: ["Lihat"],
+  },
+  pajak: {
+    Keuangan: ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"],
+    Procurement: ["Lihat"],
+    CRM: ["Lihat"],
+    Proyek: ["Lihat"],
+    Pengaturan: ["Lihat", "Ubah"],
+    Dokumen: ["Lihat", "Buat", "Ubah"],
     Notifikasi: ["Lihat"],
   },
   viewer: {
@@ -775,6 +799,8 @@ export default function Peran() {
           );
         })()}
       </Modal>
+
+      {isDeveloper(session?.role) && remote && <ModuleAccessCard />}
 
       <Card className="mb-4 p-4">
         <div className="max-w-sm">
