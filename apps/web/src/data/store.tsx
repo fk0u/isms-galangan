@@ -226,7 +226,8 @@ const seedSettings: StoreItem[] = [
   { id: "SET-PTKPT", key: "PTKP_TANGGUNGAN", value: 4500000, label: "PTKP per tanggungan (Rp/thn, maks 3)", group: "Payroll" },
   { id: "SET-BPJSK", key: "BPJS_KES_KAR", value: 1, label: "BPJS Kes karyawan (%)", group: "Payroll" },
   { id: "SET-BPJSP", key: "BPJS_KES_PER", value: 4, label: "BPJS Kes perusahaan (%)", group: "Payroll" },
-  { id: "SET-BPJSTK", key: "BPJS_TK_KAR", value: 2, label: "BPJS TK karyawan JHT (%)", group: "Payroll" },
+  { id: "SET-BPJSTK", key: "BPJS_TK_KAR", value: 3, label: "BPJS TK karyawan (%)", group: "Payroll" },
+  { id: "SET-BPJSTKP", key: "BPJS_TK_PER", value: 6.24, label: "BPJS TK perusahaan (%)", group: "Payroll" },
   { id: "SET-OT", key: "OVERTIME_DIV", value: 173, label: "Pembagi tarif lembur", group: "Payroll" },
   { id: "SET-POKECIL", key: "PO_KECIL_LIMIT", value: 50000000, label: "Batas PO Kecil (Rp)", group: "Procurement" },
   /* Kapasitas per gudang. Tanpa baris ini tabel "Gudang & Kapasitas" di

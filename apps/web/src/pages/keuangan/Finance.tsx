@@ -48,6 +48,7 @@ import {
 import type { SortState } from "../../components/ui";
 import { useBusy } from "../../components/ui";
 import { n_fin } from "../../i18n/n_fin";
+import PayrollTab from "./tabs/PayrollTab";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
 import type { StoreItem, WbsItem } from "../../data/store";
@@ -861,7 +862,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* #289: tab Keuangan yang boleh dibuka role ini (Commercial: Invoice saja). */
   const { user: finUser } = useAuth();
   const finTabs = useMemo(() => {
-    const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak"];
+    const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll"];
     const allow = finUser?.modules?.finTabs;
     return allow ? all.filter((t) => allow.includes(t)) : all;
   }, [finUser?.modules?.finTabs]);
@@ -4505,6 +4506,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             );
           })() : null}
 
+          {tab === "Payroll" && <PayrollTab />}
           {tab === "Pajak" && (
             <div className="space-y-4">
               <CardHeader

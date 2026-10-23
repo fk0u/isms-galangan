@@ -626,17 +626,21 @@ async function main(): Promise<void> {
       url: "/api/journals?limit=1",
       headers: { authorization: `Bearer ${finToken}` },
     });
-    const finPayroll = await app.inject({
-      method: "GET",
-      url: "/api/payroll?limit=1",
-      headers: { authorization: `Bearer ${finToken}` },
+    /* Q29 (notulen 23 Okt) menggantikan Q2 untuk payroll: Keuangan membayar
+       gaji sehingga boleh membaca & mencatat pembayaran, tetapi tidak boleh
+       membuat/menghapus slip (komponen gaji tetap wewenang HR). */
+    const finPayrollCreate = await app.inject({
+      method: "POST",
+      url: "/api/payroll",
+      headers: { authorization: `Bearer ${finToken}`, "content-type": "application/json" },
+      payload: { data: { employeeId: "EMP-001", period: "2026-10", type: "Gaji", net: 1, status: "Dibayar" } },
     });
     record(
       "Q2-Finance",
-      "Finance boleh baca jurnal (200), tolak payroll (403)",
+      "Finance boleh baca jurnal (200), tolak membuat payroll (403)",
       "200 & 403",
-      `journals=${finJournals.statusCode}, payroll=${finPayroll.statusCode}`,
-      finJournals.statusCode !== 200 || finPayroll.statusCode !== 403,
+      `journals=${finJournals.statusCode}, payroll POST=${finPayrollCreate.statusCode}`,
+      finJournals.statusCode !== 200 || finPayrollCreate.statusCode !== 403,
     );
 
     const hrUname = `hr.${crypto.randomUUID().slice(0, 6)}`;

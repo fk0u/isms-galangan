@@ -35,10 +35,13 @@ import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { findUsages } from "../../utils/usages";
-import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
+import { PayrollPayModal, canPayPayroll } from "../../components/PayrollPayModal";
+import { useAuth } from "../../auth/auth";
+import { exportBpjsCompanyReport, exportPphReport } from "../../utils/payrollReports";
+import { grossUp } from "../../utils/grossUp";
 import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
-import { applyKasbonPotongan, KASBON_CICILAN_OPTIONS, normKasbonList, type KasbonEntry } from "../../utils/kasbon";
+import { KASBON_CICILAN_OPTIONS, normKasbonList, type KasbonEntry } from "../../utils/kasbon";
 
 const NEXT_STATUS: Record<string, string> = {
   Draft: "Dihitung",
@@ -121,6 +124,7 @@ export interface PayrollRates {
   ptkpK0: number;
   ptkpTang: number;
   bpjsKesPer: number;
+  bpjsTkPer: number;
 }
 
 function normAllowances(v: unknown): AllowanceLine[] {
@@ -249,6 +253,9 @@ export default function Payroll() {
   const { locale } = useT();
   const S = n_dry[locale];
   const advLabel: Record<string, string> = { Draft: S.advCalc, Dihitung: S.advApprove, Disetujui: S.advPay };
+  const { user } = useAuth();
+  // #281: HR menghitung & menyetujui, pembayaran hanya oleh Keuangan.
+  const canPay = canPayPayroll(user?.role);
   const modAlert = useModuleAlert("payroll");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -280,7 +287,6 @@ export default function Payroll() {
   const [editForm, setEditForm] = useState({ basic: "", overtimePay: "", deductions: "" });
   const [editLines, setEditLines] = useState<AllowanceLine[]>([]);
   const [payTarget, setPayTarget] = useState<StoreItem | null>(null);
-  const [proof, setProof] = useState({ date: todayISO(), method: "Transfer", ref: "" });
   const [confirmAdv, setConfirmAdv] = useState<StoreItem | null>(null);
   const [revertTarget, setRevertTarget] = useState<StoreItem | null>(null);
   const [gajiStage, setGajiStage] = useState<string>("Semua");
@@ -350,7 +356,7 @@ export default function Payroll() {
     pphRate: getSetting(data, "PPH21_T1_RATE", 5),
     ptkpMonthly: getSetting(data, "PTKP_TK0", 54000000) / 12,
     bpjsKes: getSetting(data, "BPJS_KES_KAR", 1),
-    bpjsTk: getSetting(data, "BPJS_TK_KAR", 2),
+    bpjsTk: getSetting(data, "BPJS_TK_KAR", 3),
     t1Rate: getSetting(data, "PPH21_T1_RATE", 5),
     t1Max: getSetting(data, "PPH21_T1_MAX", 60000000),
     t2Rate: getSetting(data, "PPH21_T2_RATE", 15),
@@ -362,6 +368,8 @@ export default function Payroll() {
     ptkpK0: getSetting(data, "PTKP_K0", 58500000),
     ptkpTang: getSetting(data, "PTKP_TANGGUNGAN", 4500000),
     bpjsKesPer: getSetting(data, "BPJS_KES_PER", 4),
+    // JHT 3,7% + JKK 0,24% + JKM 0,3% + JP 2% (porsi perusahaan, #279).
+    bpjsTkPer: getSetting(data, "BPJS_TK_PER", 6.24),
   };
   const otDivisor = getSetting(data, "OVERTIME_DIV", 173);
 
@@ -391,14 +399,16 @@ export default function Payroll() {
     const bruto = basic + allowTotal + overtimePay;
     const isHarian = String(emp.tipe ?? "") === "Harian";
     const pph21 = isHarian
-      ? calcPphHarian(basic, hadirDays)
-      : calcPphProgressive(bruto, String(emp.ptkpStatus ?? "TK/0"), Number(emp.dependents ?? 0), rates);
+      ? grossUp((t) => calcPphHarian(basic + (hadirDays > 0 ? t / hadirDays : 0), hadirDays))
+      : grossUp((t) => calcPphProgressive(bruto + t, String(emp.ptkpStatus ?? "TK/0"), Number(emp.dependents ?? 0), rates));
     const bpjsKesKar = Math.round(basic * (rates.bpjsKes / 100));
     const bpjsKesPer = Math.round(basic * (rates.bpjsKesPer / 100));
     const bpjsTkKar = Math.round(basic * (rates.bpjsTk / 100));
+    const bpjsTkPer = Math.round(basic * (rates.bpjsTkPer / 100));
     const deductions = manualDed + kasbonPot;
-    const net = bruto - deductions - pph21 - bpjsKesKar - bpjsTkKar;
-    return { allowTotal, bruto, pph21, bpjsKesKar, bpjsKesPer, bpjsTkKar, deductions, net };
+    // PPh ditanggung perusahaan (gross-up) → tidak memotong gaji bersih.
+    const net = bruto - deductions - bpjsKesKar - bpjsTkKar;
+    return { allowTotal, bruto, pph21, bpjsKesKar, bpjsKesPer, bpjsTkKar, bpjsTkPer, deductions, net };
   };
 
   const generate = async () => {
@@ -460,6 +470,8 @@ export default function Payroll() {
             bpjsKesKar: c.bpjsKesKar,
             bpjsKesPer: c.bpjsKesPer,
             bpjsTkKar: c.bpjsTkKar,
+            bpjsTkPer: c.bpjsTkPer,
+            pphGrossUp: true,
             net: c.net,
             status: "Draft",
             paidAt: "",
@@ -482,8 +494,7 @@ export default function Payroll() {
     const next = NEXT_STATUS[String(p.status)];
     if (!next) return;
     if (next === "Dibayar") {
-      setPayTarget(p);
-      setProof({ date: todayISO(), method: "Transfer", ref: "" });
+      if (canPay) setPayTarget(p);
       return;
     }
     setConfirmAdv(p);
@@ -503,6 +514,43 @@ export default function Payroll() {
     setConfirmAdv(null);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
+
+  /* #280: HR memajukan semua slip satu tahap sekaligus (Draft → Dihitung,
+     Dihitung → Disetujui). Pembayaran tetap per slip di Keuangan. */
+  const [bulk, setBulk] = useState<{ from: string; rows: StoreItem[] } | null>(null);
+  const askBulk = (list: StoreItem[], from: string) => {
+    const picked = list.filter((p) => String(p.status) === from);
+    if (picked.length === 0) { toast(S.bulkNone.replace("{a}", from), "info"); return; }
+    setBulk({ from, rows: picked });
+  };
+  const doBulk = async () => {
+    if (!bulk) return;
+    const next = NEXT_STATUS[bulk.from];
+    let done = 0;
+    for (const p of bulk.rows) {
+      try { await update("payroll", p.id, { status: next }); done += 1; }
+      catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+    }
+    log("memproses payroll massal", `${period} · ${done} slip ${bulk.from} → ${next}`, "Payroll");
+    toast(S.bulkDone.replace("{n}", String(done)).replace("{a}", next));
+    setBulk(null);
+  };
+  const bulkButtons = (list: StoreItem[]) => (
+    <>
+      <AsyncButton className="btn-secondary" onAction={async () => askBulk(list, "Draft")}>{S.btnBulkCalc}</AsyncButton>
+      <AsyncButton className="btn-secondary" onAction={async () => askBulk(list, "Dihitung")}>{S.btnBulkApprove}</AsyncButton>
+    </>
+  );
+  const reportButtons = (
+    <>
+      <button className="btn-secondary" onClick={() => { void exportPphReport(rows, empNameOf, period); toast(S.reportDone); }}>
+        <Download className="h-4 w-4" /> {S.btnPphReport}
+      </button>
+      <button className="btn-secondary" onClick={() => { void exportBpjsCompanyReport(rows, empNameOf, period); toast(S.reportDone); }}>
+        <Download className="h-4 w-4" /> {S.btnBpjsReport}
+      </button>
+    </>
+  );
 
   const doRevert = async () => {
     if (!revertTarget) return;
@@ -557,68 +605,13 @@ export default function Payroll() {
       bpjsKesKar: c.bpjsKesKar,
       bpjsKesPer: c.bpjsKesPer,
       bpjsTkKar: c.bpjsTkKar,
+      bpjsTkPer: c.bpjsTkPer,
+      pphGrossUp: true,
       net: c.net,
     });
     toast(S.tUpdated.replace("{a}", String(editTarget.id)).replace("{b}", fmtRupiah(c.net)));
     setEditTarget(null);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
-  };
-
-  const confirmPay = async () => {
-    if (!payTarget) return;
-    if (!proof.date) {
-      toast(S.tDateReq, "info");
-      return;
-    }
-    if (!proof.ref.trim()) {
-      toast(S.tRefReq, "info");
-      return;
-    }
-    const slipId = payTarget.id;
-    try {
-      /* Kasbon dipotong saat Bayar: min(cicilan, sisa) per entri, kurangi sisa
-         karyawan, lalu sesuaikan potongan + net slip ini. */
-      let kasbonPot = Number(payTarget.kasbonPot || 0);
-      let deductions = Number(payTarget.deductions || 0);
-      let net = Number(payTarget.net || 0);
-      const empKas = empOf(String(payTarget.employeeId));
-      const kasbon = empKas ? normKasbon(empKas) : [];
-      if (kasbon.length > 0 && String(payTarget.status ?? "") !== "Dibayar") {
-        // K17-HR-03: potongan per kasbon tercatat di riwayatnya (slip + periode).
-        const { next, pot } = applyKasbonPotongan(kasbon, { id: String(payTarget.id), period: String(payTarget.period ?? period), tanggal: proof.date });
-        if (pot > 0) {
-          await update("employees", String(payTarget.employeeId), { kasbon: next });
-          kasbonPot += pot;
-          deductions += pot;
-          net -= pot;
-        }
-      }
-      await update("payroll", payTarget.id, {
-        status: "Dibayar",
-        paidAt: proof.date,
-        paidMethod: proof.method,
-        paidRef: proof.ref.trim(),
-        kasbonPot,
-        deductions,
-        net,
-      });
-      log("membayar payroll", `${payTarget.id} via ${proof.method} ${proof.ref.trim()}${kasbonPot > 0 ? ` · kasbon ${fmtRupiah(kasbonPot)}` : ""}`, "Payroll");
-      await postCashJournal({
-        add,
-        journals: data.journals ?? [],
-        branch: String(payTarget.branch ?? ""),
-        dokumen: `PAYROLL-${rowType(payTarget)}-${String(payTarget.period ?? period)}-${String(payTarget.employeeId ?? "")}`,
-        date: proof.date,
-        uraian: `Bayar ${rowType(payTarget)} ${payTarget.id} via ${proof.ref.trim()}`,
-        db: "6-002",
-        kr: kasKodeOf(proof.method),
-        amount: Math.max(0, net),
-      });
-      toast(S.tPaid.replace("{a}", String(payTarget.id)));
-      setPayTarget(null);
-    } catch {
-      toast(S.tPayFail.replace("{a}", slipId), "info");
-    }
   };
 
   const removeRow = async (p: StoreItem) => {
@@ -662,7 +655,7 @@ export default function Payroll() {
       const allowAvg = sumAllowances(e.allowances);
       const n = monthsWorked(String(e.join ?? ""), period);
       const thr = Math.round(((basic + allowAvg) * Math.min(n, 12)) / 12);
-      const pphThr = calcPphIrregular(basic + allowAvg, thr, e, rates);
+      const pphThr = grossUp((t) => calcPphIrregular(basic + allowAvg, thr + t, e, rates));
       await add(
         "payroll",
         {
@@ -678,7 +671,8 @@ export default function Payroll() {
           bpjsKesKar: 0,
           bpjsKesPer: 0,
           bpjsTkKar: 0,
-          net: thr - pphThr,
+          pphGrossUp: true,
+          net: thr,
           thrBase: basic + allowAvg,
           masaBulan: Math.min(n, 12),
           status: "Draft",
@@ -705,7 +699,7 @@ export default function Payroll() {
       return;
     }
     const bonusBase = Number(emp.basic || 0) + sumAllowances(emp.allowances);
-    const pphBonus = calcPphIrregular(bonusBase, nominal, emp, rates);
+    const pphBonus = grossUp((t) => calcPphIrregular(bonusBase, nominal + t, emp, rates));
     try {
     await add(
       "payroll",
@@ -722,7 +716,8 @@ export default function Payroll() {
         bpjsKesKar: 0,
         bpjsKesPer: 0,
         bpjsTkKar: 0,
-        net: Math.round(nominal) - pphBonus,
+        pphGrossUp: true,
+        net: Math.round(nominal),
         bonusNote: bonusForm.keterangan.trim() || "Bonus",
         status: "Draft",
         paidAt: "",
@@ -738,7 +733,8 @@ export default function Payroll() {
   const openBonusEdit = (p: StoreItem) => {
     setBonusEdit(p);
     setBonusEditForm({
-      nominal: String(Number(p.net || 0) + Number(p.pph21 || 0)),
+      // Baris lama (sebelum gross-up) menyimpan net = nominal - PPh.
+      nominal: String(Number(p.net || 0) + (p.pphGrossUp ? 0 : Number(p.pph21 || 0))),
       keterangan: String(p.bonusNote ?? ""),
     });
   };
@@ -754,8 +750,8 @@ export default function Payroll() {
         const nominal = parseRupiah(bonusEditForm.nominal);
         if (!Number.isFinite(nominal) || nominal <= 0) { toast(S.tBonusInvalid, "info"); return; }
         const bonusBase = Number(emp.basic || 0) + sumAllowances(emp.allowances);
-        const pphBonus = calcPphIrregular(bonusBase, nominal, emp, rates);
-        await update("payroll", bonusEdit.id, { pph21: pphBonus, net: Math.round(nominal) - pphBonus, bonusNote: note });
+        const pphBonus = grossUp((t) => calcPphIrregular(bonusBase, nominal + t, emp, rates));
+        await update("payroll", bonusEdit.id, { pph21: pphBonus, pphGrossUp: true, net: Math.round(nominal), bonusNote: note });
       } else {
         await update("payroll", bonusEdit.id, { bonusNote: note });
       }
@@ -901,10 +897,10 @@ export default function Payroll() {
       ["Upah lembur", fmtRupiah(Number(p.overtimePay || 0))],
       ["Cicilan kasbon", fmtRupiah(Number(p.kasbonPot || 0))],
       ["Potongan manual", fmtRupiah(Number(p.deductions || 0) - Number(p.kasbonPot || 0))],
-      [isHarian ? "PPh harian (5% × kelebihan 450rb × hari hadir)" : "PPh 21 (progresif disetahunkan)", fmtRupiah(Number(p.pph21 || 0))],
+      // PPh gross-up & BPJS porsi perusahaan tidak tampil di slip (#278, #279); baris lama tetap menampilkan PPh yang memotong gajinya.
+      ...(p.pphGrossUp ? [] : [[isHarian ? "PPh harian (5% × kelebihan 450rb × hari hadir)" : "PPh 21 (progresif disetahunkan)", fmtRupiah(Number(p.pph21 || 0))]]),
       [`BPJS Kesehatan karyawan (${rates.bpjsKes}%)`, fmtRupiah(b.kes)],
-      [`BPJS Ketenagakerjaan - JHT karyawan (${rates.bpjsTk}%)`, fmtRupiah(b.tk)],
-      [`BPJS Kesehatan perusahaan (${rates.bpjsKesPer}%) - info, tidak memotong gaji`, fmtRupiah(Number(p.bpjsKesPer || 0))],
+      [`BPJS Ketenagakerjaan karyawan (${rates.bpjsTk}%)`, fmtRupiah(b.tk)],
       [rowType(p) === "Gaji" ? "Gaji bersih" : "Nominal diterima", fmtRupiah(Number(p.net || 0))],
       ["Status", String(p.status)],
       ["Tanda terima", sign.received ? `Sudah diterima ${fmtTanggal(sign.date ?? "")}` : "Belum diterima"],
@@ -940,6 +936,8 @@ export default function Payroll() {
           tab === "Gaji" ? (
             <>
               <button className="btn-secondary" onClick={() => setShowPesangon(true)}>{S.btnPesangon}</button>
+              {reportButtons}
+              {bulkButtons(gajiRows)}
               <button className="btn-secondary" onClick={exportRekap}>
                 <Download className="h-4 w-4" /> {S.btnExportRekap}
               </button>
@@ -947,6 +945,7 @@ export default function Payroll() {
             </>
           ) : tab === "THR & Bonus" ? (
             <>
+              {bulkButtons(thrBonusAll)}
               <button className="btn-secondary" onClick={exportThrBonus}>
                 <Download className="h-4 w-4" /> {S.btnExportThr}
               </button>
@@ -1038,7 +1037,10 @@ export default function Payroll() {
                             {p.status === "Draft" && (
                               <RowAction icon={Pencil} tone="neutral" label={S.editTitleAttr} onClick={() => openEdit(p)} />
                             )}
-                            {NEXT_STATUS[String(p.status)] && (
+                            {String(p.status) === "Disetujui" && !canPay && (
+                              <span className="text-xs text-steel-500">{S.waitFinancePay}</span>
+                            )}
+                            {NEXT_STATUS[String(p.status)] && (String(p.status) !== "Disetujui" || canPay) && (
                               <button
                                 className="text-sm font-semibold text-emerald-600 hover:underline"
                                 title={String(p.status) === "Disetujui" ? S.payViaModal : S.moveToNext.replace("{a}", NEXT_STATUS[String(p.status)])}
@@ -1148,7 +1150,10 @@ export default function Payroll() {
                         <td className="td"><StatusBadge status={String(p.status)} /></td>
                         <td className="td">
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            {NEXT_STATUS[String(p.status)] && (
+                            {String(p.status) === "Disetujui" && !canPay && (
+                              <span className="text-xs text-steel-500">{S.waitFinancePay}</span>
+                            )}
+                            {NEXT_STATUS[String(p.status)] && (String(p.status) !== "Disetujui" || canPay) && (
                               <button
                                 className="text-sm font-semibold text-emerald-600 hover:underline"
                                 title={String(p.status) === "Disetujui" ? S.payViaModal : S.moveToNext.replace("{a}", NEXT_STATUS[String(p.status)])}
@@ -1345,33 +1350,7 @@ export default function Payroll() {
         </div>
       </Modal>
 
-      {/* ---------- modal bayar ---------- */}
-      <Modal
-        open={payTarget !== null}
-        onClose={() => setPayTarget(null)}
-        title={S.payProofTitle}
-        subtitle={payTarget ? S.payProofSub.replace("{a}", String(payTarget.id)).replace("{b}", fmtRupiah(Number(payTarget.net || 0))) : ""}
-        footer={
-          <>
-            <button className="btn-secondary" onClick={() => setPayTarget(null)}>{S.cancelBtn}</button>
-            <AsyncButton className="btn-primary" onAction={confirmPay}>{S.btnConfirmPay}</AsyncButton>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <FormGrid>
-            <Field label={S.lblPayDate}><input type="date" className="input" value={proof.date} onChange={(e) => setProof({ ...proof, date: e.target.value })} /></Field>
-            <Field label={S.lblMethod}>
-              <select className="input" value={proof.method} onChange={(e) => setProof({ ...proof, method: e.target.value })}>
-                <option>Transfer</option>
-                <option>Tunai</option>
-                <option>Giro</option>
-              </select>
-            </Field>
-          </FormGrid>
-          <Field label={S.lblRefNo}><input className="input" value={proof.ref} onChange={(e) => setProof({ ...proof, ref: e.target.value })} placeholder={S.phRefNo} /></Field>
-        </div>
-      </Modal>
+      <PayrollPayModal target={payTarget} onClose={() => setPayTarget(null)} />
 
       {/* ---------- modal pesangon ---------- */}
       <Modal
@@ -1474,6 +1453,14 @@ export default function Payroll() {
           );
         })()}
       </Modal>
+      <ConfirmModal
+        open={bulk !== null}
+        title={bulk ? S.bulkTitle.replace("{a}", advLabel[bulk.from] ?? "").replace("{n}", String(bulk.rows.length)) : ""}
+        desc={bulk ? S.bulkDesc.replace("{b}", bulk.from).replace("{c}", fmtBulan(period)).replace("{n}", String(bulk.rows.length)).replace("{d}", NEXT_STATUS[bulk.from] ?? "") : ""}
+        confirmLabel={bulk ? advLabel[bulk.from] ?? S.advContinue : S.advContinue}
+        onCancel={() => setBulk(null)}
+        onConfirm={() => void doBulk()}
+      />
       <ConfirmModal
         open={confirmAdv !== null}
         title={confirmAdv ? S.advTitle.replace("{a}", String(confirmAdv.id)) : S.advTitleEmpty}

@@ -915,7 +915,8 @@ const slipGajiRecipe: Recipe<SlipGajiInput> = {
         ...(kasbon > 0 ? [{ komponen: L(locale, "Potongan kasbon", "Loan deduction"), nilai: rupiah(-kasbon) }] : []),
         { komponen: "BPJS Kesehatan", nilai: rupiah(-bpjsKes) },
         { komponen: "BPJS Ketenagakerjaan", nilai: rupiah(-bpjsTk) },
-        { komponen: "PPh 21", nilai: rupiah(-num(p, "pph21")) },
+        // #278: PPh gross-up ditanggung perusahaan, tidak tampil di slip karyawan.
+        ...(p.pphGrossUp ? [] : [{ komponen: "PPh 21", nilai: rupiah(-num(p, "pph21")) }]),
       ],
       netLabel: L(locale, "Total Diterima", "Total received"),
       net: rupiah(num(p, "net")),

@@ -15,7 +15,7 @@ export const MODULE_KEYS = [
 ] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
-export const FIN_TABS = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak"] as const;
+export const FIN_TABS = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll"] as const;
 
 export interface ModuleAccess {
   /** Modul yang TIDAK boleh dibuka role ini. */
@@ -31,7 +31,7 @@ export const DEFAULT_ACCESS: Record<Role, ModuleAccess> = Object.fromEntries(ROL
   const deny: ModuleKey[] = r === "direktur" || r === "developer" ? [] : [...EXEC_ONLY];
   let finTabs: string[] | null = null;
   if (r === "procurement" || r === "gudang") deny.push("proyek", "monitoring");
-  if (r === "finance" || r === "pajak") deny.push("monitoring");
+  if (r === "finance" || r === "pajak") deny.push("monitoring", "payroll"); // #281: Keuangan membayar lewat tab Payroll di Keuangan, bukan modul HR.
   if (r === "commercial") {
     deny.push("sdm", "absensi", "payroll", "qc", "procurement", "inventori", "equipment");
     finTabs = ["Invoice"];
