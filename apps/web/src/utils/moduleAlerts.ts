@@ -357,6 +357,19 @@ function buildKeuangan(ctx: Ctx): ModuleAlertItem[] {
   }
   for (const a of ctx.list("payables")) {
     if (String(a.st ?? "") === "Lunas") continue;
+    /* Q27: invoice PO menunggu persetujuan Keuangan - barang PO belum bisa
+       diterima sampai disetujui, jadi perlu terlihat. */
+    if (a.persetujuan === "Menunggu") {
+      const amt = num(a.amt);
+      out.push({
+        id: `mod-fin-inv-${a.id}`, rowId: String(a.id),
+        label: `Invoice PO ${a.po ?? a.id} menunggu persetujuan (${a.v ?? "-"})`,
+        detail: amt > 0 ? "Setujui di Hutang (AP) agar barang PO bisa diterima" : "Nilai nota PO Kecil belum dilengkapi",
+        level: "perhatian",
+        impact: amt > 0 ? rupiah(amt) : undefined,
+        since: sinceOf(a),
+      });
+    }
     const due = String(a.due ?? "");
     if (!due || due >= ctx.today) continue;
     const total = num(a.total ?? a.amount);

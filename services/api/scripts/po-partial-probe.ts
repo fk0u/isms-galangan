@@ -179,6 +179,8 @@ async function main(): Promise<void> {
     assert("nilai & nomor nota mengikuti ke invoice", apN[0]?.amt === 150000, JSON.stringify(apN));
     const pending = await post(dir, `/api/purchaseOrders/${smallId}/receive`, { qty: 2 });
     assert("terima sebelum invoice disetujui → 409", pending.statusCode === 409 && pending.body.includes("Invoice"), pending.body);
+    const payEarly = await patchAp({ pay1: 50000 });
+    assert("bayar invoice sebelum disetujui → 422", payEarly.statusCode === 422, payEarly.body);
     const okAp = await patchAp({ persetujuan: "Disetujui" });
     assert("Keuangan menyetujui invoice → 200", okAp.statusCode === 200, okAp.body);
     const back = await patchAp({ persetujuan: "Menunggu" });

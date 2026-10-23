@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { openFileUrl } from "../../services/files";
@@ -1182,11 +1182,17 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
 
   // Terlambat otomatis dari due (menggantikan flag manual): invoice Belum Dibayar
   // yang lewat jatuh tempo otomatis berstatus Terlambat. ageDays sudah ada.
+  /* Efek ini jalan setiap `data.invoices` berubah - saat halaman dibuka itu
+     terjadi dua kali (data lokal lalu data server) sehingga invoice yang sama
+     diubah dua kali bersamaan dan ubahan kedua ditolak server (409, toast
+     "Data sudah diubah pengguna lain"). Satu invoice cukup ditandai sekali. */
+  const overdueMarked = useRef(new Set<string>());
   useEffect(() => {
     const rows = (data.invoices ?? []).filter(
-      (i) => String(i.status) === "Belum Dibayar" && ageDays(i.due, today) > 0
+      (i) => String(i.status) === "Belum Dibayar" && ageDays(i.due, today) > 0 && !overdueMarked.current.has(String(i.id))
     );
     for (const r of rows) {
+      overdueMarked.current.add(String(r.id));
       void update("invoices", r.id, { status: "Terlambat" })
         .then(() => {
           log("invoice jatuh tempo otomatis", `${r.id} → Terlambat`, "Keuangan");
@@ -3287,6 +3293,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                             {a.st !== "Lunas" && (
                               <>
                                 <RowAction
+                                  disabled={a.persetujuan === "Menunggu"}
                                   icon={Wallet}
                                   tone="success"
                                   label={S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")}
