@@ -11,5 +11,13 @@ put {
 }
 
 body:json {
-  {}
+  {
+    "override": {
+      "commercial": { "deny": ["sdm", "payroll"], "finTabs": ["Invoice"] }
+    }
+  }
+}
+
+docs {
+  Hanya developer. override per peran menggantikan default; {} = kembali ke default. finTabs null = semua tab Keuangan.
 }

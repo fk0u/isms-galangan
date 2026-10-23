@@ -123,6 +123,12 @@ async function main(): Promise<void> {
         script: "if (res.body?.data?.token) bru.setEnvVar(\"token\", res.body.data.token);",
         docs: "Isi password di environment (variabel rahasia). Token hasil login disimpan ke {{token}}.",
       });
+    } else if (r.path === "/api/rbac" && r.method === "PUT") {
+      // Contoh body nyata; body kosong ditolak 400 sehingga request tidak bisa langsung dicoba.
+      bru(folder, name, r.method, r.path, {
+        body: "{\n  \"override\": {\n    \"commercial\": { \"deny\": [\"sdm\", \"payroll\"], \"finTabs\": [\"Invoice\"] }\n  }\n}",
+        docs: "Hanya developer. override per peran menggantikan default; {} = kembali ke default. finTabs null = semua tab Keuangan.",
+      });
     } else {
       bru(folder, name, r.method, r.path);
     }
