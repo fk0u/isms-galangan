@@ -19,6 +19,7 @@ import {
   RowAction,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
@@ -80,6 +81,9 @@ const PRJ_COLS: CollectionKey[] = ["activities", "clients", "drydocks", "employe
 export default function Projects() {
   const { locale } = useT();
   const S = n_prj[locale];
+  const { user } = useAuth();
+  const canWriteProjects = hasPermission(user?.permissions, "projects", "w");
+  const canWriteRisks = hasPermission(user?.permissions, "risks", "w");
   const { data, add, update, remove, inBranch, log } = useStore();
   const modAlert = useModuleAlert("proyek");
   const flash = useNotifFlash();
@@ -138,6 +142,7 @@ export default function Projects() {
 
   // Terlambat otomatis dari due (P8: bisa di-override manual).
   useEffect(() => {
+    if (!canWriteProjects) return;
     const today = todayISO();
     for (const p of projects) {
       // Override sudah tidak relevan → clear.
@@ -156,12 +161,13 @@ export default function Projects() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects]);
+  }, [projects, canWriteProjects]);
 
   // D8: risiko otomatis dari WBS dan milestone WO saat page load.
   // Proyek yang punya WBS tersimpan dicek; milestone yang mendekati jatuh
   // tempo atau terlambat otomatis menjadi risiko aktif.
   useEffect(() => {
+    if (!canWriteRisks) return;
     const today = todayISO();
     const msDays = getSetting(data, "ALERT_MILESTONE_DAYS", 7);
     for (const p of projects) {
@@ -175,14 +181,14 @@ export default function Projects() {
       const woResult = generateRisksFromWo(p.id, wos, existing, today, msDays);
       for (const draft of [...wbsResult.add, ...woResult.add]) {
         if (!claimAutoRisk(String(p.id), draft)) continue;
-      void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(p.id), draft));
+        void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(p.id), draft));
       }
       for (const id of [...wbsResult.close, ...woResult.close]) {
         void update("risks", id, { status: "Tertutup" }).catch(() => {});
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects]);
+  }, [projects, canWriteRisks]);
 
   const moreFilters = [filter, tahapFilter, prioritasFilter, pmFilter].filter((v) => v !== "Semua").length;
   const activeFilters = [filter, tahapFilter, statusFilter, prioritasFilter, pmFilter].filter((v) => v !== "Semua").length;

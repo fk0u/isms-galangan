@@ -753,22 +753,32 @@ function storeLocale(): "id" | "en" {
   }
 }
 
-/* Toast alasan penolakan backend (mis. 403 "Butuh peran Direktur") - tiap kejadian. */
-function notifyForbidden(reason: string): void {
+const errorToastCooldowns = new Map<string, number>();
+function throttleToast(message: string, tone: "info" | "warning" | "danger" | "success" = "info", cooldownMs = 4000): void {
+  const now = Date.now();
+  const last = errorToastCooldowns.get(message) ?? 0;
+  if (now - last < cooldownMs) return;
+  errorToastCooldowns.set(message, now);
+  if (errorToastCooldowns.size > 50) {
+    for (const [k, v] of errorToastCooldowns.entries()) {
+      if (now - v > 10000) errorToastCooldowns.delete(k);
+    }
+  }
   try {
-    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message: reason, tone: "info" } }));
+    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message, tone } }));
   } catch {
     /* abaikan */
   }
 }
 
+/* Toast alasan penolakan backend (mis. 403 "Butuh peran Direktur") - dithrottle per alasan agar tidak spam. */
+function notifyForbidden(reason: string): void {
+  throttleToast(reason, "info", 4000);
+}
+
 /* Toast konflik tulis (409 STALE/REFERENCED/VALIDATION): data server menang. */
 function notifyConflict(message: string): void {
-  try {
-    window.dispatchEvent(new CustomEvent("isms:toast", { detail: { message, tone: "info" } }));
-  } catch {
-    /* abaikan */
-  }
+  throttleToast(message, "info", 4000);
 }
 
 /* Toast penyimpanan penuh. Dulu diam-diam (try/catch kosong) - padahal justru

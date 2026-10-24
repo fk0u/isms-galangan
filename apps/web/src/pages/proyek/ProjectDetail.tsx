@@ -143,6 +143,7 @@ export default function ProjectDetail() {
      menulis ke server. Peran yang hanya boleh membaca proyek (viewer, QC,
      finance, …) tidak boleh memicu tulis saat sekadar membuka halaman. */
   const canAutoWrite = hasPermission(session?.permissions, "projects", "w");
+  const canWriteRisks = hasPermission(session?.permissions, "risks", "w");
   const fromState = (useLocation().state as { from?: unknown } | null)?.from;
   const backTo = fromState === "/proyek/monitoring" || fromState === "/dashboard" ? fromState : "/proyek";
   const backLabel = backTo === "/proyek/monitoring" ? S.detBackMon : backTo === "/dashboard" ? S.detBackDash : S.detBack;
@@ -421,14 +422,16 @@ const confirmStatus = async () => {
     const existingRisks = data.risks.filter((r) => r.project === project.id);
     const wbsResult = generateRisksFromWbs(project.id, wbs, existingRisks, today, msDays);
     const woResult = generateRisksFromWo(project.id, data.workOrders.filter((w) => w.project === project.id), existingRisks, today, msDays);
-    for (const draft of [...wbsResult.add, ...woResult.add]) {
-      if (!claimAutoRisk(String(project.id), draft)) continue;
-      void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(project.id), draft));
+    if (canWriteRisks) {
+      for (const draft of [...wbsResult.add, ...woResult.add]) {
+        if (!claimAutoRisk(String(project.id), draft)) continue;
+        void add("risks", draft, { action: "risiko otomatis dari WBS/WO", module: "Proyek" }).catch(() => releaseAutoRisk(String(project.id), draft));
+      }
+      for (const id of [...wbsResult.close, ...woResult.close]) {
+        void update("risks", id, { status: "Tertutup" }).catch(() => {});
+      }
     }
-    for (const id of [...wbsResult.close, ...woResult.close]) {
-      void update("risks", id, { status: "Tertutup" }).catch(() => {});
-    }
-  }, [data.projects, canAutoWrite]);
+  }, [data.projects, canAutoWrite, canWriteRisks]);
 
 // Terlambat otomatis dari due (P8: bisa di-override manual).
     useEffect(() => {

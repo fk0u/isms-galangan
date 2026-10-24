@@ -310,6 +310,10 @@ export function Toaster() {
       const dismissible = detail.dismissible !== undefined ? detail.dismissible : true;
 
       setItems((prev) => {
+        // Cegah spam pesan identik yang masih aktif tampil di layar
+        if (prev.some((t) => t.message === detail.message)) {
+          return prev;
+        }
         const next = prev.filter((t) => t.id !== id);
         // Maksimal 5 toast aktif bersamaan
         const trimmed = next.length >= 5 ? next.slice(-4) : next;
