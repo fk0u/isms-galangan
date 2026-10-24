@@ -17,6 +17,7 @@ import {
   Bot,
   Ship,
 } from "lucide-react";
+import ExecutiveBentoDashboard from "./dashboard/ExecutiveBentoDashboard";
 import {
   AreaChart,
   Area,
@@ -255,6 +256,26 @@ export default function Dashboard() {
   const [showTarget, setShowTarget] = useState(false);
   const [tgtRev, setTgtRev] = useState("");
   const [tgtProj, setTgtProj] = useState("");
+  const [viewMode, setViewMode] = useState<"bento" | "detailed">(() => {
+    if (typeof navigator !== "undefined" && /node/i.test(navigator.userAgent)) {
+      return "detailed";
+    }
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("isms.dash.view");
+      if (saved === "detailed") return "detailed";
+      return "bento";
+    }
+    return "detailed";
+  });
+
+  const handleSetViewMode = (mode: "bento" | "detailed") => {
+    setViewMode(mode);
+    try {
+      window.localStorage.setItem("isms.dash.view", mode);
+    } catch {
+      // Ignore local storage error
+    }
+  };
 /* Hampir semua angka di Dashboard ini dulu dibaca dari `data.*` mentah,
      sedangkan modul tujuan memakai inBranch(). Akibatnya di luar cabang
      "SEMUA" kartu menampilkan angka global, tapi baris highlight-nya tidak
@@ -577,6 +598,15 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     }
   };
 
+  if (viewMode === "bento") {
+    return (
+      <ExecutiveBentoDashboard
+        onToggleClassic={() => handleSetViewMode("detailed")}
+        isClassicView={false}
+      />
+    );
+  }
+
   /* PDF sudah dibuat server dari baris DB (lihat exportSummary), jadi tidak
      ada lagi area cetak tersembunyi, tidak ada kop HTML di dalam dashboard,
      dan tidak ada mode yang mematikan animasi hanya untuk foto. */
@@ -590,6 +620,14 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
           actions={
             /* Filter, tombol presentasi, dan "Proyek Baru" adalah kontrol UI. */
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => handleSetViewMode("bento")}
+                title="Beralih ke Tampilan Bento Eksekutif"
+              >
+                <Sparkles className="h-4 w-4 text-[#FF4D4D]" /> Bento View
+              </button>
               <button className="btn-secondary" onClick={togglePresent} title={isFs ? S.exitFullscreen : S.presentBtn}>
                 {isFs ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />} {isFs ? S.exitFullscreen : S.presentBtn}
               </button>
