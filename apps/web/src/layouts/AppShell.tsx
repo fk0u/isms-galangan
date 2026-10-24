@@ -570,10 +570,13 @@ export default function AppShell() {
       {/* Desktop sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-30 hidden transition-all duration-300 lg:block ${minSide ? "w-20" : "w-[17.5rem]"}`}>{renderSidebar(minSide)}</aside>
 
-      <div className={`transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-[17.5rem]"}`}>
+      <div className={`relative min-h-screen transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-[17.5rem]"}`}>
+        {/* Ambient top light mesh for modern enterprise visual richness */}
+        <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[32rem] w-[56rem] max-w-full rounded-full bg-[radial-gradient(ellipse_at_center,rgba(185,28,28,0.038),transparent_68%)] blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute top-12 right-0 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.03),transparent_70%)] blur-3xl" />
 
         {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-steel-200 bg-white/80 px-4 backdrop-blur-xl lg:px-6">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-steel-200/80 bg-white/75 px-4 backdrop-blur-xl shadow-xs lg:px-6">
           <div className="flex items-center gap-3">
             <button
               className="text-steel-600 lg:hidden"
@@ -642,6 +645,20 @@ export default function AppShell() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Live Operational Status Pill - Enterprise Maritime */}
+            <div
+              className="hidden items-center gap-2 rounded-full border border-steel-200/80 bg-white/80 px-2.5 py-1 text-xs shadow-xs backdrop-blur-sm sm:flex"
+              title={S.shYardStatusTooltip}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-[11px] font-medium text-steel-600">
+                <span className="font-semibold text-navy-800">Samarinda Yard</span> · {locale === "en" ? "Live" : "Aktif"}
+              </span>
+            </div>
+
             {moduleSyncing && (
               <span className="hidden items-center gap-1.5 rounded-full bg-ocean-50 px-2.5 py-1 text-[11px] font-semibold text-ocean-600 sm:inline-flex" role="status" aria-live="polite">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

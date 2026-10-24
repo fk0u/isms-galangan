@@ -118,7 +118,8 @@
 
 @layer components {
   .card {
-    @apply bg-white border border-steel-200 rounded-xl shadow-soft;
+    @apply bg-white/95 border border-steel-200/90 rounded-xl shadow-soft backdrop-blur-[2px];
+    transition: box-shadow 200ms var(--ease-out), border-color 200ms ease;
   }
   /* Aksi utama: merah merek. Maks satu per area. */
   .btn-primary {

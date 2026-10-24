@@ -315,14 +315,14 @@ function StatusText({ value }: { value: string }) {
 
 /* ============ K P I   C A R D   ( P R E M I U M ) ============ */
 
-/* Nada KPI: warna ikon lembut. Merah hanya untuk nada perhatian. */
+/* Nada KPI: warna ikon ber-tint lembut dengan ring halus. */
 const gradientChip: Record<string, string> = {
-  navy: "bg-steel-100 text-navy-800",
-  teal: "bg-emerald-50 text-emerald-700",
-  rose: "bg-ocean-50 text-ocean-600",
-  violet: "bg-steel-100 text-navy-800",
-  amber: "bg-amber-50 text-amber-700",
-  ocean: "bg-steel-100 text-navy-800",
+  navy: "bg-slate-100 text-navy-800 ring-slate-200/60",
+  teal: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  rose: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  violet: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  ocean: "bg-rose-50 text-rose-700 ring-rose-600/20",
 };
 
 /* Varian gradient kartu status (revisi klien PRJ-03). Teks putih di atas
@@ -378,7 +378,7 @@ export function KpiCard({
             <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] break-words tabular-nums" title={value}>{compactMoney(value)}</p>
             {(delta ?? hint) && <p className="mt-2.5 truncate text-xs font-medium text-white/85">{delta ?? hint}</p>}
           </div>
-          {icon && <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15">{icon}</div>}
+          {icon && <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 shadow-xs ring-1 ring-white/20">{icon}</div>}
         </div>
       </div>
     );
@@ -391,12 +391,12 @@ export function KpiCard({
           <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy-900 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
           {delta ? (
             <p
-              className={`mt-2.5 flex items-center gap-1 text-xs font-medium ${
+              className={`mt-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
                 deltaDirection === "up"
-                  ? "text-emerald-700"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
                   : deltaDirection === "down"
-                  ? "text-ocean-600"
-                  : "text-steel-500"
+                  ? "bg-rose-50 text-rose-700 ring-rose-600/20"
+                  : "bg-steel-100 text-steel-600 ring-steel-300/40"
               }`}
             >
               {deltaDirection === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
@@ -409,7 +409,7 @@ export function KpiCard({
           )}
         </div>
         {icon && (
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${gradientChip[chip] ?? gradientChip.navy}`}>
+          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ring-1 ring-inset ${gradientChip[chip] ?? gradientChip.navy}`}>
             {icon}
           </div>
         )}
@@ -574,7 +574,7 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           {icon && (
-            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-steel-200 bg-white text-navy-800 shadow-soft sm:flex">
+            <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-steel-200/90 bg-white/95 text-navy-800 shadow-xs ring-1 ring-steel-900/5 sm:flex">
               {icon}
             </div>
           )}
