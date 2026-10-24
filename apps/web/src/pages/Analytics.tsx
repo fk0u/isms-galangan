@@ -258,7 +258,7 @@ export default function Analytics() {
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
     value: data.projects.filter((p) => p.type === t).length,
-    color: ["#0A0A0A", "#E61919", "#262626"][i],
+    color: ["#2563EB", "#10B981", "#F59E0B"][i],
   }));
 
   /* === SERI GRAFIK RENTANG BULAN ===

@@ -44,11 +44,13 @@ export default {
         ink: "#09090B",
         accent: "#B91C1C",
         teal: {
-          600: "#141414",
-          500: "#1C1C1C",
-          400: "#474747",
-          100: "#EBEBEB",
-          50: "#F5F5F5",
+          700: "#0F766E",
+          600: "#0D9488",
+          500: "#14B8A6",
+          400: "#2DD4BF",
+          200: "#99F6E4",
+          100: "#CCFBF1",
+          50: "#F0FDFA",
         },
         rose: {
           800: "#7F1D1D",
@@ -61,12 +63,13 @@ export default {
           50: "#FEF2F2",
         },
         violet: {
-          700: "#262626",
-          600: "#2B2B2B",
-          500: "#474747",
-          200: "#D6D6D6",
-          100: "#EBEBEB",
-          50: "#F5F5F5",
+          700: "#6D28D9",
+          600: "#7C3AED",
+          500: "#8B5CF6",
+          400: "#A78BFA",
+          200: "#DDD6FE",
+          100: "#EDE9FE",
+          50: "#F5F3FF",
         },
       },
       fontFamily: {
@@ -81,13 +84,13 @@ export default {
         lift: "0 12px 32px -8px rgba(9,9,11,0.16), 0 2px 6px rgba(9,9,11,0.06)",
         glow: "0 0 0 3px rgba(185,28,28,0.16)",
       },
-      /* Tanpa gradien: nama kelas lama dipertahankan, isinya warna solid. */
+      /* Gradien harmonis untuk dashboard visual rich */
       backgroundImage: {
-        "gradient-hero": "linear-gradient(#0A0A0A, #0A0A0A)",
-        "gradient-teal": "linear-gradient(#1C1C1C, #1C1C1C)",
-        "gradient-rose": "linear-gradient(#B91C1C, #B91C1C)",
-        "gradient-violet": "linear-gradient(#474747, #474747)",
-        "gradient-amber": "linear-gradient(#B91C1C, #B91C1C)",
+        "gradient-hero": "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%)",
+        "gradient-teal": "linear-gradient(135deg, #0d9488, #14b8a6)",
+        "gradient-rose": "linear-gradient(135deg, #e11d48, #f43f5e)",
+        "gradient-violet": "linear-gradient(135deg, #6366f1, #8b5cf6)",
+        "gradient-amber": "linear-gradient(135deg, #d97706, #f59e0b)",
       },
       keyframes: {
         fadeUp: {

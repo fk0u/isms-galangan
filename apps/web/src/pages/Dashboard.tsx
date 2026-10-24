@@ -494,7 +494,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
     value: projects.filter((p) => p.type === t).length,
-    color: ["#0A0A0A", "#E61919", "#262626"][i],
+    color: ["#2563EB", "#10B981", "#F59E0B"][i],
   }));
   const pipelineActive = inBranch(data.quotations)
     .filter((x) => x.stage !== "Menang")
@@ -599,24 +599,26 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         />
       </StaggerItem>
 
-      {/* EXECUTIVE OVERVIEW GRID (Apple HIG Light Theme - Harmonious & High Contrast) */}
+      {/* EXECUTIVE OVERVIEW GRID (Apple HIG Luminous Cockpit - Vibrant, High-Contrast & Alive) */}
       <StaggerItem>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-stretch">
           {/* Executive Portfolio Cockpit (7 cols lg, 8 cols 2xl) */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-white border border-steel-200/90 p-6 shadow-soft lg:col-span-7 2xl:col-span-8">
-            {/* Subtle soft gradient highlight in corner */}
-            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-red-500/5 blur-2xl" />
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-sky-50/20 to-indigo-50/25 border border-slate-200/90 p-6 shadow-soft lg:col-span-7 2xl:col-span-8">
+            {/* Top gradient highlight bar */}
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-teal-500" />
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
 
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-700 ring-1 ring-red-600/20 shadow-xs">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xs">
                   <Sparkles className="h-4 w-4" />
                 </span>
                 <div>
-                  <span className="text-xs font-bold tracking-wider uppercase text-steel-500">
+                  <span className="text-xs font-bold tracking-wider uppercase text-slate-600">
                     {S.totalPortfolio}
                   </span>
-                  <span className="block text-[11px] text-steel-400">Pusat kendali operasional galangan aktif</span>
+                  <span className="block text-[11px] text-slate-400">Pusat kendali operasional galangan aktif</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -624,39 +626,40 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   {S.systemOperational}
                 </span>
-                <span className="inline-flex items-center rounded-full bg-steel-100 px-2.5 py-1 text-xs font-semibold text-steel-700 ring-1 ring-steel-300/40">
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300/40">
                   {S.activeWorkers.replace("{n}", String(activeEmployees))}
                 </span>
               </div>
             </div>
 
             <div className="relative z-10 my-5">
-              <p className="text-3xl sm:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-navy-950 tabular-nums">
+              <p className="text-3xl sm:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-slate-900 tabular-nums">
                 {fmtMiliar(activeContracts)}
               </p>
-              <p className="mt-1.5 text-xs font-medium text-steel-500">
-                {branchProjects.length} proyek terdaftar di portofolio aktif cabang <span className="font-semibold text-navy-900">{branch}</span>
+              <p className="mt-1.5 text-xs font-medium text-slate-500">
+                {branchProjects.length} proyek terdaftar di portofolio aktif cabang <span className="font-semibold text-slate-800">{branch}</span>
               </p>
             </div>
 
-            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-steel-100 pt-3.5">
-              <div className="rounded-xl bg-surface/80 p-2.5 border border-steel-100">
-                <span className="text-[11px] font-medium text-steel-500 block truncate">{S.activeQuotationLabel}</span>
-                <span className="text-sm font-bold text-navy-900 tabular-nums">{fmtMiliar(pipelineActive)}</span>
+            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-slate-200/80 pt-3.5">
+              <div className="rounded-xl bg-gradient-to-br from-violet-50/90 via-white to-violet-50/40 p-3 border border-violet-200/70 shadow-2xs">
+                <span className="text-[11px] font-semibold text-violet-700 block truncate">{S.activeQuotationLabel}</span>
+                <span className="text-sm font-extrabold text-violet-950 tabular-nums">{fmtMiliar(pipelineActive)}</span>
               </div>
-              <div className="rounded-xl bg-surface/80 p-2.5 border border-steel-100">
-                <span className="text-[11px] font-medium text-steel-500 block truncate">{S.seaTrialLabel}</span>
-                <span className="text-sm font-bold text-navy-900 truncate block" title={seaTrialVessel}>{seaTrialVessel}</span>
+              <div className="rounded-xl bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/40 p-3 border border-emerald-200/70 shadow-2xs">
+                <span className="text-[11px] font-semibold text-emerald-700 block truncate">{S.seaTrialLabel}</span>
+                <span className="text-sm font-extrabold text-emerald-950 truncate block" title={seaTrialVessel}>{seaTrialVessel}</span>
               </div>
-              <div className="hidden sm:block rounded-xl bg-surface/80 p-2.5 border border-steel-100">
-                <span className="text-[11px] font-medium text-steel-500 block truncate">{S.stockValueLabel}</span>
-                <span className="text-sm font-bold text-navy-900 tabular-nums">{fmtMiliar(stockValue)}</span>
+              <div className="hidden sm:block rounded-xl bg-gradient-to-br from-amber-50/90 via-white to-amber-50/40 p-3 border border-amber-200/70 shadow-2xs">
+                <span className="text-[11px] font-semibold text-amber-700 block truncate">{S.stockValueLabel}</span>
+                <span className="text-sm font-extrabold text-amber-950 tabular-nums">{fmtMiliar(stockValue)}</span>
               </div>
             </div>
           </div>
 
           {/* Target vs Aktual Executive Widget (5 cols lg, 4 cols 2xl) */}
-          <div className="flex flex-col justify-between rounded-2xl bg-white border border-steel-200/90 p-6 shadow-soft lg:col-span-5 2xl:col-span-4">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-white border border-steel-200/90 p-6 shadow-soft lg:col-span-5 2xl:col-span-4">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
             <div>
               <div className="flex items-center justify-between gap-2 pb-3 border-b border-steel-100">
                 <div className="min-w-0">
@@ -812,41 +815,41 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             {/* 1. Nilai Stok Inventori */}
             <Link
               to="/inventori"
-              className="group flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs transition-all hover:border-steel-300 hover:bg-steel-50/60 hover:shadow-sm"
+              className="group flex items-center justify-between rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/20 p-3.5 shadow-xs transition-all hover:border-amber-400 hover:shadow-sm"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-600/20">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100/80 text-amber-800 ring-1 ring-amber-600/30 shadow-2xs">
                   <Boxes className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-steel-500 truncate">{S.stockValueLabel}</span>
+                    <span className="text-xs font-semibold text-amber-800 truncate">{S.stockValueLabel}</span>
                     {lowStock.length > 0 && (
-                      <span className="rounded-full bg-rose-50 px-1.5 py-0.2 text-[10px] font-bold text-rose-700 ring-1 ring-rose-600/20">
+                      <span className="rounded-full bg-rose-100 px-1.5 py-0.2 text-[10px] font-bold text-rose-700 ring-1 ring-rose-600/30">
                         {S.lowStockBadge.replace("{n}", String(lowStock.length))}
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 text-lg font-bold text-navy-900 tabular-nums">{fmtMiliar(stockValue)}</p>
+                  <p className="mt-0.5 text-lg font-extrabold text-amber-950 tabular-nums">{fmtMiliar(stockValue)}</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-steel-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-900" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-amber-400 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-800" />
             </Link>
 
             {/* 2. Sea Trial Terjadwal */}
-            <div className="flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs">
+            <div className="flex items-center justify-between rounded-xl border border-sky-200/90 bg-gradient-to-br from-sky-50/70 via-white to-sky-50/20 p-3.5 shadow-xs">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100/80 text-sky-800 ring-1 ring-sky-600/30 shadow-2xs">
                   <Calendar className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <span className="text-xs font-medium text-steel-500 block truncate">{S.seaTrialLabel}</span>
-                  <p className="mt-0.5 text-lg font-bold text-navy-900 truncate" title={seaTrialVessel}>
+                  <span className="text-xs font-semibold text-sky-800 block truncate">{S.seaTrialLabel}</span>
+                  <p className="mt-0.5 text-lg font-extrabold text-sky-950 truncate" title={seaTrialVessel}>
                     {seaTrialVessel}
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-600/20 shrink-0">
+              <span className="text-[11px] font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-full ring-1 ring-sky-600/30 shrink-0">
                 Terjadwal
               </span>
             </div>
@@ -854,18 +857,18 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             {/* 3. Pipeline CRM (Quotation Aktif) */}
             <Link
               to="/crm"
-              className="group flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs transition-all hover:border-steel-300 hover:bg-steel-50/60 hover:shadow-sm"
+              className="group flex items-center justify-between rounded-xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/20 p-3.5 shadow-xs transition-all hover:border-indigo-400 hover:shadow-sm"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 ring-1 ring-violet-600/20">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100/80 text-indigo-800 ring-1 ring-indigo-600/30 shadow-2xs">
                   <Anchor className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <span className="text-xs font-medium text-steel-500 block truncate">{S.activeQuotationLabel}</span>
-                  <p className="mt-0.5 text-lg font-bold text-navy-900 tabular-nums">{fmtMiliar(pipelineActive)}</p>
+                  <span className="text-xs font-semibold text-indigo-800 block truncate">{S.activeQuotationLabel}</span>
+                  <p className="mt-0.5 text-lg font-extrabold text-indigo-950 tabular-nums">{fmtMiliar(pipelineActive)}</p>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-steel-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-900" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-indigo-400 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-800" />
             </Link>
 
             {/* 4. NCR Terbuka (QC & Safety) */}
@@ -873,14 +876,14 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               type="button"
               onClick={goNcr}
               title={`Buka ${openNcrIds.length} NCR terbuka di QC & Safety`}
-              className="group flex items-center justify-between rounded-xl border border-rose-200/90 bg-rose-50/50 p-3.5 text-left shadow-xs transition-all hover:border-rose-300 hover:bg-rose-50 hover:shadow-sm"
+              className="group flex items-center justify-between rounded-xl border border-rose-200/90 bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-3.5 text-left shadow-xs transition-all hover:border-rose-400 hover:shadow-sm"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/70 px-1.5 py-0.5 rounded ring-1 ring-rose-600/20">QC &amp; Safety</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded ring-1 ring-rose-600/30">QC &amp; Safety</span>
                   <span className="text-[10px] font-semibold text-rose-600">Buka modul &rarr;</span>
                 </div>
-                <span className="text-xs font-semibold text-steel-700 block truncate">{S.openNcrLabel}</span>
+                <span className="text-xs font-semibold text-rose-900 block truncate">{S.openNcrLabel}</span>
                 <p
                   className="mt-0.5 text-base font-extrabold text-rose-700 tabular-nums"
                   title={criticalOpenNcr > 0 ? S.criticalCount.replace("{n}", String(criticalOpenNcr)) : S.nihilCritical}
@@ -897,15 +900,15 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               type="button"
               onClick={goAR}
               title={`Buka ${arRows.length} invoice belum tertagih di Keuangan`}
-              className="group flex items-center justify-between rounded-xl border border-navy-200/90 bg-navy-50/50 p-3.5 text-left shadow-xs transition-all hover:border-navy-300 hover:bg-navy-50 hover:shadow-sm"
+              className="group flex items-center justify-between rounded-xl border border-blue-200/90 bg-gradient-to-br from-blue-50/70 via-white to-blue-50/30 p-3.5 text-left shadow-xs transition-all hover:border-blue-400 hover:shadow-sm"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-navy-800 bg-navy-100/70 px-1.5 py-0.5 rounded ring-1 ring-navy-600/20">Keuangan &amp; Billing</span>
-                  <span className="text-[10px] font-semibold text-steel-500">Buka modul &rarr;</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded ring-1 ring-blue-600/30">Keuangan &amp; Billing</span>
+                  <span className="text-[10px] font-semibold text-blue-600">Buka modul &rarr;</span>
                 </div>
-                <span className="text-xs font-semibold text-steel-700 block truncate">{S.arLabel}</span>
-                <p className="mt-0.5 text-base font-extrabold text-navy-900 tabular-nums">{fmtMiliar(arOutstanding)}</p>
+                <span className="text-xs font-semibold text-blue-900 block truncate">{S.arLabel}</span>
+                <p className="mt-0.5 text-base font-extrabold text-blue-950 tabular-nums">{fmtMiliar(arOutstanding)}</p>
               </div>
             </button>
 
@@ -914,15 +917,15 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               type="button"
               onClick={goKontrak}
               title={`Buka ${wonContracts.length} kontrak menang di CRM`}
-              className="group flex items-center justify-between rounded-xl border border-emerald-200/90 bg-emerald-50/50 p-3.5 text-left shadow-xs transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-sm"
+              className="group flex items-center justify-between rounded-xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/30 p-3.5 text-left shadow-xs transition-all hover:border-emerald-400 hover:shadow-sm"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded ring-1 ring-emerald-600/20">CRM &amp; Klien</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded ring-1 ring-emerald-600/30">CRM &amp; Klien</span>
                   <span className="text-[10px] font-semibold text-emerald-600">Buka modul &rarr;</span>
                 </div>
-                <span className="text-xs font-semibold text-steel-700 block truncate">Kontrak Menang</span>
-                <p className="mt-0.5 text-base font-extrabold text-navy-900 tabular-nums">{fmtMiliar(wonContractValue)}</p>
+                <span className="text-xs font-semibold text-emerald-900 block truncate">Kontrak Menang</span>
+                <p className="mt-0.5 text-base font-extrabold text-emerald-950 tabular-nums">{fmtMiliar(wonContractValue)}</p>
               </div>
             </button>
           </div>
@@ -1178,18 +1181,18 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
                 <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0A0A0A" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#0A0A0A" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#0284C7" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#0284C7" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
-                  <XAxis dataKey="bln" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="rev" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                  <XAxis dataKey="bln" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="rev" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
                   <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? `Rp ${v} M` : v)} />} />
-                  <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0A0A0A" strokeWidth={2.5} fill="url(#revGrad)" isAnimationActive />
-                  <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#FF8A8A" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
-                  <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#E61919" strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive />
+                  <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0284C7" strokeWidth={3} fill="url(#revGrad)" isAnimationActive />
+                  <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
+                  <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#F43F5E" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3, fill: "#F43F5E" }} isAnimationActive />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -1251,19 +1254,19 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
           <Card className="h-full">
             <CardHeader title={S.productionUtil} subtitle={S.drydockVsEquip} />
             <div className="flex items-center justify-center gap-6 p-4">
-              <RadialGauge value={utilDrydock} label="Drydock" color="#0A0A0A" />
-              <RadialGauge value={utilEquipment} label="Equipment" color="#E61919" />
+              <RadialGauge value={utilDrydock} label="Drydock" color="#2563EB" />
+              <RadialGauge value={utilEquipment} label="Equipment" color="#F59E0B" />
             </div>
             <div className="mt-2 -mb-1 h-16 px-4">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={utilSeries} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="utilGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#E61919" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#E61919" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.45} />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="equipment" stroke="#E61919" strokeWidth={2} fill="url(#utilGrad)" isAnimationActive />
+                  <Area type="monotone" dataKey="equipment" stroke="#F59E0B" strokeWidth={2.5} fill="url(#utilGrad)" isAnimationActive />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1275,15 +1278,23 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
             <CardHeader title={S.smartInsights} subtitle={S.autoRecommendations} />
             <div className="max-h-80 space-y-2.5 overflow-y-auto p-4 pt-0">
               {insights.map((i) => {
+                const borderTone =
+                  i.tone === "rose"
+                    ? "border-l-4 border-l-rose-500 bg-rose-50/40"
+                    : i.tone === "teal"
+                    ? "border-l-4 border-l-emerald-500 bg-emerald-50/40"
+                    : i.tone === "violet"
+                    ? "border-l-4 border-l-indigo-500 bg-indigo-50/40"
+                    : "border-l-4 border-l-sky-500 bg-sky-50/40";
                 const dot =
-                  i.tone === "rose" ? "bg-rose-500" : i.tone === "teal" ? "bg-teal-500" : i.tone === "violet" ? "bg-violet-500" : "bg-ocean-500";
+                  i.tone === "rose" ? "bg-rose-500" : i.tone === "teal" ? "bg-emerald-500" : i.tone === "violet" ? "bg-indigo-500" : "bg-sky-500";
                 return (
-                  <div key={i.id} className="rounded-xl border border-steel-100 bg-surface p-3">
+                  <div key={i.id} className={`rounded-xl border border-steel-100 p-3 shadow-2xs ${borderTone}`}>
                     <div className="flex items-center gap-2">
                       <span className={`h-2 w-2 rounded-full ${dot}`} />
-                      <p className="text-sm font-semibold text-navy-900">{i.title}</p>
+                      <p className="text-sm font-bold text-navy-900">{i.title}</p>
                     </div>
-                    <p className="mt-1 text-xs text-steel-500 leading-relaxed">{i.desc}</p>
+                    <p className="mt-1 text-xs text-steel-600 leading-relaxed">{i.desc}</p>
                   </div>
                 );
               })}

@@ -315,14 +315,23 @@ function StatusText({ value }: { value: string }) {
 
 /* ============ K P I   C A R D   ( P R E M I U M ) ============ */
 
-/* Nada KPI: warna ikon ber-tint lembut dengan ring halus. */
+/* Nada KPI: warna ikon ber-tint lembut dengan ring halus dan kontras tinggi. */
 const gradientChip: Record<string, string> = {
-  navy: "bg-slate-100 text-navy-800 ring-slate-200/60",
-  teal: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  rose: "bg-rose-50 text-rose-700 ring-rose-600/20",
-  violet: "bg-violet-50 text-violet-700 ring-violet-600/20",
-  amber: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  ocean: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  navy: "bg-blue-50 text-blue-700 ring-blue-500/25",
+  teal: "bg-emerald-50 text-emerald-700 ring-emerald-500/25",
+  rose: "bg-rose-50 text-rose-700 ring-rose-500/25",
+  violet: "bg-indigo-50 text-indigo-700 ring-indigo-500/25",
+  amber: "bg-amber-50 text-amber-700 ring-amber-500/25",
+  ocean: "bg-sky-50 text-sky-700 ring-sky-500/25",
+};
+
+const chipAccentBorder: Record<string, string> = {
+  navy: "border-t-2 border-blue-500",
+  teal: "border-t-2 border-emerald-500",
+  rose: "border-t-2 border-rose-500",
+  violet: "border-t-2 border-indigo-500",
+  amber: "border-t-2 border-amber-500",
+  ocean: "border-t-2 border-sky-500",
 };
 
 /* Varian gradient kartu status (revisi klien PRJ-03). Teks putih di atas
@@ -384,19 +393,19 @@ export function KpiCard({
     );
   }
   return (
-    <Card className="card-hover relative overflow-hidden p-5">
+    <Card className={`card-hover relative overflow-hidden p-5 transition-all hover:shadow-md ${chipAccentBorder[chip] ?? ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-medium text-steel-500" title={label}>{label}</p>
-          <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-navy-900 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
+          <p className="truncate text-[13px] font-semibold text-steel-600" title={label}>{label}</p>
+          <p className="mt-2 text-[28px] font-extrabold leading-none tracking-[-0.03em] text-navy-950 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
           {delta ? (
             <p
-              className={`mt-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+              className={`mt-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
                 deltaDirection === "up"
-                  ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                  ? "bg-emerald-50 text-emerald-700 ring-emerald-600/25"
                   : deltaDirection === "down"
-                  ? "bg-rose-50 text-rose-700 ring-rose-600/20"
-                  : "bg-steel-100 text-steel-600 ring-steel-300/40"
+                  ? "bg-rose-50 text-rose-700 ring-rose-600/25"
+                  : "bg-steel-100 text-steel-700 ring-steel-300/40"
               }`}
             >
               {deltaDirection === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
@@ -409,7 +418,7 @@ export function KpiCard({
           )}
         </div>
         {icon && (
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ring-1 ring-inset ${gradientChip[chip] ?? gradientChip.navy}`}>
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-xs ring-1 ring-inset ${gradientChip[chip] ?? gradientChip.navy}`}>
             {icon}
           </div>
         )}
@@ -422,7 +431,7 @@ export function KpiCard({
 
 export function Donut({
   data,
-  colors = ["#27272A", "#B91C1C", "#A1A1AA", "#F87171", "#D4D4D8"],
+  colors = ["#2563EB", "#10B981", "#F59E0B", "#F43F5E", "#8B5CF6"],
   size = 140,
   thickness = 18,
   centerLabel,
@@ -602,12 +611,12 @@ export function ProgressBar({
   showLabel?: boolean;
 }) {
   const map = {
-    navy: "bg-navy-800",
-    green: "bg-emerald-500",
-    amber: "bg-amber-500",
-    red: "bg-ocean-500",
-    ocean: "bg-navy-800",
-    teal: "bg-emerald-500",
+    navy: "bg-gradient-to-r from-blue-600 to-indigo-600",
+    green: "bg-gradient-to-r from-emerald-500 to-teal-500",
+    amber: "bg-gradient-to-r from-amber-500 to-orange-500",
+    red: "bg-gradient-to-r from-rose-500 to-red-600",
+    ocean: "bg-gradient-to-r from-sky-500 to-blue-600",
+    teal: "bg-gradient-to-r from-teal-500 to-emerald-500",
   };
   return (
     <div className={`w-full ${className}`}>
