@@ -7,18 +7,23 @@ import {
   VolumeX,
   Send,
   ArrowRight,
-  Clock,
   AlertTriangle,
   Wallet,
   Ship,
   ChevronDown,
   ChevronUp,
+  Boxes,
+  ShieldCheck,
+  Activity,
+  Anchor,
 } from "lucide-react";
 import { useStore } from "../data/store";
 import { useAuth } from "../auth/auth";
 import { useT } from "../i18n/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { fmtMiliar } from "../data";
+import { warnLevelOf } from "../utils/inventoryWarn";
+import { projectProgressOf } from "../utils/projectProgress";
 
 interface ChatMessage {
   id: string;
@@ -34,7 +39,7 @@ interface ChatMessage {
 export default function DigitalSecretary() {
   const { user } = useAuth();
   const { locale } = useT();
-  const { data, inBranch } = useStore();
+  const { data, inBranch, branch } = useStore();
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -44,13 +49,64 @@ export default function DigitalSecretary() {
   const [inputVal, setInputVal] = useState("");
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic real-time shipyard intelligence
-  const projects = inBranch(data.projects ?? []);
-  const activeProjects = projects.filter((p) => p.status === "Berjalan" || p.status === "Produksi");
-  const delayedProjects = projects.filter((p) => p.status === "Terlambat");
-  const drydockSlots = (data.dockSlots ?? []).filter((s) => String(s.status ?? "") === "Aktif" || String(s.status ?? "") === "Digunakan");
-  const lowStock = (data.inventory ?? []).filter((i) => Number(i.stock ?? 0) <= Number(i.minStock ?? 5));
-  const totalBudget = activeProjects.reduce((s, p) => s + Number(p.budget ?? 0), 0);
+  // Dynamic real-time shipyard intelligence directly from store
+  const branchProjects = inBranch(data.projects ?? []);
+  const activeProjects = branchProjects.filter((p) => p.status !== "Selesai" && p.status !== "Batal");
+  const delayedProjects = branchProjects.filter((p) => p.status === "Terlambat");
+
+  const branchDrydocks = inBranch(data.drydocks ?? []);
+  const branchDockIds = useMemo(() => new Set(branchDrydocks.map((d) => String(d.id))), [branchDrydocks]);
+  const activeDockSlots = useMemo(() => {
+    const slots = data.dockSlots ?? [];
+    return slots.filter((s) => (branch === "SEMUA" || branchDockIds.has(String(s.dockId))) && s.status !== "Batal" && !s.undockDone);
+  }, [data.dockSlots, branch, branchDockIds]);
+
+  const branchInventory = inBranch(data.inventory ?? []);
+  const lowStockItems = useMemo(() => {
+    return branchInventory.filter((i) => {
+      const lv = warnLevelOf(i).level;
+      return lv === "critical" || lv === "low";
+    });
+  }, [branchInventory]);
+  const criticalStockItems = useMemo(() => {
+    return branchInventory.filter((i) => warnLevelOf(i).level === "critical");
+  }, [branchInventory]);
+  const stockValue = useMemo(() => {
+    return branchInventory.reduce((s, i) => s + Number(i.stock ?? 0) * Number(i.cost ?? 0), 0);
+  }, [branchInventory]);
+
+  const branchInvoices = inBranch(data.invoices ?? []);
+  const unpaidInvoices = useMemo(() => {
+    return branchInvoices.filter((i) => i.status !== "Lunas" && i.status !== "Draft");
+  }, [branchInvoices]);
+  const arOutstanding = useMemo(() => {
+    return unpaidInvoices.reduce((s, i) => s + Number(i.amount ?? 0), 0);
+  }, [unpaidInvoices]);
+
+  const wonContracts = useMemo(() => {
+    return inBranch(data.contracts ?? []).filter((k) => String(k.status ?? "") !== "Batal");
+  }, [data.contracts, inBranch]);
+  const wonContractValue = useMemo(() => {
+    return wonContracts.reduce((s, k) => s + Number(k.value ?? 0), 0);
+  }, [wonContracts]);
+
+  const openNcr = useMemo(() => {
+    return inBranch(data.ncr ?? []).filter((n) => n.status !== "Tertutup");
+  }, [data.ncr, inBranch]);
+  const criticalNcr = useMemo(() => {
+    return openNcr.filter((n) => n.severity === "Critical");
+  }, [openNcr]);
+
+  const openIncidents = useMemo(() => {
+    return inBranch(data.incidents ?? []).filter((i) => i.status !== "Selesai");
+  }, [data.incidents, inBranch]);
+
+  const vessels = inBranch(data.vessels ?? []);
+  const employees = data.employees ?? [];
+  const purchaseOrders = inBranch(data.purchaseOrders ?? []);
+  const pendingPo = useMemo(() => {
+    return purchaseOrders.filter((p) => p.status === "Menunggu Persetujuan" || p.status === "Draft");
+  }, [purchaseOrders]);
 
   // Initial welcome message from Nadia
   const initialGreeting = useMemo(() => {
@@ -58,13 +114,13 @@ export default function DigitalSecretary() {
     const delayedCount = delayedProjects.length;
     if (delayedCount > 0) {
       return locale === "en"
-        ? `Hello ${name}! I'm Nadia, your Shipyard Copilot. You have ${delayedCount} delayed project(s) requiring schedule review, and ${activeProjects.length} active fleet builds underway.`
-        : `Halo Pak ${name}! Saya Nadia, sekretaris digital galangan Anda. Saat ini ada ${delayedCount} proyek terlambat yang perlu evaluasi jadwal, dan ${activeProjects.length} proyek armada aktif berjalan.`;
+        ? `Hello ${name}! I'm Nadia, your Shipyard Copilot. There are ${delayedCount} delayed project(s) requiring schedule review and WBS mitigation at ${branch} branch.`
+        : `Halo Pak ${name}! Saya Nadia, asisten digital galangan Anda. Saat ini terdeteksi ${delayedCount} proyek berstatus terlambat yang memerlukan evaluasi jadwal di cabang ${branch}. Silakan pilih pintasan cepat atau tanyakan metrik operasional kapan saja.`;
     }
     return locale === "en"
-      ? `Hello ${name}! All shipyard operations at Samarinda Yard are running smoothly with ${activeProjects.length} active projects.`
-      : `Halo Pak ${name}! Selamat bertugas. Seluruh operasional galangan Samarinda Yard terpantau kondusif dengan ${activeProjects.length} proyek aktif.`;
-  }, [user, delayedProjects.length, activeProjects.length, locale]);
+      ? `Hello ${name}! All shipyard operations at ${branch} branch are running smoothly with ${activeProjects.length} active fleet projects and ${activeDockSlots.length} vessels in dock.`
+      : `Halo Pak ${name}! Selamat bertugas. Operasional galangan cabang ${branch} terpantau kondusif dengan ${activeProjects.length} proyek armada aktif dan ${activeDockSlots.length} kapal bersandar di dok.`;
+  }, [user, delayedProjects.length, activeProjects.length, activeDockSlots.length, branch, locale]);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
@@ -76,7 +132,7 @@ export default function DigitalSecretary() {
   ]);
 
   // Text to speech helper
-  const speakText = (text: string) => {
+  const speakText = useCallback((text: string) => {
     if (!speechEnabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
@@ -88,7 +144,7 @@ export default function DigitalSecretary() {
     } catch {
       // Speech synthesis unsupported or blocked
     }
-  };
+  }, [speechEnabled, locale]);
 
   useEffect(() => {
     if (isOpen) {
@@ -96,7 +152,7 @@ export default function DigitalSecretary() {
     }
   }, [messages, isOpen]);
 
-  // Answer generation engine based on live store data
+  // Comprehensive answer generation engine synthesizing live store data
   const handleUserQuery = useCallback((queryText: string) => {
     if (!queryText.trim()) return;
 
@@ -115,37 +171,74 @@ export default function DigitalSecretary() {
       let reply = "";
       let action: { label: string; to: string } | undefined;
 
-      if (q.includes("terlambat") || q.includes("delay") || q.includes("jadwal")) {
+      // 1. Keterlambatan, Jadwal, & WBS
+      if (q.includes("terlambat") || q.includes("delay") || q.includes("jadwal") || q.includes("keterlambatan") || q.includes("wbs") || q.includes("progres")) {
         if (delayedProjects.length > 0) {
-          const names = delayedProjects.slice(0, 3).map((p) => p.name).join(", ");
-          reply = `Terdapat ${delayedProjects.length} proyek yang statusnya terlambat dari jadwal, di antaranya: ${names}. Saya sarankan cek timeline WBS dan ketersediaan material di gudang.`;
+          const details = delayedProjects.slice(0, 3).map((p) => {
+            const prog = projectProgressOf(p, data.wbsByProject, data.boq);
+            return `${p.name} (Klien: ${p.client || "Reguler"}, Progres: ${prog}%, Target: ${p.end || "Harian"})`;
+          }).join("; ");
+          reply = `Terdapat ${delayedProjects.length} proyek yang statusnya terlambat dari jadwal di cabang ${branch}: ${details}. Disarankan mitigasi percepatan task WBS berbobot kritis dan koordinasi alokasi jam kerja dok.`;
           action = { label: "Buka Proyek Terlambat", to: "/proyek?status=Terlambat" };
         } else {
-          reply = "Luar biasa! Tidak ada proyek yang terlambat saat ini di Samarinda Yard. Seluruh timeline on-schedule.";
+          reply = `Kabar baik! Seluruh ${activeProjects.length} proyek aktif di cabang ${branch} berjalan sesuai jadwal (on-track). Deviasi timeline terpantau aman tanpa kendala kritis.`;
+          action = { label: "Lihat Timeline Proyek", to: "/proyek" };
         }
-      } else if (q.includes("proyek") || q.includes("project") || q.includes("kontrak")) {
-        reply = `Total ada ${projects.length} proyek terdata (${activeProjects.length} sedang berjalan) dengan akumulasi portofolio kontrak sebesar ${fmtMiliar(totalBudget)}.`;
-        action = { label: "Lihat Manajemen Proyek", to: "/proyek" };
-      } else if (q.includes("dok") || q.includes("dock") || q.includes("drydock") || q.includes("graving")) {
-        reply = `Fasilitas drydock Samarinda Yard memiliki ${drydockSlots.length} slot aktif yang terpantau dalam sistem.`;
-        action = { label: "Buka Jadwal Drydock", to: "/drydock" };
-      } else if (q.includes("stok") || q.includes("baja") || q.includes("gudang") || q.includes("material") || q.includes("plat")) {
-        if (lowStock.length > 0) {
-          reply = `Perhatian: Ada ${lowStock.length} jenis material di gudang yang mendekati atau di bawah batas minimum (safety stock), misalnya ${lowStock[0]?.name ?? "Plat Baja"}.`;
+      }
+      // 2. Stok Material & Gudang
+      else if (q.includes("stok") || q.includes("material") || q.includes("gudang") || q.includes("inventori") || q.includes("baja") || q.includes("plat") || q.includes("cat") || q.includes("kawat")) {
+        if (lowStockItems.length > 0) {
+          const sampleItems = lowStockItems.slice(0, 3).map((i) =>
+            `${i.name} (sisa ${i.stock} ${i.unit || "unit"}, batas aman ${i.minStock})`
+          ).join(", ");
+          reply = `Perhatian logistik: Ada ${lowStockItems.length} item material di bawah safety stock (${criticalStockItems.length} berstatus kritis), di antaranya: ${sampleItems}. Total valuasi persediaan gudang aktif: ${fmtMiliar(stockValue)}.`;
           action = { label: "Cek Inventori Gudang", to: "/inventori" };
         } else {
-          reply = "Seluruh ketersediaan stok material vital galangan (plat baja, kawat las, cat marine) dalam batas aman.";
-          action = { label: "Buka Inventori", to: "/inventori" };
+          reply = `Stok gudang dalam kondisi aman. Sebanyak ${branchInventory.length} jenis material utama galangan (plat baja grade A, sacrificial anode, kawat las) tercukupi di atas batas minimum.`;
+          action = { label: "Katalog Inventori", to: "/inventori" };
         }
-      } else if (q.includes("kapal") || q.includes("vessel") || q.includes("tugboat") || q.includes("tongkang")) {
-        const vesselCount = (data.vessels ?? []).length;
-        reply = `Database armada galangan mencatat ${vesselCount} kapal aktif (Tugboat, Barge/Tongkang, & Support Vessel).`;
-        action = { label: "Lihat Data Kapal", to: "/kapal" };
-      } else if (q.includes("keuangan") || q.includes("kas") || q.includes("margin") || q.includes("uang")) {
-        reply = `Portofolio kontrak galangan mencapai ${fmtMiliar(totalBudget)}. Laporan arus kas dan piutang siap ditinjau di modul Keuangan.`;
-        action = { label: "Buka Dashboard Keuangan", to: "/keuangan" };
-      } else {
-        reply = `Saya mengerti, Pak. Anda dapat memantau indikator operasional galangan, memfilter armada, atau meminta saya memeriksa metrik spesifik proyek kapan saja.`;
+      }
+      // 3. Fasilitas Dok, Slipway, & Drydock Occupancy
+      else if (q.includes("dok") || q.includes("dock") || q.includes("drydock") || q.includes("slipway") || q.includes("graving") || q.includes("okupansi") || q.includes("kapasitas")) {
+        const dockNames = branchDrydocks.map((d) => d.name || d.id).join(", ");
+        const dockingList = activeDockSlots.slice(0, 3).map((s) => `${s.vessel || "Kapal"} di ${s.dockId}`).join(", ");
+        reply = `Galangan cabang ${branch} memiliki ${branchDrydocks.length} fasilitas dok (${dockNames || "Drydock 1 & Slipway"}). Saat ini ada ${activeDockSlots.length} kapal dalam pengerjaan docking: ${dockingList || "seluruh slot dok siap menerima kapal baru"}. Utilisasi dok berjalan terkendali.`;
+        action = { label: "Jadwal Fasilitas Dok", to: "/drydock" };
+      }
+      // 4. Keuangan, Piutang (AR), & Kontrak
+      else if (q.includes("keuangan") || q.includes("piutang") || q.includes("ar") || q.includes("invoice") || q.includes("tagihan") || q.includes("kas") || q.includes("kontrak") || q.includes("omset") || q.includes("nilai kontrak")) {
+        reply = `Ringkasan Finansial cabang ${branch}: Total piutang usaha (AR) aktif adalah ${fmtMiliar(arOutstanding)} dari ${unpaidInvoices.length} faktur tagihan yang belum lunas. Akumulasi portofolio kontrak aktif bernilai ${fmtMiliar(wonContractValue)} dari ${wonContracts.length} kontrak yang dimenangkan.`;
+        action = { label: "Buka Modul Keuangan", to: "/keuangan?tab=Piutang%20(AR)" };
+      }
+      // 5. QC, Mutu, K3, NCR, & Insiden
+      else if (q.includes("qc") || q.includes("safety") || q.includes("k3") || q.includes("ncr") || q.includes("inspeksi") || q.includes("temuan") || q.includes("insiden") || q.includes("mutu")) {
+        const ncrText = openNcr.length > 0
+          ? `Terdapat ${openNcr.length} NCR terbuka (${criticalNcr.length} berkategori kritis) yang memerlukan corrective action`
+          : `Seluruh temuan NCR telah tertutup`;
+        const incidentText = openIncidents.length > 0
+          ? `dan ${openIncidents.length} laporan insiden sedang dalam proses investigasi investigatif.`
+          : `dan galangan mencatatkan performa Zero Lost Time Incident (LTI).`;
+        reply = `Status Mutu & Keselamatan Kerja: ${ncrText}, ${incidentText}`;
+        action = { label: "Tinjau QC & Safety", to: "/qc-safety?tab=NCR" };
+      }
+      // 6. Armada & Kapal
+      else if (q.includes("kapal") || q.includes("vessel") || q.includes("armada") || q.includes("tugboat") || q.includes("tongkang")) {
+        reply = `Database armada galangan memantau ${vessels.length} kapal aktif yang terdaftar (Tugboat ASD, Barge, Oil Barge, dan Support Vessels) dengan riwayat docking dan sertifikasi tercatat rapi.`;
+        action = { label: "Lihat Direktori Kapal", to: "/kapal" };
+      }
+      // 7. SDM & Tenaga Kerja
+      else if (q.includes("karyawan") || q.includes("sdm") || q.includes("pekerja") || q.includes("tenaga") || q.includes("welder") || q.includes("tim")) {
+        reply = `Operasional galangan didukung oleh ${employees.length} tenaga kerja profesional (Engineering, Fitters, Welders bersertifikasi BKI, serta Inspektur QC & Perwira K3).`;
+        action = { label: "Buka Manajemen SDM", to: "/sdm" };
+      }
+      // 8. Pengadaan & Purchase Order (PO)
+      else if (q.includes("po") || q.includes("pengadaan") || q.includes("procurement") || q.includes("vendor") || q.includes("beli")) {
+        reply = `Pengadaan galangan: Tercatat ${purchaseOrders.length} PO dalam sistem, dengan ${pendingPo.length} PO berstatus menunggu persetujuan otorisasi atau verifikasi faktur vendor.`;
+        action = { label: "Modul Procurement", to: "/procurement" };
+      }
+      // 9. Briefing Umum / Fallback
+      else {
+        reply = `Executive Briefing cabang ${branch}: Ada ${activeProjects.length} proyek armada aktif (${delayedProjects.length} terlambat), ${activeDockSlots.length} kapal bersandar di dok, ${lowStockItems.length} material butuh restock, dan piutang belum tertagih sebesar ${fmtMiliar(arOutstanding)}. Seluruh protokol K3 diawasi secara ketat.`;
         action = { label: "Buka Dashboard Utama", to: "/dashboard" };
       }
 
@@ -159,8 +252,8 @@ export default function DigitalSecretary() {
 
       setMessages((prev) => [...prev, nadiaMsg]);
       speakText(reply);
-    }, 450);
-  }, [activeProjects.length, data.vessels, delayedProjects, drydockSlots.length, lowStock, projects.length, totalBudget]);
+    }, 380);
+  }, [activeDockSlots, activeProjects.length, arOutstanding, branch, branchDrydocks, branchInventory.length, criticalNcr.length, criticalStockItems.length, data.boq, data.wbsByProject, delayedProjects, employees.length, lowStockItems, openIncidents.length, openNcr.length, pendingPo.length, purchaseOrders.length, speakText, stockValue, unpaidInvoices.length, vessels.length, wonContractValue, wonContracts.length]);
 
   useEffect(() => {
     const onOpenAssistant = (e: Event) => {
@@ -178,7 +271,7 @@ export default function DigitalSecretary() {
 
   return (
     <>
-      {/* Interactive Floating Assistant Pill & Bubble */}
+      {/* Floating Assistant Trigger & Unread Bubble */}
       <aside aria-label="Nadia - Asisten Digital Galangan" className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         {/* Subtle greeting bubble when closed */}
         {!isOpen && hasUnread && (
@@ -194,6 +287,7 @@ export default function DigitalSecretary() {
                 <span>Nadia · Shipyard Copilot</span>
               </div>
               <button
+                type="button"
                 onClick={() => setHasUnread(false)}
                 className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
@@ -202,10 +296,11 @@ export default function DigitalSecretary() {
             </div>
             <p className="mt-1.5 text-xs text-slate-700 leading-relaxed font-medium">
               {delayedProjects.length > 0
-                ? `Halo! Ada ${delayedProjects.length} proyek terlambat yang perlu Anda tinjau hari ini.`
-                : `Halo! Semua operasional galangan Samarinda berjalan lancar.`}
+                ? `Halo! Ada ${delayedProjects.length} proyek terlambat yang perlu dievaluasi hari ini di cabang ${branch}.`
+                : `Halo! Seluruh ${activeProjects.length} proyek operasional galangan cabang ${branch} terpantau aman.`}
             </p>
             <button
+              type="button"
               onClick={() => {
                 setIsOpen(true);
                 setHasUnread(false);
@@ -221,6 +316,7 @@ export default function DigitalSecretary() {
         {/* Floating Trigger Button with Nadia's Avatar */}
         {!isOpen && (
           <motion.button
+            type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
@@ -283,7 +379,7 @@ export default function DigitalSecretary() {
                 <button
                   type="button"
                   onClick={() => setSpeechEnabled((v) => !v)}
-                  className={`rounded-lg p-1.5 transition-colors ${
+                  className={`rounded-lg p-1.5 transition-colors cursor-pointer ${
                     speechEnabled ? "bg-rose-50 text-rose-600" : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   }`}
                   title={speechEnabled ? "Suara Aktif" : "Aktifkan Suara"}
@@ -293,7 +389,7 @@ export default function DigitalSecretary() {
                 <button
                   type="button"
                   onClick={() => setIsMinimized((v) => !v)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
                   title={isMinimized ? "Perbesar" : "Kecilkan"}
                 >
                   {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -301,7 +397,7 @@ export default function DigitalSecretary() {
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
                   title="Tutup"
                 >
                   <X className="h-4 w-4" />
@@ -317,27 +413,44 @@ export default function DigitalSecretary() {
                   <div className="rounded-2xl border border-rose-100 bg-gradient-to-br from-white via-rose-50/20 to-white p-3.5 shadow-xs">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                       <span className="flex items-center gap-1.5 text-rose-600">
-                        <Sparkles className="h-3.5 w-3.5" />
+                        <Activity className="h-3.5 w-3.5" />
                         <span>Briefing Operasional</span>
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">Samarinda Yard</span>
+                      <span className="text-[10px] text-slate-400 font-medium">Cabang {branch}</span>
                     </div>
 
-                    <div className="mt-2.5 grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
-                        <span className="block text-[10px] text-slate-400 font-medium">Proyek Aktif</span>
-                        <span className="text-sm font-bold text-slate-800">{activeProjects.length}</span>
+                    <div className="mt-2.5 grid grid-cols-4 gap-1.5 text-center">
+                      <div className="rounded-xl bg-slate-50/80 p-1.5 border border-slate-100">
+                        <span className="block text-[9px] text-slate-400 font-medium truncate">Proyek</span>
+                        <span className="text-xs font-bold text-slate-800">{activeProjects.length}</span>
                       </div>
-                      <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
-                        <span className="block text-[10px] text-slate-400 font-medium">Terlambat</span>
-                        <span className={`text-sm font-bold ${delayedProjects.length > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      <div className="rounded-xl bg-slate-50/80 p-1.5 border border-slate-100">
+                        <span className="block text-[9px] text-slate-400 font-medium truncate">Terlambat</span>
+                        <span className={`text-xs font-bold ${delayedProjects.length > 0 ? "text-rose-600" : "text-emerald-600"}`}>
                           {delayedProjects.length}
                         </span>
                       </div>
-                      <div className="rounded-xl bg-slate-50/80 p-2 border border-slate-100">
-                        <span className="block text-[10px] text-slate-400 font-medium">Slot Dok</span>
-                        <span className="text-sm font-bold text-slate-800">{drydockSlots.length}</span>
+                      <div className="rounded-xl bg-slate-50/80 p-1.5 border border-slate-100">
+                        <span className="block text-[9px] text-slate-400 font-medium truncate">Dok Aktif</span>
+                        <span className="text-xs font-bold text-slate-800">{activeDockSlots.length}</span>
                       </div>
+                      <div className="rounded-xl bg-slate-50/80 p-1.5 border border-slate-100">
+                        <span className="block text-[9px] text-slate-400 font-medium truncate">Stok Menipis</span>
+                        <span className={`text-xs font-bold ${lowStockItems.length > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                          {lowStockItems.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between border-t border-rose-100/60 pt-2 text-[10px] text-slate-500 font-medium px-0.5">
+                      <span className="flex items-center gap-1">
+                        <ShieldCheck className="h-3 w-3 text-rose-500" />
+                        <span>NCR: <strong className="text-slate-700">{openNcr.length}</strong> ({criticalNcr.length} Kritis)</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Wallet className="h-3 w-3 text-emerald-500" />
+                        <span>AR: <strong className="text-slate-700">{fmtMiliar(arOutstanding)}</strong></span>
+                      </span>
                     </div>
                   </div>
 
@@ -357,11 +470,12 @@ export default function DigitalSecretary() {
                         <p>{m.text}</p>
                         {m.action && (
                           <button
+                            type="button"
                             onClick={() => {
                               navigate(m.action!.to);
                               setIsOpen(false);
                             }}
-                            className="mt-2 inline-flex items-center gap-1 rounded-xl bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100 transition-colors"
+                            className="mt-2 inline-flex items-center gap-1 rounded-xl bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
                           >
                             <span>{m.action.label}</span>
                             <ArrowRight className="h-3 w-3" />
@@ -381,32 +495,60 @@ export default function DigitalSecretary() {
                   </p>
                   <div className="flex gap-1.5 overflow-x-auto pb-1 hide-native-bar">
                     <button
-                      onClick={() => handleUserQuery("Cek proyek yang terlambat")}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors"
+                      type="button"
+                      onClick={() => handleUserQuery("Status proyek terlambat dan kendala")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
                     >
-                      <Clock className="h-3 w-3 text-rose-500" />
+                      <AlertTriangle className="h-3 w-3 text-rose-500" />
                       <span>Proyek Terlambat</span>
                     </button>
                     <button
-                      onClick={() => handleUserQuery("Bagaimana stok material di gudang?")}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors"
+                      type="button"
+                      onClick={() => handleUserQuery("Cek stok material kritis di gudang")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
                     >
-                      <AlertTriangle className="h-3 w-3 text-amber-500" />
+                      <Boxes className="h-3 w-3 text-amber-500" />
                       <span>Stok Menipis</span>
                     </button>
                     <button
-                      onClick={() => handleUserQuery("Berapa total nilai kontrak aktif?")}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors"
+                      type="button"
+                      onClick={() => handleUserQuery("Bagaimana kapasitas dan okupansi drydock?")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
                     >
-                      <Wallet className="h-3 w-3 text-emerald-500" />
-                      <span>Nilai Kontrak</span>
+                      <Anchor className="h-3 w-3 text-sky-500" />
+                      <span>Okupansi Dok</span>
                     </button>
                     <button
-                      onClick={() => handleUserQuery("Status fasilitas drydock hari ini?")}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors"
+                      type="button"
+                      onClick={() => handleUserQuery("Berapa piutang usaha dan nilai kontrak aktif?")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
                     >
-                      <Ship className="h-3 w-3 text-sky-500" />
-                      <span>Drydock</span>
+                      <Wallet className="h-3 w-3 text-emerald-500" />
+                      <span>Piutang &amp; Kontrak</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUserQuery("Bagaimana status mutu, temuan NCR, dan K3?")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="h-3 w-3 text-indigo-500" />
+                      <span>Mutu &amp; K3</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUserQuery("Bagaimana status armada kapal di galangan?")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
+                    >
+                      <Ship className="h-3 w-3 text-cyan-600" />
+                      <span>Armada Kapal</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUserQuery("Berikan ringkasan eksekutif operasional galangan hari ini")}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 px-2.5 py-1 text-[11px] font-medium text-slate-600 transition-colors cursor-pointer"
+                    >
+                      <Activity className="h-3 w-3 text-rose-500" />
+                      <span>Briefing Lengkap</span>
                     </button>
                   </div>
                 </div>
@@ -429,7 +571,7 @@ export default function DigitalSecretary() {
                   <button
                     type="submit"
                     disabled={!inputVal.trim()}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-red-500 to-rose-600 text-white shadow-xs disabled:opacity-40 transition-all"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-red-500 to-rose-600 text-white shadow-xs disabled:opacity-40 transition-all cursor-pointer"
                   >
                     <Send className="h-3.5 w-3.5" />
                   </button>

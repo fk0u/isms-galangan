@@ -630,12 +630,8 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               </div>
 
               <div className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/20 border border-rose-400/30 px-3 py-1 text-xs font-semibold text-rose-200">
-                  <Sparkles className="h-3.5 w-3.5 text-rose-300 animate-spin" style={{ animationDuration: "6s" }} />
-                  <span>Nadia · AI Copilot &amp; Asisten Galangan</span>
-                </div>
                 <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
-                  Selamat Datang, {user?.name ? user.name.split(" ")[0] : "Rekan"}! 👋
+                  Selamat Datang, {user?.name ? user.name.split(" ")[0] : "Rekan"}!
                 </h2>
                 <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
                   {delayed > 0
@@ -650,21 +646,24 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                     onClick={() => askNadia("Status proyek terlambat dan kendala")}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    <span>⚡ Analisis Keterlambatan</span>
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Analisis Keterlambatan</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => askNadia("Cek stok material kritis di gudang")}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    <span>📦 Cek Stok Kritis</span>
+                    <Boxes className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>Cek Stok Kritis</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => askNadia("Bagaimana kapasitas drydock dan slipway?")}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   >
-                    <span>⚓ Okupansi Drydock</span>
+                    <Anchor className="h-3.5 w-3.5 text-sky-400" />
+                    <span>Okupansi Drydock</span>
                   </button>
                   <button
                     type="button"
