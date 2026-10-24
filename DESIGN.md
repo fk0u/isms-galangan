@@ -16,15 +16,15 @@ Aturan emas:
 |---|---|---|---|
 | Kanvas | `bg-surface` | `#FAFAFA` | Latar aplikasi & panel sekunder |
 | Kartu / permukaan | `bg-white` | `#FFFFFF` | Kartu, modal, top bar |
-| Sidebar | `bg-ocean-600` | `#C41212` | Navigasi utama (teks putih / putih 90%) |
+| Sidebar | `bg-ocean-600` | `#991B1B` | Navigasi utama (teks putih / putih 90%) |
 | Tinta | `ink`, `navy-900` | `#09090B` | Judul, angka utama |
 | Teks badan | `steel-700` | `#27272A` | Isi |
 | Teks sekunder | `steel-500/600` | `#71717A` / `#52525B` | Label, deskripsi |
 | Teks samar | `steel-400` | `#A1A1AA` | Placeholder, label grup |
 | Garis | `steel-200` / `steel-100` | `#E4E4E7` / `#F4F4F5` | Border kartu / divider |
-| **Merek** | `accent`, `ocean-500` | **`#E61919`** | CTA, aktif, bahaya |
-| Merek hover / teks | `ocean-600/700` | `#C41212` / `#A30F0F` | Hover tombol, teks merah |
-| Merek tint | `ocean-50/100` | `#FFF3F3` / `#FFE3E3` | Latar badge bahaya, seleksi teks |
+| **Merek** | `accent`, `ocean-500` | **`#B91C1C`** | CTA, aktif, bahaya (soft corporate ruby) |
+| Merek hover / teks | `ocean-600/700` | `#991B1B` / `#7F1D1D` | Hover tombol, teks merah |
+| Merek tint | `ocean-50/100` | `#FEF2F2` / `#FEE2E2` | Latar badge bahaya, seleksi teks |
 | Status selesai | `emerald-50/500/700` | `#F0FDF4` `#22A55B` `#14632F` | Badge & delta positif |
 | Status peringatan | `amber-50/500/700` | `#FFFBEB` `#E59A0B` `#92520D` | Badge menunggu/menipis |
 

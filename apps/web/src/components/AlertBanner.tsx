@@ -235,9 +235,9 @@ function ageDays(since: string | undefined): number | null {
    transparan. Dulunya keduanya memakai kelas yang sama, jadi lonceng rose
    tampil sebagai kotak merah solid di belakang ikon, bukan ikon merah. */
 const LEVEL_STYLE: Record<AlertLevel, { bar: string; chip: string; dot: string; icon: string; head: string; labelKey: "levelKritis" | "levelPerhatian" | "levelInfo" }> = {
-  kritis: { bar: "bg-rose-500", chip: "bg-rose-100 text-rose-800", dot: "bg-rose-500", icon: "text-rose-500", head: "text-rose-900", labelKey: "levelKritis" },
-  perhatian: { bar: "bg-amber-500", chip: "bg-amber-100 text-amber-900", dot: "bg-amber-500", icon: "text-amber-500", head: "text-amber-900", labelKey: "levelPerhatian" },
-  info: { bar: "bg-ocean-400", chip: "bg-ocean-50 text-ocean-800", dot: "bg-ocean-400", icon: "text-ocean-500", head: "text-ocean-800", labelKey: "levelInfo" },
+  kritis: { bar: "bg-rose-600", chip: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/70", dot: "bg-rose-600", icon: "text-rose-600", head: "text-rose-900", labelKey: "levelKritis" },
+  perhatian: { bar: "bg-amber-500", chip: "bg-amber-50 text-amber-800 ring-1 ring-amber-200/70", dot: "bg-amber-500", icon: "text-amber-600", head: "text-amber-900", labelKey: "levelPerhatian" },
+  info: { bar: "bg-ocean-500", chip: "bg-ocean-50 text-ocean-700 ring-1 ring-ocean-200/70", dot: "bg-ocean-500", icon: "text-ocean-600", head: "text-ocean-900", labelKey: "levelInfo" },
 };
 
 export function AlertBannerView({

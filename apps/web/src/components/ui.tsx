@@ -422,7 +422,7 @@ export function KpiCard({
 
 export function Donut({
   data,
-  colors = ["#27272A", "#E61919", "#A1A1AA", "#FF8A8A", "#D4D4D8"],
+  colors = ["#27272A", "#B91C1C", "#A1A1AA", "#F87171", "#D4D4D8"],
   size = 140,
   thickness = 18,
   centerLabel,
@@ -460,7 +460,7 @@ export function RadialGauge({
   value,
   label,
   max = 100,
-  color = "#E61919",
+  color = "#B91C1C",
   size = 120,
 }: {
   value: number;

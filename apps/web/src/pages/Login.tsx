@@ -99,10 +99,8 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Panel kiri - merah merek bergradasi (catatan 14 Okt: jangan putih datar,
-          teks jangan hitam). Semua teks putih: judul dikunci text-white karena
-          aturan global h1 memberi warna tinta. Dekorasi aria-hidden & diam. */}
-      <div className="relative hidden h-dvh w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#E61919_0%,#C41212_45%,#7F0B0B_100%)] p-12 text-white lg:flex">
+      {/* Panel kiri - ruby & crimson elegan bergradasi halus. Semua teks putih. */}
+      <div className="relative hidden h-dvh w-[46%] flex-col justify-between overflow-hidden bg-[linear-gradient(150deg,#881337_0%,#991B1B_35%,#7F1D1D_70%,#450A0A_100%)] p-12 text-white lg:flex">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.10)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
         <div aria-hidden className="pointer-events-none absolute -right-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-white/10 blur-3xl" />
         <ShipWheel aria-hidden className="pointer-events-none absolute -bottom-28 -right-28 h-[28rem] w-[28rem] text-white/[0.07]" />
