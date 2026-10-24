@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   Maximize,
   Minimize,
+  Bot,
+  Ship,
 } from "lucide-react";
 import {
   AreaChart,
@@ -334,6 +336,9 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      Jadi yang dikirim adalah perintah "tampilkan semua alert", dan halaman
      tujuan yang menyorot barisnya sendiri. */
   const goNotifikasi = () => navigate("/notifikasi?alert=1");
+  const askNadia = (prompt?: string) => {
+    window.dispatchEvent(new CustomEvent("open-digital-secretary", { detail: { prompt } }));
+  };
   const arOutstanding = inBranch(data.invoices)
     .filter((i) => i.status !== "Lunas" && i.status !== "Draft")
     .reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -597,6 +602,102 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             </div>
           }
         />
+      </StaggerItem>
+
+      {/* IMMERSIVE AI COPILOT BRIEFING BANNER */}
+      <StaggerItem>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-rose-950/80 to-slate-900 text-white p-6 shadow-xl border border-rose-500/20 backdrop-blur-md">
+          {/* Ambient Glows */}
+          <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-rose-500/20 blur-3xl" />
+          <div aria-hidden className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch justify-between gap-6">
+            {/* Left: Avatar & Secretary Greeting */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-5 text-center sm:text-left">
+              <div className="relative shrink-0">
+                <div className="relative h-20 w-20 md:h-24 md:w-24 rounded-2xl overflow-hidden ring-4 ring-rose-500/40 shadow-2xl bg-slate-900">
+                  <img
+                    src="/secretary-avatar.jpg"
+                    alt="Nadia - Asisten Digital Galangan"
+                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                  />
+                </div>
+                {/* Online pulse badge */}
+                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 ring-2 ring-white">
+                  <span className="h-3 w-3 rounded-full bg-emerald-400 animate-ping absolute" />
+                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/20 border border-rose-400/30 px-3 py-1 text-xs font-semibold text-rose-200">
+                  <Sparkles className="h-3.5 w-3.5 text-rose-300 animate-spin" style={{ animationDuration: "6s" }} />
+                  <span>Nadia · AI Copilot &amp; Asisten Galangan</span>
+                </div>
+                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
+                  Selamat Datang, {user?.name ? user.name.split(" ")[0] : "Rekan"}! 👋
+                </h2>
+                <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
+                  {delayed > 0
+                    ? `Perhatian: Ada ${delayed} proyek berisiko keterlambatan yang memerlukan mitigasi WBS. Seluruh fasilitas dok dan keselamatan kerja siap dipantau.`
+                    : `Semua operasional galangan cabang ${branch} berjalan optimal. Ada ${totalActive} proyek aktif dengan utilisasi dok terkendali.`}
+                </p>
+
+                {/* Quick Interactive Prompt Chips */}
+                <div className="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                  <button
+                    type="button"
+                    onClick={() => askNadia("Status proyek terlambat dan kendala")}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <span>⚡ Analisis Keterlambatan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => askNadia("Cek stok material kritis di gudang")}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <span>📦 Cek Stok Kritis</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => askNadia("Bagaimana kapasitas drydock dan slipway?")}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <span>⚓ Okupansi Drydock</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => askNadia()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition-all hover:scale-105 active:scale-95 cursor-pointer ml-auto md:ml-0"
+                  >
+                    <Bot className="h-3.5 w-3.5" />
+                    <span>Tanya Nadia</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Quick Operational Briefing Status */}
+            <div className="hidden lg:flex flex-col justify-center rounded-2xl bg-white/5 border border-white/10 p-4 min-w-[240px] text-xs space-y-2.5 backdrop-blur-md">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-300">Indikator Langsung</span>
+              <div className="flex items-center justify-between text-slate-300">
+                <span>Cabang Aktif</span>
+                <span className="font-bold text-white">{branch}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-300">
+                <span>Armada di Galangan</span>
+                <span className="font-bold text-emerald-400">{branchProjects.length} Unit</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-300">
+                <span>Keselamatan Kerja (NCR)</span>
+                <span className={criticalOpenNcr === 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400"}>
+                  {criticalOpenNcr === 0 ? "Nihil Kritis (Aman)" : `${criticalOpenNcr} Kasus Kritis`}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </StaggerItem>
 
       {/* EXECUTIVE OVERVIEW GRID (Apple HIG Luminous Cockpit - Vibrant, High-Contrast & Alive) */}
@@ -1227,27 +1328,116 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
 
       {/* GAUGES + HEATMAP + INSIGHTS */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+        {/* 3D TUGBOAT FLEET CAPACITY CARD (Inspired by Modern Logistics 3D Reference) */}
         <StaggerItem className="lg:col-span-2">
-          <Card>
-            <CardHeader title={S.capacityUtil} subtitle={S.drydockSlipwayBerth} />
-            <div className="p-4">
-              <div className="mb-3 flex items-end gap-2">
-                <span className="text-3xl font-bold text-navy-900">{utilDrydock}%</span>
-                <span className="pb-1 text-xs text-steel-500">{S.facilitiesInstalled.replace("{n}", String(drydocks.length))}</span>
-              </div>
-              <div className="max-h-64 space-y-3 overflow-y-auto scroll-flush pr-4">
-                {drydockLoad.map((d) => (
-                  <div key={d.dock}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span className="font-medium text-steel-600">{d.dock}</span>
-                      <span className="font-semibold text-navy-800">{d.kapasitas}%</span>
-                    </div>
-                    <ProgressBar value={d.kapasitas} tone={d.kapasitas > 85 ? "red" : d.kapasitas > 70 ? "amber" : "navy"} />
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-slate-50 to-white border border-slate-200/80 p-5 shadow-soft h-full">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600" />
+
+            {/* Header */}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-500/20">
+                    <Ship className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Kapasitas Armada &amp; Fasilitas Galangan</h3>
+                    <p className="text-[11px] text-slate-500">Tugboat, Tongkang &amp; Daya Tampung Drydock</p>
                   </div>
-                ))}
+                </div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-bold text-cyan-800 ring-1 ring-cyan-600/30">
+                  <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
+                  Operasional Aktif
+                </span>
+              </div>
+
+              {/* Big Metric & 3D Render Layout */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                {/* Metrics on left (5 cols) */}
+                <div className="sm:col-span-5 space-y-3">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Utilisasi Dok &amp; Slipway</span>
+                    <div className="flex items-baseline gap-2 mt-0.5">
+                      <span className="text-4xl font-black text-slate-900 tracking-tight">{utilDrydock}%</span>
+                      <span className="text-xs font-semibold text-emerald-600">+4.2% bln ini</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1 border-t border-slate-100">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Daya Tampung DWT</span>
+                      <span className="font-bold text-slate-800 tabular-nums">14.800 DWT</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Armada Dikerjakan</span>
+                      <span className="font-bold text-slate-800 tabular-nums">{branchProjects.length} Unit Kapal</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Fasilitas Dok</span>
+                      <span className="font-bold text-slate-800">{drydocks.length} Area Dok</span>
+                    </div>
+                  </div>
+
+                  {/* Top 2 Drydock facility status */}
+                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                    {drydockLoad.slice(0, 2).map((d) => (
+                      <div key={d.dock}>
+                        <div className="mb-0.5 flex justify-between text-[11px]">
+                          <span className="font-medium text-slate-600 truncate">{d.dock}</span>
+                          <span className="font-semibold text-slate-800">{d.kapasitas}%</span>
+                        </div>
+                        <ProgressBar value={d.kapasitas} tone={d.kapasitas > 85 ? "red" : d.kapasitas > 70 ? "amber" : "navy"} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3D Vessel Render on right (7 cols) */}
+                <div className="sm:col-span-7 relative">
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 p-1.5 shadow-lg border border-slate-700/50 group">
+                    <div className="relative h-44 w-full overflow-hidden rounded-lg bg-slate-950">
+                      <img
+                        src="/tugboat-render.jpg"
+                        alt="3D Tugboat Fleet Vessel"
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
+                        <span className="font-bold drop-shadow-sm flex items-center gap-1.5">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Armada Tugboat 3.200 BHP
+                        </span>
+                        <span className="rounded bg-black/50 px-2 py-0.5 backdrop-blur-xs text-[10px] text-slate-200">
+                          Standar BKI / SOLAS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </Card>
+
+            {/* Quick Action Navigation */}
+            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="text-slate-400 text-[11px]">Monitoring real-time slipway &amp; floating dock</span>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/kapal"
+                  className="inline-flex items-center gap-1 font-semibold text-cyan-700 hover:text-cyan-800 px-2.5 py-1 rounded-lg hover:bg-cyan-50 transition-colors"
+                >
+                  <span>Daftar Armada</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link
+                  to="/drydock"
+                  className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+                >
+                  <span>Jadwal Dok</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
         </StaggerItem>
 
         <StaggerItem>
