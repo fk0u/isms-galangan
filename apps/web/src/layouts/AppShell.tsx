@@ -38,7 +38,6 @@ import {
 import { useAuth, hasPermission, canOpenModule } from "../auth/auth";
 import { moduleKeyOf, canSeePath, canSeeActivity } from "../utils/moduleKey";
 import { useStore } from "../data/store";
-import DemoGuide from "../components/DemoGuide";
 import DigitalSecretary from "../components/DigitalSecretary";
 import { Badge, Modal, Field, Toaster, toast } from "../components/ui";
 import { markSessionExpired } from "../auth/sessionExpired";
@@ -882,8 +881,6 @@ export default function AppShell() {
               <p className="mt-1 text-sm text-steel-500">{S.noModuleAccessHint}</p>
             </div>
           )}
-          {/* Panduan demo presentasi (Shift + D). Matikan dengan VITE_DEMO_GUIDE=false. */}
-          {import.meta.env.VITE_DEMO_GUIDE !== "false" && <DemoGuide />}
           {/* Asisten / Sekretaris Digital Imersif Galangan */}
           <DigitalSecretary />
         </main>
