@@ -317,30 +317,20 @@ function StatusText({ value }: { value: string }) {
 
 /* Nada KPI: warna ikon ber-tint lembut dengan ring halus dan kontras tinggi. */
 const gradientChip: Record<string, string> = {
-  navy: "bg-blue-50 text-blue-700 ring-blue-500/25",
-  teal: "bg-emerald-50 text-emerald-700 ring-emerald-500/25",
-  rose: "bg-rose-50 text-rose-700 ring-rose-500/25",
-  violet: "bg-indigo-50 text-indigo-700 ring-indigo-500/25",
-  amber: "bg-amber-50 text-amber-700 ring-amber-500/25",
-  ocean: "bg-sky-50 text-sky-700 ring-sky-500/25",
+  navy: "bg-blue-50 text-blue-600 ring-blue-500/20",
+  teal: "bg-emerald-50 text-emerald-600 ring-emerald-500/20",
+  rose: "bg-rose-50 text-rose-600 ring-rose-500/20",
+  violet: "bg-indigo-50 text-indigo-600 ring-indigo-500/20",
+  amber: "bg-amber-50 text-amber-600 ring-amber-500/20",
+  ocean: "bg-sky-50 text-sky-600 ring-sky-500/20",
 };
 
-const chipAccentBorder: Record<string, string> = {
-  navy: "border-t-2 border-blue-500",
-  teal: "border-t-2 border-emerald-500",
-  rose: "border-t-2 border-rose-500",
-  violet: "border-t-2 border-indigo-500",
-  amber: "border-t-2 border-amber-500",
-  ocean: "border-t-2 border-sky-500",
-};
-
-/* Varian gradient kartu status (revisi klien PRJ-03). Teks putih di atas
-   warna 600-700 supaya kontras tetap lolos AA. */
+/* Varian gradient kartu status (sesuai referensi UI CEO: gradasi lembut bercahaya). */
 const kpiTone: Record<string, string> = {
-  blue: "bg-gradient-to-br from-navy-600 to-navy-800",
-  green: "bg-gradient-to-br from-emerald-600 to-emerald-800",
-  orange: "bg-gradient-to-br from-amber-600 to-orange-700",
-  red: "bg-gradient-to-br from-rose-600 to-rose-800",
+  blue: "bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 shadow-blue-500/20",
+  green: "bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 shadow-emerald-500/20",
+  orange: "bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 shadow-orange-500/20",
+  red: "bg-gradient-to-br from-red-500 via-rose-500 to-rose-600 shadow-rose-500/25",
 };
 
 /* Nominal besar di kartu tidak boleh pecah dua baris ("Rp" di atas, angka di
@@ -380,24 +370,36 @@ export function KpiCard({
   void spark;
   if (tone) {
     return (
-      <div className={`card-hover relative overflow-hidden rounded-2xl p-5 text-white shadow-sm ${kpiTone[tone]}`}>
-        <div className="flex items-start justify-between gap-3">
+      <div className={`card-hover relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 ${kpiTone[tone]}`}>
+        {/* Subtle decorative background shine */}
+        <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-xl" />
+        <div className="relative z-10 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-medium text-white/85" title={label}>{label}</p>
-            <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] break-words tabular-nums" title={value}>{compactMoney(value)}</p>
-            {(delta ?? hint) && <p className="mt-2.5 truncate text-xs font-medium text-white/85">{delta ?? hint}</p>}
+            <p className="truncate text-xs font-semibold uppercase tracking-wider text-white/80" title={label}>{label}</p>
+            <p className="mt-2 text-[30px] font-extrabold leading-none tracking-tight break-words tabular-nums" title={value}>{compactMoney(value)}</p>
+            {(delta ?? hint) && (
+              <div className="mt-3 flex items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs">
+                  {delta ?? hint}
+                </span>
+              </div>
+            )}
           </div>
-          {icon && <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 shadow-xs ring-1 ring-white/20">{icon}</div>}
+          {icon && (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-xs shadow-xs ring-1 ring-white/30">
+              {icon}
+            </div>
+          )}
         </div>
       </div>
     );
   }
   return (
-    <Card className={`card-hover relative overflow-hidden p-5 transition-all hover:shadow-md ${chipAccentBorder[chip] ?? ""}`}>
+    <Card className="card-hover relative overflow-hidden rounded-2xl p-5 bg-white border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold text-steel-600" title={label}>{label}</p>
-          <p className="mt-2 text-[28px] font-extrabold leading-none tracking-[-0.03em] text-navy-950 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
+          <p className="truncate text-xs font-semibold uppercase tracking-wider text-slate-400" title={label}>{label}</p>
+          <p className="mt-2 text-[28px] font-extrabold leading-none tracking-tight text-slate-900 break-words tabular-nums" title={value}>{compactMoney(value)}</p>
           {delta ? (
             <p
               className={`mt-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
@@ -405,7 +407,7 @@ export function KpiCard({
                   ? "bg-emerald-50 text-emerald-700 ring-emerald-600/25"
                   : deltaDirection === "down"
                   ? "bg-rose-50 text-rose-700 ring-rose-600/25"
-                  : "bg-steel-100 text-steel-700 ring-steel-300/40"
+                  : "bg-slate-100 text-slate-700 ring-slate-300/40"
               }`}
             >
               {deltaDirection === "up" && <ArrowUpRight className="h-3.5 w-3.5" />}
@@ -414,11 +416,11 @@ export function KpiCard({
               {delta}
             </p>
           ) : (
-            hint && <p className="mt-2.5 text-xs text-steel-500 truncate">{hint}</p>
+            hint && <p className="mt-2.5 text-xs text-slate-400 font-medium truncate">{hint}</p>
           )}
         </div>
         {icon && (
-          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-xs ring-1 ring-inset ${gradientChip[chip] ?? gradientChip.navy}`}>
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-xs ring-1 ring-inset ${gradientChip[chip] ?? gradientChip.navy}`}>
             {icon}
           </div>
         )}

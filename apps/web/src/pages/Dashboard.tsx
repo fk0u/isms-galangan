@@ -603,15 +603,15 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       <StaggerItem>
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-stretch">
           {/* Executive Portfolio Cockpit (7 cols lg, 8 cols 2xl) */}
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-sky-50/20 to-indigo-50/25 border border-slate-200/90 p-6 shadow-soft lg:col-span-7 2xl:col-span-8">
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-rose-50/15 to-white border border-slate-100 p-6 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] lg:col-span-7 2xl:col-span-8">
             {/* Top gradient highlight bar */}
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-teal-500" />
-            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
-            <div aria-hidden className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-red-500 via-rose-500 to-amber-400" />
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-rose-500/10 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -left-16 -bottom-16 h-48 w-48 rounded-full bg-amber-500/10 blur-3xl" />
 
             <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xs">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-xs">
                   <Sparkles className="h-4 w-4" />
                 </span>
                 <div>

@@ -41,19 +41,22 @@
   --color-orange-50: #FFFBEB; --color-orange-100: #FEF3C7; --color-orange-500: #E59A0B; --color-orange-600: #B4690E; --color-orange-700: #92520D;
   --color-yellow-50: #FFFBEB; --color-yellow-100: #FEF3C7; --color-yellow-500: #E59A0B; --color-yellow-600: #B4690E;
 
-  /* Merah = merek & bahaya, satu skala (Ruby & Crimson Elegan). */
+  /* Merah & Rose = aksen merek coral-rose bergradasi lembut (sesuai referensi UI CEO) */
   --color-red-50: #FEF2F2; --color-red-100: #FEE2E2; --color-red-200: #FECACA; --color-red-300: #FCA5A5;
-  --color-red-400: #EF4444; --color-red-500: #B91C1C; --color-red-600: #991B1B; --color-red-700: #7F1D1D;
-  --color-rose-300: #FCA5A5; --color-rose-800: #7F1D1D;
+  --color-red-400: #F87171; --color-red-500: #EF4444; --color-red-600: #DC2626; --color-red-700: #B91C1C;
+  --color-rose-50: #FFF1F2; --color-rose-100: #FFE4E6; --color-rose-200: #FECDD3; --color-rose-300: #FDA4AF;
+  --color-rose-400: #FB7185; --color-rose-500: #F43F5E; --color-rose-600: #E11D48; --color-rose-700: #BE123C;
 
-  /* Biru/ungu/cyan/slate → abu netral (tidak ada warna dekoratif lain). */
-  --color-blue-50: #FAFAFA; --color-blue-100: #F4F4F5; --color-blue-200: #E4E4E7; --color-blue-300: #D4D4D8;
-  --color-blue-400: #A1A1AA; --color-blue-500: #52525B; --color-blue-600: #3F3F46; --color-blue-700: #27272A;
-  --color-sky-50: #FAFAFA; --color-sky-100: #F4F4F5; --color-sky-500: #52525B; --color-sky-600: #3F3F46; --color-sky-700: #27272A;
-  --color-indigo-50: #FAFAFA; --color-indigo-100: #F4F4F5; --color-indigo-500: #52525B; --color-indigo-600: #3F3F46; --color-indigo-700: #27272A;
-  --color-cyan-50: #FAFAFA; --color-cyan-100: #F4F4F5; --color-cyan-200: #E4E4E7; --color-cyan-500: #52525B; --color-cyan-600: #3F3F46; --color-cyan-700: #27272A;
-  --color-purple-50: #FAFAFA; --color-purple-100: #F4F4F5; --color-purple-500: #52525B; --color-purple-600: #3F3F46; --color-purple-700: #27272A;
-  --color-slate-50: #FAFAFA; --color-slate-100: #F4F4F5; --color-slate-200: #E4E4E7; --color-slate-300: #D4D4D8; --color-slate-400: #A1A1AA; --color-slate-500: #71717A; --color-slate-600: #52525B; --color-slate-700: #27272A;
+  /* Slate netral modern untuk teks, latar, dan border */
+  --color-slate-50: #F8FAFC; --color-slate-100: #F1F5F9; --color-slate-200: #E2E8F0; --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8; --color-slate-500: #64748B; --color-slate-600: #475569; --color-slate-700: #334155;
+  --color-slate-800: #1E293B; --color-slate-900: #0F172A;
+
+  /* Biru, Sky, Indigo untuk aksen fungsional & data visual */
+  --color-blue-50: #EFF6FF; --color-blue-100: #DBEAFE; --color-blue-200: #BFDBFE;
+  --color-blue-500: #3B82F6; --color-blue-600: #2563EB; --color-blue-700: #1D4ED8;
+  --color-sky-50: #F0F9FF; --color-sky-100: #E0F2FE; --color-sky-500: #0EA5E9; --color-sky-600: #0284C7;
+  --color-indigo-50: #EEF2FF; --color-indigo-100: #E0E7FF; --color-indigo-500: #6366F1; --color-indigo-600: #4F46E5;
 }
 
 @layer base {
@@ -76,7 +79,7 @@
     letter-spacing: -0.02em;
   }
   ::selection { background: #FEE2E2; color: #09090B; }
-  :focus-visible { outline: 2px solid rgba(185, 28, 28, 0.45); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid rgba(244, 63, 94, 0.45); outline-offset: 2px; }
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -109,7 +112,7 @@
    dengan "Cannot apply unknown utility class `btn`".
    Nilai gaya-nya tidak berubah sama sekali dari versi v3. */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium
+  @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium
          border focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed;
   /* Umpan balik tekan: scale(0.97), hanya transform & warna yang dianimasikan. */
   transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -118,32 +121,44 @@
 
 @layer components {
   .card {
-    @apply bg-white/95 border border-steel-200/90 rounded-2xl shadow-soft backdrop-blur-[2px];
+    @apply bg-white border border-slate-100 rounded-2xl shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] backdrop-blur-[2px];
     transition: box-shadow 200ms var(--ease-out), border-color 200ms ease;
   }
-  /* Aksi utama: merah merek. Maks satu per area. */
+  /* Aksi utama: tombol gradasi coral-rose mewah (sesuai referensi UI CEO) */
   .btn-primary {
-    @apply btn bg-ocean-500 border-ocean-500 text-white shadow-soft hover:bg-ocean-600 hover:border-ocean-600 focus-visible:shadow-glow;
+    @apply btn border-0 text-white font-semibold shadow-md active:scale-[0.98];
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    box-shadow: 0 4px 14px -2px rgba(225, 29, 72, 0.28);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+    box-shadow: 0 6px 20px -2px rgba(225, 29, 72, 0.35);
   }
   .btn-primary-gradient {
-    @apply btn bg-ocean-500 border-ocean-500 text-white shadow-soft hover:bg-ocean-600 hover:border-ocean-600 focus-visible:shadow-glow;
+    @apply btn border-0 text-white font-semibold shadow-md active:scale-[0.98];
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    box-shadow: 0 4px 14px -2px rgba(225, 29, 72, 0.28);
+  }
+  .btn-primary-gradient:hover {
+    background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+    box-shadow: 0 6px 20px -2px rgba(225, 29, 72, 0.35);
   }
   /* Aksi gelap netral (mis. konfirmasi dalam modal). */
   .btn-dark {
-    @apply btn bg-navy-900 border-navy-900 text-white hover:bg-navy-700;
+    @apply btn bg-slate-900 border-slate-900 text-white hover:bg-slate-800 rounded-xl;
   }
   .btn-secondary {
-    @apply btn bg-white border-steel-200 text-steel-700 shadow-soft hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900;
+    @apply btn bg-white border-slate-200 text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 rounded-xl;
   }
   .btn-danger {
-    @apply btn bg-white border-steel-200 text-ocean-600 hover:bg-ocean-50 hover:border-ocean-200;
+    @apply btn bg-white border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 rounded-xl;
   }
   .input {
-    @apply w-full rounded-lg border border-steel-200 bg-white px-3 py-2 text-sm text-navy-900 shadow-soft
-           placeholder:text-steel-400 focus:outline-none focus:border-ocean-400;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-xs
+           placeholder:text-slate-400 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/15;
     transition: border-color 150ms ease, box-shadow 150ms ease;
   }
-  .input:focus { box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.10); }
+  .input:focus { box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.12); }
   .label {
     @apply block text-[13px] font-medium text-steel-700 mb-1.5;
   }

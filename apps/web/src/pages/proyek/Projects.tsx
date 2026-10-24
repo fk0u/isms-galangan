@@ -261,11 +261,11 @@ export default function Projects() {
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard tone="blue" label={S.prjKpiTotal} value={String(list.length)} hint={S.prjKpiTotalSub.replace("{d}", String(doneCount)).replace("{r}", String(inProgress))} icon={<Anchor className="h-5 w-5" />} />
-        <KpiCard tone="orange" label={S.prjKpiActive} value={String(inProgress)} hint={S.prjKpiActiveSub.replace("{n}", String(onHold)).replace("{l}", String(delayed))} icon={<Clock className="h-5 w-5" />} />
-        <KpiCard tone="green" label={S.prjKpiContract} value={fmtMiliar(totalBudget)} hint={S.prjKpiContractHint} icon={<Wallet className="h-5 w-5" />} />
-        <KpiCard tone={delayed > 0 ? "red" : "blue"} label={S.prjKpiAvg} value={`${avgProgress}%`} hint={S.prjKpiAvgHint} icon={<TrendingUp className="h-5 w-5" />} />
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard chip="navy" label={S.prjKpiTotal} value={String(list.length)} hint={S.prjKpiTotalSub.replace("{d}", String(doneCount)).replace("{r}", String(inProgress))} icon={<Anchor className="h-5 w-5" />} />
+        <KpiCard chip="amber" label={S.prjKpiActive} value={String(inProgress)} hint={S.prjKpiActiveSub.replace("{n}", String(onHold)).replace("{l}", String(delayed))} icon={<Clock className="h-5 w-5" />} />
+        <KpiCard chip="teal" label={S.prjKpiContract} value={fmtMiliar(totalBudget)} hint={S.prjKpiContractHint} icon={<Wallet className="h-5 w-5" />} />
+        <KpiCard tone="red" label={S.prjKpiAvg} value={`${avgProgress}%`} hint={S.prjKpiAvgHint} icon={<TrendingUp className="h-5 w-5" />} />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

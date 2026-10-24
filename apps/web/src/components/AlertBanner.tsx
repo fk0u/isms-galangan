@@ -235,9 +235,9 @@ function ageDays(since: string | undefined): number | null {
    transparan. Dulunya keduanya memakai kelas yang sama, jadi lonceng rose
    tampil sebagai kotak merah solid di belakang ikon, bukan ikon merah. */
 const LEVEL_STYLE: Record<AlertLevel, { bar: string; chip: string; dot: string; icon: string; head: string; labelKey: "levelKritis" | "levelPerhatian" | "levelInfo" }> = {
-  kritis: { bar: "bg-rose-600", chip: "bg-rose-50 text-rose-700 ring-1 ring-rose-200/70", dot: "bg-rose-600", icon: "text-rose-600", head: "text-rose-900", labelKey: "levelKritis" },
-  perhatian: { bar: "bg-amber-500", chip: "bg-amber-50 text-amber-800 ring-1 ring-amber-200/70", dot: "bg-amber-500", icon: "text-amber-600", head: "text-amber-900", labelKey: "levelPerhatian" },
-  info: { bar: "bg-ocean-500", chip: "bg-ocean-50 text-ocean-700 ring-1 ring-ocean-200/70", dot: "bg-ocean-500", icon: "text-ocean-600", head: "text-ocean-900", labelKey: "levelInfo" },
+  kritis: { bar: "bg-gradient-to-b from-red-500 to-rose-600", chip: "bg-rose-50 text-rose-600 ring-1 ring-rose-200/60", dot: "bg-rose-500", icon: "text-rose-500", head: "text-rose-950", labelKey: "levelKritis" },
+  perhatian: { bar: "bg-gradient-to-b from-amber-400 to-orange-500", chip: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/60", dot: "bg-amber-500", icon: "text-amber-500", head: "text-amber-950", labelKey: "levelPerhatian" },
+  info: { bar: "bg-gradient-to-b from-sky-400 to-blue-500", chip: "bg-sky-50 text-sky-700 ring-1 ring-sky-200/60", dot: "bg-sky-500", icon: "text-sky-500", head: "text-sky-950", labelKey: "levelInfo" },
 };
 
 export function AlertBannerView({
@@ -296,7 +296,7 @@ export function AlertBannerView({
     /* Garis aksen kiri tipis + latar netral. Versi lama memakai fill amber
        penuh untuk semua alert termasuk info, jadi merah dan kuning sama
        saja - alert yang tidak berarti kehilangan warnanya. */
-    <div className="mb-4 overflow-hidden rounded-xl border border-steel-200 bg-white">
+    <div className="mb-4 overflow-hidden rounded-2xl border border-slate-100 bg-white/95 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] backdrop-blur-xs">
       <div className="flex items-start gap-3 px-4 py-3">
         <span className={`mt-1 h-8 w-1 shrink-0 rounded-full ${tone.bar}`} aria-hidden="true" />
         <Bell className={`mt-1 h-4 w-4 shrink-0 ${tone.icon}`} aria-hidden="true" />

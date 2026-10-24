@@ -465,15 +465,17 @@ export default function AppShell() {
        ~44px (target sentuh), ikon 20px, menu aktif ditandai tiga cara sekaligus
        (latar putih, huruf tebal, garis kiri) supaya tidak bergantung pada warna,
        dan animasi buka-tutup grup mati bila pengguna memilih kurangi gerakan. */
-    <div className="flex h-full flex-col bg-ocean-600 text-white [&_:focus-visible]:outline-white">
-      <div className={`flex h-16 items-center gap-3 border-b border-white/20 px-4 ${mini ? "justify-center px-3" : ""}`}>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white">
-          <img src="/logo-sb.png" alt="Logo perusahaan" width={30} height={30} className="h-[30px] w-[30px] object-contain" />
+    /* Sidebar Modern SaaS (sesuai referensi UI CEO: latar putih bersih,
+       active pill bergradasi coral-rose lembut, dan tipografi berkelas). */
+    <div className="flex h-full flex-col bg-white border-r border-slate-200/80 text-slate-800 shadow-[2px_0_12px_rgba(0,0,0,0.02)]">
+      <div className={`flex h-16 items-center gap-3 border-b border-slate-100 px-4 ${mini ? "justify-center px-3" : ""}`}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-50 to-red-50 border border-rose-100/90 shadow-2xs">
+          <img src="/logo-sb.png" alt="Logo perusahaan" width={30} height={30} className="h-[28px] w-[28px] object-contain" />
         </span>
         {!mini && (
           <div className="min-w-0">
-            <p className="text-[15px] font-bold leading-tight tracking-[-0.01em]">ISMS Galangan</p>
-            <p className="truncate text-xs text-white/90">PT Syukur Bersaudara</p>
+            <p className="text-[15px] font-bold leading-tight tracking-[-0.01em] text-slate-900">ISMS Galangan</p>
+            <p className="truncate text-xs font-medium text-slate-400">PT Syukur Bersaudara</p>
           </div>
         )}
       </div>
@@ -484,15 +486,15 @@ export default function AppShell() {
           <div key={group.label} className="mb-4">
             {!mini ? (
               <button
-                className="mb-1 flex min-h-9 w-full items-center gap-1 rounded-md px-3 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+                className="mb-1 flex min-h-8 w-full items-center gap-1 rounded-md px-3 py-1 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 transition-colors hover:text-slate-600"
                 onClick={() => toggleGroup(group.label)}
                 aria-expanded={gOpen}
               >
                 <span className="truncate">{group.label}</span>
-                <ChevronDown className={`ml-auto h-4 w-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${gOpen ? "" : "-rotate-90"}`} />
+                <ChevronDown className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${gOpen ? "" : "-rotate-90"}`} />
               </button>
             ) : (
-              <div className="mx-2 mb-1 border-b border-white/20" aria-hidden />
+              <div className="mx-2 mb-1.5 border-b border-slate-100" aria-hidden />
             )}
             <div className={`grid transition-all duration-200 ease-out motion-reduce:transition-none ${gOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
               <ul className="space-y-1 overflow-hidden">
@@ -511,21 +513,22 @@ export default function AppShell() {
                       setOpen(false);
                       window.scrollTo({ top: 0 });
                     }}
-                    className={({ isActive }) =>
-                      `group relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] leading-snug transition-colors duration-150 active:scale-[0.98] motion-reduce:transform-none ${mini ? "justify-center" : ""} ${
+                    className={({ isActive }) => {
+                      const active = isActive || activeProjectOrigin === item.to;
+                      return `group relative flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14px] leading-snug transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none ${mini ? "justify-center" : ""} ${
                         item.child && !mini ? "ml-4" : ""
                       } ${
-                        isActive || activeProjectOrigin === item.to
-                          ? "bg-white font-semibold text-ocean-700 shadow-sm [&>svg]:text-ocean-600 before:absolute before:-left-3 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-white"
-                          : "font-medium text-white/90 hover:bg-white/15 hover:text-white"
-                      }`
-                    }
+                        active
+                          ? "bg-gradient-to-r from-red-500 via-rose-500 to-rose-600 font-semibold text-white shadow-md shadow-rose-500/25"
+                          : "font-medium text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+                      }`;
+                    }}
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
                     {!mini && <span className="truncate" title={item.label}>{item.label}</span>}
                     {!mini && badge > 0 ? (
                       <span
-                        className="ml-auto min-w-6 rounded-full bg-white px-2 py-1 text-center text-xs font-bold leading-none text-ocean-700 tabular-nums"
+                        className="ml-auto min-w-5 rounded-full bg-rose-50 px-2 py-0.5 text-center text-xs font-bold leading-none text-rose-600 ring-1 ring-rose-200/60 tabular-nums group-[.text-white]:bg-white/20 group-[.text-white]:text-white group-[.text-white]:ring-transparent"
                         title={S.shNewNotif.replace("{n}", String(badge))}
                       >
                         {badge > 99 ? "99+" : badge}
@@ -541,15 +544,28 @@ export default function AppShell() {
           );
         })}
       </nav>
-      <div className="border-t border-white/20 p-3">
-        <div className={`flex items-center gap-2.5 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-ocean-700">
+
+      {/* Mini Widget Galangan (seperti Recent trips di referensi) */}
+      {!mini && (
+        <div className="mx-3 mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500/10 via-red-500/5 to-transparent border border-rose-100/80 p-3.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">ISMS Galangan</span>
+            <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+          </div>
+          <p className="mt-1 text-xs font-bold text-slate-800">Operasional Samarinda</p>
+          <p className="text-[11px] text-slate-400">Tugboat & Barge Fleet Live</p>
+        </div>
+      )}
+
+      <div className="border-t border-slate-100 p-3 bg-slate-50/60">
+        <div className={`flex items-center gap-3 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-rose-500 to-red-500 text-sm font-bold text-white shadow-xs">
             {user?.initials ?? "?"}
           </div>
           {!mini && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{user?.name ?? "-"}</p>
-              <p className="truncate text-xs capitalize text-white/90">{user?.role ?? "-"}</p>
+              <p className="truncate text-sm font-semibold text-slate-800">{user?.name ?? "-"}</p>
+              <p className="truncate text-xs font-medium capitalize text-slate-400">{user?.role ?? "-"}</p>
             </div>
           )}
         </div>
@@ -572,34 +588,35 @@ export default function AppShell() {
 
       <div className={`relative min-h-screen transition-all duration-300 ${minSide ? "lg:pl-20" : "lg:pl-[17.5rem]"}`}>
         {/* Ambient top light mesh for modern enterprise visual richness */}
-        <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[32rem] w-[56rem] max-w-full rounded-full bg-[radial-gradient(ellipse_at_center,rgba(185,28,28,0.038),transparent_68%)] blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute top-12 right-0 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.03),transparent_70%)] blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 h-[32rem] w-[56rem] max-w-full rounded-full bg-[radial-gradient(ellipse_at_center,rgba(244,63,94,0.04),transparent_68%)] blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute top-12 right-0 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0.02),transparent_70%)] blur-3xl" />
 
         {/* Topbar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-4 border-b border-steel-200/80 bg-white/75 px-4 backdrop-blur-xl shadow-xs lg:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-slate-200/70 bg-white/80 px-4 backdrop-blur-xl shadow-xs lg:px-6">
           <div className="flex items-center gap-3">
             <button
-              className="text-steel-600 lg:hidden"
+              className="text-slate-600 lg:hidden"
               onClick={() => setOpen(true)}
               aria-label="Menu"
             >
               <Menu className="h-5 w-5" />
             </button>
             <button
-              className="hidden rounded-lg p-1.5 text-steel-500 hover:bg-steel-100 lg:block"
+              className="hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors lg:block"
               onClick={toggleMinSide}
               aria-label={minSide ? S.shExpandSide : S.shMinSide}
               title={minSide ? S.shExpandSide : S.shMinSide}
             >
               <PanelLeft className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2 text-sm text-steel-500">
-              <span className="font-medium text-navy-900">{S.shGalangan}</span>
-              <span>/</span>
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <span className="font-semibold text-slate-900">{S.shGalangan}</span>
+              <span className="text-slate-300">/</span>
               <span
                 title={backendError ?? (backendMode === "remote" ? S.shConnectedServer : S.shRunningLocal)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${backendMode === "remote" && !backendError ? "bg-emerald-50 text-emerald-700 ring-emerald-600/15" : "bg-steel-50 text-steel-500 ring-steel-500/15"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${backendMode === "remote" && !backendError ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : "bg-slate-100 text-slate-600 ring-slate-200"}`}
               >
+                <span className={`h-1.5 w-1.5 rounded-full ${backendMode === "remote" && !backendError ? "bg-emerald-500" : "bg-slate-400"}`} />
                 {backendMode === "remote" && !backendError ? S.shServerBadge : S.shLocalBadge}
               </span>
             </div>
@@ -607,10 +624,10 @@ export default function AppShell() {
 
           <div className="relative hidden max-w-md flex-1 md:block">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder={t.nav.searchPh}
-                className="input pl-9 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 pl-10 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/15 focus:border-rose-400 transition-all shadow-2xs"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
