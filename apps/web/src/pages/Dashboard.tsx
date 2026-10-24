@@ -37,7 +37,6 @@ import {
   ChartTooltip,
   Stagger,
   StaggerItem,
-  GlowCard,
   Badge,
   ProgressBar,
   Avatar,
@@ -523,6 +522,14 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     return out;
   }, [scopedAlertData, user]);
 
+  const attentionCountByCategory = useMemo(() => {
+    const counts: Partial<Record<ModuleAlertKey, number>> = {};
+    for (const { key } of attentionItems) {
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }, [attentionItems]);
+
   const selectedAttentionItems = useMemo(
     () => selectedAttentionCategory
       ? attentionItems.filter(({ key }) => key === selectedAttentionCategory)
@@ -592,42 +599,150 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         />
       </StaggerItem>
 
-      {/* TARGET VS AKTUAL - atur via tombol, hanya Direktur/Manager */}
+      {/* EXECUTIVE COCKPIT & TARGET PROGRESS GRID (Apple HIG & Linear Grid Layout) */}
       <StaggerItem>
-        <Card className="p-4">
-          <div className="mb-2 flex items-center justify-between px-1">
-            <h3 className="text-sm font-semibold text-navy-900">{S.targetVsActual.replace("{n}", branch)}</h3>
-            {allowedTarget ? (
-              <button className="btn-secondary text-xs" onClick={openTargetModal}>{S.setTargetBtn}</button>
-            ) : (
-              <span className="text-xs text-steel-400">{S.onlyDirectorManager}</span>
-            )}
-          </div>
-          {(!tgt.revenue || tgt.revenue <= 0) && (!tgt.projects || tgt.projects <= 0) && (
-            <div className="mx-1 mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5" role="status">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-              <div className="min-w-0 flex-1 text-xs leading-relaxed text-amber-800">
-                <p className="font-semibold">Belum ada target untuk cabang {branch}.</p>
-                <p className="text-amber-700">Aktual {fmtMiliar(aktualRev)} · {aktualProj} proyek aktif belum bisa dibandingkan. {allowedTarget ? "Klik Atur Target untuk mengisi." : "Minta Direktur/Manager mengisi target."}</p>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 items-stretch">
+          {/* Executive Portfolio Cockpit (7 cols lg, 8 cols 2xl) */}
+          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-900 p-6 text-white shadow-md border border-navy-800/80 lg:col-span-7 2xl:col-span-8">
+            {/* Ambient inner soft glow */}
+            <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08),transparent_70%)] blur-2xl" />
+            <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-48 w-48 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(185,28,28,0.12),transparent_70%)] blur-xl" />
+
+            <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/90 ring-1 ring-white/15">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <span className="text-xs font-semibold tracking-wider uppercase text-white/70">
+                  {S.totalPortfolio}
+                </span>
               </div>
-              {allowedTarget && (
-                <button className="btn-secondary shrink-0 px-2 py-1 text-[11px]" onClick={openTargetModal}>Isi target</button>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-300 ring-1 ring-emerald-400/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {S.systemOperational}
+                </span>
+                <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90 ring-1 ring-white/15">
+                  {S.activeWorkers.replace("{n}", String(activeEmployees))}
+                </span>
+              </div>
             </div>
-          )}
-          <div className="grid grid-cols-1 gap-3 px-1 sm:grid-cols-2">
-            <div>
-              <div className="mb-1 flex justify-between text-xs"><span className="text-steel-500">{S.revenueActualVsTarget}</span><span className="font-semibold text-navy-900">{fmtMiliar(aktualRev)} / {fmtMiliar(tgt.revenue)}</span></div>
-              <ProgressBar value={tgt.revenue > 0 ? (aktualRev / tgt.revenue) * 100 : 0} tone="navy" />
-              {(!tgt.revenue || tgt.revenue <= 0) && <p className="mt-1 text-[11px] italic text-steel-400">Target pendapatan masih kosong</p>}
+
+            <div className="relative z-10 my-5">
+              <p className="text-3xl sm:text-4xl 2xl:text-5xl font-bold tracking-tight text-white tabular-nums">
+                {fmtMiliar(activeContracts)}
+              </p>
+              <p className="mt-1 text-xs text-white/60">
+                {branchProjects.length} proyek terdaftar di portofolio aktif cabang {branch}
+              </p>
             </div>
-            <div>
-              <div className="mb-1 flex justify-between text-xs"><span className="text-steel-500">{S.projectActualVsTarget}</span><span className="font-semibold text-navy-900">{aktualProj} / {tgt.projects}</span></div>
-              <ProgressBar value={tgt.projects > 0 ? (aktualProj / tgt.projects) * 100 : 0} tone="teal" />
-              {(!tgt.projects || tgt.projects <= 0) && <p className="mt-1 text-[11px] italic text-steel-400">Target proyek masih kosong</p>}
+
+            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-white/10 pt-3.5">
+              <div>
+                <span className="text-[11px] text-white/60 block">{S.activeQuotationLabel}</span>
+                <span className="text-sm font-semibold text-white/95">{fmtMiliar(pipelineActive)}</span>
+              </div>
+              <div>
+                <span className="text-[11px] text-white/60 block">{S.seaTrialLabel}</span>
+                <span className="text-sm font-semibold text-white/95 truncate block">{seaTrialVessel}</span>
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-[11px] text-white/60 block">{S.stockValueLabel}</span>
+                <span className="text-sm font-semibold text-white/95">{fmtMiliar(stockValue)}</span>
+              </div>
             </div>
           </div>
-        </Card>
+
+          {/* Target vs Aktual Executive Widget (5 cols lg, 4 cols 2xl) */}
+          <div className="flex flex-col justify-between rounded-2xl bg-white/95 border border-steel-200/90 p-5 shadow-soft backdrop-blur-md lg:col-span-5 2xl:col-span-4">
+            <div>
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-steel-100">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-navy-900 truncate">
+                    {S.targetVsActual.replace("{n}", branch)}
+                  </h3>
+                  <p className="text-[11px] text-steel-500">Pencapaian performa galangan</p>
+                </div>
+                {allowedTarget ? (
+                  <button className="btn-secondary text-xs px-2.5 py-1 shrink-0" onClick={openTargetModal}>
+                    {S.setTargetBtn}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-steel-400 shrink-0">{S.onlyDirectorManager}</span>
+                )}
+              </div>
+
+              {(!tgt.revenue || tgt.revenue <= 0) && (!tgt.projects || tgt.projects <= 0) ? (
+                <div className="my-3 rounded-xl border border-amber-200/90 bg-amber-50/70 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                    <div className="min-w-0 flex-1 text-xs">
+                      <p className="font-semibold text-amber-900">Belum ada target cabang {branch}</p>
+                      <p className="mt-0.5 text-amber-700 leading-relaxed text-[11px]">
+                        Aktual {fmtMiliar(aktualRev)} ({aktualProj} proyek). Atur target untuk melacak pencapaian.
+                      </p>
+                      {allowedTarget && (
+                        <button
+                          className="mt-2 inline-flex items-center gap-1 rounded-md bg-amber-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-xs hover:bg-amber-700"
+                          onClick={openTargetModal}
+                        >
+                          Isi Target
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-3 pt-2.5">
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-medium text-steel-600">{S.revenueActualVsTarget}</span>
+                    <span className="font-semibold text-navy-900 tabular-nums">
+                      {fmtMiliar(aktualRev)} / {fmtMiliar(tgt.revenue)}
+                    </span>
+                  </div>
+                  <ProgressBar value={tgt.revenue > 0 ? (aktualRev / tgt.revenue) * 100 : 0} tone="navy" />
+                  {tgt.revenue > 0 ? (
+                    <div className="mt-1 flex justify-between text-[11px] text-steel-400">
+                      <span>Pencapaian pendapatan</span>
+                      <span className="font-semibold text-navy-900">
+                        {Math.round((aktualRev / tgt.revenue) * 100)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] italic text-steel-400">Target pendapatan masih kosong</p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-medium text-steel-600">{S.projectActualVsTarget}</span>
+                    <span className="font-semibold text-navy-900 tabular-nums">
+                      {aktualProj} / {tgt.projects} proyek
+                    </span>
+                  </div>
+                  <ProgressBar value={tgt.projects > 0 ? (aktualProj / tgt.projects) * 100 : 0} tone="teal" />
+                  {tgt.projects > 0 ? (
+                    <div className="mt-1 flex justify-between text-[11px] text-steel-400">
+                      <span>Pencapaian proyek</span>
+                      <span className="font-semibold text-navy-900">
+                        {Math.round((aktualProj / tgt.projects) * 100)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-[11px] italic text-steel-400">Target proyek masih kosong</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 border-t border-steel-100 pt-2.5 text-[11px] text-steel-400 flex items-center justify-between">
+              <span>Siklus kuartal aktif</span>
+              <span className="font-medium text-navy-900">Q4 2026</span>
+            </div>
+          </div>
+        </div>
       </StaggerItem>
 
       <Modal open={showTarget} onClose={() => setShowTarget(false)} title={S.setTargetTitle.replace("{n}", branch)} subtitle={S.setTargetSub}
@@ -637,31 +752,6 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
           <Field label={S.targetProjectLabel}><NumInput min={0} className="input" placeholder={S.targetProjectPh} value={tgtProj} onChange={(e) => setTgtProj(e.target.value)} /></Field>
         </div>
       </Modal>
-
-      {/* HERO GLOW BANNER */}
-      <StaggerItem>
-        <GlowCard gradient="gradient-hero">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-steel-300">{S.totalPortfolio}</p>
-                <p className="text-3xl font-bold tracking-tight">{fmtMiliar(activeContracts)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge tone="teal" className="bg-white/15 border-white/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {S.systemOperational}
-              </Badge>
-              <span className="px-3 py-1.5 rounded-lg bg-black/25 text-sm font-medium text-white">
-                {S.activeWorkers.replace("{n}", String(activeEmployees))}
-              </span>
-            </div>
-          </div>
-        </GlowCard>
-      </StaggerItem>
 
       {/* KPI ROW */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -711,81 +801,135 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         </StaggerItem>
       </div>
 
-      {/* RINGKASAN OPERASIONAL - pindahan strip, tepat di bawah 4 kartu utama */}
+      {/* RADAR OPERASIONAL & TINDAKAN CEPAT (Apple HIG / Linear Matrix) */}
       <StaggerItem>
-        <Card className="p-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-ocean-50 text-ocean-600">
-                <Boxes className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-navy-900">{S.stockValueLabel} {lowStock.length > 0 && <span className="ml-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">{S.lowStockBadge.replace("{n}", String(lowStock.length))}</span>}</p>
-                <Link to="/inventori" className="text-lg font-bold text-gradient-navy hover:underline">{fmtMiliar(stockValue)}</Link>
-              </div>
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between border-b border-steel-100 pb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-navy-900">Radar Operasional &amp; Indikator Langsung</h3>
+              <p className="text-xs text-steel-500">Metrik utama galangan &amp; tautan tindakan langsung ke modul kerja</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Calendar className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-navy-900">{S.seaTrialLabel}</p>
-                <p className="text-lg font-bold text-gradient-navy">{seaTrialVessel}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                <Anchor className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-navy-900">{S.activeQuotationLabel}</p>
-                <Link to="/crm" className="text-lg font-bold text-gradient-navy hover:underline">{fmtMiliar(pipelineActive)}</Link>
-              </div>
-            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-steel-400">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Sinkron langsung
+            </span>
           </div>
-          {/* Kartu mini "NCR Terbuka" / "Piutang Tertagih" / "Kontrak Menang".
-              Semuanya adalah <button> penuh (bukan hanya angkanya) supaya
-              target kliknya besar dan tidak perlu clicked secara presisi;
-              geklik akan redirect ke modul + tab tujuan lalu menyorot SELURUH
-              baris yang dihitung angka di kartu ini. */}
-          <div className="mt-3 grid grid-cols-1 gap-3 border-t border-steel-100 pt-3 sm:grid-cols-3">
+
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            {/* 1. Nilai Stok Inventori */}
+            <Link
+              to="/inventori"
+              className="group flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs transition-all hover:border-steel-300 hover:bg-steel-50/60 hover:shadow-sm"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-600/20">
+                  <Boxes className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-steel-500 truncate">{S.stockValueLabel}</span>
+                    {lowStock.length > 0 && (
+                      <span className="rounded-full bg-rose-50 px-1.5 py-0.2 text-[10px] font-bold text-rose-700 ring-1 ring-rose-600/20">
+                        {S.lowStockBadge.replace("{n}", String(lowStock.length))}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-lg font-bold text-navy-900 tabular-nums">{fmtMiliar(stockValue)}</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-steel-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-900" />
+            </Link>
+
+            {/* 2. Sea Trial Terjadwal */}
+            <div className="flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20">
+                  <Calendar className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <span className="text-xs font-medium text-steel-500 block truncate">{S.seaTrialLabel}</span>
+                  <p className="mt-0.5 text-lg font-bold text-navy-900 truncate" title={seaTrialVessel}>
+                    {seaTrialVessel}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-600/20 shrink-0">
+                Terjadwal
+              </span>
+            </div>
+
+            {/* 3. Pipeline CRM (Quotation Aktif) */}
+            <Link
+              to="/crm"
+              className="group flex items-center justify-between rounded-xl border border-steel-200/80 bg-white/70 p-3.5 shadow-xs transition-all hover:border-steel-300 hover:bg-steel-50/60 hover:shadow-sm"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 ring-1 ring-violet-600/20">
+                  <Anchor className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <span className="text-xs font-medium text-steel-500 block truncate">{S.activeQuotationLabel}</span>
+                  <p className="mt-0.5 text-lg font-bold text-navy-900 tabular-nums">{fmtMiliar(pipelineActive)}</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-steel-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-900" />
+            </Link>
+
+            {/* 4. NCR Terbuka (QC & Safety) */}
             <button
               type="button"
               onClick={goNcr}
-              title={`Buka ${openNcrIds.length} NCR terbuka di QC & Safety (tab NCR, semua baris disorot)`}
-              className="flex w-full cursor-pointer flex-col items-start gap-0.5 rounded-xl border border-rose-200 bg-rose-50/40 px-3 py-2 text-left transition-colors hover:border-rose-400 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+              title={`Buka ${openNcrIds.length} NCR terbuka di QC & Safety`}
+              className="group flex items-center justify-between rounded-xl border border-rose-200/80 bg-rose-50/40 p-3.5 text-left shadow-xs transition-all hover:border-rose-300 hover:bg-rose-50/80 hover:shadow-sm"
             >
-              <span className="flex w-full items-center justify-between gap-2">
-                <span className="text-xs text-steel-500">{S.openNcrLabel}</span>
-                <span className="text-[11px] text-rose-400" aria-hidden>&rarr; QC &amp; Safety</span>
-              </span>
-              <span className="font-bold text-rose-600" title={criticalOpenNcr > 0 ? S.criticalCount.replace("{n}", String(criticalOpenNcr)) : S.nihilCritical}>
-                {criticalOpenNcr > 0 ? S.ncrCasesCritical.replace("{n}", String(openNcr)).replace("{a}", String(criticalOpenNcr)) : S.ncrCases.replace("{n}", String(openNcr))}
-              </span>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-steel-600">{S.openNcrLabel}</span>
+                  <span className="text-[10px] font-semibold text-rose-700">QC &amp; Safety</span>
+                </div>
+                <p
+                  className="mt-0.5 text-base font-bold text-rose-700 tabular-nums"
+                  title={criticalOpenNcr > 0 ? S.criticalCount.replace("{n}", String(criticalOpenNcr)) : S.nihilCritical}
+                >
+                  {criticalOpenNcr > 0
+                    ? S.ncrCasesCritical.replace("{n}", String(openNcr)).replace("{a}", String(criticalOpenNcr))
+                    : S.ncrCases.replace("{n}", String(openNcr))}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-rose-400 transition-transform group-hover:translate-x-0.5 group-hover:text-rose-700" />
             </button>
+
+            {/* 5. Piutang Tertagih (AR) */}
             <button
               type="button"
               onClick={goAR}
-              title={`Buka ${arRows.length} invoice belum tertagih di Keuangan (tab Piutang (AR), semua baris disorot)`}
-              className="flex w-full cursor-pointer flex-col items-start gap-0.5 rounded-xl border border-navy-200 bg-navy-50/40 px-3 py-2 text-left transition-colors hover:border-navy-400 hover:bg-navy-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-400"
+              title={`Buka ${arRows.length} invoice belum tertagih di Keuangan`}
+              className="group flex items-center justify-between rounded-xl border border-navy-200/80 bg-navy-50/40 p-3.5 text-left shadow-xs transition-all hover:border-navy-300 hover:bg-navy-50/80 hover:shadow-sm"
             >
-              <span className="flex w-full items-center justify-between gap-2">
-                <span className="text-xs text-steel-500">{S.arLabel}</span>
-                <span className="text-[11px] text-navy-400" aria-hidden>&rarr; Keuangan</span>
-              </span>
-              <span className="font-bold text-navy-900">{fmtMiliar(arOutstanding)}</span>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-steel-600">{S.arLabel}</span>
+                  <span className="text-[10px] font-semibold text-navy-700">Keuangan</span>
+                </div>
+                <p className="mt-0.5 text-base font-bold text-navy-900 tabular-nums">{fmtMiliar(arOutstanding)}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-navy-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-900" />
             </button>
+
+            {/* 6. Kontrak Menang (CRM) */}
             <button
               type="button"
               onClick={goKontrak}
-              title={`Buka ${wonContracts.length} kontrak menang di CRM (tab Kontrak, semua baris disorot)`}
-              className="flex w-full cursor-pointer flex-col items-start gap-0.5 rounded-xl border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              title={`Buka ${wonContracts.length} kontrak menang di CRM`}
+              className="group flex items-center justify-between rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-3.5 text-left shadow-xs transition-all hover:border-emerald-300 hover:bg-emerald-50/80 hover:shadow-sm"
             >
-              <span className="flex w-full items-center justify-between gap-2">
-                <span className="text-xs text-steel-500">{S.wonContractLabel}</span>
-                <span className="text-[11px] text-emerald-600" aria-hidden>&rarr; CRM</span>
-              </span>
-              <span className="font-bold text-navy-900">{fmtMiliar(wonContractValue)}</span>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-steel-600">{S.wonContractLabel}</span>
+                  <span className="text-[10px] font-semibold text-emerald-700">CRM</span>
+                </div>
+                <p className="mt-0.5 text-base font-bold text-navy-900 tabular-nums">{fmtMiliar(wonContractValue)}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-emerald-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700" />
             </button>
           </div>
         </Card>
@@ -794,44 +938,66 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       {/* PERLU PERHATIAN - pilih kategori sebelum melihat laporan; pilihan terakhir
           disimpan di perangkat, dan item tetap menuju modul + tab + baris terkait. */}
       <StaggerItem>
-        <Card className="p-4">
-          <div className="mb-3 flex items-center gap-2 px-1">
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between border-b border-steel-100 pb-3">
             <button
               type="button"
               onClick={goNotifikasi}
               title={`Buka semua notifikasi (${attentionItems.length} kondisi) - semua baris alert akan disorot`}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-1 py-0.5 text-left hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+              className="group flex cursor-pointer items-center gap-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
             >
-              <AlertTriangle className="h-4 w-4 text-rose-500" />
-              <h3 className="text-sm font-semibold text-navy-900 underline-offset-2 hover:underline">
-                {S.needAttention}
-                {selectedAttentionCategory && (
-                  <span className="ml-1 text-xs font-medium text-steel-500">
-                    {S.attentionSelectedCount.replace("{n}", String(selectedAttentionItems.length))}
-                  </span>
-                )}
-                <span className="ml-1 text-[11px] font-normal text-steel-400">&rarr; Notifikasi</span>
-              </h3>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-600/20">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-navy-900 group-hover:text-rose-700 transition-colors">
+                  {S.needAttention}
+                  {selectedAttentionCategory && (
+                    <span className="ml-1 text-xs font-normal text-steel-500">
+                      {S.attentionSelectedCount.replace("{n}", String(selectedAttentionItems.length))}
+                    </span>
+                  )}
+                </h3>
+                <p className="text-[11px] text-steel-400">{S.autoThreshold}</p>
+              </div>
             </button>
-            <span className="text-xs text-steel-400">{S.autoThreshold}</span>
-            <button type="button" onClick={goNotifikasi} className="btn-secondary ml-auto px-2 py-1 text-[11px]">{S.seeAll}</button>
+            <button
+              type="button"
+              onClick={goNotifikasi}
+              className="btn-secondary text-xs px-2.5 py-1"
+            >
+              {S.seeAll} di Notifikasi &rarr;
+            </button>
           </div>
-          <div className="mb-3 flex flex-wrap gap-2 px-1" role="group" aria-label={S.attentionCategoryLabel}>
+
+          <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={S.attentionCategoryLabel}>
             {DASH_ALERT_CATEGORY_ORDER.map((key) => {
               const selected = selectedAttentionCategory === key;
+              const count = attentionCountByCategory[key] ?? 0;
               return (
                 <button
                   key={key}
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggleAttentionCategory(key)}
-                  className={`min-h-10 rounded-full border px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
                     selected
-                      ? "border-navy-700 bg-navy-700 text-white"
-                      : "border-steel-200 bg-white text-steel-600 hover:bg-steel-50"
+                      ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                      : "border-steel-200/90 bg-white text-steel-600 hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900"
                   }`}
                 >
-                  {DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}
+                  <span>{DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}</span>
+                  {count > 0 && (
+                    <span
+                      className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                        selected
+                          ? "bg-white text-navy-950"
+                          : "bg-rose-100 text-rose-700 ring-1 ring-rose-600/20"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}

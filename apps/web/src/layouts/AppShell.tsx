@@ -856,7 +856,7 @@ export default function AppShell() {
           </div>
         )}
 
-        <main className="p-4 lg:p-6">
+        <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-5 lg:p-6 2xl:p-8">
           {canOpenModule(user, moduleKeyOf(location.pathname)) ? <Outlet /> : (
             <div className="mx-auto mt-16 max-w-md rounded-2xl border border-steel-200 bg-white p-6 text-center">
               <ShieldCheck className="mx-auto h-8 w-8 text-steel-400" />
