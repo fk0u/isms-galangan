@@ -908,14 +908,15 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   /* Nama kapal invoice (K17-FIN-03): field invoice, lalu kapal proyeknya. */
   const invVesselOf = (inv: Record<string, unknown>): string => String(inv.vessel || projectById[String(inv.project ?? "")]?.vessel || "");
 
-  const matchBranch = (projectId: string): boolean => {
+  const matchBranch = (projectId: string, invBranch?: string): boolean => {
     if (branch === "SEMUA") return true;
+    if (invBranch && (invBranch === branch || (branch === "Samarinda" && (invBranch === "SMD" || invBranch === "Samarinda")))) return true;
     const p = projectById[projectId];
     return Boolean(p) && String(p.branch ?? "") === branch;
   };
 
   const invoices = useMemo(
-    () => (data.invoices ?? []).filter((i) => matchBranch(String(i.project ?? ""))),
+    () => (data.invoices ?? []).filter((i) => matchBranch(String(i.project ?? ""), String(i.branch ?? ""))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data.invoices, branch, data.projects]
   );
@@ -1064,7 +1065,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const filteredAr = useMemo(
     () => invoices
       .filter((i) => matchHist(String(i.due ?? ""), invHist))
-      .filter((i) => rowMatches(i as unknown as Record<string, unknown>, arQ, ["id", "client", "kodePembantu", "status", "po"])),
+      .filter((i) => rowMatches(i as unknown as Record<string, unknown>, arQ, ["id", "noInv", "client", "kodePembantu", "vessel", "status", "po"])),
     [invoices, invHist, arQ]);
   const filteredAp = useMemo(
     () => payables
@@ -1096,7 +1097,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     k === "updatedAt" ? (lastTouchedAt(inv) ?? "") : String(inv.id)), [filteredInvoices, invSort]);
   const sortedAr = useMemo(() => sortRows(filteredAr, arSort, (inv, k) =>
     k === "id" ? String(inv.id) : k === "kode" ? String(inv.kodePembantu ?? inv.client ?? "") : k === "project" ? String(inv.project ?? "") :
-    k === "openAwal" ? num(inv.openAwal) : k === "amount" ? num(inv.amount) : k === "due" ? String(inv.due ?? "") :
+    k === "openAwal" ? num(inv.openAwal) : k === "amount" ? invNeto(inv) : k === "due" ? String(inv.due ?? "") :
     k === "age" ? ageDays(inv.due, today) : String(inv.status)), [filteredAr, arSort, today]);
   const sortedAp = useMemo(() => sortRows(filteredAp, apSort, (a, k) =>
     k === "v" ? String(a.v) : k === "kode" ? String(a.kodePembantu ?? a.v) : k === "po" ? String(a.po) :
@@ -3216,15 +3217,24 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         return (
                           <tr key={inv.id} id={notifRowId(String(inv.id))} className={rowHighlightClass({ id: String(inv.id), flash, notified: notified.has(String(inv.id)), base: "hover:bg-surface" })}>
                             <td className="td">
-                              <p className="font-medium text-navy-900 font-mono">{inv.id}</p>
+                              <p className="font-medium text-navy-900 font-mono">
+                                {inv.noInv ? (
+                                  <>
+                                    <span>{String(inv.noInv)}</span>
+                                    <span className="block text-[10px] text-steel-400 font-normal">({String(inv.id)})</span>
+                                  </>
+                                ) : (
+                                  <span>{String(inv.id)}</span>
+                                )}
+                              </p>
                               <p className="text-xs text-steel-500 truncate" title={String(inv.client ?? "")}>{String(inv.client ?? "")}</p>
-                              <p className="text-[11px] text-steel-400">{String(inv.billingType ?? inv.paymentTerm ?? "")}{inv.milestoneRef ? ` · ${inv.milestoneRef}` : ""}</p>
+                              <p className="text-[11px] text-steel-400 truncate" title={String(inv.vessel || invVesselOf(inv) || "")}>{String(inv.vessel || invVesselOf(inv) || String(inv.billingType ?? inv.paymentTerm ?? ""))}{inv.milestoneRef ? ` · ${inv.milestoneRef}` : ""}</p>
                               {needsDirector(inv) && <span className="mt-1 inline-block"><Badge tone="amber">{S.needDirector}</Badge></span>}
                             </td>
                             <td className="td text-steel-600 font-mono text-xs truncate" title={String(inv.kodePembantu ?? inv.client ?? "")}>{String(inv.kodePembantu ?? inv.client ?? "")}{inv.nonPpn ? " · Non-PPn" : ""}</td>
                             <td className="td text-steel-600 font-mono text-xs truncate" title={String(inv.project ?? "-")}>{inv.project || "-"}</td>
                             <td className="td text-xs text-steel-500">{num(inv.openAwal) ? fmtRupiah(num(inv.openAwal)) : "-"}</td>
-                            <td className="td font-semibold text-navy-900">{fmtRupiah(num(inv.amount))}</td>
+                            <td className="td font-semibold text-navy-900">{fmtRupiah(invNeto(inv))}</td>
                             <td className="td text-steel-600">{fmtTanggal(String(inv.due ?? ""))}</td>
                             <td className="td text-xs text-steel-600">{open ? S.ageDays.replace("{n}", fmtJumlah(age)) : "-"}</td>
                             <td className="td">
@@ -3289,7 +3299,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           {fmtRupiah(sortedAr.reduce((s, r) => s + num(r.openAwal), 0))}
                         </td>
                         <td className="td font-bold text-navy-900">
-                          {fmtRupiah(sortedAr.reduce((s, r) => s + num(r.amount), 0))}
+                          {fmtRupiah(sortedAr.reduce((s, r) => s + invNeto(r), 0))}
                         </td>
                         <td className="td" colSpan={5}></td>
                       </tr>
@@ -3870,8 +3880,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       const bukti = String(inv.paidProofUrl ?? inv.buktiUrl ?? "");
                       return (
                       <tr key={inv.id} id={notifRowId(String(inv.id))} className={rowHighlightClass({ id: String(inv.id), flash, notified: notified.has(String(inv.id)), base: "hover:bg-surface" })}>
-                        <td className="td font-mono text-xs font-semibold text-navy-900">{inv.id}<span className="block font-sans text-[11px] font-normal text-steel-500">{fmtTanggal(String(inv.due ?? ""))}</span>
-                          <span className="block max-w-[220px] truncate font-sans text-[11px] font-normal text-steel-600">{String(inv.client || "-")} · {invVesselOf(inv) || S.detNoVessel}</span></td>
+                        <td className="td font-mono text-xs font-semibold text-navy-900">
+                          {inv.noInv ? (
+                            <div>
+                              <span>{String(inv.noInv)}</span>
+                              <span className="ml-1 text-[10px] text-steel-400 font-normal">({String(inv.id)})</span>
+                            </div>
+                          ) : (
+                            <span>{String(inv.id)}</span>
+                          )}
+                          <span className="block font-sans text-[11px] font-normal text-steel-500">{fmtTanggal(String(inv.due ?? ""))}</span>
+                          <span className="block max-w-[220px] truncate font-sans text-[11px] font-normal text-steel-600">{String(inv.client || "-")} · {invVesselOf(inv) || S.detNoVessel}</span>
+                        </td>
                         <td className="td text-xs text-steel-600">{String(inv.billingType ?? inv.paymentTerm ?? "-")}{inv.serviceRef ? ` · ${inv.serviceRef}` : ""}</td>
                         <td className="td text-xs text-steel-600">{S.linesCount.replace("{n}", String(Array.isArray(inv.lines) ? inv.lines.length : 1))}</td>
                         <td className="td text-xs">
@@ -5748,8 +5768,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       />
 
       {/* Modal Detail Invoice: ringkasan + baris + pajak + bukti & jurnal viewer. */}
-      <Modal open={invDetail !== null} onClose={() => setInvDetail(null)} title={invDetail ? S.detTitle.replace("{a}", invDetail.id) : S.detBtn}
-        subtitle={invDetail ? [invDetail.client, invDetail.project, invDetail.status].map((v) => String(v ?? "").trim()).filter(Boolean).join(" · ") : ""} wide
+      <Modal open={invDetail !== null} onClose={() => setInvDetail(null)} title={invDetail ? (invDetail.noInv ? `${String(invDetail.noInv)} (${String(invDetail.id)})` : S.detTitle.replace("{a}", String(invDetail.id))) : S.detBtn}
+        subtitle={invDetail ? [invDetail.client, invDetail.vessel || invVesselOf(invDetail) || invDetail.project, invDetail.status].map((v) => String(v ?? "").trim()).filter(Boolean).join(" · ") : ""} wide
         footer={<>
           <button className="btn-secondary" onClick={() => setInvDetail(null)}>{S.cancelBtn}</button>
           <button
@@ -5764,7 +5784,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               }
               void pdfDoc.request(
                 { kind: "invoice", id: String(invDetail?.id ?? ""), locale },
-                `Invoice-${String(invDetail?.id ?? "")}.pdf`,
+                `Invoice-${String((invDetail?.noInv || invDetail?.id) ?? "").replaceAll("/", "-")}.pdf`,
                 false,
               );
             }}
