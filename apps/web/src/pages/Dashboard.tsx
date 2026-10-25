@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Maximize,
   Minimize,
-  Bot,
   Ship,
 } from "lucide-react";
 import {
@@ -336,9 +335,6 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      Jadi yang dikirim adalah perintah "tampilkan semua alert", dan halaman
      tujuan yang menyorot barisnya sendiri. */
   const goNotifikasi = () => navigate("/notifikasi?alert=1");
-  const askNadia = (prompt?: string) => {
-    window.dispatchEvent(new CustomEvent("open-digital-secretary", { detail: { prompt } }));
-  };
   const arOutstanding = inBranch(data.invoices)
     .filter((i) => i.status !== "Lunas" && i.status !== "Draft")
     .reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -602,101 +598,6 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             </div>
           }
         />
-      </StaggerItem>
-
-      {/* IMMERSIVE AI COPILOT BRIEFING BANNER */}
-      <StaggerItem>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-rose-950/80 to-slate-900 text-white p-6 shadow-xl border border-rose-500/20 backdrop-blur-md">
-          {/* Ambient Glows */}
-          <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-rose-500/20 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-sky-500/15 blur-3xl" />
-
-          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch justify-between gap-6">
-            {/* Left: Avatar & Secretary Greeting */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start md:items-center gap-5 text-center sm:text-left">
-              <div className="relative shrink-0">
-                <div className="relative h-20 w-20 md:h-24 md:w-24 rounded-2xl overflow-hidden ring-4 ring-rose-500/40 shadow-2xl bg-slate-900">
-                  <img
-                    src="/secretary-avatar.jpg"
-                    alt="Nadia - Asisten Digital Galangan"
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                </div>
-                {/* Online pulse badge */}
-                <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 ring-2 ring-white">
-                  <span className="h-3 w-3 rounded-full bg-emerald-400 animate-ping absolute" />
-                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <h2 className="text-xl md:text-2xl font-black tracking-tight text-white">
-                  Selamat Datang, {user?.name ? user.name.split(" ")[0] : "Rekan"}!
-                </h2>
-                <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-                  {delayed > 0
-                    ? `Perhatian: Ada ${delayed} proyek berisiko keterlambatan yang memerlukan mitigasi WBS. Seluruh fasilitas dok dan keselamatan kerja siap dipantau.`
-                    : `Semua operasional galangan cabang ${branch} berjalan optimal. Ada ${totalActive} proyek aktif dengan utilisasi dok terkendali.`}
-                </p>
-
-                {/* Quick Interactive Prompt Chips */}
-                <div className="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => askNadia("Status proyek terlambat dan kendala")}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                    <span>Analisis Keterlambatan</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => askNadia("Cek stok material kritis di gudang")}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    <Boxes className="h-3.5 w-3.5 text-cyan-400" />
-                    <span>Cek Stok Kritis</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => askNadia("Bagaimana kapasitas drydock dan slipway?")}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    <Anchor className="h-3.5 w-3.5 text-sky-400" />
-                    <span>Okupansi Drydock</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => askNadia()}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-lg shadow-rose-900/40 transition-all hover:scale-105 active:scale-95 cursor-pointer ml-auto md:ml-0"
-                  >
-                    <Bot className="h-3.5 w-3.5" />
-                    <span>Tanya Nadia</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Quick Operational Briefing Status */}
-            <div className="hidden lg:flex flex-col justify-center rounded-2xl bg-white/5 border border-white/10 p-4 min-w-[240px] text-xs space-y-2.5 backdrop-blur-md">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-300">Indikator Langsung</span>
-              <div className="flex items-center justify-between text-slate-300">
-                <span>Cabang Aktif</span>
-                <span className="font-bold text-white">{branch}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span>Armada di Galangan</span>
-                <span className="font-bold text-emerald-400">{branchProjects.length} Unit</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-300">
-                <span>Keselamatan Kerja (NCR)</span>
-                <span className={criticalOpenNcr === 0 ? "font-bold text-emerald-400" : "font-bold text-rose-400"}>
-                  {criticalOpenNcr === 0 ? "Nihil Kritis (Aman)" : `${criticalOpenNcr} Kasus Kritis`}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </StaggerItem>
 
       {/* EXECUTIVE OVERVIEW GRID (Apple HIG Luminous Cockpit - Vibrant, High-Contrast & Alive) */}

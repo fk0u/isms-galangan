@@ -135,12 +135,25 @@ function guardBroken(): boolean {
 /* ---------- komponen React (hanya pemasok konten, return null) ---------- */
 
 export default function Watermark() {
+  /* Watermark dimatikan sesuai permintaan tim pengembang (tampilan bersih tanpa teks melayang).
+     Bila ingin diaktifkan kembali untuk kebutuhan audit fisik, set VITE_ENABLE_WATERMARK=true. */
+  const enabled = import.meta.env.VITE_ENABLE_WATERMARK === "true";
+
+  useEffect(() => {
+    if (!enabled) {
+      for (const id of [...WM_IDS, ...LEGACY_WM_IDS, PRINT_ID]) {
+        document.getElementById(id)?.remove();
+      }
+    }
+  }, [enabled]);
+
   const { user } = useAuth();
   const [geo, setGeo] = useState<Geo>({ ip: "…", city: "", country: "" });
   const [now, setNow] = useState(() => new Date());
   const latest = useRef({ bg: "", printText: "" });
 
   useEffect(() => {
+    if (!enabled) return;
     const c = new AbortController();
     const t = window.setTimeout(() => c.abort(), 4000);
     fetchGeo(c.signal)
@@ -150,12 +163,13 @@ export default function Watermark() {
       window.clearTimeout(t);
       c.abort();
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     const id = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [enabled]);
 
   const device = useMemo(() => parseDevice(), []);
   const who = user?.username ?? "guest";
@@ -163,23 +177,25 @@ export default function Watermark() {
   const timeLabel = fmtWita(now);
   const lines = useMemo(
     () => [
-      `On Development by Alenkosa for PT Syukur Bersaudara`,
+      `PT Syukur Bersaudara — ISMS Galangan`,
       `${who} · ${timeLabel} · ${geo.ip}${loc ? ` · ${loc}` : ""} · ${device}`,
     ],
     [who, timeLabel, geo.ip, loc, device]
   );
-  const bg = useMemo(() => tileUri(lines), [lines]);
+  const bg = useMemo(() => (enabled ? tileUri(lines) : ""), [enabled, lines]);
   const printText = lines[1];
 
   latest.current = { bg, printText };
 
   /* pasang / perbarui konten */
   useEffect(() => {
+    if (!enabled) return;
     ensureDom(bg, printText);
-  }, [bg, printText]);
+  }, [enabled, bg, printText]);
 
   /* self-healing: pasang ulang jika node dihapus / disembunyikan */
   useEffect(() => {
+    if (!enabled) return;
     const heal = () => {
       if (guardBroken()) ensureDom(latest.current.bg, latest.current.printText);
     };
@@ -195,7 +211,7 @@ export default function Watermark() {
       window.clearInterval(iv);
       obs.disconnect();
     };
-  }, []);
+  }, [enabled]);
 
   return null;
 }
