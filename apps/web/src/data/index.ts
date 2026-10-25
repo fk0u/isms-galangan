@@ -663,6 +663,20 @@ export const spareparts: Sparepart[] = [
   { id: "SP-006", name: "Wire Rope 12mm", partNumber: "WR-12-050", category: "Rigging", projectId: "NB-2025-014", vesselId: "V-003", status: "Selesai", requestDate: "2026-06-15", repairDate: "2026-06-20", technician: "Sari Wulandari", cost: 8500000, notes: "Terpasang di cargo system" },
 ];
 
+export interface InvoiceCost {
+  desc: string;
+  amount: number;
+}
+
+export interface InvoicePayment {
+  termin?: string;
+  amount: number;
+  date: string;
+  method?: string;
+  ref?: string;
+  proofUrl?: string;
+}
+
 export interface Invoice {
   id: string;
   client: string;
@@ -671,6 +685,42 @@ export interface Invoice {
   due: string;
   status: "Lunas" | "Belum Dibayar" | "Terlambat" | "Draft";
   paymentTerm: string;
+  noInv?: string;
+  no?: number | string;
+  vessel?: string;
+  branch?: string;
+  date?: string;
+  jasaTotal?: number;
+  matTotal?: number;
+  dpp?: number;
+  ppnAmt?: number;
+  pphAmt?: number;
+  ppnRate?: number;
+  pphRate?: number;
+  grandTotal?: number;
+  sisa?: number;
+  paidTotal?: number;
+  paidAt?: string;
+  paidMethod?: string;
+  paidRef?: string;
+  billingType?: string;
+  milestoneRef?: string;
+  fakturPajak?: string;
+  buktiPotong?: string;
+  dockReport?: string;
+  pimpro?: string;
+  arsip?: string;
+  costs?: InvoiceCost[];
+  modalTotal?: number;
+  payments?: InvoicePayment[];
+  lines?: Array<{
+    desc: string;
+    qty?: number | string;
+    unit?: string;
+    price?: number;
+    amount?: number;
+    kategori?: string;
+  }>;
 }
 
 // Seed invoice dihapus - sumber kebenaran adalah saldo awal Piutang Excel

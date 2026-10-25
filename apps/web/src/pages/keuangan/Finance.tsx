@@ -55,6 +55,7 @@ import NeracaLajurCard from "./tabs/NeracaLajurCard";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
 import type { StoreItem, WbsItem } from "../../data/store";
+import type { InvoiceCost, InvoicePayment } from "../../data/index";
 import { useModuleSync } from "../../data/useModuleSync";
 import { financeCollectionsForTab } from "../../data/moduleCollections";
 import { fmtRupiah, fmtMiliar, fmtTanggal, fmtJumlah, parseRupiah, todayISO } from "../../utils/format";
@@ -5828,6 +5829,110 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   </table>
                 </div>
               </div>
+
+              {/* Dokumen & Status Operasional Pajak dari Ledger */}
+              {Boolean(invDetail.fakturPajak || invDetail.buktiPotong || invDetail.dockReport || invDetail.pimpro || invDetail.arsip) && (
+                <div className="rounded-xl border border-steel-200 p-3 bg-surface/50 space-y-1.5 text-xs">
+                  <p className="font-semibold uppercase tracking-wide text-steel-500">Kelengkapan Dokumen &amp; Pajak</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-steel-700">
+                    {Boolean(invDetail.fakturPajak) && (
+                      <div className="flex justify-between gap-2 border-b border-steel-100 pb-1">
+                        <span className="text-steel-500">Faktur Pajak:</span>
+                        <span className="font-mono text-navy-900 truncate max-w-[200px]" title={String(invDetail.fakturPajak)}>{String(invDetail.fakturPajak).split("\\").pop()}</span>
+                      </div>
+                    )}
+                    {Boolean(invDetail.buktiPotong) && (
+                      <div className="flex justify-between gap-2 border-b border-steel-100 pb-1">
+                        <span className="text-steel-500">Bukti Potong PPh:</span>
+                        <span className="font-mono text-navy-900 truncate max-w-[200px]">{String(invDetail.buktiPotong)}</span>
+                      </div>
+                    )}
+                    {Boolean(invDetail.dockReport) && (
+                      <div className="flex justify-between gap-2 border-b border-steel-100 pb-1">
+                        <span className="text-steel-500">Dock Report:</span>
+                        <span className="font-medium text-navy-900 truncate max-w-[200px]">{String(invDetail.dockReport)}</span>
+                      </div>
+                    )}
+                    {Boolean(invDetail.pimpro) && (
+                      <div className="flex justify-between gap-2 border-b border-steel-100 pb-1">
+                        <span className="text-steel-500">Pimpro / Project Manager:</span>
+                        <span className="font-medium text-navy-900">{String(invDetail.pimpro)}</span>
+                      </div>
+                    )}
+                    {Boolean(invDetail.arsip) && (
+                      <div className="flex justify-between gap-2 border-b border-steel-100 pb-1 sm:col-span-2">
+                        <span className="text-steel-500">Catatan Arsip:</span>
+                        <span className="text-navy-900">{String(invDetail.arsip)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Riwayat Pembayaran / Termin Bertahap */}
+              {Array.isArray(invDetail.payments) && (invDetail.payments as InvoicePayment[]).length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">Riwayat Pembayaran &amp; Termin ({(invDetail.payments as InvoicePayment[]).length})</p>
+                    <span className="text-xs font-semibold text-emerald-700">Total Masuk: {fmtRupiah(num(invDetail.paidTotal))}</span>
+                  </div>
+                  <div className="overflow-x-auto rounded-lg border border-steel-200">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-steel-200">
+                        <tr>
+                          <th className="th">Termin / Tahap</th>
+                          <th className="th">Tanggal Bayar</th>
+                          <th className="th text-right">Nominal Masuk</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {(invDetail.payments as InvoicePayment[]).map((p: InvoicePayment, idx: number) => (
+                          <tr key={idx}>
+                            <td className="td font-medium text-navy-900">Termin {p.termin || idx + 1}</td>
+                            <td className="td text-steel-600">{p.date ? fmtTanggal(String(p.date)) : "-"}</td>
+                            <td className="td text-right font-semibold text-emerald-600">{fmtRupiah(num(p.amount))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Rincian Modal & Biaya (HPP) Galangan */}
+              {Array.isArray(invDetail.costs) && (invDetail.costs as InvoiceCost[]).length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">Rincian Modal &amp; HPP Galangan ({(invDetail.costs as InvoiceCost[]).length})</p>
+                    <span className="text-xs font-semibold text-rose-700">Total Modal: {fmtRupiah(num(invDetail.modalTotal))}</span>
+                  </div>
+                  <div className="overflow-x-auto rounded-lg border border-steel-200">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface border-b border-steel-200">
+                        <tr>
+                          <th className="th">Pos Biaya / Subkon / Vendor</th>
+                          <th className="th text-right">Nominal Biaya</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {(invDetail.costs as InvoiceCost[]).map((c: InvoiceCost, idx: number) => (
+                          <tr key={idx}>
+                            <td className="td font-medium text-navy-900">{c.desc || "-"}</td>
+                            <td className="td text-right font-semibold text-slate-700">{fmtRupiah(num(c.amount))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-steel-50 font-semibold border-t border-steel-200">
+                        <tr>
+                          <td className="td text-steel-600">Estimasi Laba Kotor (Gross Margin)</td>
+                          <td className="td text-right text-navy-900">{fmtRupiah(Math.max(0, invNeto(invDetail) - num(invDetail.modalTotal)))}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-steel-200 p-3">
                   <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.detProof}</p>
