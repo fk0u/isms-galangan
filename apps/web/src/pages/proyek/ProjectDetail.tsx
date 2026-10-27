@@ -48,7 +48,7 @@ import { sameName } from "../../utils/names";
 import { calcProjectProgress } from "../../utils/projectProgress";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
-import { canonPrioritas, scopeList } from "../../utils/scope";
+import { canonPrioritas, scopeList, scopeTotal, syncWbsWeightsWithScope, groupWbsByScope, type ScopeItem } from "../../utils/scope";
 import { equipmentCostSummary } from "../../utils/projectCost";
 import { employeeOptions } from "../../utils/employeeOptions";
 import { projectDelayDetailsOf, runAutoWriteOnce, shouldAutoSetLate, shouldClearOverride } from "../../utils/projectDelay";
@@ -172,7 +172,7 @@ export default function ProjectDetail() {
   }, [tabParams]);
 
   const [showScope, setShowScope] = useState(false);
-  const [scopeVal, setScopeVal] = useState({ service: "", lokasi: "", deskripsi: "" });
+  const [scopeVal, setScopeVal] = useState({ service: "", harga: "", deskripsi: "" });
   /* Pratinjau impor ruang lingkup: berkas dibaca dulu, disimpan setelah dikonfirmasi. */
   const [scopePreview, setScopePreview] = useState<{ file: string; rows: ImportPreviewRow[]; items: { service: string; lokasi?: string; deskripsi?: string }[] } | null>(null);
   const [showDoc, setShowDoc] = useState(false);
@@ -226,7 +226,7 @@ export default function ProjectDetail() {
      salah milestone, risk yang dobel) nyangkut permanen di proyek. */
   const [delRec, setDelRec] = useState<{ kind: "risks" | "trials" | "changeOrders" | "bast"; row: StoreItem } | null>(null);
   const [showWbs, setShowWbs] = useState(false);
-  const [wbsForm, setWbsForm] = useState({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" });
+  const [wbsForm, setWbsForm] = useState({ task: "", category: "", start: "", end: "", progress: "0" });
   const [showWorktree, setShowWorktree] = useState(false);
   const [stageToDelete, setStageToDelete] = useState<string | null>(null);
   const [showClassDetails, setShowClassDetails] = useState(false);
@@ -494,7 +494,7 @@ const confirmStatus = async () => {
     }
   };
 
-  const wbs = wbsFor(pid) as WbsExt[];
+  const wbs = syncWbsWeightsWithScope(wbsFor(pid) as WbsExt[], project.scope);
   /* Semua booking equipment proyek (juga yang masih terjadwal), dikelompokkan
      per tahapan WBS: tahapan sesuai urutan WBS, lalu "tanpa tahapan". */
   const stageOrder = new Map(wbs.map((w, i) => [w.task, i]));
@@ -1159,16 +1159,21 @@ const createWarranty = async (wbsTask?: string) => {
 
   const saveScope = async () => {
     if (!scopeVal.service.trim()) { toast(S.detToastSvcReq, "info"); return; }
-    const item = {
+    const rawHarga = parseRupiah(scopeVal.harga);
+    const item: ScopeItem = {
       service: scopeVal.service.trim(),
-      ...(scopeVal.lokasi.trim() ? { lokasi: scopeVal.lokasi.trim() } : {}),
+      ...(rawHarga > 0 ? { harga: rawHarga } : {}),
       ...(scopeVal.deskripsi.trim() ? { deskripsi: scopeVal.deskripsi.trim() } : {}),
     };
+    const nextScope = [...scopeList(project.scope), item];
+    const totalP = scopeTotal(nextScope);
+    const patch: Record<string, unknown> = { scope: nextScope };
+    if (totalP > 0) patch.budget = totalP;
     try {
-      await update("projects", pid, { scope: [...scopeList(project.scope), item] });
+      await update("projects", pid, patch);
       log("menambah lingkup", `${pid} · ${item.service}`, "Proyek");
       toast(S.detToastScopeAdd);
-      setScopeVal({ service: "", lokasi: "", deskripsi: "" });
+      setScopeVal({ service: "", harga: "", deskripsi: "" });
       setShowScope(false);
     } catch {
       toast(S.detToastScopeFail, "info");
@@ -1325,26 +1330,25 @@ const createWarranty = async (wbsTask?: string) => {
   const saveWbs = async () => {
     if (!wbsForm.task.trim()) { toast(S.detToastStageName, "info"); return; }
     if (wbs.some((w) => w.task === wbsForm.task.trim())) { toast(S.detToastStageDup, "info"); return; }
-    const weight = Number(wbsForm.weight) || 0;
-    if (weight <= 0) { toast(S.detToastWeight, "info"); return; }
-    const pred = wbsForm.predecessor || "";
-    if (pred && !wbs.some((w) => w.task === pred)) { toast(S.detToastPredUnknown, "info"); return; }
-    const currentTotal = wbs.reduce((s, w) => s + Number(w.weight || 0), 0);
-    const remaining = Math.max(0, 100 - currentTotal);
-    if (weight > remaining) {
-      toast(locale === "en"
-        ? `Weight exceeds remaining allocation. Current allocated: ${currentTotal}%, remaining: ${remaining}%`
-        : `Bobot melebihi sisa alokasi. Total saat ini: ${currentTotal}%, sisa alokasi: ${remaining}%`, "info");
-      return;
-    }
-    const next = [...wbs, { task: wbsForm.task.trim(), start: wbsForm.start || "-", end: wbsForm.end || "-", progress: Number(wbsForm.progress) || 0, weight, ...(pred ? { predecessor: pred } : {}) }];
+    const scopes = scopeList(project.scope);
+    const cat = wbsForm.category.trim() || scopes[0]?.service || "Umum";
+    const newTask: WbsExt = {
+      task: wbsForm.task.trim(),
+      category: cat,
+      scopeRef: cat,
+      start: wbsForm.start || "-",
+      end: wbsForm.end || "-",
+      progress: Number(wbsForm.progress) || 0,
+      weight: 0,
+    };
+    const next = syncWbsWeightsWithScope([...(wbsFor(pid) as WbsExt[]), newTask], project.scope);
     try {
       await saveWbsWithConflictRetry(next);
       await update("projects", pid, { progress: calcProjectProgress(next, projectBoq) });
       log("menambah tahapan WBS", `${pid} · ${wbsForm.task.trim()}`, "Proyek");
       toast(S.detToastStageAdd);
       setShowWbs(false);
-      setWbsForm({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" });
+      setWbsForm({ task: "", category: "", start: "", end: "", progress: "0" });
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
     }
@@ -1548,7 +1552,7 @@ const createWarranty = async (wbsTask?: string) => {
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy-50 text-xs font-bold text-navy-700">{i + 1}</span>
                       <span className="flex-1 text-sm text-steel-700">
                         <span className="font-medium text-navy-900">{s.service}</span>
-                        {s.lokasi ? <span className="text-steel-500"> · {s.lokasi}</span> : null}
+                        {s.harga ? <span className="font-medium text-emerald-700"> · {fmtRupiah(s.harga)}</span> : (s.lokasi ? <span className="text-steel-500"> · {s.lokasi}</span> : null)}
                         {s.deskripsi ? <span className="block text-xs text-steel-500">{s.deskripsi}</span> : null}
                       </span>
                       <button className="hidden rounded p-1 text-rose-400 hover:bg-rose-50 group-hover:block" onClick={() => setDelScope(i)} title={S.detScopeDelTitle}><Trash2 className="h-3.5 w-3.5" /></button>
@@ -1872,103 +1876,173 @@ const createWarranty = async (wbsTask?: string) => {
               dipakai. Yang bisa tumbuh panjang tanpa batas adalah WBS. */}
               <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
                 <SearchBox value={wbsQ} onChange={setWbsQ} placeholder={locale === "en" ? "Search WBS..." : "Cari WBS..."} ariaLabel={locale === "en" ? "Search WBS" : "Cari WBS"} className="w-full max-w-xs" />
-                <button className="btn-secondary text-xs" onClick={() => { setWbsForm({ task: "", start: "", end: "", weight: "0", progress: "0", predecessor: "" }); setShowWbs(true); }}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
+                <button className="btn-secondary text-xs" onClick={() => { setWbsForm({ task: "", category: scopeList(project.scope)[0]?.service ?? "", start: "", end: "", progress: "0" }); setShowWbs(true); }}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface">
-                    <tr><SortTh label={S.colStageName} sortKey="task" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detStart} sortKey="start" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.detEnd} sortKey="end" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colWeight} sortKey="weight" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colPred} sortKey="predecessor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.detAssignCol}</th><th className="th">{S.actionTh}</th></tr>
+                  <thead className="bg-surface sticky top-0 z-10">
+                    <tr>
+                      <SortTh label={S.colStageName} sortKey="task" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <SortTh label={S.detStart} sortKey="start" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <SortTh label={S.detEnd} sortKey="end" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <SortTh label={S.colWeight} sortKey="weight" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <SortTh label={S.progLabel} sortKey="progress" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
+                      <th className="th">{S.detAssignCol}</th>
+                      <th className="th">{S.actionTh}</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
                     {wbs.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-xs text-steel-400">
+                        <td colSpan={7} className="py-8 text-center text-xs text-steel-400">
                           {S.detNoWbs}
                         </td>
                       </tr>
                     ) : (
-                      sortRows(wbs.filter((w) => rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "dft", "predecessor"])), sort, (w: WbsExt, k) => k === "weight" ? Number(w.weight) : k === "progress" ? Number(w.progress) : String((w as unknown as Record<string, unknown>)[k] ?? "")).map((w) => (
-                      <tr key={w.task}>
-<td className="td font-medium text-navy-900">{w.task}
-                            {w.station ? <span className="ml-2 rounded bg-navy-50 px-1.5 py-0.5 text-[11px] font-semibold text-navy-700">{w.station}</span> : null}
-                            {w.dft !== undefined && w.dft !== null && String(w.dft) !== "" ? <span className="ml-1 text-[11px] text-steel-400">DFT {w.dft}</span> : null}
-                            {/* D3: badge jumlah foto jika ada. */}
-                            {w.photos && w.photos.length > 0 && <span className="ml-1 rounded bg-ocean-50 px-1.5 py-0.5 text-[11px] font-semibold text-ocean-700">📷 {w.photos.length}</span>}
-                          </td>
-                         <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.start)}</td>
-                         <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.end)}</td>
-                        <td className="td">{w.weight}%</td>
-                        <td className="td text-xs text-steel-500">{w.predecessor || "-"}</td>
-                        <td className="td">
-                          <div className="flex items-center gap-3">
-                            <ProgressBar value={w.progress} className="w-32" tone={w.progress >= 100 ? "green" : "navy"} />
-                            <span className="text-xs font-medium">{w.progress}%</span>
-                          </div>
-                        </td>
-                        <td className="td">
-                          {w.assignee ? (
-                            w.assignee.type === "internal" ? (
-                              <span className="inline-flex items-center gap-1 rounded bg-ocean-50 px-2 py-0.5 text-xs font-medium text-ocean-700" title={w.assignee.name}>
-                                <span className="font-semibold">{S.detAssignInternalBadge}:</span> {w.assignee.name}
-                              </span>
+                      groupWbsByScope(wbs, project.scope).map((group) => {
+                        const matchingTasks = group.tasks.filter((w) =>
+                          rowMatches(w as unknown as Record<string, unknown>, wbsQ, ["task", "station", "dft", "predecessor"])
+                        );
+                        if (wbsQ && matchingTasks.length === 0) return null;
+                        const sortedTasks = sortRows(matchingTasks, sort, (w: WbsExt, k) =>
+                          k === "weight" ? Number(w.weight) : k === "progress" ? Number(w.progress) : String((w as unknown as Record<string, unknown>)[k] ?? "")
+                        );
+                        return (
+                          <Fragment key={`scope-group-${group.category}`}>
+                            {/* Kategori Header Row */}
+                            <tr className="bg-steel-50/90 border-y border-steel-200">
+                              <td colSpan={3} className="td font-semibold text-navy-900 py-2.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex h-5 items-center rounded bg-navy-100 px-2 text-[11px] font-bold text-navy-800">
+                                    {S.prjScopeCat || (locale === "en" ? "Scope" : "Ruang Lingkup")}
+                                  </span>
+                                  <span className="font-bold text-navy-900">{group.category}</span>
+                                  {group.cost > 0 && (
+                                    <span className="text-xs font-semibold text-emerald-700">
+                                      ({fmtRupiah(group.cost)})
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="td font-bold text-navy-900 py-2.5">
+                                {group.weight}%
+                              </td>
+                              <td className="td py-2.5">
+                                <div className="flex items-center gap-2">
+                                  <ProgressBar value={group.avgProgress} className="w-24" tone={group.avgProgress >= 100 ? "green" : "navy"} />
+                                  <span className="text-xs font-semibold text-steel-700">{group.avgProgress}%</span>
+                                </div>
+                              </td>
+                              <td className="td py-2.5" />
+                              <td className="td py-2.5 text-right">
+                                <button
+                                  type="button"
+                                  className="btn-secondary text-[11px] py-1 px-2 inline-flex items-center gap-1"
+                                  onClick={() => {
+                                    setWbsForm({ task: "", category: group.category, start: "", end: "", progress: "0" });
+                                    setShowWbs(true);
+                                  }}
+                                  title={`${S.detAddStage} - ${group.category}`}
+                                >
+                                  <Plus className="h-3 w-3" /> {S.detAddStage}
+                                </button>
+                              </td>
+                            </tr>
+
+                            {/* Sub-kategori: Tahapan WBS di dalam kategori ini */}
+                            {sortedTasks.length === 0 ? (
+                              <tr>
+                                <td colSpan={7} className="py-2.5 pl-8 text-xs italic text-steel-400">
+                                  {locale === "en" ? "No stages in this category yet." : "Belum ada tahapan dalam kategori ini."}
+                                </td>
+                              </tr>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700" title={`${w.assignee.name} (${w.assignee.woId ?? ""})`}>
-                                <span className="font-semibold">{S.detAssignExternalBadge}:</span> {w.assignee.name} {w.assignee.woId ? `(${w.assignee.woId})` : ""}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-xs text-steel-400">-</span>
-                          )}
-                        </td>
-                        <td className="td">
-                          <div className="flex items-center gap-1">
-                            <RowAction
-                              icon={Boxes}
-                              tone="neutral"
-                              label={`${S.wbsMatBtn} ${w.task} (${stageMaterialCount(data.bomItems ?? [], pid, w.task)})`}
-                              onClick={() => setWbsMatTask(w.task)}
-                            />
-                            <RowAction
-                              icon={UserPlus}
-                              tone="neutral"
-                              label={`${S.detAssignBtn} ${w.task}`}
-                              onClick={() => {
-                                setWbsAssignTask(w.task);
-                                setAssignForm({
-                                  type: w.assignee?.type ?? "internal",
-                                  employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
-                                  subconId: w.assignee?.type === "external" ? w.assignee.id : "",
-                                  woValue: "",
-                                });
-                              }}
-                            />
-                            <RowAction
-                              icon={History}
-                              tone="neutral"
-                              label={`${S.detWbsHistoryBtn} ${w.task}`}
-                              onClick={() => setWbsHistoryTask(w.task)}
-                            />
-                            <RowAction
-                              icon={Pencil}
-                              tone="neutral"
-                              label={`${S.detUpdateBtn} ${w.task}`}
-                              onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
-                            />
-                            <RowAction
-                              icon={Trash2}
-                              tone="danger"
-                              label={`${S.detDelStageTitle} ${w.task}`}
-                              onClick={() => {
-                                /* #67: aturan yang sama ditegakkan server (409 STAGE_IN_USE). */
-                                const terpakai = Number(w.progress) > 0 || (w.history?.length ?? 0) > 0 || (w.photos?.length ?? 0) > 0 || Boolean(w.photoUrl) || Boolean(w.assignee);
-                                if (terpakai) { toast(S.detDelStageBlocked.replace("{a}", w.task), "info"); return; }
-                                setStageToDelete(w.task);
-                              }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    )))}
+                              sortedTasks.map((w) => (
+                                <tr key={w.task} className="hover:bg-steel-50/50">
+                                  <td className="td font-medium text-navy-900 pl-8">
+                                    <span className="mr-2 text-steel-400">↳</span>
+                                    {w.task}
+                                    {w.station ? <span className="ml-2 rounded bg-navy-50 px-1.5 py-0.5 text-[11px] font-semibold text-navy-700">{w.station}</span> : null}
+                                    {w.dft !== undefined && w.dft !== null && String(w.dft) !== "" ? <span className="ml-1 text-[11px] text-steel-400">DFT {w.dft}</span> : null}
+                                    {w.photos && w.photos.length > 0 && <span className="ml-1 rounded bg-ocean-50 px-1.5 py-0.5 text-[11px] font-semibold text-ocean-700">📷 {w.photos.length}</span>}
+                                  </td>
+                                  <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.start)}</td>
+                                  <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.end)}</td>
+                                  <td className="td font-medium text-steel-700">{w.weight}%</td>
+                                  <td className="td">
+                                    <div className="flex items-center gap-3">
+                                      <ProgressBar value={w.progress} className="w-28" tone={w.progress >= 100 ? "green" : "navy"} />
+                                      <span className="text-xs font-medium">{w.progress}%</span>
+                                    </div>
+                                  </td>
+                                  <td className="td">
+                                    {w.assignee ? (
+                                      w.assignee.type === "internal" ? (
+                                        <span className="inline-flex items-center gap-1 rounded bg-ocean-50 px-2 py-0.5 text-xs font-medium text-ocean-700" title={w.assignee.name}>
+                                          <span className="font-semibold">{S.detAssignInternalBadge}:</span> {w.assignee.name}
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700" title={`${w.assignee.name} (${w.assignee.woId ?? ""})`}>
+                                          <span className="font-semibold">{S.detAssignExternalBadge}:</span> {w.assignee.name} {w.assignee.woId ? `(${w.assignee.woId})` : ""}
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="text-xs text-steel-400">-</span>
+                                    )}
+                                  </td>
+                                  <td className="td">
+                                    <div className="flex items-center gap-1">
+                                      <RowAction
+                                        icon={Boxes}
+                                        tone="neutral"
+                                        label={`${S.wbsMatBtn} ${w.task} (${stageMaterialCount(data.bomItems ?? [], pid, w.task)})`}
+                                        onClick={() => setWbsMatTask(w.task)}
+                                      />
+                                      <RowAction
+                                        icon={UserPlus}
+                                        tone="neutral"
+                                        label={`${S.detAssignBtn} ${w.task}`}
+                                        onClick={() => {
+                                          setWbsAssignTask(w.task);
+                                          setAssignForm({
+                                            type: w.assignee?.type ?? "internal",
+                                            employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
+                                            subconId: w.assignee?.type === "external" ? w.assignee.id : "",
+                                            woValue: "",
+                                          });
+                                        }}
+                                      />
+                                      <RowAction
+                                        icon={History}
+                                        tone="neutral"
+                                        label={`${S.detWbsHistoryBtn} ${w.task}`}
+                                        onClick={() => setWbsHistoryTask(w.task)}
+                                      />
+                                      <RowAction
+                                        icon={Pencil}
+                                        tone="neutral"
+                                        label={`${S.detUpdateBtn} ${w.task}`}
+                                        onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
+                                      />
+                                      <RowAction
+                                        icon={Trash2}
+                                        tone="danger"
+                                        label={`${S.detDelStageTitle} ${w.task}`}
+                                        onClick={() => {
+                                          const terpakai = Number(w.progress) > 0 || (w.history?.length ?? 0) > 0 || (w.photos?.length ?? 0) > 0 || Boolean(w.photoUrl) || Boolean(w.assignee);
+                                          if (terpakai) { toast(S.detDelStageBlocked.replace("{a}", w.task), "info"); return; }
+                                          setStageToDelete(w.task);
+                                        }}
+                                      />
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </Fragment>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -3533,53 +3607,38 @@ const createWarranty = async (wbsTask?: string) => {
       <Modal open={showWbs} onClose={() => setShowWbs(false)} title={S.detWbsModal}
         footer={<><button className="btn-secondary" onClick={() => setShowWbs(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWbs}>{S.addBtn}</button></>}>
         <div className="space-y-3">
-          <Field label={S.detStageName} required><input className="input" value={wbsForm.task} onChange={(e) => setWbsForm({ ...wbsForm, task: e.target.value })} /></Field>
+          <Field label={S.prjScopeCat || (locale === "en" ? "Scope Category" : "Ruang Lingkup (Kategori)")} required>
+            <select
+              className="input"
+              value={wbsForm.category}
+              onChange={(e) => setWbsForm({ ...wbsForm, category: e.target.value })}
+            >
+              <option value="">{S.prjScopeCatSelect || (locale === "en" ? "-- Select Scope --" : "-- Pilih Ruang Lingkup --")}</option>
+              {scopeList(project.scope).map((s) => (
+                <option key={s.service} value={s.service}>
+                  {s.service} {s.harga ? `(${fmtRupiah(s.harga)})` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={S.detStageName} required>
+            <input className="input" placeholder={S.prjScopeSubTask || (locale === "en" ? "Stage / sub-task name" : "Nama tahapan / sub-pekerjaan")} value={wbsForm.task} onChange={(e) => setWbsForm({ ...wbsForm, task: e.target.value })} />
+          </Field>
           <FormGrid>
             <Field label={S.detStart}><input type="date" className="input" placeholder={S.detWbsStartPh} value={wbsForm.start === "-" ? "" : wbsForm.start} onChange={(e) => setWbsForm({ ...wbsForm, start: e.target.value })} /></Field>
             <Field label={S.detEnd}><input type="date" className="input" placeholder={S.detWbsEndPh} value={wbsForm.end === "-" ? "" : wbsForm.end} onChange={(e) => setWbsForm({ ...wbsForm, end: e.target.value })} /></Field>
-            <Field label={S.detWeight} hint={S.detWeightCalcRemain.replace("{n}", String(Math.max(0, 100 - wbs.reduce((s, w) => s + (Number(w.weight) || 0), 0))))}>
-              <NumInput className="input" value={wbsForm.weight} onChange={(e) => setWbsForm({ ...wbsForm, weight: e.target.value })} />
-            </Field>
             <Field label={S.detProgField}><NumInput className="input" value={wbsForm.progress} onChange={(e) => setWbsForm({ ...wbsForm, progress: e.target.value })} /></Field>
           </FormGrid>
 
-          {/* Live kalkulasi bobot WBS */}
-          {(() => {
-            const currentTotal = wbs.reduce((sum, w) => sum + (Number(w.weight) || 0), 0);
-            const remaining = Math.max(0, 100 - currentTotal);
-            const inputWeight = Number(wbsForm.weight) || 0;
-            const simTotal = currentTotal + inputWeight;
-            return (
-              <div className="rounded-xl border border-steel-200 bg-steel-50/80 p-3 text-xs space-y-1.5">
-                <div className="flex justify-between items-center text-steel-600">
-                  <span>{S.detWeightCalcCurrent.replace("{n}", String(currentTotal))}</span>
-                  <span className="font-semibold text-ocean-700">{S.detWeightCalcRemain.replace("{n}", String(remaining))}</span>
-                </div>
-                <div className="flex justify-between items-center pt-1.5 border-t border-steel-200/70">
-                  <span className={`font-semibold ${simTotal > 100 ? "text-rose-600" : simTotal === 100 ? "text-emerald-600" : "text-navy-900"}`}>
-                    {S.detWeightCalcTotal.replace("{n}", String(simTotal))}
-                  </span>
-                  {simTotal > 100 && (
-                    <span className="rounded bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-                      {S.detWeightCalcOver}
-                    </span>
-                  )}
-                  {simTotal === 100 && (
-                    <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                      100% Ideal
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          <Field label={S.detPred} hint={S.detPredHint}>
-            <select className="input" value={wbsForm.predecessor} onChange={(e) => setWbsForm({ ...wbsForm, predecessor: e.target.value })}>
-              <option value="">{S.detNoPred}</option>
-              {wbs.map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
-            </select>
-          </Field>
+          {/* Bobot otomatis dari Ruang Lingkup */}
+          <div className="rounded-xl border border-steel-200 bg-steel-50/80 p-3 text-xs space-y-1">
+            <span className="font-semibold text-navy-800">{S.prjWbsAutoWeightNote || (locale === "en" ? "Automatic Weight Calculation" : "Bobot Otomatis Ruang Lingkup")}</span>
+            <p className="text-steel-600 leading-relaxed">
+              {locale === "en"
+                ? "Percentage weight is automatically derived from the scope cost ratio. Each stage under this category divides the category weight evenly."
+                : "Bobot persentase tahapan dihitung otomatis dari nilai biaya ruang lingkup pekerjaan. Tahapan di bawah kategori ini membagi bobot kategori secara proporsional."}
+            </p>
+          </div>
         </div>
       </Modal>
 
@@ -3590,8 +3649,9 @@ const createWarranty = async (wbsTask?: string) => {
         onConfirm={async () => {
           if (!stageToDelete) return;
           // Predecessor yang menunjuk tahapan terhapus ikut dilepas agar tidak yatim.
-          const next = wbs.filter((w) => w.task !== stageToDelete)
+          const remaining = wbs.filter((w) => w.task !== stageToDelete)
             .map((w) => (w.predecessor === stageToDelete ? { ...w, predecessor: undefined } : w));
+          const next = syncWbsWeightsWithScope(remaining, project.scope);
           try {
             await saveWbsWithConflictRetry(next);
             log("menghapus tahapan WBS", `${pid} · ${stageToDelete}`, "Proyek");
@@ -3767,8 +3827,8 @@ const createWarranty = async (wbsTask?: string) => {
           <Field label={S.prjScopeType} required>
             <input className="input" placeholder={S.detScopeTypePh2} value={scopeVal.service} onChange={(e) => setScopeVal((v) => ({ ...v, service: e.target.value }))} />
           </Field>
-          <Field label={S.prjScopeLoc}>
-            <input className="input" placeholder={S.detScopeLocPh} value={scopeVal.lokasi} onChange={(e) => setScopeVal((v) => ({ ...v, lokasi: e.target.value }))} />
+          <Field label={S.prjScopePrice}>
+            <MoneyInput className="input" placeholder={S.prjScopePricePh} value={scopeVal.harga} onChange={(v) => setScopeVal((prev) => ({ ...prev, harga: v }))} />
           </Field>
           <Field label={S.prjScopeDesc}>
             <input className="input" placeholder={S.detScopeDescPh} value={scopeVal.deskripsi} onChange={(e) => setScopeVal((v) => ({ ...v, deskripsi: e.target.value }))} />
@@ -3790,7 +3850,13 @@ const createWarranty = async (wbsTask?: string) => {
         confirmLabel={S.detConfirmDelete} danger onCancel={() => setDelScope(null)}
         onConfirm={async () => {
           try {
-            if (delScope !== null) await update("projects", pid, { scope: scopeList(project.scope).filter((_, i) => i !== delScope) });
+            if (delScope !== null) {
+              const nextScope = scopeList(project.scope).filter((_, i) => i !== delScope);
+              const totalP = scopeTotal(nextScope);
+              const patch: Record<string, unknown> = { scope: nextScope };
+              if (totalP > 0) patch.budget = totalP;
+              await update("projects", pid, patch);
+            }
           } catch {
             toast(S.detToastScopeDelFail, "info");
           }

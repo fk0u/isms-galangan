@@ -9,7 +9,7 @@ import { SearchSelect } from "./SearchSelect";
 import type { StoreItem } from "../data/store";
 import { useStore } from "../data/store";
 import { useAuth } from "../auth/auth";
-import { parseRupiah, todayISO } from "../utils/format";
+import { fmtRupiah, parseRupiah, todayISO } from "../utils/format";
 import { isProjectManager } from "../utils/employeeOptions";
 import ClientModal from "./ClientModal";
 import { TAHAP_V2, tahapLabel } from "../utils/projectStages";
@@ -65,9 +65,14 @@ export default function ProjectAddModal({
   const activeBranch = (user?.branch && user.branch !== "SEMUA") ? user.branch : (storeBranch || "Samarinda");
 
   const [form, setForm] = useState(emptyForm);
-  const [scopeRows, setScopeRows] = useState([{ service: "", lokasi: "", deskripsi: "" }]);
+  const [scopeRows, setScopeRows] = useState([{ service: "", harga: "", deskripsi: "" }]);
   const [showClientModal, setShowClientModal] = useState(false);
   const [createdGuide, setCreatedGuide] = useState<{ id: string; vessel: string } | null>(null);
+
+  const totalScopePrice = useMemo(
+    () => scopeRows.reduce((sum, r) => sum + (parseRupiah(r.harga) || 0), 0),
+    [scopeRows]
+  );
 
   const setF = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const vesselExists = vessels.some((v) => String(v.name ?? "").toLowerCase() === form.vessel.trim().toLowerCase());
@@ -129,23 +134,26 @@ export default function ProjectAddModal({
 
   const close = () => {
     setForm(emptyForm);
-    setScopeRows([{ service: "", lokasi: "", deskripsi: "" }]);
+    setScopeRows([{ service: "", harga: "", deskripsi: "" }]);
     onClose();
   };
 
   const save = async () => {
     if (!form.vessel.trim() || !form.client.trim()) { toast(S.prjToastVesselClient, "info"); return; }
     const scopeItems = scopeRows
-      .map((r) => ({
-        service: r.service.trim(),
-        ...(r.lokasi.trim() ? { lokasi: r.lokasi.trim() } : {}),
-        ...(r.deskripsi.trim() ? { deskripsi: r.deskripsi.trim() } : {}),
-      }))
+      .map((r) => {
+        const h = parseRupiah(r.harga);
+        return {
+          service: r.service.trim(),
+          ...(Number.isFinite(h) && h > 0 ? { harga: h } : {}),
+          ...(r.deskripsi.trim() ? { deskripsi: r.deskripsi.trim() } : {}),
+        };
+      })
       .filter((r) => r.service);
     if (scopeItems.length === 0) { toast(S.prjToastScopeMin, "info"); return; }
     if (!form.start || !form.end) { toast(S.prjToastDatesReq, "info"); return; }
     if (form.end < form.start) { toast(S.prjToastDateOrder, "info"); return; }
-    const budget = parseRupiah(form.budget);
+    const budget = totalScopePrice > 0 ? totalScopePrice : parseRupiah(form.budget);
     if (!Number.isFinite(budget) || budget <= 0) { toast(S.prjToastBudget, "info"); return; }
     if (!form.manager) { toast(S.prjToastPm, "info"); return; }
     if (form.type === "New Build" && projects.some((p) => String(p.vessel ?? "").trim().toLowerCase() === form.vessel.trim().toLowerCase() && String(p.type) === "New Build")) {
@@ -203,7 +211,7 @@ export default function ProjectAddModal({
       }
       setCreatedGuide({ id: String(created.id), vessel: form.vessel.trim() });
       setForm(emptyForm);
-      setScopeRows([{ service: "", lokasi: "", deskripsi: "" }]);
+      setScopeRows([{ service: "", harga: "", deskripsi: "" }]);
       onClose();
     } catch {
       toast(S.prjToastSaveFail.replace("{a}", code), "info");
@@ -307,15 +315,29 @@ export default function ProjectAddModal({
               </FormGrid>
             </div>
           )}
-          <Field label={S.prjBudget}>
-            <MoneyInput className="input" value={form.budget} onChange={(v) => setF("budget", v)} placeholder={S.prjBudgetPh} />
+          <Field label={S.prjBudget} hint={totalScopePrice > 0 ? (S.prjScopePriceAutoTotal || "Total otomatis dihitung dari harga ruang lingkup") : undefined}>
+            <MoneyInput
+              className={`input ${totalScopePrice > 0 ? "bg-steel-50/80 font-semibold text-navy-900 cursor-not-allowed" : ""}`}
+              value={totalScopePrice > 0 ? String(totalScopePrice) : form.budget}
+              onChange={(v) => setF("budget", v)}
+              placeholder={S.prjBudgetPh}
+              disabled={totalScopePrice > 0}
+            />
           </Field>
           <div className="rounded-xl border border-steel-200 p-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold text-navy-900">{S.prjScope}</p>
+              <div>
+                <p className="text-xs font-semibold text-navy-900">{S.prjScope}</p>
+                {totalScopePrice > 0 && (
+                  <p className="text-[11px] font-medium text-ocean-700">
+                    {(S.prjScopeTotalCost || "Total Biaya")}: {fmtRupiah(totalScopePrice)}
+                  </p>
+                )}
+              </div>
               <button
+                type="button"
                 className="btn-secondary px-2 py-1 text-xs"
-                onClick={() => setScopeRows((s) => [...s, { service: "", lokasi: "", deskripsi: "" }])}
+                onClick={() => setScopeRows((s) => [...s, { service: "", harga: "", deskripsi: "" }])}
               >
                 {S.prjAddScope}
               </button>
@@ -329,8 +351,8 @@ export default function ProjectAddModal({
                     </Field>
                   </div>
                   <div className="sm:col-span-3">
-                    <Field label={S.prjScopeLoc}>
-                      <input className="input" value={r.lokasi} onChange={(e) => setScopeRows((s) => s.map((x, i) => (i === idx ? { ...x, lokasi: e.target.value } : x)))} placeholder={S.prjScopeLocPh} />
+                    <Field label={S.prjScopePrice || "Harga"}>
+                      <MoneyInput className="input" value={r.harga} onChange={(v) => setScopeRows((s) => s.map((x, i) => (i === idx ? { ...x, harga: v } : x)))} placeholder={S.prjScopePricePh || "Rp 0"} />
                     </Field>
                   </div>
                   <div className="sm:col-span-4">
@@ -340,6 +362,7 @@ export default function ProjectAddModal({
                   </div>
                   <div className="flex items-end sm:col-span-1">
                     <button
+                      type="button"
                       className="btn-secondary w-full px-2 py-2 text-xs text-rose-600"
                       aria-label={S.prjDelScopeAria.replace("{n}", String(idx + 1))}
                       disabled={scopeRows.length <= 1}

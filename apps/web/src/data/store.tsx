@@ -91,6 +91,8 @@ export interface WbsItem {
   end: string;
   progress: number;
   weight: number;
+  category?: string;
+  scopeRef?: string;
   actualHours?: number;
   materialUsed?: string;
   materialQty?: number;
