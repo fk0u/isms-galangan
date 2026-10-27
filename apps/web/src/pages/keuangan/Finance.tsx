@@ -879,7 +879,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   // WBS tidak diperlukan untuk merender Project P&L; ambil exact hanya ketika
   // settlement invoice perlu memeriksa syarat penutupan proyek.
   const wbsByProject = data.wbsByProject ?? {};
-  const [retQ, setRetQ] = useState("");
   const [plQ, setPlQ] = useState("");
   const [allocQ, setAllocQ] = useState("");
   const [juListQ, setJuListQ] = useState("");
@@ -3309,29 +3308,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </div>
                 {sortedAr.length === 0 && <EmptyState title={S.emptyInvTitle} subtitle={S.emptyInvSub} />}
                 {arPager.bar}
-                <Card className="mt-4 p-4">
-                  <CardHeader title={S.agingTitle} subtitle={S.agingSub} />
-                  <div className="overflow-x-auto px-5 pb-5">
-                    <table className="w-full">
-                      <thead className="bg-surface sticky top-0 z-10">
-                        <tr>
-                          <SortTh label={S.colBucket} sortKey="name" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colJumlah} sortKey="count" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colTotal} sortKey="total" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-steel-100">
-                        {sortRows(agingReal, arSort, (b, k) => k === "count" ? Number(b.count) : k === "total" ? Number(b.total) : String(b.name)).map((b) => (
-                          <tr key={b.name} className="hover:bg-surface">
-                            <td className="td font-medium text-navy-900">{b.name}</td>
-                            <td className="td text-steel-600">{S.countInvoice.replace("{n}", fmtJumlah(b.count))}</td>
-                            <td className="td font-semibold">{fmtRupiah(b.total)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
               </div>
               <div className="space-y-5">
                 <div>
@@ -3356,26 +3332,32 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     </div>
                   </div>
                 </div>
+
+                {/* Card Aging Piutang di sebelah kanan (notulen 26 Okt) */}
                 <Card className="p-4">
-                  <CardHeader title={S.retentionTitle} subtitle={S.retentionSub} />
-                  <p className="px-5 pb-2 text-2xl font-bold text-navy-900">{fmtRupiah(retentionTotal)}</p>
-                  <div className="px-5 pb-2"><SearchBox value={retQ} onChange={setRetQ} placeholder={S.cardSearchPh} ariaLabel={S.cardSearchPh} /></div>
-                  <div className="max-h-64 space-y-2 overflow-y-auto scroll-flush-5 px-5 pb-5 pr-4">
-                    {invoices.filter((i) => num(i.retentionAmt) > 0).filter((i) => rowMatches(i, retQ, ["id", "noInv", "client", "retentionStatus"])).map((i) => (
-                      <div key={i.id} className="flex items-center gap-2 text-xs">
-                        <span className="font-mono font-semibold text-navy-900">{i.id}</span>
-                        <span className="text-steel-500">{fmtRupiah(num(i.retentionAmt))}</span>
-                        <span className="ml-auto"><StatusBadge status={String(i.retentionStatus ?? "Ditahan")} /></span>
-                        {i.retentionStatus !== "Released" && (
-                          <button className="btn-secondary px-2 py-1 text-[11px]" onClick={() => { setReleaseTarget(i); setReleaseForm({ date: todayISO(), ba: "", warrantyId: "" }); }}>{S.releaseBtn}</button>
-                        )}
-                      </div>
-                    ))}
-                    {invoices.filter((i) => num(i.retentionAmt) > 0).length === 0 && (
-                      <p className="text-xs text-steel-400">{S.noRetention}</p>
-                    )}
+                  <CardHeader title={S.agingTitle} subtitle={S.agingSub} />
+                  <div className="overflow-x-auto px-4 pb-4">
+                    <table className="w-full text-xs">
+                      <thead className="bg-surface sticky top-0 z-10">
+                        <tr>
+                          <SortTh label={S.colBucket} sortKey="name" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                          <SortTh label={S.colJumlah} sortKey="count" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                          <SortTh label={S.colTotal} sortKey="total" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-steel-100">
+                        {sortRows(agingReal, arSort, (b, k) => k === "count" ? Number(b.count) : k === "total" ? Number(b.total) : String(b.name)).map((b) => (
+                          <tr key={b.name} className="hover:bg-surface">
+                            <td className="td font-medium text-navy-900">{b.name}</td>
+                            <td className="td text-steel-600">{S.countInvoice.replace("{n}", fmtJumlah(b.count))}</td>
+                            <td className="td font-semibold text-navy-900">{fmtRupiah(b.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </Card>
+
                 <p className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
                   <Receipt className="h-3.5 w-3.5" /> {S.lateBanner.replace("{n}", String(lateCount))}
                   <button className="font-semibold underline" onClick={() => { if (firstLate) { setPayTarget(firstLate); setProof(emptyProof()); setProofImg(""); } }}>{S.markPaidLink}</button>
