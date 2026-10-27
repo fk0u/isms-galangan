@@ -115,6 +115,12 @@ export default function QCSafety() {
   const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
   const { user } = useAuth();
+  const canWriteNcr = hasPermission(user?.permissions, "ncr", "w");
+  const canDeleteNcr = hasPermission(user?.permissions, "ncr", "d");
+  const canWriteInsp = hasPermission(user?.permissions, "inspections", "w");
+  const canDeleteInsp = hasPermission(user?.permissions, "inspections", "d");
+  const canWriteIncidents = hasPermission(user?.permissions, "incidents", "w");
+  const canDeleteIncidents = hasPermission(user?.permissions, "incidents", "d");
   /* Fetch per-batch modul (pengganti resync penuh). */
   useModuleSync(QC_COLS);
   const { locale } = useT();
@@ -994,10 +1000,16 @@ export default function QCSafety() {
         subtitle={S.pageSub}
         icon={<ShieldCheck className="h-5 w-5" />}
         actions={
-          <div className="flex gap-2">
-            <button className="btn-secondary" onClick={() => setShowNcr(true)}><AlertTriangle className="h-4 w-4" /> {S.btnNcrBaru}</button>
-            <button className="btn-primary-gradient" onClick={() => setShowInsp(true)}><Plus className="h-4 w-4" /> {S.btnInspBaru}</button>
-          </div>
+          (canWriteNcr || canWriteInsp) ? (
+            <div className="flex gap-2">
+              {canWriteNcr && (
+                <button className="btn-secondary" onClick={() => setShowNcr(true)}><AlertTriangle className="h-4 w-4" /> {S.btnNcrBaru}</button>
+              )}
+              {canWriteInsp && (
+                <button className="btn-primary-gradient" onClick={() => setShowInsp(true)}><Plus className="h-4 w-4" /> {S.btnInspBaru}</button>
+              )}
+            </div>
+          ) : undefined
         }
       />
 
@@ -1076,8 +1088,12 @@ export default function QCSafety() {
                                 salah (mis. Hold terbalik, sampel terisi
                                 keliru) tidak bisa dikoreksi tanpa hapus
                                 & buat ulang baris + jejaknya. */}
-                            <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(i.id)}`} onClick={() => openInspEdit(i)} />
-                            <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(i.id)}`} onClick={() => setDelInsp(i)} />
+                            {canWriteInsp && (
+                              <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(i.id)}`} onClick={() => openInspEdit(i)} />
+                            )}
+                            {canDeleteInsp && (
+                              <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(i.id)}`} onClick={() => setDelInsp(i)} />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1212,12 +1228,14 @@ export default function QCSafety() {
                     <div className="flex items-center gap-2">
                       <Badge tone={ncrTone[n.status] ?? "gray"}>{n.status}</Badge>
                       <button className="btn-secondary text-xs" onClick={() => openDetail(n)}>{S.btnDetail}</button>
-                      {n.status !== "Tertutup" ? (
-                        <button className="btn-primary text-xs" onClick={() => void busy.run(`ncr-${n.id}`, () => advanceNcr(n))} disabled={busy.isBusy(`ncr-${n.id}`)}>{S.btnProses}</button>
-                      ) : (
-                        <button className="btn-secondary text-xs" onClick={() => { setReopenNcr(n); setReopenReason(""); }}>{S.btnBukaKembali}</button>
+                      {canWriteNcr && (
+                        n.status !== "Tertutup" ? (
+                          <button className="btn-primary text-xs" onClick={() => void busy.run(`ncr-${n.id}`, () => advanceNcr(n))} disabled={busy.isBusy(`ncr-${n.id}`)}>{S.btnProses}</button>
+                        ) : (
+                          <button className="btn-secondary text-xs" onClick={() => { setReopenNcr(n); setReopenReason(""); }}>{S.btnBukaKembali}</button>
+                        )
                       )}
-                      {!recLocked("ncr", n) && (
+                      {canDeleteNcr && !recLocked("ncr", n) && (
                         <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelRec({ kind: "ncr", row: n })}>{locale === "en" ? "Delete" : "Hapus"}</button>
                       )}
                       {recLocked("ncr", n) !== null && (
@@ -1374,7 +1392,9 @@ export default function QCSafety() {
                     <div key={a.id} className="rounded-lg border border-steel-100 p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="font-medium text-navy-900">{a.area} <span className="font-mono text-xs text-steel-500">· {a.id}</span></p>
-                        <button className="btn-secondary text-xs" onClick={() => setDelAudit(a)}>{S.btnHapus}</button>
+                        {canDeleteIncidents && (
+                          <button className="btn-secondary text-xs" onClick={() => setDelAudit(a)}>{S.btnHapus}</button>
+                        )}
                       </div>
                       <p className="mt-1 text-xs text-steel-600">{S.planMeta.replace("{a}", fmtTanggal(a.date)).replace("{b}", String(a.auditor)).replace("{n}", String(a.findings))}{a.ncrId ? S.terkaitN.replace("{n}", String(a.ncrId)) : ""}</p>
                     </div>
@@ -1387,9 +1407,11 @@ export default function QCSafety() {
 
           {tab === "Insiden" && (
             <div>
-              <div className="mb-3 flex justify-end">
-                <button className="btn-secondary text-xs" onClick={() => { setShowInc(true); setIncForm((f) => ({ ...f, project: f.project || data.projects[0]?.id || "" })); }}><Plus className="h-3.5 w-3.5" /> {S.btnCatatInsiden}</button>
-              </div>
+              {canWriteIncidents && (
+                <div className="mb-3 flex justify-end">
+                  <button className="btn-secondary text-xs" onClick={() => { setShowInc(true); setIncForm((f) => ({ ...f, project: f.project || data.projects[0]?.id || "" })); }}><Plus className="h-3.5 w-3.5" /> {S.btnCatatInsiden}</button>
+                </div>
+              )}
               <div className="space-y-3">
                 {incidents.map((i) => (
                   <Card key={i.id} id={notifRowId(String(i.id))} className={`p-4 ${rowHighlightClass({ id: String(i.id), flash, notified: notified.has(String(i.id)) })}`}>
@@ -1403,12 +1425,17 @@ export default function QCSafety() {
                         <p className="text-xs text-steel-500 mt-0.5">{S.incidentMeta.replace("{a}", fmtTanggal(i.date)).replace("{b}", String(i.project ?? i.projectId ?? "-")).replace("{c}", String(i.location)).replace("{d}", String(i.severity))}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <button className="btn-secondary text-xs" onClick={() => void incidentToNcr(i)}>{S.btnBuatkanNcr}</button>
+                        {canWriteNcr && (
+                          <button className="btn-secondary text-xs" onClick={() => void incidentToNcr(i)}>{S.btnBuatkanNcr}</button>
+                        )}
                         <div className="flex gap-1.5">
-                          <button className="btn-secondary text-xs" onClick={() => openIncEdit(i)}>{S.btnEdit}</button>
-                          {!recLocked("incidents", i) ? (
+                          {canWriteIncidents && (
+                            <button className="btn-secondary text-xs" onClick={() => openIncEdit(i)}>{S.btnEdit}</button>
+                          )}
+                          {canDeleteIncidents && !recLocked("incidents", i) && (
                             <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelRec({ kind: "incidents", row: i })}>{locale === "en" ? "Delete" : "Hapus"}</button>
-                          ) : (
+                          )}
+                          {recLocked("incidents", i) !== null && (
                             <span className="text-xs text-steel-400" title={recLocked("incidents", i) ?? ""}>{locale === "en" ? "Locked" : "Terkunci"}</span>
                           )}
                         </div>
@@ -1678,7 +1705,7 @@ export default function QCSafety() {
 
       {/* Modal detail NCR */}
       <Modal open={ncrDetail !== null} onClose={() => setNcrDetail(null)} title={ncrDetail ? String(ncrDetail.id) : ""} subtitle={S.mNcrDetailS}
-        footer={ncrDetail && ncrDetail.status !== "Tertutup" ? <AsyncButton className="btn-primary" onAction={() => { if (ncrDetail) return advanceNcr(ncrDetail); }}>{S.btnProsesNext}</AsyncButton> : undefined}>
+        footer={canWriteNcr && ncrDetail && ncrDetail.status !== "Tertutup" ? <AsyncButton className="btn-primary" onAction={() => { if (ncrDetail) return advanceNcr(ncrDetail); }}>{S.btnProsesNext}</AsyncButton> : undefined}>
         {ncrDetail && (
           <div>
             <dl className="dl-div text-sm">

@@ -41,7 +41,7 @@ import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash }
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { getSetting } from "../../utils/settings";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady, renderSuratDraft } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -248,9 +248,12 @@ export default function HR() {
   const E = n_emp[locale];
   const P = n_prj[locale];
   const S = n_qc[locale];
-  /* Nama penyetuju dicatat di baris cuti, bukan diasumsikan: surat persetujuan
-     ditandatangani atas nama orang tertentu, jadi "siapa" harus benar. */
   const { user } = useAuth();
+  const canWriteHR = hasPermission(user?.permissions, "employees", "w");
+  const canDeleteHR = hasPermission(user?.permissions, "employees", "d");
+  const canWriteLeave = hasPermission(user?.permissions, "leaveRequests", "w");
+  const canDeleteLeave = hasPermission(user?.permissions, "leaveRequests", "d");
+  const canWriteMutasi = hasPermission(user?.permissions, "mutations", "w");
   const modAlert = useModuleAlert("sdm");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -1670,28 +1673,38 @@ const finishTraining = async (t: StoreItem) => {
         icon={<Users className="h-5 w-5" />}
         actions={
           tab === "Karyawan" ? (
-            <button className="btn-primary-gradient" onClick={openAdd}>
-              <Plus className="h-4 w-4" /> {S.btnTambahKaryawan}
-            </button>
+            canWriteHR ? (
+              <button className="btn-primary-gradient" onClick={openAdd}>
+                <Plus className="h-4 w-4" /> {S.btnTambahKaryawan}
+              </button>
+            ) : undefined
           ) : tab === "Cuti & Izin" ? (
-            <>
-            <button className="btn-secondary" onClick={() => void openLeaveQr(false)}>{E.qrBtn}</button>
-            <button className="btn-primary-gradient" onClick={() => { setLeaveEditId(null); setLeaveForm({ employeeId: "", type: "Tahunan", from: todayISO(), to: todayISO(), note: "", fileUrl: "" }); setShowLeave(true); }}>
-              <Plus className="h-4 w-4" /> {S.btnAjukanCuti}
-            </button>
-            </>
+            <div className="flex gap-2">
+              <button className="btn-secondary" onClick={() => void openLeaveQr(false)}>{E.qrBtn}</button>
+              {canWriteLeave && (
+                <button className="btn-primary-gradient" onClick={() => { setLeaveEditId(null); setLeaveForm({ employeeId: "", type: "Tahunan", from: todayISO(), to: todayISO(), note: "", fileUrl: "" }); setShowLeave(true); }}>
+                  <Plus className="h-4 w-4" /> {S.btnAjukanCuti}
+                </button>
+              )}
+            </div>
           ) : tab === "Mutasi" ? (
-            <button className="btn-primary-gradient" onClick={() => setShowMutasi(true)}>
-              <Plus className="h-4 w-4" /> {S.btnCatatMutasi}
-            </button>
+            canWriteMutasi ? (
+              <button className="btn-primary-gradient" onClick={() => setShowMutasi(true)}>
+                <Plus className="h-4 w-4" /> {S.btnCatatMutasi}
+              </button>
+            ) : undefined
           ) : tab === "Training" ? (
-            <button className="btn-primary-gradient" onClick={() => setShowTraining(true)}>
-              <Plus className="h-4 w-4" /> {S.btnJadwalkanTraining}
-            </button>
+            canWriteHR ? (
+              <button className="btn-primary-gradient" onClick={() => setShowTraining(true)}>
+                <Plus className="h-4 w-4" /> {S.btnJadwalkanTraining}
+              </button>
+            ) : undefined
           ) : (
-            <button className="btn-primary-gradient" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}>
-              <Plus className="h-4 w-4" /> {S.btnBuatSurat}
-            </button>
+            canWriteHR ? (
+              <button className="btn-primary-gradient" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}>
+                <Plus className="h-4 w-4" /> {S.btnBuatSurat}
+              </button>
+            ) : undefined
           )
         }
       />
@@ -1808,8 +1821,12 @@ const finishTraining = async (t: StoreItem) => {
                             <td className="td">
                               <div className="flex items-center gap-2 whitespace-nowrap">
                                 <Link to={`/sdm/karyawan/${e.id}`} className="relative inline-flex shrink-0 items-center justify-center rounded-lg p-1.5 text-ocean-600 transition-colors hover:bg-steel-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 focus-visible:ring-offset-1 after:absolute after:-inset-1.5 after:content-['']" title={S.btnDetail} aria-label={`${S.btnDetail} ${String(e.name ?? e.id)}`}><Eye className="h-4 w-4" aria-hidden="true" /></Link>
-                                <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(e.name ?? e.id)}`} onClick={() => openEdit(e)} />
-                                <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(e.name ?? e.id)}`} onClick={() => setDelEmp(e)} />
+                                {canWriteHR && (
+                                  <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(e.name ?? e.id)}`} onClick={() => openEdit(e)} />
+                                )}
+                                {canDeleteHR && (
+                                  <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(e.name ?? e.id)}`} onClick={() => setDelEmp(e)} />
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1944,15 +1961,27 @@ const finishTraining = async (t: StoreItem) => {
                       <td className="td">
                         {l.status === "Diajukan" ? (
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            <button className="text-sm font-semibold text-emerald-600 hover:underline" onClick={() => approveSupervisor(l)}>{S.btnSetujuiAtasan}</button>
-                            <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(l.id)}`} onClick={() => openLeaveEdit(l)} />
-                            <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setRejectTarget(l)}>{S.btnTolak}</button>
-                            <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(l.id)}`} onClick={() => setDelLeave(l)} />
+                            {canWriteLeave && (
+                              <button className="text-sm font-semibold text-emerald-600 hover:underline" onClick={() => approveSupervisor(l)}>{S.btnSetujuiAtasan}</button>
+                            )}
+                            {canWriteLeave && (
+                              <RowAction icon={Pencil} tone="neutral" label={S.btnEdit} ariaLabel={`${S.btnEdit} ${String(l.id)}`} onClick={() => openLeaveEdit(l)} />
+                            )}
+                            {canWriteLeave && (
+                              <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setRejectTarget(l)}>{S.btnTolak}</button>
+                            )}
+                            {canDeleteLeave && (
+                              <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(l.id)}`} onClick={() => setDelLeave(l)} />
+                            )}
                           </div>
                         ) : l.status === "Disetujui Atasan" ? (
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            <button className="text-sm font-semibold text-emerald-600 hover:underline" onClick={() => approveHrd(l)}>{S.btnSetujuiHrd}</button>
-                            <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setRejectTarget(l)}>{S.btnTolak}</button>
+                            {canWriteLeave && (
+                              <button className="text-sm font-semibold text-emerald-600 hover:underline" onClick={() => approveHrd(l)}>{S.btnSetujuiHrd}</button>
+                            )}
+                            {canWriteLeave && (
+                              <button className="text-sm font-semibold text-rose-600 hover:underline" onClick={() => setRejectTarget(l)}>{S.btnTolak}</button>
+                            )}
                           </div>
                         ) : String(l.status ?? "") === "Disetujui" ? (
                           /* Edit/Hapus tetap ada setelah disetujui supaya data
@@ -1970,14 +1999,18 @@ const finishTraining = async (t: StoreItem) => {
                               ariaLabel={`${locale === "en" ? "Approval letter" : "Surat persetujuan"} ${String(l.id)}`}
                               onClick={() => void printSuratCuti(l)}
                             />
-                            <RowAction
-                              icon={Pencil}
-                              tone="neutral"
-                              label={locale === "en" ? "Correct note / attachment (period is locked)" : "Koreksi catatan / lampiran (periode terkunci)"}
-                              ariaLabel={`${S.btnEdit} ${String(l.id)}`}
-                              onClick={() => openLeaveEditFinal(l)}
-                            />
-                            <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(l.id)}`} onClick={() => setDelLeave(l)} />
+                            {canWriteLeave && (
+                              <RowAction
+                                icon={Pencil}
+                                tone="neutral"
+                                label={locale === "en" ? "Correct note / attachment (period is locked)" : "Koreksi catatan / lampiran (periode terkunci)"}
+                                ariaLabel={`${S.btnEdit} ${String(l.id)}`}
+                                onClick={() => openLeaveEditFinal(l)}
+                              />
+                            )}
+                            {canDeleteLeave && (
+                              <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(l.id)}`} onClick={() => setDelLeave(l)} />
+                            )}
                           </div>
                         ) : (
                           <span className="text-xs text-steel-400">-</span>
@@ -2022,7 +2055,9 @@ const finishTraining = async (t: StoreItem) => {
                     </div>
                   ))}
                 </div>
-                <button className="btn-secondary mt-4 text-xs" onClick={() => setShowMutasi(true)}>{S.btnMutasiBaru}</button>
+                {canWriteMutasi && (
+                  <button className="btn-secondary mt-4 text-xs" onClick={() => setShowMutasi(true)}>{S.btnMutasiBaru}</button>
+                )}
               </Card>
             </div>
           )}
@@ -2099,20 +2134,24 @@ const finishTraining = async (t: StoreItem) => {
                         <td className="td"><StatusBadge status={String(t.status)} /></td>
                         <td className="td">
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            {String(t.status) !== "Selesai" && (
+                            {canWriteHR && String(t.status) !== "Selesai" && (
                               <button className="text-sm font-semibold text-emerald-600 hover:underline" onClick={() => finishTraining(t)}>{S.btnSelesai}</button>
                             )}
-                            {String(t.status) === "Selesai" && (
+                            {canWriteHR && String(t.status) === "Selesai" && (
                               <button className="text-sm font-semibold text-ocean-600 hover:underline" onClick={() => setCertTarget(t)}>{S.btnTerapkan}</button>
                             )}
-                            <RowAction
-                              icon={Pencil}
-                              tone="neutral"
-                              label={S.btnEdit}
-                              ariaLabel={`${S.btnEdit} ${String(t.id)}`}
-                              onClick={() => openTrainingEdit(t)}
-                            />
-                            <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(t.id)}`} onClick={() => setDelTraining(t)} />
+                            {canWriteHR && (
+                              <RowAction
+                                icon={Pencil}
+                                tone="neutral"
+                                label={S.btnEdit}
+                                ariaLabel={`${S.btnEdit} ${String(t.id)}`}
+                                onClick={() => openTrainingEdit(t)}
+                              />
+                            )}
+                            {canDeleteHR && (
+                              <RowAction icon={Trash2} tone="danger" label={S.btnHapus} ariaLabel={`${S.btnHapus} ${String(t.id)}`} onClick={() => setDelTraining(t)} />
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -7,6 +7,7 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Modal, Field, FormGrid, t
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { rowMatches, SearchBox } from "../../components/ui";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import { findUsages } from "../../utils/usages";
 import type { StoreItem } from "../../data/store";
@@ -139,6 +140,9 @@ function vesselToForm(v: StoreItem): VesselForm {
 
 export default function Vessels() {
   const { data, add, update, remove, log } = useStore();
+  const { user } = useAuth();
+  const canWriteVessels = hasPermission(user?.permissions, "vessels", "w");
+  const canDeleteVessels = hasPermission(user?.permissions, "vessels", "d");
   const { locale } = useT();
   const S = n_eqp[locale];
   const modAlert = useModuleAlert("kapal");
@@ -353,7 +357,7 @@ export default function Vessels() {
         title={S.vsTitle}
         subtitle={S.vsSubtitle}
         icon={<Ship className="h-5 w-5" />}
-        actions={<button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.vsAdd}</button>}
+        actions={canWriteVessels ? <button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.vsAdd}</button> : undefined}
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
@@ -452,14 +456,20 @@ export default function Vessels() {
                   </div>
                   {(v.certificates ?? []).length > 0 && <p className="mt-2 text-[11px] text-steel-400">{S.vsCertSurveyCount.replace("{a}", String((v.certificates ?? []).length)).replace("{b}", String(data.surveys.filter((s) => sameName(s.vessel, v.name)).length))}</p>}
                 </Link>
-                <div className="absolute right-5 top-5 z-10 flex items-center gap-1">
-                  <button className="rounded-lg border border-steel-200 bg-white p-1.5 text-steel-500 hover:border-ocean-400 hover:text-ocean-600" aria-label={S.vsEditAria.replace("{a}", v.name)} onClick={() => openEdit(v)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button className="rounded-lg border border-steel-200 bg-white p-1.5 text-steel-500 hover:border-rose-400 hover:text-rose-600" aria-label={`${S.delBtn} ${v.name}`} onClick={() => setDeleting(v)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                {(canWriteVessels || canDeleteVessels) && (
+                  <div className="absolute right-5 top-5 z-10 flex items-center gap-1">
+                    {canWriteVessels && (
+                      <button className="rounded-lg border border-steel-200 bg-white p-1.5 text-steel-500 hover:border-ocean-400 hover:text-ocean-600" aria-label={S.vsEditAria.replace("{a}", v.name)} onClick={() => openEdit(v)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    {canDeleteVessels && (
+                      <button className="rounded-lg border border-steel-200 bg-white p-1.5 text-steel-500 hover:border-rose-400 hover:text-rose-600" aria-label={`${S.delBtn} ${v.name}`} onClick={() => setDeleting(v)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -472,7 +482,7 @@ export default function Vessels() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="sticky top-0 z-10 bg-surface">
-                <tr><SortTh label={S.thVessel} sortKey="vessel" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thSurveyType} sortKey="type" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thSurveyor} sortKey="classSurveyor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.dateLabel} sortKey="date" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.thAction}</th></tr>
+                <tr><SortTh label={S.thVessel} sortKey="vessel" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thSurveyType} sortKey="type" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thSurveyor} sortKey="classSurveyor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.dateLabel} sortKey="date" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.thStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colCreated} sortKey="createdAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.colUpdated} sortKey="updatedAt" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />{(canWriteVessels || canDeleteVessels) && <th className="th">{S.thAction}</th>}</tr>
               </thead>
               <tbody className="divide-y divide-steel-100">
                 {surveyPager.slice(surveySorted).map((s) => (
@@ -484,31 +494,32 @@ export default function Vessels() {
                     <td className="td"><Badge tone={s.status === "Selesai" ? "green" : s.status === "Dalam Proses" ? "blue" : "gray"}>{s.status}</Badge></td>
                     <td className="td text-xs text-steel-600">{createdAtOf(s) !== null ? fmtTanggal(createdAtOf(s)) : <span className="text-steel-400">-</span>}</td>
                     <td className="td text-xs text-steel-600">{lastTouchedAt(s) !== null ? fmtTanggal(lastTouchedAt(s)) : <span className="text-steel-400">-</span>}</td>
-                    {/* Tabel survei TIDAK punya kolom aksi sama sekali - kartu
-                        kapal di atas punya Ubah/Hapus, tapi baris survei sendiri
-                        tidak. Survei yang tercatat salah kapal/tanggal/surveyor
-                        tidak bisa dikoreksi, dan tidak bisa dihapus saat kapal
-                        ternyata salah di-input. */}
-                    <td className="td">
-                      <div className="flex gap-1">
-                        <button
-                          className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100"
-                          title={locale === "en" ? "Edit survey" : "Ubah survei"}
-                          aria-label={`${locale === "en" ? "Edit" : "Ubah"} survei ${String(s.id)}`}
-                          onClick={() => openSurveyEdit(s)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
-                          title={locale === "en" ? "Delete survey" : "Hapus survei"}
-                          aria-label={`${locale === "en" ? "Delete" : "Hapus"} survei ${String(s.id)}`}
-                          onClick={() => setDelSurvey(s)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+                    {(canWriteVessels || canDeleteVessels) && (
+                      <td className="td">
+                        <div className="flex gap-1">
+                          {canWriteVessels && (
+                            <button
+                              className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100"
+                              title={locale === "en" ? "Edit survey" : "Ubah survei"}
+                              aria-label={`${locale === "en" ? "Edit" : "Ubah"} survei ${String(s.id)}`}
+                              onClick={() => openSurveyEdit(s)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {canDeleteVessels && (
+                            <button
+                              className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                              title={locale === "en" ? "Delete survey" : "Hapus survei"}
+                              aria-label={`${locale === "en" ? "Delete" : "Hapus"} survei ${String(s.id)}`}
+                              onClick={() => setDelSurvey(s)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

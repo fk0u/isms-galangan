@@ -7,6 +7,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AsyncButton, ConfirmModal, EmptyState, Field, FormGrid, KpiCard, Modal, MoneyInput, RowAction, toast } from "../../../components/ui";
 import type { StoreItem } from "../../../data/store";
 import { useStore } from "../../../data/store";
+import { useAuth, hasPermission } from "../../../auth/auth";
 import { exportExcel } from "../../../utils/export";
 import { fmtBulan, fmtRupiah, parseRupiah, todayISO } from "../../../utils/format";
 import { n_fin } from "../../../i18n/n_fin";
@@ -29,8 +30,13 @@ const emptyForm = (periode: string) => ({
 
 export default function RabTab() {
   const { data, add, update, remove, inBranch } = useStore();
+  const { user } = useAuth();
   const { locale } = useT();
   const S = n_fin[locale];
+
+  const canWriteRab = hasPermission(user?.permissions, "rabItems", "w");
+  const canDeleteRab = hasPermission(user?.permissions, "rabItems", "d");
+
   const [periode, setPeriode] = useState(todayISO().slice(0, 7));
   const [form, setForm] = useState(emptyForm(periode));
   const [lines, setLines] = useState<RabLine[]>([emptyLine()]);
@@ -171,7 +177,7 @@ export default function RabTab() {
         </label>
         <div className="ml-auto flex gap-2">
           <button className="btn-secondary text-xs" onClick={() => void exportXls()}>{S.histExport}</button>
-          <button className="btn-primary text-xs" onClick={openNew}>{S.rabAdd}</button>
+          {canWriteRab && <button className="btn-primary text-xs" onClick={openNew}>{S.rabAdd}</button>}
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -189,7 +195,7 @@ export default function RabTab() {
               <th className="th text-right">{S.rabBudget}</th>
               <th className="th text-right">{S.rabReal}</th>
               <th className="th text-right">{S.rabRemain}</th>
-              <th className="th">{S.actionTh}</th>
+              {(canWriteRab || canDeleteRab) && <th className="th">{S.actionTh}</th>}
             </tr></thead>
             <tbody className="divide-y divide-steel-100">
               {rows.map(({ r, real }) => {
@@ -209,10 +215,12 @@ export default function RabTab() {
                     <td className={`td text-right text-xs font-semibold font-mono ${real > a ? "text-rose-600" : "text-emerald-700"}`}>
                       {fmtRupiah(a - real)}
                     </td>
-                    <td className="td"><div className="flex gap-1">
-                      <RowAction icon={Pencil} tone="neutral" label={S.editBtn} onClick={() => openEdit(r)} />
-                      <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} onClick={() => setDel(r)} />
-                    </div></td>
+                    {(canWriteRab || canDeleteRab) && (
+                      <td className="td"><div className="flex gap-1">
+                        {canWriteRab && <RowAction icon={Pencil} tone="neutral" label={S.editBtn} onClick={() => openEdit(r)} />}
+                        {canDeleteRab && <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} onClick={() => setDel(r)} />}
+                      </div></td>
+                    )}
                   </tr>
                 );
               })}

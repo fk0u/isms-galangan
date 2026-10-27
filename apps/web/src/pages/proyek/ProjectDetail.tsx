@@ -1369,29 +1369,37 @@ const createWarranty = async (wbsTask?: string) => {
             {/* Prioritas sebelumnya write-once: hanya ditulis saat proyek dibuat,
                 tidak bisa diubah di halaman mana pun padahal ditampilkan sebagai
                 badge & bisa difilter. */}
-            <label className="flex items-center gap-1.5">
-              <span className="text-xs text-steel-500">{S.prjFieldPrioritas}</span>
-              <select
-                className="input w-auto py-1.5 text-sm"
-                value={canonPrioritas(project.prioritas)}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  void busy.run("savePrioritas", () => savePrioritas(next));
-                }}
-                disabled={busy.isBusy("savePrioritas")}
-                aria-label={S.prjFieldPrioritas}
-              >
-                {PRIORITAS.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </label>
-            <select
-              className="input w-auto py-1.5 text-sm"
-              value={project.status}
-              onChange={(e) => askStatus(e.target.value)}
-              title={S.detStatusLateTitle}
-            >
-              {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            {canAutoWrite ? (
+              <>
+                <label className="flex items-center gap-1.5">
+                  <span className="text-xs text-steel-500">{S.prjFieldPrioritas}</span>
+                  <select
+                    className="input w-auto py-1.5 text-sm"
+                    value={canonPrioritas(project.prioritas)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      void busy.run("savePrioritas", () => savePrioritas(next));
+                    }}
+                    disabled={busy.isBusy("savePrioritas")}
+                    aria-label={S.prjFieldPrioritas}
+                  >
+                    {PRIORITAS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </label>
+                <select
+                  className="input w-auto py-1.5 text-sm"
+                  value={project.status}
+                  onChange={(e) => askStatus(e.target.value)}
+                  title={S.detStatusLateTitle}
+                >
+                  {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </>
+            ) : (
+              <span className="text-xs text-steel-600 font-medium">
+                {S.prjFieldPrioritas}: <span className="font-semibold text-navy-900">{canonPrioritas(project.prioritas)}</span>
+              </span>
+            )}
             <StatusBadge status={project.status} />
             {project.statusOverride && (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700"
@@ -1538,12 +1546,16 @@ const createWarranty = async (wbsTask?: string) => {
                   <h3 className="text-sm font-semibold text-navy-900">{S.detScopeTitle}</h3>
                   <div className="flex flex-wrap items-center gap-2">
                     <button type="button" className="btn-secondary text-xs" onClick={downloadScopeTemplate}><FileDown className="h-3.5 w-3.5" /> {S.detScopeTemplate}</button>
-                    <label className="btn-secondary cursor-pointer text-xs">
-                      <Upload className="h-3.5 w-3.5" /> {S.detScopeImport}
-                      <input type="file" accept=".xlsx,.csv" className="hidden" aria-label={S.detScopeImport}
-                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importScope(f); }} />
-                    </label>
-                    <button className="btn-secondary text-xs" onClick={() => setShowScope(true)}><Plus className="h-3.5 w-3.5" /> {S.addBtn}</button>
+                    {canAutoWrite && (
+                      <>
+                        <label className="btn-secondary cursor-pointer text-xs">
+                          <Upload className="h-3.5 w-3.5" /> {S.detScopeImport}
+                          <input type="file" accept=".xlsx,.csv" className="hidden" aria-label={S.detScopeImport}
+                            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void importScope(f); }} />
+                        </label>
+                        <button className="btn-secondary text-xs" onClick={() => setShowScope(true)}><Plus className="h-3.5 w-3.5" /> {S.addBtn}</button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <ul className="space-y-2">
@@ -1555,7 +1567,9 @@ const createWarranty = async (wbsTask?: string) => {
                         {s.harga ? <span className="font-medium text-emerald-700"> · {fmtRupiah(s.harga)}</span> : (s.lokasi ? <span className="text-steel-500"> · {s.lokasi}</span> : null)}
                         {s.deskripsi ? <span className="block text-xs text-steel-500">{s.deskripsi}</span> : null}
                       </span>
-                      <button className="hidden rounded p-1 text-rose-400 hover:bg-rose-50 group-hover:block" onClick={() => setDelScope(i)} title={S.detScopeDelTitle}><Trash2 className="h-3.5 w-3.5" /></button>
+                      {canAutoWrite && (
+                        <button className="hidden rounded p-1 text-rose-400 hover:bg-rose-50 group-hover:block" onClick={() => setDelScope(i)} title={S.detScopeDelTitle}><Trash2 className="h-3.5 w-3.5" /></button>
+                      )}
                     </li>
                   ))}
                   {scopeList(project.scope).length === 0 && <p className="text-sm text-steel-400">{S.detScopeEmpty}</p>}
@@ -1876,7 +1890,9 @@ const createWarranty = async (wbsTask?: string) => {
               dipakai. Yang bisa tumbuh panjang tanpa batas adalah WBS. */}
               <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
                 <SearchBox value={wbsQ} onChange={setWbsQ} placeholder={locale === "en" ? "Search WBS..." : "Cari WBS..."} ariaLabel={locale === "en" ? "Search WBS" : "Cari WBS"} className="w-full max-w-xs" />
-                <button className="btn-secondary text-xs" onClick={() => { setWbsForm({ task: "", category: scopeList(project.scope)[0]?.service ?? "", start: "", end: "", progress: "0" }); setShowWbs(true); }}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
+                {canAutoWrite && (
+                  <button className="btn-secondary text-xs" onClick={() => { setWbsForm({ task: "", category: scopeList(project.scope)[0]?.service ?? "", start: "", end: "", progress: "0" }); setShowWbs(true); }}><Plus className="h-3.5 w-3.5" /> {S.detAddStage}</button>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -1935,17 +1951,19 @@ const createWarranty = async (wbsTask?: string) => {
                               </td>
                               <td className="td py-2.5" />
                               <td className="td py-2.5 text-right">
-                                <button
-                                  type="button"
-                                  className="btn-secondary text-[11px] py-1 px-2 inline-flex items-center gap-1"
-                                  onClick={() => {
-                                    setWbsForm({ task: "", category: group.category, start: "", end: "", progress: "0" });
-                                    setShowWbs(true);
-                                  }}
-                                  title={`${S.detAddStage} - ${group.category}`}
-                                >
-                                  <Plus className="h-3 w-3" /> {S.detAddStage}
-                                </button>
+                                {canAutoWrite && (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary text-[11px] py-1 px-2 inline-flex items-center gap-1"
+                                    onClick={() => {
+                                      setWbsForm({ task: "", category: group.category, start: "", end: "", progress: "0" });
+                                      setShowWbs(true);
+                                    }}
+                                    title={`${S.detAddStage} - ${group.category}`}
+                                  >
+                                    <Plus className="h-3 w-3" /> {S.detAddStage}
+                                  </button>
+                                )}
                               </td>
                             </tr>
 
@@ -1998,42 +2016,48 @@ const createWarranty = async (wbsTask?: string) => {
                                         label={`${S.wbsMatBtn} ${w.task} (${stageMaterialCount(data.bomItems ?? [], pid, w.task)})`}
                                         onClick={() => setWbsMatTask(w.task)}
                                       />
-                                      <RowAction
-                                        icon={UserPlus}
-                                        tone="neutral"
-                                        label={`${S.detAssignBtn} ${w.task}`}
-                                        onClick={() => {
-                                          setWbsAssignTask(w.task);
-                                          setAssignForm({
-                                            type: w.assignee?.type ?? "internal",
-                                            employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
-                                            subconId: w.assignee?.type === "external" ? w.assignee.id : "",
-                                            woValue: "",
-                                          });
-                                        }}
-                                      />
+                                      {canAutoWrite && (
+                                        <RowAction
+                                          icon={UserPlus}
+                                          tone="neutral"
+                                          label={`${S.detAssignBtn} ${w.task}`}
+                                          onClick={() => {
+                                            setWbsAssignTask(w.task);
+                                            setAssignForm({
+                                              type: w.assignee?.type ?? "internal",
+                                              employeeId: w.assignee?.type === "internal" ? w.assignee.id : "",
+                                              subconId: w.assignee?.type === "external" ? w.assignee.id : "",
+                                              woValue: "",
+                                            });
+                                          }}
+                                        />
+                                      )}
                                       <RowAction
                                         icon={History}
                                         tone="neutral"
                                         label={`${S.detWbsHistoryBtn} ${w.task}`}
                                         onClick={() => setWbsHistoryTask(w.task)}
                                       />
-                                      <RowAction
-                                        icon={Pencil}
-                                        tone="neutral"
-                                        label={`${S.detUpdateBtn} ${w.task}`}
-                                        onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
-                                      />
-                                      <RowAction
-                                        icon={Trash2}
-                                        tone="danger"
-                                        label={`${S.detDelStageTitle} ${w.task}`}
-                                        onClick={() => {
-                                          const terpakai = Number(w.progress) > 0 || (w.history?.length ?? 0) > 0 || (w.photos?.length ?? 0) > 0 || Boolean(w.photoUrl) || Boolean(w.assignee);
-                                          if (terpakai) { toast(S.detDelStageBlocked.replace("{a}", w.task), "info"); return; }
-                                          setStageToDelete(w.task);
-                                        }}
-                                      />
+                                      {canAutoWrite && (
+                                        <>
+                                          <RowAction
+                                            icon={Pencil}
+                                            tone="neutral"
+                                            label={`${S.detUpdateBtn} ${w.task}`}
+                                            onClick={() => { setWbsTaskUpdate(w.task); setWbsUpdateForm({ hours: String(w.actualHours ?? ""), material: w.materialUsed ?? "", materialQty: String(w.materialQty ?? "1"), status: w.status === "Selesai" ? "Selesai" : "Sedang", progress: String(w.progress ?? 0), predecessor: w.predecessor ?? "", station: w.station ?? "", photoNote: w.photoNote ?? "", photoUrl: String(w.photoUrl ?? ""), photos: [], dft: w.dft === undefined || w.dft === null ? "" : String(w.dft) }); }}
+                                          />
+                                          <RowAction
+                                            icon={Trash2}
+                                            tone="danger"
+                                            label={`${S.detDelStageTitle} ${w.task}`}
+                                            onClick={() => {
+                                              const terpakai = Number(w.progress) > 0 || (w.history?.length ?? 0) > 0 || (w.photos?.length ?? 0) > 0 || Boolean(w.photoUrl) || Boolean(w.assignee);
+                                              if (terpakai) { toast(S.detDelStageBlocked.replace("{a}", w.task), "info"); return; }
+                                              setStageToDelete(w.task);
+                                            }}
+                                          />
+                                        </>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -2447,7 +2471,9 @@ const createWarranty = async (wbsTask?: string) => {
               <style>{`@media print { .doc-card, .bast-card, .report-card { break-inside: avoid; page-break-inside: avoid; } table, thead, tbody, tr { break-inside: auto; page-break-inside: auto; } }`}</style>
               <h3 className="mb-2 text-sm font-semibold text-navy-900">{S.detDocTitle}</h3>
               <div className="mb-3 flex justify-end">
-                <button className="btn-secondary text-xs" onClick={() => setShowDoc(true)}><Plus className="h-3.5 w-3.5" /> {S.detAddDoc}</button>
+                {canAutoWrite && (
+                  <button className="btn-secondary text-xs" onClick={() => setShowDoc(true)}><Plus className="h-3.5 w-3.5" /> {S.detAddDoc}</button>
+                )}
               </div>
               {/* Alur bercabang: tipe → dokumen → riwayat revisi. Kartu di bawah tetap untuk pratinjau & berbagi. */}
               {docsByType.length > 0 && (
@@ -2551,7 +2577,9 @@ const createWarranty = async (wbsTask?: string) => {
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.detBastTitle.replace("{n}", String(bastList.length))}</h3>
-                  <button className="btn-secondary text-xs" onClick={() => { setBastForm({ milestone: "", tanggal: todayISO(), signer: "", lampiran: "", amount: "" }); setShowBast(true); }}><Plus className="h-3.5 w-3.5" /> {S.detCreateBast}</button>
+                  {canAutoWrite && (
+                    <button className="btn-secondary text-xs" onClick={() => { setBastForm({ milestone: "", tanggal: todayISO(), signer: "", lampiran: "", amount: "" }); setShowBast(true); }}><Plus className="h-3.5 w-3.5" /> {S.detCreateBast}</button>
+                  )}
                 </div>
                 <div className="space-y-2">
                   {bastList.map((b) => {
@@ -2564,10 +2592,10 @@ const createWarranty = async (wbsTask?: string) => {
 </div>
                         <div className="flex items-center gap-2">
                           <StatusBadge status={String(b.status)} />
-                          {String(b.status) === "Draft" && (
+                          {canAutoWrite && String(b.status) === "Draft" && (
                             <button className="btn-secondary text-xs" onClick={() => advanceBast(b, "Diajukan")}>{S.detProposeBtn}</button>
                           )}
-                          {String(b.status) === "Diajukan" && (
+                          {canAutoWrite && String(b.status) === "Diajukan" && (
                             <button className="btn-secondary text-xs" onClick={() => advanceBast(b, "Disetujui")}>{S.detApproveInvBtn}</button>
                           )}
                           {/* BAST boleh dicetak begitu sudah diajukan: suratnya
@@ -2583,7 +2611,7 @@ const createWarranty = async (wbsTask?: string) => {
                               BAST PDF
                             </button>
                           )}
-                          {String(b.status) === "Draft" && (
+                          {canAutoWrite && String(b.status) === "Draft" && (
                             <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelRec({ kind: "bast", row: b })}>{locale === "en" ? "Delete" : "Hapus"}</button>
                           )}
                           {String(b.status) !== "Draft" && (
@@ -2717,7 +2745,9 @@ const createWarranty = async (wbsTask?: string) => {
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.detCoTitle.replace("{n}", String(coList.length))}</h3>
-                  <button className="btn-secondary text-xs" onClick={() => setShowCo(true)}><Plus className="h-3.5 w-3.5" /> {S.detProposeCo}</button>
+                  {canAutoWrite && (
+                    <button className="btn-secondary text-xs" onClick={() => setShowCo(true)}><Plus className="h-3.5 w-3.5" /> {S.detProposeCo}</button>
+                  )}
                 </div>
                 <div className="mb-3 rounded-xl border border-steel-100 bg-surface p-3 text-sm">
                   <span className="text-steel-500">{S.detCoTotalPrefix}</span>
@@ -2735,16 +2765,16 @@ const createWarranty = async (wbsTask?: string) => {
                         <StatusBadge status={c.status} />
                         {c.boqDocId ? <span className="text-[11px] text-steel-500">{S.detCoLinked.replace("{n}", String(Array.isArray(c.changes) ? c.changes.length : 0))}</span> : null}
                         {c.status === "Diajukan" && !coOwner && <span className="text-[11px] text-steel-500">{S.detCoWaitOwner}</span>}
-                        {c.status === "Diajukan" && coOwner && (
+                        {canAutoWrite && c.status === "Diajukan" && coOwner && (
                           <>
                             <button className="btn-secondary text-xs" onClick={() => setCoStatus(c.id, "Disetujui")}>{S.detApproveBtn}</button>
                             <button className="btn-secondary text-xs" onClick={() => setCoStatus(c.id, "Ditolak")}>{S.detRejectBtn}</button>
                           </>
                         )}
-                        {c.status === "Disetujui" && (
+                        {canAutoWrite && c.status === "Disetujui" && (
                             <button className="btn-secondary text-xs" onClick={() => setCoStatus(c.id, "Diterapkan")}>{S.detApplyBtn}</button>
                         )}
-                        {c.status !== "Diterapkan" && (
+                        {canAutoWrite && c.status !== "Diterapkan" && (
                           <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelRec({ kind: "changeOrders", row: c })}>{locale === "en" ? "Delete" : "Hapus"}</button>
                         )}
                         {c.status === "Diterapkan" && (
@@ -2904,7 +2934,7 @@ const createWarranty = async (wbsTask?: string) => {
             <Card className="p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-navy-900">{S.detWarTitle.replace("{n}", String(warrantyList.length))}</h3>
-{project.status === "Selesai" && (
+                {canAutoWrite && project.status === "Selesai" && (
                   <button className="btn-secondary text-xs" onClick={() => createWarranty()}><Plus className="h-3.5 w-3.5" /> {S.detCreateWar}</button>
                 )}
               </div>
@@ -2912,7 +2942,7 @@ const createWarranty = async (wbsTask?: string) => {
                 <p className="mb-2 text-xs text-steel-500">{S.detWarHint}</p>
               )}
               {/* D11: garansi per WBS task yang sudah selesai. */}
-              {project.status === "Selesai" && wbs.some((w) => Number(w.progress ?? 0) >= 100) && (
+              {canAutoWrite && project.status === "Selesai" && wbs.some((w) => Number(w.progress ?? 0) >= 100) && (
                 <div className="mt-2">
                   <p className="mb-1 text-xs font-medium text-steel-500">{S.detWarPerTask}</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -2944,7 +2974,9 @@ const createWarranty = async (wbsTask?: string) => {
             <Card className="p-4">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-navy-900">{S.detTrialTitle.replace("{n}", String(trialList.length))}</h3>
-                <button className="btn-secondary text-xs" onClick={openTrialNew}><Plus className="h-3.5 w-3.5" /> {S.detCreateTrial}</button>
+                {canAutoWrite && (
+                  <button className="btn-secondary text-xs" onClick={openTrialNew}><Plus className="h-3.5 w-3.5" /> {S.detCreateTrial}</button>
+                )}
               </div>
               <p className="mb-2 text-xs text-steel-500">{S.detTrialHint}</p>
               <div className="space-y-2">
@@ -2956,13 +2988,13 @@ const createWarranty = async (wbsTask?: string) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={String(t.hasil ?? "Berjalan")} />
-                      {String(t.hasil) !== "Lolos" && (
+                      {canAutoWrite && String(t.hasil) !== "Lolos" && (
                         <button className="btn-secondary text-xs" onClick={() => advanceTrial(t, "Lolos")}>{S.detTrialPassBtn}</button>
                       )}
-                      {String(t.hasil) !== "Gagal" && (
+                      {canAutoWrite && String(t.hasil) !== "Gagal" && (
                         <button className="btn-secondary text-xs" onClick={() => advanceTrial(t, "Gagal")}>{S.detTrialFailBtn}</button>
                       )}
-                      {!t.baRef && (
+                      {canAutoWrite && !t.baRef && (
                         <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelRec({ kind: "trials", row: t })}>{locale === "en" ? "Delete" : "Hapus"}</button>
                       )}
                       {String(t.baRef ?? "") !== "" && (

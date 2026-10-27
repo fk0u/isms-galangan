@@ -5,7 +5,7 @@ import { n_tree } from "../../i18n/n_tree";
 import { Card, PageHeader, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, toast, StatusBadge, usePager, AsyncButton, EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { FilterPopover } from "../../components/FilterPopover";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore, type StoreItem, type CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { DocumentPreviewCell, DocumentPreviewPanel, InlineDocPreview } from "../../components/DocumentPreview";
@@ -156,6 +156,8 @@ function attachFields(typed: string): { fileUrl?: string; fileName?: string } {
 export default function Documents() {
   const { data, add, update, remove, log, branch, inBranch } = useStore();
   const { user } = useAuth();
+  const canWriteDocs = hasPermission(user?.permissions, "documents", "w");
+  const canDeleteDocs = hasPermission(user?.permissions, "documents", "d");
   const sessionName = user?.name || "Pengguna";
   const { locale } = useT();
   const S = n_dry[locale];
@@ -730,7 +732,9 @@ const doExport = () => {
         actions={
           <>
             <AsyncButton className="btn-secondary" onAction={doExport}><Download className="h-4 w-4" /> {S.exportExcelBtn}</AsyncButton>
-            <button className="btn-primary-gradient" onClick={openAdd}><Plus className="h-4 w-4" /> {S.btnArchiveDoc}</button>
+            {canWriteDocs && (
+              <button className="btn-primary-gradient" onClick={openAdd}><Plus className="h-4 w-4" /> {S.btnArchiveDoc}</button>
+            )}
           </>
         }
       />
@@ -1032,13 +1036,17 @@ const doExport = () => {
                       />
                       {type === "Arsip" ? (
                         <>
-                          <button className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50" title={S.actRestore} aria-label={S.actRestoreOf.replace("{a}", String(d.id))} onClick={async () => { try { await update("documents", d.id, { archived: false }); log("memulihkan dokumen dari arsip", d.id, "Dokumen"); toast(S.tRestored.replace("{a}", String(d.id))); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } }}><RotateCcw className="h-4 w-4" /></button>
-                          <button className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50" title={S.actDeletePerm} aria-label={S.actDeletePermOf.replace("{a}", String(d.id))} onClick={() => openDelete(d)}><Trash2 className="h-4 w-4" /></button>
+                          {canWriteDocs && (
+                            <button className="rounded-lg p-1.5 text-teal-600 hover:bg-teal-50" title={S.actRestore} aria-label={S.actRestoreOf.replace("{a}", String(d.id))} onClick={async () => { try { await update("documents", d.id, { archived: false }); log("memulihkan dokumen dari arsip", d.id, "Dokumen"); toast(S.tRestored.replace("{a}", String(d.id))); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } }}><RotateCcw className="h-4 w-4" /></button>
+                          )}
+                          {canDeleteDocs && (
+                            <button className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50" title={S.actDeletePerm} aria-label={S.actDeletePermOf.replace("{a}", String(d.id))} onClick={() => openDelete(d)}><Trash2 className="h-4 w-4" /></button>
+                          )}
                         </>
                       ) : (
                         <>
                           {/* Quick Action: Trigger Ajukan Dokumen bila berstatus Draft */}
-                          {String(d.status) === "Draft" && (
+                          {canWriteDocs && String(d.status) === "Draft" && (
                             <button
                               className="rounded-lg p-1.5 text-amber-600 hover:bg-amber-50"
                               title={S.docActionBtnSubmitNow}
@@ -1056,7 +1064,7 @@ const doExport = () => {
                             </button>
                           )}
                           {/* Quick Action: Trigger Approve Dokumen bila berstatus Diajukan / Menunggu Approval */}
-                          {(String(d.status) === "Diajukan" || String(d.status) === "Menunggu Approval" || String(d.status) === "Dalam Review" || d.approvalStatus === "Menunggu Approval") && (
+                          {canWriteDocs && (String(d.status) === "Diajukan" || String(d.status) === "Menunggu Approval" || String(d.status) === "Dalam Review" || d.approvalStatus === "Menunggu Approval") && (
                             <button
                               className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"
                               title={S.docActionBtnApproveNow}
@@ -1074,8 +1082,12 @@ const doExport = () => {
                               <Check className="h-4 w-4" />
                             </button>
                           )}
-                          <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actEdit} aria-label={S.actEditOf.replace("{a}", String(d.id))} onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></button>
-                          <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actArchive} aria-label={S.actArchiveOf.replace("{a}", String(d.id))} onClick={() => openArchive(d)}><Archive className="h-4 w-4" /></button>
+                          {canWriteDocs && (
+                            <>
+                              <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actEdit} aria-label={S.actEditOf.replace("{a}", String(d.id))} onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></button>
+                              <button className="rounded-lg p-1.5 text-steel-500 hover:bg-steel-100" title={S.actArchive} aria-label={S.actArchiveOf.replace("{a}", String(d.id))} onClick={() => openArchive(d)}><Archive className="h-4 w-4" /></button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

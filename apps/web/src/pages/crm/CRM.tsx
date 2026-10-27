@@ -11,6 +11,7 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, Donut, Modal, Field
 import ClientModal from "../../components/ClientModal";
 import type { SortState } from "../../components/ui";
 import { AsyncButton } from "../../components/ui";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
@@ -76,6 +77,15 @@ const CRM_COLS: CollectionKey[] = ["activities", "clientPos", "clients", "commun
 
 export default function CRM() {
   const { data, add, update, remove, log, branch, inBranch } = useStore();
+  const { user } = useAuth();
+  const canWriteQuotes = hasPermission(user?.permissions, "quotations", "w");
+  const canDeleteQuotes = hasPermission(user?.permissions, "quotations", "d");
+  const canWriteClients = hasPermission(user?.permissions, "clients", "w");
+  const canWriteRequests = hasPermission(user?.permissions, "requests", "w");
+  const canDeleteRequests = hasPermission(user?.permissions, "requests", "d");
+  const canWriteComms = hasPermission(user?.permissions, "communications", "w");
+  const canWriteContracts = hasPermission(user?.permissions, "contracts", "w");
+  const canDeleteContracts = hasPermission(user?.permissions, "contracts", "d");
   const { locale } = useT();
   const S = n_crm[locale];
   /* Label tampilan: "Lead" → "Prospek" (ID saja); value backend tetap "Lead". */
@@ -705,7 +715,7 @@ export default function CRM() {
         title={S.crmTitle}
         subtitle={S.crmSubtitle}
         icon={<Handshake className="h-5 w-5" />}
-        actions={<button className="btn-primary-gradient" onClick={() => setShowQ(true)}><Plus className="h-4 w-4" /> {S.newQuotation}</button>}
+        actions={canWriteQuotes ? <button className="btn-primary-gradient" onClick={() => setShowQ(true)}><Plus className="h-4 w-4" /> {S.newQuotation}</button> : null}
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
@@ -842,7 +852,7 @@ export default function CRM() {
                             <Link to={`/crm/quotation/${q.id}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-ocean-600 hover:text-ocean-500">
                               {S.detailBtn} <ArrowRight className="h-3 w-3" />
                             </Link>
-                            {!isTerminal(stage) && (
+                            {!isTerminal(stage) && canWriteQuotes && (
                               <div className="mt-2 space-y-1.5">
                                 {stage !== "Menang" ? (
                                   <button className="btn-secondary flex-1 justify-center py-1 text-xs w-full" onClick={() => advance(q)}>
@@ -901,7 +911,9 @@ export default function CRM() {
                     {S.clientFilterActive.replace("{n}", String(visibleClients.length))}
                   </span>
                 )}
-                <button className="btn-secondary ml-auto text-xs" onClick={() => setShowClient(true)}><Plus className="h-3.5 w-3.5" /> {S.addClientBtn}</button>
+                {canWriteClients && (
+                  <button className="btn-secondary ml-auto text-xs" onClick={() => setShowClient(true)}><Plus className="h-3.5 w-3.5" /> {S.addClientBtn}</button>
+                )}
               </div>
               {visibleClients.length === 0 ? (
                 <EmptyState title={S.emptyClientTitle} subtitle={S.emptyClientSub} />
@@ -967,13 +979,13 @@ export default function CRM() {
                     <span className="text-lg font-bold text-navy-900">{fmtMiliar(num(q.value))}</span>
                     <div className="flex gap-1.5">
                       <Link to={`/crm/quotation/${q.id}`} className="btn-secondary text-xs">{S.detailBtn}</Link>
-                      <button className="btn-secondary text-xs" onClick={() => openSend(q)}><Send className="h-3.5 w-3.5" /> {S.sendBtn}</button>
-                      {!isTerminal(String(q.stage)) && q.stage !== "Menang" && <button className="btn-secondary text-xs" onClick={() => advance(q)}>{S.advanceBtn}</button>}
-                      {!isTerminal(String(q.stage)) && q.stage === "Menang" && <button className="btn-primary text-xs" onClick={() => openConvert(q)}>{S.toProjectBtn}</button>}
-                      {String(q.stage) === "Lead" && <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelQuote(q)}>{S.deleteBtn}</button>}
+                      {canWriteQuotes && <button className="btn-secondary text-xs" onClick={() => openSend(q)}><Send className="h-3.5 w-3.5" /> {S.sendBtn}</button>}
+                      {canWriteQuotes && !isTerminal(String(q.stage)) && q.stage !== "Menang" && <button className="btn-secondary text-xs" onClick={() => advance(q)}>{S.advanceBtn}</button>}
+                      {canWriteQuotes && !isTerminal(String(q.stage)) && q.stage === "Menang" && <button className="btn-primary text-xs" onClick={() => openConvert(q)}>{S.toProjectBtn}</button>}
+                      {canDeleteQuotes && String(q.stage) === "Lead" && <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelQuote(q)}>{S.deleteBtn}</button>}
                     </div>
                   </div>
-                  {!isTerminal(String(q.stage)) && (
+                  {!isTerminal(String(q.stage)) && canWriteQuotes && (
                     <div className="mt-2 flex gap-1.5">
                       <button className="btn-secondary flex-1 justify-center py-1 text-xs" onClick={() => markTerminal(q, "Batal")}>{S.markCancelBtn}</button>
                       <button className="btn-secondary flex-1 justify-center py-1 text-xs" onClick={() => markTerminal(q, "Kalah")}>{S.markLoseBtn}</button>
@@ -989,9 +1001,11 @@ export default function CRM() {
 
           {tab === "Request" && (
             <div className="space-y-3">
-              <div className="flex items-center justify-end">
-                <button className="btn-secondary text-xs" onClick={() => setShowReq(true)}><Plus className="h-3.5 w-3.5" /> {S.newRequestBtn}</button>
-              </div>
+              {canWriteRequests && (
+                <div className="flex items-center justify-end">
+                  <button className="btn-secondary text-xs" onClick={() => setShowReq(true)}><Plus className="h-3.5 w-3.5" /> {S.newRequestBtn}</button>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {reqPager.slice(requests).map((r) => (
                   <Card key={r.id} id={notifRowId(String(r.id))} className={`p-4 ${rowHighlightClass({ id: String(r.id), flash, notified: notified.has(String(r.id)) })}`}>
@@ -1007,16 +1021,18 @@ export default function CRM() {
                       <span className="text-lg font-bold text-navy-900">{fmtMiliar(num(r.value))}</span>
                       <span className="font-mono text-xs text-steel-500">{r.id}</span>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {String(r.status) === "Baru" && <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Disurvei")}>Disurvei</button>}
-                      {String(r.status) === "Baru" && <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelReq(r)}>{S.deleteBtn}</button>}
-                      {String(r.status) === "Disurvei" && <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Diajukan")}>Diajukan</button>}
-                      {String(r.status) === "Diajukan" && (<>
-                        <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Disetujui")}>Disetujui</button>
-                        <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Ditolak")}>Ditolak</button>
-                      </>)}
-                      {String(r.status) === "Disetujui" && <button className="btn-primary text-xs" onClick={() => convertRequest(r)}>{S.toQuotationBtn}</button>}
-                    </div>
+                    {canWriteRequests && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {String(r.status) === "Baru" && <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Disurvei")}>Disurvei</button>}
+                        {canDeleteRequests && String(r.status) === "Baru" && <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelReq(r)}>{S.deleteBtn}</button>}
+                        {String(r.status) === "Disurvei" && <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Diajukan")}>Diajukan</button>}
+                        {String(r.status) === "Diajukan" && (<>
+                          <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Disetujui")}>Disetujui</button>
+                          <button className="btn-secondary text-xs" onClick={() => advanceRequest(r, "Ditolak")}>Ditolak</button>
+                        </>)}
+                        {String(r.status) === "Disetujui" && <button className="btn-primary text-xs" onClick={() => convertRequest(r)}>{S.toQuotationBtn}</button>}
+                      </div>
+                    )}
                   </Card>
                 ))}
                 {requests.length === 0 && <EmptyState title={S.emptyReqTitle} subtitle={S.emptyReqSub} />}
@@ -1026,8 +1042,8 @@ export default function CRM() {
           )}
 
           {tab === "Komunikasi" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="p-4 lg:col-span-2">
+            <div className={`grid grid-cols-1 gap-4 ${canWriteComms ? "lg:grid-cols-3" : ""}`}>
+              <Card className={`p-4 ${canWriteComms ? "lg:col-span-2" : ""}`}>
                 <CardHeader title={S.commLogTitle} subtitle={S.commLogSub} />
                 {communications.length === 0 ? (
                   <EmptyState title={S.emptyCommTitle} subtitle={S.emptyCommSubClient} />
@@ -1046,35 +1062,37 @@ export default function CRM() {
                   </div>
                 )}
               </Card>
-              <Card className="p-4">
-                <CardHeader title={S.addCommTitle} />
-                <div className="space-y-3 px-1 pb-1">
-                  <Field label={S.quotationLabel} required>
-                    <select className="input" value={commForm.quotationId} onChange={(e) => setCommForm({ ...commForm, quotationId: e.target.value })}>
-                      <option value="">{S.pickOpt}</option>
-                      {quotations.map((q) => <option key={q.id} value={q.id}>{q.id} · {String(q.vessel)}</option>)}
-                    </select>
-                  </Field>
-                  <FormGrid>
-                    <Field label={S.channelLabel}>
-                      <select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
-                        {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
+              {canWriteComms && (
+                <Card className="p-4">
+                  <CardHeader title={S.addCommTitle} />
+                  <div className="space-y-3 px-1 pb-1">
+                    <Field label={S.quotationLabel} required>
+                      <select className="input" value={commForm.quotationId} onChange={(e) => setCommForm({ ...commForm, quotationId: e.target.value })}>
+                        <option value="">{S.pickOpt}</option>
+                        {quotations.map((q) => <option key={q.id} value={q.id}>{q.id} · {String(q.vessel)}</option>)}
                       </select>
                     </Field>
-                    <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
-                  </FormGrid>
-                  <Field label={S.summaryLabel} required><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} placeholder={S.commSummaryPh} /></Field>
-                  <Field label={S.byLabel}><input className="input" value={commForm.by} onChange={(e) => setCommForm({ ...commForm, by: e.target.value })} placeholder={S.byPh} /></Field>
-                  <button className="btn-primary w-full justify-center" onClick={saveComm}>{S.saveLogBtn}</button>
-                </div>
-              </Card>
+                    <FormGrid>
+                      <Field label={S.channelLabel}>
+                        <select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
+                          {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                      </Field>
+                      <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
+                    </FormGrid>
+                    <Field label={S.summaryLabel} required><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} placeholder={S.commSummaryPh} /></Field>
+                    <Field label={S.byLabel}><input className="input" value={commForm.by} onChange={(e) => setCommForm({ ...commForm, by: e.target.value })} placeholder={S.byPh} /></Field>
+                    <button className="btn-primary w-full justify-center" onClick={saveComm}>{S.saveLogBtn}</button>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 
           {tab === "Kontrak" && (
             <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="p-4 lg:col-span-2">
+            <div className={`grid grid-cols-1 gap-4 ${canWriteContracts ? "lg:grid-cols-3" : ""}`}>
+              <Card className={`p-4 ${canWriteContracts ? "lg:col-span-2" : ""}`}>
                 <CardHeader title={S.contractListTitle} subtitle={S.contractListSub} />
                 {contracts.length === 0 ? (
                   <EmptyState title={S.emptyContractTitle} subtitle={S.emptyContractSub} />
@@ -1099,21 +1117,16 @@ export default function CRM() {
                             <td className="td text-xs text-steel-600">{createdAtOf(k) !== null ? fmtTanggal(createdAtOf(k)) : <span className="text-steel-400">-</span>}</td>
                             <td className="td text-xs text-steel-600">{lastTouchedAt(k) !== null ? fmtTanggal(lastTouchedAt(k)) : <span className="text-steel-400">-</span>}</td>
                             <td className="td">
-                              <div className="flex gap-1.5">
-                                {/* Ubah: nilai kontrak, tanggal tanda tangan, dan
-                                    proyek tertaut TIDAK bisa dikoreksi tanpa
-                                    jalur ini - dan nilai kontrak disinkronkan
-                                    ke projects.budget saat dibuat, jadi
-                                    perubahan nilai harus menyinkronkan budget
-                                    juga (lihat saveContractEdit). */}
-                                <RowAction icon={Pencil} tone="neutral" label={locale === "en" ? "Edit" : "Ubah"} ariaLabel={`${locale === "en" ? "Edit" : "Ubah"} ${String(k.id)}`} onClick={() => openContractEdit(k)} />
-                                {/* Hapus dulu hanya untuk kontrak yang BELUM
-                                    di-link ke proyek. Sekarang tersedia juga
-                                    untuk kontrak terpaut - konfirmasi akan
-                                    memblokir bila masih ada clientPos / 
-                                    invoice yang merujuk (contractBlockers). */}
-                                <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(k.id)}`} onClick={() => setDelContract(k)} />
-                              </div>
+                              {(canWriteContracts || canDeleteContracts) ? (
+                                <div className="flex gap-1.5">
+                                  {canWriteContracts && (
+                                    <RowAction icon={Pencil} tone="neutral" label={locale === "en" ? "Edit" : "Ubah"} ariaLabel={`${locale === "en" ? "Edit" : "Ubah"} ${String(k.id)}`} onClick={() => openContractEdit(k)} />
+                                  )}
+                                  {canDeleteContracts && (
+                                    <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(k.id)}`} onClick={() => setDelContract(k)} />
+                                  )}
+                                </div>
+                              ) : <span className="text-xs text-steel-400">-</span>}
                             </td>
                           </tr>
                         ))}
@@ -1123,7 +1136,8 @@ export default function CRM() {
                   </div>
                 )}
               </Card>
-              <Card className="p-4">
+              {canWriteContracts && (
+                <Card className="p-4">
                 <CardHeader
                   title={contractEditId
                     ? (locale === "en" ? `Edit contract - ${contractEditId}` : `Ubah Kontrak - ${contractEditId}`)
@@ -1172,6 +1186,7 @@ export default function CRM() {
                   </div>
                 </div>
               </Card>
+            )}
             </div>
             <Card className="mt-4 p-4">
               <CardHeader title={S.clientPoTitle.replace("{n}", String(clientPos.length))} subtitle={S.clientPoSub} />
@@ -1220,8 +1235,8 @@ export default function CRM() {
           )}
 
           {tab === "Kepuasan" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="p-4 lg:col-span-2">
+            <div className={`grid grid-cols-1 gap-4 ${canWriteClients ? "lg:grid-cols-3" : ""}`}>
+              <Card className={`p-4 ${canWriteClients ? "lg:col-span-2" : ""}`}>
                 <CardHeader title={S.satTitle} subtitle={S.satSub.replace("{a}", globalSatisfaction ? globalSatisfaction.toFixed(1) : "-").replace("{b}", String(allSurveys.length))} />
                 <div className="space-y-2">
                   {clients.map((c) => {
@@ -1266,26 +1281,28 @@ export default function CRM() {
                   })}
                 </div>
               </Card>
-              <Card className="p-4">
-                <CardHeader title={S.addSurveyTitle} subtitle={S.addSurveySub} />
-                <div className="space-y-3 px-1 pb-1">
-                  <Field label={S.clientLabel} required>
-                    <select className="input" value={surveyForm.clientId} onChange={(e) => setSurveyForm({ ...surveyForm, clientId: e.target.value })}>
-                      <option value="">{S.pickOpt}</option>
-                      {clients.map((c) => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
-                    </select>
-                  </Field>
-                  <Field label={S.ratingLabel}>
-                    <select className="input" value={surveyForm.rating} onChange={(e) => setSurveyForm({ ...surveyForm, rating: e.target.value })}>
-                      {["1", "2", "3", "4", "5"].map((r) => <option key={r}>{r}</option>)}
-                    </select>
-                  </Field>
-                  <Field label={S.descLabel}>
-                    <textarea className="input" rows={2} value={surveyForm.desc} onChange={(e) => setSurveyForm({ ...surveyForm, desc: e.target.value })} placeholder="Ceritakan kecepatan respon, kualitas repair, komunikasi..." />
-                  </Field>
-                  <button className="btn-primary w-full justify-center" onClick={saveSurvey}>{S.saveSurveyBtn}</button>
-                </div>
-              </Card>
+              {canWriteClients && (
+                <Card className="p-4">
+                  <CardHeader title={S.addSurveyTitle} subtitle={S.addSurveySub} />
+                  <div className="space-y-3 px-1 pb-1">
+                    <Field label={S.clientLabel} required>
+                      <select className="input" value={surveyForm.clientId} onChange={(e) => setSurveyForm({ ...surveyForm, clientId: e.target.value })}>
+                        <option value="">{S.pickOpt}</option>
+                        {clients.map((c) => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
+                      </select>
+                    </Field>
+                    <Field label={S.ratingLabel}>
+                      <select className="input" value={surveyForm.rating} onChange={(e) => setSurveyForm({ ...surveyForm, rating: e.target.value })}>
+                        {["1", "2", "3", "4", "5"].map((r) => <option key={r}>{r}</option>)}
+                      </select>
+                    </Field>
+                    <Field label={S.descLabel}>
+                      <textarea className="input" rows={2} value={surveyForm.desc} onChange={(e) => setSurveyForm({ ...surveyForm, desc: e.target.value })} placeholder="Ceritakan kecepatan respon, kualitas repair, komunikasi..." />
+                    </Field>
+                    <button className="btn-primary w-full justify-center" onClick={saveSurvey}>{S.saveSurveyBtn}</button>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
         </div>

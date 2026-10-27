@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Send } from "lucide-react";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { Card, CardHeader, PageHeader, StatusBadge, Badge, Modal, Field, FormGrid, EmptyState, toast,
   NumInput,
   MoneyInput,
@@ -45,9 +46,13 @@ export default function QuotationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data, add, update, log } = useStore();
+  const { user } = useAuth();
   const { locale } = useT();
   const S = n_crm[locale];
   const pdfDoc = usePdfDoc();
+
+  const canWriteQuotes = hasPermission(user?.permissions, "quotations", "w");
+  const canWriteComms = hasPermission(user?.permissions, "communications", "w");
 
   const quotation = (data.quotations ?? []).find((q) => q.id === id);
   const seedLines = useMemo(() => (quotation ? initialLines(quotation) : []), [quotation?.id]);
@@ -270,7 +275,7 @@ export default function QuotationDetail() {
             <button className="btn-secondary" onClick={() => navigate("/crm")}><ArrowLeft className="h-4 w-4" /> {S.backBtn}</button>
             <button className="btn-secondary" onClick={cetakKopPdf}>{S.printKopPdfBtn}</button>
             <button className="btn-secondary" onClick={cetakKop}>{S.printKopXlsxBtn}</button>
-            <button className="btn-primary" onClick={openSend}><Send className="h-4 w-4" /> {S.sendBtn}</button>
+            {canWriteQuotes && <button className="btn-primary" onClick={openSend}><Send className="h-4 w-4" /> {S.sendBtn}</button>}
           </>
         }
       />
@@ -288,37 +293,52 @@ export default function QuotationDetail() {
               <p className="text-xs text-teal-600">{S.sentInfo.replace("{a}", fmtTanggal(String(quotation.sentAt ?? ""))).replace("{b}", String(quotation.sentTo ?? ""))}</p>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5 px-5 pb-5">
-            <button className="btn-secondary text-xs" disabled={locked || FLOW.indexOf(String(quotation.stage)) <= 0} onClick={() => move(-1)}>{S.backStepBtn}</button>
-            <button className="btn-secondary text-xs" disabled={locked || FLOW.indexOf(String(quotation.stage)) < 0 || FLOW.indexOf(String(quotation.stage)) >= FLOW.length - 1} onClick={() => move(1)}>{S.advanceBtn}</button>
-            <button className="btn-secondary text-xs" disabled={locked} onClick={() => markTerminal("Batal")}>{S.cancelBtn}</button>
-            <button className="btn-secondary text-xs" disabled={locked} onClick={() => markTerminal("Kalah")}>{S.loseBtn}</button>
-            <button className="btn-primary text-xs" disabled={locked || String(quotation.stage) !== "Menang"} onClick={openConvert}>{S.convertBtn}</button>
-          </div>
+          {canWriteQuotes && (
+            <div className="flex flex-wrap gap-1.5 px-5 pb-5">
+              <button className="btn-secondary text-xs" disabled={locked || FLOW.indexOf(String(quotation.stage)) <= 0} onClick={() => move(-1)}>{S.backStepBtn}</button>
+              <button className="btn-secondary text-xs" disabled={locked || FLOW.indexOf(String(quotation.stage)) < 0 || FLOW.indexOf(String(quotation.stage)) >= FLOW.length - 1} onClick={() => move(1)}>{S.advanceBtn}</button>
+              <button className="btn-secondary text-xs" disabled={locked} onClick={() => markTerminal("Batal")}>{S.cancelBtn}</button>
+              <button className="btn-secondary text-xs" disabled={locked} onClick={() => markTerminal("Kalah")}>{S.loseBtn}</button>
+              <button className="btn-primary text-xs" disabled={locked || String(quotation.stage) !== "Menang"} onClick={openConvert}>{S.convertBtn}</button>
+            </div>
+          )}
         </Card>
 
         <Card className="p-5 lg:col-span-2">
           <CardHeader title={S.linesTitle.replace("{n}", fmtRupiah(total))} subtitle={S.linesSub} />
           <div className="space-y-2 px-5 pb-2">
-            {activeLines.map((l, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 rounded-xl bg-surface p-2">
-                <div className="col-span-12 sm:col-span-6"><Field label={S.descLabel}><input className="input" value={l.desc} onChange={(e) => setLine(idx, "desc", e.target.value)} /></Field></div>
-                <div className="col-span-5 sm:col-span-2"><Field label={S.qtyLabel}><NumInput min={0} className="input" value={l.qty} onChange={(e) => setLine(idx, "qty", e.target.value)} /></Field></div>
-                <div className="col-span-7 sm:col-span-4"><Field label={S.priceLabel}><MoneyInput className="input" value={l.price} onChange={(v) => setLine(idx, "price", v)} /></Field></div>
+            {canWriteQuotes ? (
+              <>
+                {activeLines.map((l, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 rounded-xl bg-surface p-2">
+                    <div className="col-span-12 sm:col-span-6"><Field label={S.descLabel}><input className="input" value={l.desc} onChange={(e) => setLine(idx, "desc", e.target.value)} /></Field></div>
+                    <div className="col-span-5 sm:col-span-2"><Field label={S.qtyLabel}><NumInput min={0} className="input" value={l.qty} onChange={(e) => setLine(idx, "qty", e.target.value)} /></Field></div>
+                    <div className="col-span-7 sm:col-span-4"><Field label={S.priceLabel}><MoneyInput className="input" value={l.price} onChange={(v) => setLine(idx, "price", v)} /></Field></div>
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn-secondary text-xs" onClick={() => setLines([...activeLines, { desc: "", qty: "1", price: "" }])}>{S.addRowBtn}</button>
+                  {activeLines.length > 1 && (
+                    <button className="btn-secondary text-xs" onClick={() => setLines(activeLines.slice(0, -1))}>{S.delRowBtn}</button>
+                  )}
+                </div>
+                <FormGrid>
+                  <Field label={S.revNoteLabel}><input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={S.revNotePh} /></Field>
+                  <Field label={S.actionLabel}>
+                    <button className="btn-primary w-full justify-center" onClick={saveRevisi}>{S.saveRevisionBtn.replace("{n}", String(version + 1))}</button>
+                  </Field>
+                </FormGrid>
+              </>
+            ) : (
+              <div className="space-y-1.5">
+                {activeLines.map((l, idx) => (
+                  <div key={idx} className="flex justify-between items-center rounded-xl bg-surface p-2.5 text-xs text-steel-700">
+                    <span className="font-medium text-navy-900">{l.desc || "-"}</span>
+                    <span>{l.qty} × {fmtRupiah(num(l.price))} = <strong className="text-navy-900">{fmtRupiah(num(l.qty) * num(l.price))}</strong></span>
+                  </div>
+                ))}
               </div>
-            ))}
-            <div className="flex flex-wrap gap-2">
-              <button className="btn-secondary text-xs" onClick={() => setLines([...activeLines, { desc: "", qty: "1", price: "" }])}>{S.addRowBtn}</button>
-              {activeLines.length > 1 && (
-                <button className="btn-secondary text-xs" onClick={() => setLines(activeLines.slice(0, -1))}>{S.delRowBtn}</button>
-              )}
-            </div>
-            <FormGrid>
-              <Field label={S.revNoteLabel}><input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={S.revNotePh} /></Field>
-              <Field label={S.actionLabel}>
-                <button className="btn-primary w-full justify-center" onClick={saveRevisi}>{S.saveRevisionBtn.replace("{n}", String(version + 1))}</button>
-              </Field>
-            </FormGrid>
+            )}
           </div>
           <div className="px-5 pb-5">
             <p className="label">{S.versionHistory}</p>
@@ -355,19 +375,21 @@ export default function QuotationDetail() {
               </div>
             ))}
           </div>
-          <div className="space-y-3 px-5 pb-5">
-            <FormGrid>
-              <Field label={S.channelLabel}>
-                <select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
-                  {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-              <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
-            </FormGrid>
-            <Field label={S.summaryLabel} required><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} /></Field>
-            <Field label={S.byLabel}><input className="input" value={commForm.by} onChange={(e) => setCommForm({ ...commForm, by: e.target.value })} placeholder={S.byPh} /></Field>
-            <button className="btn-primary w-full justify-center" onClick={saveComm}>{S.addCommBtn}</button>
-          </div>
+          {canWriteComms && (
+            <div className="space-y-3 px-5 pb-5">
+              <FormGrid>
+                <Field label={S.channelLabel}>
+                  <select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
+                    {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </Field>
+                <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
+              </FormGrid>
+              <Field label={S.summaryLabel} required><textarea className="input" rows={3} value={commForm.summary} onChange={(e) => setCommForm({ ...commForm, summary: e.target.value })} /></Field>
+              <Field label={S.byLabel}><input className="input" value={commForm.by} onChange={(e) => setCommForm({ ...commForm, by: e.target.value })} placeholder={S.byPh} /></Field>
+              <button className="btn-primary w-full justify-center" onClick={saveComm}>{S.addCommBtn}</button>
+            </div>
+          )}
         </Card>
 
         <Card className="p-5">

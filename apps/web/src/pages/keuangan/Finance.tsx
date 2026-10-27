@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { openFileUrl } from "../../services/files";
 import { apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { pdfServerReady } from "../../services/pdfClient";
@@ -865,8 +865,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const pdfDoc = usePdfDoc();
     const deepParams = useDeepLinkParams();
   const notified = useMemo(() => new Set(modAlert.items.map((a) => a.rowId)), [modAlert.items]);
-  /* #289: tab Keuangan yang boleh dibuka role ini (Commercial: Invoice saja). */
   const { user: finUser } = useAuth();
+  const canWriteInvoices = hasPermission(finUser?.permissions, "invoices", "w");
+  const canDeleteInvoices = hasPermission(finUser?.permissions, "invoices", "d");
+  const canWriteBills = hasPermission(finUser?.permissions, "bills", "w");
+  const canWriteJournals = hasPermission(finUser?.permissions, "journals", "w");
+  const canWriteAssets = hasPermission(finUser?.permissions, "assets", "w");
+  const canDeleteAssets = hasPermission(finUser?.permissions, "assets", "d");
   const finTabs = useMemo(() => {
     const all = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll", "RAB"];
     const allow = finUser?.modules?.finTabs;
@@ -3131,7 +3136,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         title={S.pageTitle}
         subtitle={S.pageSubtitle}
         icon={<Wallet className="h-5 w-5" />}
-        actions={<button className="btn-primary-gradient" onClick={() => setShowInv(true)}><FileText className="h-4 w-4" /> {S.createInvoice}</button>}
+        actions={canWriteInvoices ? <button className="btn-primary-gradient" onClick={() => setShowInv(true)}><FileText className="h-4 w-4" /> {S.createInvoice}</button> : undefined}
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
@@ -3240,7 +3245,11 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                               {open ? (
                                 <span className="flex items-center gap-1.5">
                                   <StatusBadge status={dun} />
-                                  <button className="btn-secondary px-2 py-1 text-[11px]" onClick={() => void busy.run(`dun-${inv.id}`, () => advanceDunning(inv))} disabled={busy.isBusy(`dun-${inv.id}`)}>{S.dunningNext.replace("{a}", nextDun)}</button>
+                                  {canWriteInvoices ? (
+                                    <button className="btn-secondary px-2 py-1 text-[11px]" onClick={() => void busy.run(`dun-${inv.id}`, () => advanceDunning(inv))} disabled={busy.isBusy(`dun-${inv.id}`)}>{S.dunningNext.replace("{a}", nextDun)}</button>
+                                  ) : (
+                                    <span className="text-xs text-steel-500 font-medium">{nextDun}</span>
+                                  )}
                                 </span>
                               ) : <span className="text-xs text-steel-400">-</span>}
                             </td>
@@ -3251,38 +3260,42 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                               )}
                             </td>
                             <td className="td">
-                              <div className="flex flex-wrap gap-1.5">
-                                {invNext(String(inv.status)).map((next) => (
-                                  <button
-                                    key={next}
-                                    className={next === "Lunas" ? "btn-primary text-xs" : next === "Ditolak" ? "btn-secondary text-xs text-rose-600" : "btn-secondary text-xs"}
-                                    title={
-                                      next === "Lunas" ? S.settleViaModal
-                                      : next === "Ditolak" ? S.rejectViaModal
-                                      : next === "Disetujui" ? S.approveNote
-                                      : S.moveTo.replace("{a}", next)
-                                    }
-                                    onClick={() => void busy.run(`stepInvoice-${inv.id}-${next}`, () => stepInvoice(inv, next))} disabled={busy.isBusy(`stepInvoice-${inv.id}-${next}`)}
-                                  >
-                                    {next === "Lunas" ? S.markPaid : next}
-                                  </button>
-                                ))}
-                                {(String(inv.status) === "Draft" || String(inv.status) === "Ditolak") && (
-                                  <button
-                                    className="btn-secondary text-xs"
-                                    title={S.editLockedNote}
-                                    onClick={() => {
-                                      setInvEdit(inv);
-                                      setInvEditForm({
-                                        client: String(inv.client ?? ""), kodePembantu: String(inv.kodePembantu ?? inv.client ?? ""),
-                                        due: String(inv.due ?? ""), paymentTerm: String(inv.paymentTerm ?? ""),
-                                        milestoneRef: String(inv.milestoneRef ?? ""), nsfp: String(inv.nsfp ?? ""), noFaktur: String(inv.noFaktur ?? ""),
-                                      });
-                                    }}
-                                  >{S.editBtn}</button>
-                                )}
-                                {invNext(String(inv.status)).length === 0 && (String(inv.status) === "Lunas" || String(inv.status) === "Dihapusbukukan") && <span className="text-xs text-steel-400">-</span>}
-                              </div>
+                              {canWriteInvoices ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {invNext(String(inv.status)).map((next) => (
+                                    <button
+                                      key={next}
+                                      className={next === "Lunas" ? "btn-primary text-xs" : next === "Ditolak" ? "btn-secondary text-xs text-rose-600" : "btn-secondary text-xs"}
+                                      title={
+                                        next === "Lunas" ? S.settleViaModal
+                                        : next === "Ditolak" ? S.rejectViaModal
+                                        : next === "Disetujui" ? S.approveNote
+                                        : S.moveTo.replace("{a}", next)
+                                      }
+                                      onClick={() => void busy.run(`stepInvoice-${inv.id}-${next}`, () => stepInvoice(inv, next))} disabled={busy.isBusy(`stepInvoice-${inv.id}-${next}`)}
+                                    >
+                                      {next === "Lunas" ? S.markPaid : next}
+                                    </button>
+                                  ))}
+                                  {(String(inv.status) === "Draft" || String(inv.status) === "Ditolak") && (
+                                    <button
+                                      className="btn-secondary text-xs"
+                                      title={S.editLockedNote}
+                                      onClick={() => {
+                                        setInvEdit(inv);
+                                        setInvEditForm({
+                                          client: String(inv.client ?? ""), kodePembantu: String(inv.kodePembantu ?? inv.client ?? ""),
+                                          due: String(inv.due ?? ""), paymentTerm: String(inv.paymentTerm ?? ""),
+                                          milestoneRef: String(inv.milestoneRef ?? ""), nsfp: String(inv.nsfp ?? ""), noFaktur: String(inv.noFaktur ?? ""),
+                                        });
+                                      }}
+                                    >{S.editBtn}</button>
+                                  )}
+                                  {invNext(String(inv.status)).length === 0 && (String(inv.status) === "Lunas" || String(inv.status) === "Dihapusbukukan") && <span className="text-xs text-steel-400">-</span>}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-steel-400">-</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -3371,7 +3384,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.apTitle}
                 subtitle={S.apSub}
-                action={<button className="btn-secondary text-xs" onClick={() => setShowAp(true)}>{S.addHutang}</button>}
+                action={canWriteBills ? <button className="btn-secondary text-xs" onClick={() => setShowAp(true)}>{S.addHutang}</button> : undefined}
               />
               <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
                 <HistFilterBar value={apHist} onChange={setApHist} idPrefix="ap" />
@@ -3394,7 +3407,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       <SortTh label={S.colDue} sortKey="due" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
                       <th className="th">{S.pph23}</th>
                       <SortTh label={S.colStatus} sortKey="st" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
-                      <th className="th">{S.actionTh}</th>
+                      {canWriteBills && <th className="th">{S.actionTh}</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
@@ -3416,40 +3429,42 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td text-steel-600">{String(a.pph ?? "2%")}</td>
                         <td className="td"><StatusBadge status={String(a.st)} />
                           {a.persetujuan === "Menunggu" && <p className="mt-1 text-[11px] font-medium text-amber-700">{num(a.amt) > 0 ? S.apInvMenunggu : S.apInvNol}</p>}</td>
-                        <td className="td">
-                          <div className="flex flex-wrap gap-1.5">
-                            {/* Q27: invoice dari PO menunggu persetujuan Keuangan sebelum
-                                barang boleh diterima; nilai 0 = nota PO Kecil belum lengkap. */}
-                            {a.persetujuan === "Menunggu" && (
-                              <RowAction icon={Check} tone="success" label={S.apInvSetujui} ariaLabel={`${S.apInvSetujui} ${String(a.po)}`}
-                                disabled={!(num(a.amt) > 0)}
-                                onClick={() => void update("payables", String(a.id), { persetujuan: "Disetujui", disetujuiAt: new Date().toISOString() })
-                                  .then(() => toast(S.apInvOk.replace("{n}", String(a.po))))
-                                  .catch((e: unknown) => toast(e instanceof Error ? e.message : S.saveFail, "info"))} />
-                            )}
-                            {a.st !== "Lunas" && (
-                              <>
-                                <RowAction
-                                  disabled={a.persetujuan === "Menunggu"}
-                                  icon={Wallet}
-                                  tone="success"
-                                  label={S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")}
-                                  ariaLabel={`${S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")} ${String(a.po)}`}
-                                  onClick={() => { setApTarget(a); setProof(emptyProof()); setProofImg(""); setApPayAmt(String(Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)))); }}
-                                />
-                                <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.v)}`} onClick={() => {
-                                  setApEdit(a);
-                                  setApEditForm({
-                                    v: String(a.v ?? ""), kodePembantu: String(a.kodePembantu ?? a.v ?? ""),
-                                    openAwal: String(a.openAwal ?? ""), amt: String(a.amt ?? ""),
-                                    due: String(a.due ?? ""), nonPpn: String(a.pph ?? "") === "Non-PPn",
-                                    vessel: String(a.vessel ?? ""), item: String(a.item ?? ""),
-                                  });
-                                }} />
-                              </>
-                            )}
-                          </div>
-                        </td>
+                        {canWriteBills && (
+                          <td className="td">
+                            <div className="flex flex-wrap gap-1.5">
+                              {/* Q27: invoice dari PO menunggu persetujuan Keuangan sebelum
+                                  barang boleh diterima; nilai 0 = nota PO Kecil belum lengkap. */}
+                              {a.persetujuan === "Menunggu" && (
+                                <RowAction icon={Check} tone="success" label={S.apInvSetujui} ariaLabel={`${S.apInvSetujui} ${String(a.po)}`}
+                                  disabled={!(num(a.amt) > 0)}
+                                  onClick={() => void update("payables", String(a.id), { persetujuan: "Disetujui", disetujuiAt: new Date().toISOString() })
+                                    .then(() => toast(S.apInvOk.replace("{n}", String(a.po))))
+                                    .catch((e: unknown) => toast(e instanceof Error ? e.message : S.saveFail, "info"))} />
+                              )}
+                              {a.st !== "Lunas" && (
+                                <>
+                                  <RowAction
+                                    disabled={a.persetujuan === "Menunggu"}
+                                    icon={Wallet}
+                                    tone="success"
+                                    label={S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")}
+                                    ariaLabel={`${S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")} ${String(a.po)}`}
+                                    onClick={() => { setApTarget(a); setProof(emptyProof()); setProofImg(""); setApPayAmt(String(Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)))); }}
+                                  />
+                                  <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.v)}`} onClick={() => {
+                                    setApEdit(a);
+                                    setApEditForm({
+                                      v: String(a.v ?? ""), kodePembantu: String(a.kodePembantu ?? a.v ?? ""),
+                                      openAwal: String(a.openAwal ?? ""), amt: String(a.amt ?? ""),
+                                      due: String(a.due ?? ""), nonPpn: String(a.pph ?? "") === "Non-PPn",
+                                      vessel: String(a.vessel ?? ""), item: String(a.item ?? ""),
+                                    });
+                                  }} />
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -3514,7 +3529,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.kasTitle}
                 subtitle={S.kasSub}
-                action={<><button className="btn-secondary text-xs" onClick={() => { void exportHist("kas"); }} title={S.histExported}>{S.histExport}</button><button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button></>}
+                action={<><button className="btn-secondary text-xs" onClick={() => { void exportHist("kas"); }} title={S.histExported}>{S.histExport}</button>{canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button>}</>}
               />
               <HistFilterBar value={kasHist} onChange={setKasHist} idPrefix="kas" />
               <div className="mb-2 flex justify-end">
@@ -3801,7 +3816,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   <CardHeader title={S.invDocTitle} />
                   <p className="text-sm text-steel-600">{S.invDocPara}</p>
                   <p className="mt-2 text-xs text-steel-500">{S.invDocNote.replace("{a}", invPreview).replace("{b}", invForm.billingType)}</p>
-                  <button className="btn-primary mt-4 w-full justify-center" onClick={() => setShowInv(true)}>{S.createInvoice}</button>
+                  {canWriteInvoices && <button className="btn-primary mt-4 w-full justify-center" onClick={() => setShowInv(true)}>{S.createInvoice}</button>}
                 </Card>
               </div>
               <CardHeader title={S.invListTitle} subtitle={S.invTableSub} />
@@ -3896,44 +3911,35 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td">
                           <div className="flex flex-wrap gap-1">
                             <RowAction icon={Eye} tone="neutral" label={S.detBtn} ariaLabel={`${S.detBtn} ${String(inv.id)}`} onClick={() => setInvDetail(inv)} />
-                            {/* Ubah invoice: modal edit SUDAH ada (dipakai tab
-                                Piutang AR) tapi hanya TER wiring dari tabel
-                                Piutang dan hanya untuk status Draft/Ditolak.
-                                Tab Invoice sendiri tidak punya jalan ke sana,
-                                jadi invoice salah tanggal/pelanggan di sini
-                                tidak bisa dikoreksi. */}
-                            <RowAction
-                              icon={Pencil}
-                              tone="neutral"
-                              label={S.editBtn}
-                              ariaLabel={`${S.editBtn} ${String(inv.id)}`}
-                              onClick={() => {
-                                setInvEdit(inv);
-                                setInvEditForm({
-                                  client: String(inv.client ?? ""),
-                                  kodePembantu: String(inv.kodePembantu ?? inv.client ?? ""),
-                                  due: String(inv.due ?? ""),
-                                  paymentTerm: String(inv.paymentTerm ?? ""),
-                                  milestoneRef: String(inv.milestoneRef ?? ""),
-                                  nsfp: String(inv.nsfp ?? ""),
-                                  noFaktur: String(inv.noFaktur ?? ""),
-                                });
-                              }}
-                            />
-                            {/* Hapus invoice: TIDAK ADA sama sekali di modul ini
-                                walau tabel Invoice menampilkan semua invoice
-                                setiap hari. Invoice yang salah input (test,
-                                duplikat, salah periode) hanya bisa dibatalkan
-                                lewat adjustment - tidak bisa dihapus.
-                                Backend memblokir bila invoice sudah jadi acuan
-                                payables.invoice / sudah Lunas. */}
-                            <RowAction
-                              icon={Trash2}
-                              tone="danger"
-                              label={S.deleteBtn}
-                              ariaLabel={`${S.deleteBtn} ${String(inv.id)}`}
-                              onClick={() => setDelInvoice(inv)}
-                            />
+                            {canWriteInvoices && (
+                              <RowAction
+                                icon={Pencil}
+                                tone="neutral"
+                                label={S.editBtn}
+                                ariaLabel={`${S.editBtn} ${String(inv.id)}`}
+                                onClick={() => {
+                                  setInvEdit(inv);
+                                  setInvEditForm({
+                                    client: String(inv.client ?? ""),
+                                    kodePembantu: String(inv.kodePembantu ?? inv.client ?? ""),
+                                    due: String(inv.due ?? ""),
+                                    paymentTerm: String(inv.paymentTerm ?? ""),
+                                    milestoneRef: String(inv.milestoneRef ?? ""),
+                                    nsfp: String(inv.nsfp ?? ""),
+                                    noFaktur: String(inv.noFaktur ?? ""),
+                                  });
+                                }}
+                              />
+                            )}
+                            {canDeleteInvoices && (
+                              <RowAction
+                                icon={Trash2}
+                                tone="danger"
+                                label={S.deleteBtn}
+                                ariaLabel={`${S.deleteBtn} ${String(inv.id)}`}
+                                onClick={() => setDelInvoice(inv)}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -4821,7 +4827,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.assetTitle}
                 subtitle={S.assetSub}
-                action={<button className="btn-primary text-xs" onClick={() => { setAstEdit(null); setAstForm({ nama: "", kelompok: "2", bulan: "", tahun: "", nilai: "", metode: "GL" }); setShowAst(true); }}>{S.addAset}</button>}
+                action={canWriteAssets ? <button className="btn-primary text-xs" onClick={() => { setAstEdit(null); setAstForm({ nama: "", kelompok: "2", bulan: "", tahun: "", nilai: "", metode: "GL" }); setShowAst(true); }}>{S.addAset}</button> : undefined}
               />
               {/* #282: ringkasan aset mengikuti daftar yang sedang difilter. */}
               {(() => {
@@ -4885,8 +4891,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                             <td className="td">
                               {!seed && (
                                 <div className="flex gap-1">
-                                  <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => openAstEdit(a)} />
-                                  <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => setDelAsset(a)} />
+                                  {canWriteAssets && <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => openAstEdit(a)} />}
+                                  {canDeleteAssets && <RowAction icon={Trash2} tone="danger" label={S.deleteBtn} ariaLabel={`${S.deleteBtn} ${String(a.id ?? a.nama ?? "")}`} onClick={() => setDelAsset(a)} />}
                                 </div>
                               )}
                             </td>
@@ -4906,7 +4912,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.juTitle}
                 subtitle={S.juSub}
-                action={<button className="btn-primary text-xs" onClick={() => setShowJu(true)}>{S.addJurnal}</button>}
+                action={canWriteJournals ? <button className="btn-primary text-xs" onClick={() => setShowJu(true)}>{S.addJurnal}</button> : undefined}
               />
               <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
                 <HistFilterBar value={juHist} onChange={setJuHist} idPrefix="ju" />
@@ -4954,7 +4960,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td whitespace-nowrap">
                           {/* K17-FIN-08: voucher jurnal per transaksi (PDF dirakit server). */}
                           <RowAction icon={FileText} label={S.printVoucher} ariaLabel={`${S.printVoucher} ${String(j.voucherNo || j.id)}`} disabled={pdfDoc.state.busy} onClick={() => void pdfDoc.request({ kind: "voucher", id: String(j.id), locale }, `Voucher-${String(j.voucherNo || j.id).replaceAll("/", "-")}`, false)} />
-                          {String(j.status) !== "Void" && (
+                          {canWriteJournals && String(j.status) !== "Void" && (
                             <RowAction icon={Ban} tone="danger" label={S.voidBtn} ariaLabel={`${S.voidBtn} ${String(j.id)}`} disabled={busy.isBusy(`voidJu-${j.id}`)} onClick={() => void busy.run(`voidJu-${j.id}`, async () => { try { await update("journals", String(j.id), { status: "Void" }); log("mem-void jurnal", String(j.id), "Keuangan"); toast(S.voided.replace("{a}", String(j.id))); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } })} />
                           )}
                           {/*

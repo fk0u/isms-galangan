@@ -14,6 +14,7 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, ProgressBar, ChartT
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { ServiceNotesButton, ServiceNotesModal, notesOf } from "../../components/ServiceNotes";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
@@ -235,6 +236,9 @@ const EQ_COLS: CollectionKey[] = ["activities", "bookings", "branches", "calibra
 
 export default function EquipmentPage() {
   const { data, add, update, remove, log, branch, wbsFor } = useStore();
+  const { user } = useAuth();
+  const canWriteEquipment = hasPermission(user?.permissions, "equipment", "w");
+  const canDeleteEquipment = hasPermission(user?.permissions, "equipment", "d");
   const { locale } = useT();
   const S = n_eqp[locale];
   const P = n_prj[locale];
@@ -1634,7 +1638,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
         title={S.eqTitle}
         subtitle={S.eqSubtitle}
         icon={<Cpu className="h-5 w-5" />}
-        actions={<button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.eqAdd}</button>}
+        actions={canWriteEquipment ? <button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.eqAdd}</button> : undefined}
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
@@ -1794,20 +1798,24 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                           }}
                           onClick={() => setNoteEquip(e)}
                         />
-                        <RowAction
-                          icon={Pencil}
-                          tone="neutral"
-                          label={locale === "en" ? "Edit equipment" : "Ubah equipment"}
-                          ariaLabel={`${S.eqEdit} ${String(e.name ?? e.id)}`}
-                          onClick={() => openEdit(e)}
-                        />
-                        <RowAction
-                          icon={Trash2}
-                          tone="danger"
-                          label={locale === "en" ? "Delete equipment" : "Hapus equipment"}
-                          ariaLabel={`${S.delBtn} ${String(e.name ?? e.id)}`}
-                          onClick={() => setDelEquip(e)}
-                        />
+                        {canWriteEquipment && (
+                          <RowAction
+                            icon={Pencil}
+                            tone="neutral"
+                            label={locale === "en" ? "Edit equipment" : "Ubah equipment"}
+                            ariaLabel={`${S.eqEdit} ${String(e.name ?? e.id)}`}
+                            onClick={() => openEdit(e)}
+                          />
+                        )}
+                        {canDeleteEquipment && (
+                          <RowAction
+                            icon={Trash2}
+                            tone="danger"
+                            label={locale === "en" ? "Delete equipment" : "Hapus equipment"}
+                            ariaLabel={`${S.delBtn} ${String(e.name ?? e.id)}`}
+                            onClick={() => setDelEquip(e)}
+                          />
+                        )}
                         </div>
                       </td>
                     </tr>
@@ -1825,7 +1833,9 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
               <Card className="p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-navy-900">{S.eqActiveBookings}</h3>
-                  <button className="btn-secondary text-xs" onClick={() => { setShowBook(true); setBookError(null); }}><Plus className="h-3.5 w-3.5" /> {S.eqBookBtn}</button>
+                  {canWriteEquipment && (
+                    <button className="btn-secondary text-xs" onClick={() => { setShowBook(true); setBookError(null); }}><Plus className="h-3.5 w-3.5" /> {S.eqBookBtn}</button>
+                  )}
                 </div>
                 <div className="space-y-2.5">
                   {activeBookings.map((b) => (
@@ -1836,9 +1846,11 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <Badge tone={b.status === "Terpakai" ? "blue" : "gray"}>{b.status}</Badge>
-                        <button className="btn-secondary text-xs" onClick={() => openFinish(b)}>
-                          <CheckCircle2 className="h-3.5 w-3.5" /> {S.finishBtn}
-                        </button>
+                        {canWriteEquipment && (
+                          <button className="btn-secondary text-xs" onClick={() => openFinish(b)}>
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {S.finishBtn}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2027,18 +2039,22 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <SearchBox value={maintQ} onChange={setMaintQ} className="max-w-xs" placeholder={locale === "en" ? "Search maintenance..." : "Cari maintenance..."} ariaLabel={locale === "en" ? "Search maintenance" : "Cari maintenance"} />
-                  <select
-                    className="input w-auto py-1.5 text-xs"
-                    aria-label={locale === "en" ? "Pick equipment to schedule" : "Pilih equipment untuk dijadwalkan"}
-                    value={maintForm.equipmentId}
-                    onChange={(e) => setMaintForm({ ...maintForm, equipmentId: e.target.value })}
-                  >
-                    <option value="">{locale === "en" ? "-- equipment --" : "-- pilih equipment --"}</option>
-                    {equipment.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                  </select>
-                  <button className="btn-primary-gradient text-xs" onClick={() => openMaintNew(maintForm.equipmentId || equipment[0]?.id)}>
-                    <Wrench className="h-3.5 w-3.5" /> {locale === "en" ? "Schedule maintenance" : "Jadwalkan Maintenance"}
-                  </button>
+                  {canWriteEquipment && (
+                    <>
+                      <select
+                        className="input w-auto py-1.5 text-xs"
+                        aria-label={locale === "en" ? "Pick equipment to schedule" : "Pilih equipment untuk dijadwalkan"}
+                        value={maintForm.equipmentId}
+                        onChange={(e) => setMaintForm({ ...maintForm, equipmentId: e.target.value })}
+                      >
+                        <option value="">{locale === "en" ? "-- equipment --" : "-- pilih equipment --"}</option>
+                        {equipment.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                      </select>
+                      <button className="btn-primary-gradient text-xs" onClick={() => openMaintNew(maintForm.equipmentId || equipment[0]?.id)}>
+                        <Wrench className="h-3.5 w-3.5" /> {locale === "en" ? "Schedule maintenance" : "Jadwalkan Maintenance"}
+                      </button>
+                    </>
+                  )}
                 </div>
 </div>
 
@@ -2128,7 +2144,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                           <div className="flex flex-wrap gap-1.5">
                             {/* Transisi status berikutnya - hanya yang sah
                                 (dari utils/maintenance nextStatuses). */}
-                            {r.next.map((to) => (
+                            {canWriteEquipment && r.next.map((to) => (
                               <button
                                 key={to}
                                 className={to === "Dibatalkan" ? "btn-secondary text-xs" : "btn-primary text-xs"}
@@ -2162,17 +2178,21 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                             {/* Kolom Aksi: Ubah / Riwayat / Hapus - inilah
                                 pengganti tombol "Catat Servis" tunggal yang
                                 dulu tidak bisa mengoreksi hasil servis. */}
-                            <RowAction
-                              icon={Pencil}
-                              tone="neutral"
-                              label={r.status === "Selesai"
-                                ? (locale === "en" ? "Adjust materials - stock synced by delta" : "Koreksi material - stok disesuaikan by delta")
-                                : (locale === "en" ? "Edit schedule" : "Ubah jadwal")}
-                              ariaLabel={`${S.eqEdit} ${String(r.raw.id ?? r.raw.equipmentId ?? "")}`}
-                              onClick={() => openMaintEdit(r.raw)}
-                            />
+                            {canWriteEquipment && (
+                              <RowAction
+                                icon={Pencil}
+                                tone="neutral"
+                                label={r.status === "Selesai"
+                                  ? (locale === "en" ? "Adjust materials - stock synced by delta" : "Koreksi material - stok disesuaikan by delta")
+                                  : (locale === "en" ? "Edit schedule" : "Ubah jadwal")}
+                                ariaLabel={`${S.eqEdit} ${String(r.raw.id ?? r.raw.equipmentId ?? "")}`}
+                                onClick={() => openMaintEdit(r.raw)}
+                              />
+                            )}
                             <RowAction icon={HistoryIcon} tone="neutral" label={S.eqHistory} ariaLabel={`${S.eqHistory} ${String(r.raw.id ?? r.raw.equipmentId ?? "")}`} onClick={() => setHistOf(r.raw)} />
-                            <RowAction icon={Trash2} tone="danger" label={S.delBtn} ariaLabel={`${S.delBtn} ${String(r.raw.id ?? r.raw.equipmentId ?? "")}`} onClick={() => setDelMaint(r.raw)} />
+                            {canDeleteEquipment && (
+                              <RowAction icon={Trash2} tone="danger" label={S.delBtn} ariaLabel={`${S.delBtn} ${String(r.raw.id ?? r.raw.equipmentId ?? "")}`} onClick={() => setDelMaint(r.raw)} />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2222,7 +2242,9 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
             <div>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <SearchBox value={calQ} onChange={setCalQ} className="max-w-xs" placeholder={locale === "en" ? "Search calibration..." : "Cari kalibrasi..."} ariaLabel={locale === "en" ? "Search calibrations" : "Cari kalibrasi"} />
-                <button className="btn-secondary text-xs" onClick={() => { setCalEditId(null); setCalForm({ equipmentId: "", item: "", due: todayISO() }); setShowCal(true); }}><Plus className="h-3.5 w-3.5" /> {S.eqSchedCal}</button>
+                {canWriteEquipment && (
+                  <button className="btn-secondary text-xs" onClick={() => { setCalEditId(null); setCalForm({ equipmentId: "", item: "", due: todayISO() }); setShowCal(true); }}><Plus className="h-3.5 w-3.5" /> {S.eqSchedCal}</button>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -2263,7 +2285,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                           </td>
                           <td className="td">
                             <div className="flex flex-wrap gap-1.5">
-                              {c.status !== "Selesai" && c.status !== "Gagal" && (
+                              {canWriteEquipment && c.status !== "Selesai" && c.status !== "Gagal" && (
                                 <button className="btn-secondary text-xs" onClick={() => { setFinishingCal(c); setCalCert(""); setCalResult("Lulus"); setCalDoneDate(todayISO()); setCalInterval("12"); }}>{S.finishBtn}</button>
                               )}
                               {/* Kalibrasi yang sudah Terjadwal masih bisa
@@ -2271,20 +2293,24 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                                   berubah karena jadwal clash), dan bisa dihapus
                                   kalau dijadwalkan dobel. Dulu tidak ada
                                   keduanya - hanya tombol Selesaikan. */}
-                              <RowAction
-                                icon={Pencil}
-                                tone="neutral"
-                                label={locale === "en" ? "Edit calibration schedule" : "Ubah jadwal kalibrasi"}
-                                ariaLabel={`${S.eqEdit} ${String(c.id ?? "")}`}
-                                onClick={() => openCalEdit(c)}
-                              />
-                              <RowAction
-                                icon={Trash2}
-                                tone="danger"
-                                label={locale === "en" ? "Delete calibration" : "Hapus kalibrasi"}
-                                ariaLabel={`${S.delBtn} ${String(c.id ?? "")}`}
-                                onClick={() => setDelCal(c)}
-                              />
+                              {canWriteEquipment && (
+                                <RowAction
+                                  icon={Pencil}
+                                  tone="neutral"
+                                  label={locale === "en" ? "Edit calibration schedule" : "Ubah jadwal kalibrasi"}
+                                  ariaLabel={`${S.eqEdit} ${String(c.id ?? "")}`}
+                                  onClick={() => openCalEdit(c)}
+                                />
+                              )}
+                              {canDeleteEquipment && (
+                                <RowAction
+                                  icon={Trash2}
+                                  tone="danger"
+                                  label={locale === "en" ? "Delete calibration" : "Hapus kalibrasi"}
+                                  ariaLabel={`${S.delBtn} ${String(c.id ?? "")}`}
+                                  onClick={() => setDelCal(c)}
+                                />
+                              )}
                             </div>
                           </td>
                         </tr>

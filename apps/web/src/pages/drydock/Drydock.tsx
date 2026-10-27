@@ -9,6 +9,7 @@ import { AsyncButton } from "../../components/ui";
 import { DateInput } from "../../components/DateInput";
 import { SearchSelect as SharedSearchSelect } from "../../components/SearchSelect";
 import { employeeOptions, isKnownEmployee } from "../../utils/employeeOptions";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
 import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
@@ -138,6 +139,9 @@ const DRY_COLS: CollectionKey[] = ["activities", "dockSlots", "drydocks", "invoi
 
 export default function Drydock() {
   const { data, add, update, remove, log } = useStore();
+  const { user } = useAuth();
+  const canWriteDock = hasPermission(user?.permissions, "drydocks", "w");
+  const canDeleteDock = hasPermission(user?.permissions, "drydocks", "d");
   const picOptions = useMemo(() => employeeOptions(data.employees), [data.employees]);
   const { locale } = useT();
   const S = n_dry[locale];
@@ -858,11 +862,13 @@ export default function Drydock() {
         subtitle={S.pageSubtitle}
         icon={<Ship className="h-5 w-5" />}
         actions={
-          <div className="flex gap-2">
-            <button className="btn-secondary" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}><Plus className="h-4 w-4" /> {S.btnAddDock}</button>
-            <button className="btn-secondary" onClick={() => setShowMaint(true)}><Wrench className="h-4 w-4" /> {S.btnMaintBlock}</button>
-            <button className="btn-primary-gradient" onClick={openBooking}><Plus className="h-4 w-4" /> {S.btnBookSlot}</button>
-          </div>
+          canWriteDock ? (
+            <div className="flex gap-2">
+              <button className="btn-secondary" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}><Plus className="h-4 w-4" /> {S.btnAddDock}</button>
+              <button className="btn-secondary" onClick={() => setShowMaint(true)}><Wrench className="h-4 w-4" /> {S.btnMaintBlock}</button>
+              <button className="btn-primary-gradient" onClick={openBooking}><Plus className="h-4 w-4" /> {S.btnBookSlot}</button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -1210,14 +1216,18 @@ export default function Drydock() {
                     <td className="td">
                       <div className="flex gap-1.5">
                         <RowAction icon={Eye} tone="neutral" label={S.detailBtn} ariaLabel={`${S.detailBtn} ${String(s.id)}`} onClick={() => openSlot(s)} />
-                        <RowAction
-                          icon={ArrowLeftRight}
-                          tone="neutral"
-                          label={conflict.some((c) => c.id === s.id) ? S.moveTitleConflict : S.moveTitlePlain}
-                          ariaLabel={S.moveAria.replace("{a}", String(s.id))}
-                          onClick={() => openMove(s)}
-                        />
-                        <RowAction icon={Trash2} tone="danger" label={S.delSlotTitle.replace("{a}", String(s.id))} onClick={() => setDeleting(s)} />
+                        {canWriteDock && (
+                          <RowAction
+                            icon={ArrowLeftRight}
+                            tone="neutral"
+                            label={conflict.some((c) => c.id === s.id) ? S.moveTitleConflict : S.moveTitlePlain}
+                            ariaLabel={S.moveAria.replace("{a}", String(s.id))}
+                            onClick={() => openMove(s)}
+                          />
+                        )}
+                        {canDeleteDock && (
+                          <RowAction icon={Trash2} tone="danger" label={S.delSlotTitle.replace("{a}", String(s.id))} onClick={() => setDeleting(s)} />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1236,9 +1246,11 @@ export default function Drydock() {
           title={S.cardDocks}
           subtitle={S.cardDocksSub}
           action={
-            <button className="btn-primary-gradient text-xs" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}>
-              <Plus className="h-3.5 w-3.5" /> {S.btnAddDock}
-            </button>
+            canWriteDock ? (
+              <button className="btn-primary-gradient text-xs" onClick={() => { setDockForm(emptyDockForm); setAddDockError(null); setShowAddDock(true); }}>
+                <Plus className="h-3.5 w-3.5" /> {S.btnAddDock}
+              </button>
+            ) : undefined
           }
         />
         <div className="overflow-x-auto">
@@ -1253,7 +1265,7 @@ export default function Drydock() {
                 <th className="th">{S.areaLabel}</th>
                 <th className="th">{S.lblPic}</th>
                 <th className="th">{S.colStatus}</th>
-                <th className="th text-right">{S.colAction}</th>
+                {(canWriteDock || canDeleteDock) && <th className="th text-right">{S.colAction}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-steel-100">
@@ -1280,35 +1292,43 @@ export default function Drydock() {
                         {d.status ?? "Tersedia"} {activeSlotsCount > 0 ? `(${activeSlotsCount} slot)` : ""}
                       </Badge>
                     </td>
-                    <td className="td text-right">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          className="btn-secondary px-2 py-1 text-xs"
-                          onClick={() => {
-                            setAreaModal(d);
-                            setAreaDraft(String(d.area ?? ""));
-                            setLimitDraft({ maxLoa: String(d.maxLoa || ""), maxBeam: String(d.maxBeam || ""), maxDraft: String(d.maxDraft || "") });
-                          }}
-                        >
-                          {S.btnDockSetting}
-                        </button>
-                        <button
-                          className="btn-secondary px-2 py-1 text-xs"
-                          onClick={() => {
-                            setPicModal(d);
-                            setPicDraft(String(d.pic ?? ""));
-                          }}
-                        >
-                          {S.btnPic}
-                        </button>
-                        <RowAction
-                          icon={Trash2}
-                          tone="danger"
-                          label={`Hapus ${d.name}`}
-                          onClick={() => setDeletingDock(d)}
-                        />
-                      </div>
-                    </td>
+                    {(canWriteDock || canDeleteDock) && (
+                      <td className="td text-right">
+                        <div className="flex justify-end gap-1.5">
+                          {canWriteDock && (
+                            <>
+                              <button
+                                className="btn-secondary px-2 py-1 text-xs"
+                                onClick={() => {
+                                  setAreaModal(d);
+                                  setAreaDraft(String(d.area ?? ""));
+                                  setLimitDraft({ maxLoa: String(d.maxLoa || ""), maxBeam: String(d.maxBeam || ""), maxDraft: String(d.maxDraft || "") });
+                                }}
+                              >
+                                {S.btnDockSetting}
+                              </button>
+                              <button
+                                className="btn-secondary px-2 py-1 text-xs"
+                                onClick={() => {
+                                  setPicModal(d);
+                                  setPicDraft(String(d.pic ?? ""));
+                                }}
+                              >
+                                {S.btnPic}
+                              </button>
+                            </>
+                          )}
+                          {canDeleteDock && (
+                            <RowAction
+                              icon={Trash2}
+                              tone="danger"
+                              label={`Hapus ${d.name}`}
+                              onClick={() => setDeletingDock(d)}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -1373,10 +1393,16 @@ export default function Drydock() {
             </div>
           </div>
           </>)}
-            <div className="mt-3 flex gap-2">
-              <button className="btn-secondary flex-1 justify-center" onClick={() => { setSelected(null); openMove(sel); }}>{S.btnMoveSlot}</button>
-              <button className="btn-danger flex-1 justify-center" onClick={() => { setDeleting(sel); setSelected(null); }}><Trash2 className="h-4 w-4" /> {S.btnDelSlot}</button>
-            </div>
+            {(canWriteDock || canDeleteDock) && (
+              <div className="mt-3 flex gap-2">
+                {canWriteDock && (
+                  <button className="btn-secondary flex-1 justify-center" onClick={() => { setSelected(null); openMove(sel); }}>{S.btnMoveSlot}</button>
+                )}
+                {canDeleteDock && (
+                  <button className="btn-danger flex-1 justify-center" onClick={() => { setDeleting(sel); setSelected(null); }}><Trash2 className="h-4 w-4" /> {S.btnDelSlot}</button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -83,6 +83,7 @@ export default function Projects() {
   const S = n_prj[locale];
   const { user } = useAuth();
   const canWriteProjects = hasPermission(user?.permissions, "projects", "w");
+  const canDeleteProjects = hasPermission(user?.permissions, "projects", "d");
   const canWriteRisks = hasPermission(user?.permissions, "risks", "w");
   const { data, add, update, remove, inBranch, log } = useStore();
   const modAlert = useModuleAlert("proyek");
@@ -253,9 +254,9 @@ export default function Projects() {
         subtitle={S.prjSubtitle}
         icon={<Anchor className="h-5 w-5" />}
         actions={
-          <>
+          canWriteProjects ? (
             <button className="btn-primary-gradient" onClick={() => setShowAdd(true)}><Plus className="h-4 w-4" /> {S.prjNew}</button>
-          </>
+          ) : undefined
         }
       />
 
@@ -429,13 +430,15 @@ export default function Projects() {
                           ariaLabel={`${S.btnDetail} ${p.id}`}
                           onClick={() => navigate(`/proyek/${p.id}`, { state: { from: "/proyek" } })}
                         />
-                        <RowAction
-                          icon={Trash2}
-                          tone="danger"
-                          label={locale === "en" ? "Delete" : "Hapus"}
-                          ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${p.id}`}
-                          onClick={() => setDelProject(p)}
-                        />
+                        {canDeleteProjects && (
+                          <RowAction
+                            icon={Trash2}
+                            tone="danger"
+                            label={locale === "en" ? "Delete" : "Hapus"}
+                            ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${p.id}`}
+                            onClick={() => setDelProject(p)}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

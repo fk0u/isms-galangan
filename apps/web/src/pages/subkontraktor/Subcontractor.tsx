@@ -31,7 +31,7 @@ import { n_sub } from "../../i18n/n_sub";
 import { n_prj } from "../../i18n/n_prj";
 import { PhotoUploader, type PhotoUploadItem } from "../../components/PhotoUploader";
 import { ChangeHistory } from "../../components/ChangeHistory";
-import { useAuth } from "../../auth/auth";
+import { useAuth, hasPermission } from "../../auth/auth";
 import { buildTermins, DEFAULT_TAX_RATES, type TerminSchemeType } from "../../utils/termin";
 
 /* F3-I-04: field SPK hanya diubah procurement (server juga menolak, lihat workOrderGuard.ts). */
@@ -159,8 +159,14 @@ export default function Subcontractor() {
   const T = n_sub[locale];
   const P = n_prj[locale];
   const { user } = useAuth();
+  const canWriteSubcon = hasPermission(user?.permissions, "subcontractors", "w");
+  const canDeleteSubcon = hasPermission(user?.permissions, "subcontractors", "d");
   /* Mode demo lokal tanpa peran server → izinkan; tersambung → ikut peran. */
   const canSpk = !user?.role || SPK_EDITORS.has(String(user.role).toLowerCase());
+  const canWriteWo = hasPermission(user?.permissions, "workOrders", "w") && canSpk;
+  const canDeleteWo = hasPermission(user?.permissions, "workOrders", "d");
+  const canWriteTermins = hasPermission(user?.permissions, "termins", "w");
+  const canDeleteTermins = hasPermission(user?.permissions, "termins", "d");
   const subcontractors = data.subcontractors;
   const workOrders = data.workOrders;
   const payments = data.termins;
@@ -1177,7 +1183,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         title={S.scTitle}
         subtitle={S.scSubtitle}
         icon={<HardHat className="h-5 w-5" />}
-        actions={<button className="btn-primary-gradient" onClick={() => setShowSub(true)}><Plus className="h-4 w-4" /> {S.regSubBtn}</button>}
+        actions={canWriteSubcon ? <button className="btn-primary-gradient" onClick={() => setShowSub(true)}><Plus className="h-4 w-4" /> {S.regSubBtn}</button> : undefined}
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
@@ -1250,33 +1256,41 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                     <span>{S.contractLabel} {fmtMiliar(s.contract)}</span>
                     <span>{S.woActiveCount.replace("{n}", String(workOrders.filter((w) => sameName(w.sub, s.name) && w.status !== "Selesai").length))}</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-steel-100 pt-3">
-                    <button
-                      className="btn-secondary text-xs"
-                      aria-label={S.manageMsAria.replace("{n}", String(s.name))}
-                      onClick={() => { setMsSub(s); setMsForm({ title: "", pct: "", due: "" }); }}
-                    >
-                      {S.msSowBtn}
-                    </button>
-                    <button className="btn-secondary text-xs" onClick={() => { setProfSub(s); setProfForm({ npwp: String(s.npwp ?? ""), address: String(s.address ?? "") }); }}>
-                      {S.subProfileBtn}
-                    </button>
-                    {SUB_NEXT[normSub(s.status)].map((next) => (
-                      <button
-                        key={next}
-                        className="btn-secondary text-xs"
-                        aria-label={S.changeStatusAria.replace("{a}", String(s.name)).replace("{b}", next)}
-                        onClick={() => setSubConfirm({ id: s.id, name: s.name, next })}
-                      >
-                        {S.toNextBtn.replace("{n}", next)}
-                      </button>
-                    ))}
-                    {subUsages(s).length === 0 ? (
-                      <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelSub(s)}>{locale === "en" ? "Delete" : "Hapus"}</button>
-                    ) : (
-                      <span className="text-xs text-steel-400" title={subUsages(s).join(", ")}>{locale === "en" ? "Locked" : "Terkunci"}</span>
-                    )}
-                  </div>
+                  {(canWriteSubcon || canDeleteSubcon) && (
+                    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-steel-100 pt-3">
+                      {canWriteSubcon && (
+                        <>
+                          <button
+                            className="btn-secondary text-xs"
+                            aria-label={S.manageMsAria.replace("{n}", String(s.name))}
+                            onClick={() => { setMsSub(s); setMsForm({ title: "", pct: "", due: "" }); }}
+                          >
+                            {S.msSowBtn}
+                          </button>
+                          <button className="btn-secondary text-xs" onClick={() => { setProfSub(s); setProfForm({ npwp: String(s.npwp ?? ""), address: String(s.address ?? "") }); }}>
+                            {S.subProfileBtn}
+                          </button>
+                          {SUB_NEXT[normSub(s.status)].map((next) => (
+                            <button
+                              key={next}
+                              className="btn-secondary text-xs"
+                              aria-label={S.changeStatusAria.replace("{a}", String(s.name)).replace("{b}", next)}
+                              onClick={() => setSubConfirm({ id: s.id, name: s.name, next })}
+                            >
+                              {S.toNextBtn.replace("{n}", next)}
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {canDeleteSubcon && (
+                        subUsages(s).length === 0 ? (
+                          <button className="btn-secondary text-xs text-rose-600" onClick={() => setDelSub(s)}>{locale === "en" ? "Delete" : "Hapus"}</button>
+                        ) : (
+                          <span className="text-xs text-steel-400" title={subUsages(s).join(", ")}>{locale === "en" ? "Locked" : "Terkunci"}</span>
+                        )
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))}
               </div>
@@ -1285,11 +1299,11 @@ const printSpk = async (w: StoreItem): Promise<void> => {
 
           {tab === "Work Order" && (
             <div>
-              <div className="mb-3 flex justify-end">
-                {canSpk
-                  ? <button className="btn-secondary text-xs" onClick={() => setShowWo(true)}><Plus className="h-3.5 w-3.5" /> {S.issueWoBtn}</button>
-                  : <span className="text-xs text-steel-500">{T.spkLocked}</span>}
-              </div>
+              {canWriteWo && (
+                <div className="mb-3 flex justify-end">
+                  <button className="btn-secondary text-xs" onClick={() => setShowWo(true)}><Plus className="h-3.5 w-3.5" /> {S.issueWoBtn}</button>
+                </div>
+              )}
               {/* F3-I-02: tabel WO rinci (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status). */}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px]">
@@ -1358,19 +1372,21 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                         >
                           {locale === "en" ? "SPK" : "SPK"}
                         </button>
-                        {w.status !== "Selesai" && (
+                        {canWriteWo && w.status !== "Selesai" && (
                           <button className="btn-secondary text-xs" aria-label={S.updateProgAria.replace("{n}", w.id)} onClick={() => { setWoProg(w); setProgPhotos([]); setProgMs(doneMsOf(w)); setProgNote(""); setProgPct(String(effProgress(w))); }}>{S.updateBtn}</button>
                         )}
-                        {w.status !== "Selesai" && canSpk && (
+                        {canWriteWo && w.status !== "Selesai" && (
                           <button className="btn-secondary text-xs" aria-label={`${locale === "en" ? "Edit" : "Ubah"} ${w.id}`} onClick={() => openWoEdit(w)}>{locale === "en" ? "Edit" : "Ubah"}</button>
                         )}
-                        {Number(w.progress || 0) < 100 && w.targetDate && daysLate(String(w.targetDate)) > 0 && !w.penaltyAt && (
+                        {canWriteWo && Number(w.progress || 0) < 100 && w.targetDate && daysLate(String(w.targetDate)) > 0 && !w.penaltyAt && (
                           <button className="btn-secondary text-xs" aria-label={S.logPenaltyAria.replace("{n}", w.id)} onClick={() => recordPenalty(w)}>{S.logPenaltyBtn}</button>
                         )}
-                        {woUsages(w).length === 0 ? (
-                          <button className="btn-secondary text-xs text-rose-600" aria-label={`${locale === "en" ? "Delete" : "Hapus"} ${w.id}`} onClick={() => setDelWo(w)}>{locale === "en" ? "Delete" : "Hapus"}</button>
-                        ) : (
-                          <span className="text-xs text-steel-400" title={woUsages(w).join(", ")}>{locale === "en" ? "Locked" : "Terkunci"}</span>
+                        {canDeleteWo && (
+                          woUsages(w).length === 0 ? (
+                            <button className="btn-secondary text-xs text-rose-600" aria-label={`${locale === "en" ? "Delete" : "Hapus"} ${w.id}`} onClick={() => setDelWo(w)}>{locale === "en" ? "Delete" : "Hapus"}</button>
+                          ) : (
+                            <span className="text-xs text-steel-400" title={woUsages(w).join(", ")}>{locale === "en" ? "Locked" : "Terkunci"}</span>
+                          )
                         )}
                       </div>
                     </td>
@@ -1399,9 +1415,11 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                   <span className="text-steel-400">Draf → Diajukan → Disetujui → Lunas (+hutang & retensi) → Retensi Released (WO Selesai + BA)</span>
                 </div>
               </div>
-              <div className="mb-3 flex justify-end">
-                <button className="btn-secondary text-xs" onClick={() => setShowTerm(true)}><Plus className="h-3.5 w-3.5" /> {S.proposeTerminBtn}</button>
-              </div>
+              {canWriteTermins && (
+                <div className="mb-3 flex justify-end">
+                  <button className="btn-secondary text-xs" onClick={() => setShowTerm(true)}><Plus className="h-3.5 w-3.5" /> {S.proposeTerminBtn}</button>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-surface sticky top-0 z-10">
@@ -1467,7 +1485,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                         </td>
                         <td className="td">
                           <div className="flex flex-wrap gap-1.5">
-                            {termNext(p.status).map((next) => (
+                            {canWriteTermins && termNext(p.status).map((next) => (
                               <button
                                 key={next}
                                 className={next === "Lunas" ? "btn-primary text-xs" : "btn-secondary text-xs"}
@@ -1477,7 +1495,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                                 {next === "Lunas" ? S.payBtn : next === "Diajukan" ? S.proposeBtn : next}
                               </button>
                             ))}
-                            {canRelease && (
+                            {canWriteTermins && canRelease && (
                               <button className="btn-primary text-xs" aria-label={S.releaseRetAria.replace("{n}", p.id)} onClick={() => { setReleaseTerm(p); setReleaseForm({ date: todayISO(), ba: "" }); }}>
                                 {S.releaseRetBtn}
                               </button>
@@ -1500,13 +1518,12 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                             )}
                             {normTerm(String(p.status)) === "Draf" && (
                               <>
-                                <RowAction icon={Pencil} tone="neutral" label={locale === "en" ? "Edit" : "Ubah"} ariaLabel={`${locale === "en" ? "Edit" : "Ubah"} ${p.id}`} onClick={() => openTermEdit(p)} />
-                                {/* Hapus termin hanya sah saat masih Draf. Modul ini
-                                    sebelumnya sama sekali tidak punya remove(), jadi
-                                    termin salah nominal pun nyangkut selamanya. Setelah
-                                    Disetujui termin sudah jadi dokumen pembayaran dan
-                                    tidak boleh hilang tanpa pembatalan. */}
-                                <RowAction icon={Trash2} tone="danger" label={locale === "en" ? "Delete" : "Hapus"} ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${p.id}`} onClick={() => setDelTerm(p)} />
+                                {canWriteTermins && (
+                                  <RowAction icon={Pencil} tone="neutral" label={locale === "en" ? "Edit" : "Ubah"} ariaLabel={`${locale === "en" ? "Edit" : "Ubah"} ${p.id}`} onClick={() => openTermEdit(p)} />
+                                )}
+                                {canDeleteTermins && (
+                                  <RowAction icon={Trash2} tone="danger" label={locale === "en" ? "Delete" : "Hapus"} ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${p.id}`} onClick={() => setDelTerm(p)} />
+                                )}
                               </>
                             )}
                             {normTerm(String(p.status)) === "Lunas" && retOf(p) > 0 && (
