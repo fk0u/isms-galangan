@@ -863,7 +863,7 @@ export function Modal({
   return (
     <AnimatePresence>
       {open && (
-        <div className={`fixed inset-0 z-50 flex items-end justify-center ${fullScreen ? "p-0 sm:p-3" : "p-0 sm:items-center sm:p-6"}`}>
+        <div className={`fixed inset-0 z-50 flex items-center justify-center ${fullScreen ? "p-2 sm:p-4" : "p-2 sm:p-6"}`}>
           <motion.div
             className="absolute inset-0 bg-navy-900/40 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
@@ -877,8 +877,8 @@ export function Modal({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
-            className={`relative flex ${fullScreen ? "h-screen sm:h-[96vh] max-h-screen rounded-none sm:rounded-2xl sm:max-w-[min(98vw,100rem)]" : "max-h-[92vh] rounded-t-2xl sm:rounded-2xl"} w-full flex-col overflow-hidden border border-steel-200 bg-white shadow-lift ${
-              fullScreen ? "" : fullWidth ? "sm:max-w-[min(96vw,90rem)]" : extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
+            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift ${
+              fullScreen ? "sm:max-w-6xl" : fullWidth ? "sm:max-w-[min(96vw,90rem)]" : extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             /* Masuk dari scale 0.96 (tidak pernah dari 0), ease-out kuat;
                keluar lebih cepat dari masuk. Modal tetap berpusat. */
@@ -899,7 +899,7 @@ export function Modal({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-y-auto px-5 py-4">{children}</div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
             {footer && (
               <div
                 className="flex items-center justify-end gap-2 border-t border-steel-100 bg-steel-50/70 px-5 py-3"

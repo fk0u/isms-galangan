@@ -229,12 +229,12 @@ export default function RabTab() {
         </div>
       )}
 
-      {/* Full-screen modal RAB (#302): Nama RAB, Periode, dan skema rincian anggaran tanpa input realisasi */}
+      {/* Modal RAB: proporsional extraWide, Nama RAB, Periode, dan skema rincian anggaran tanpa input realisasi */}
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         title={edit ? S.rabEdit : S.rabAdd}
-        fullScreen={true}
+        extraWide={true}
         footer={
           <>
             <button className="btn-secondary" onClick={() => setOpen(false)}>{S.cancelBtn}</button>
@@ -292,9 +292,9 @@ export default function RabTab() {
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-steel-200">
+            <div className="max-h-80 overflow-y-auto overflow-x-auto rounded-xl border border-steel-200">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-steel-200 bg-surface text-steel-600">
+                <thead className="sticky top-0 z-10 border-b border-steel-200 bg-surface text-steel-600">
                   <tr>
                     <th className="py-2.5 px-3 font-medium w-10 text-center">#</th>
                     <th className="py-2.5 px-3 font-medium min-w-[260px]">{S.colNamaAkun} <span className="text-rose-500">*</span></th>
