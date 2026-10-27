@@ -319,8 +319,8 @@ export function buildApp(): FastifyInstance {
     } catch {
       // tabel sessions belum ada (DB lama) — login tetap jalan
     }
-    const permissions = permissionsFor(user.role);
     const modules = await moduleAccessFor(user.role);
+    const permissions = permissionsFor(user.role, modules);
     return ok({
       token,
       permissions,
@@ -338,8 +338,8 @@ export function buildApp(): FastifyInstance {
   });
 
   app.get("/api/auth/me", { preHandler: [requireAuth] }, async (req) => {
-    const permissions = permissionsFor(req.user?.role);
     const modules = await moduleAccessFor(req.user?.role);
+    const permissions = permissionsFor(req.user?.role, modules);
     return ok({ user: req.user, permissions, modules, ip: requestIp(req) });
   });
 

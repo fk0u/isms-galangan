@@ -17,12 +17,18 @@ export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export const FIN_TABS = ["Akun", "Aset", "Invoice", "Piutang (AR)", "Hutang (AP)", "Jadwal Bayar", "Kas & Bank", "Jurnal", "Buku Besar", "Laba Rugi", "Neraca", "Project P&L", "Pajak", "Payroll", "RAB"] as const;
 
+export type AccessLevel = "crud" | "view" | "none";
+
 export interface ModuleAccess {
-  /** Modul yang TIDAK boleh dibuka role ini. */
+  /** Tingkat akses per modul: crud (penuh), view (baca saja), none (tanpa akses). */
+  levels: Record<ModuleKey, AccessLevel>;
+  /** Modul yang TIDAK boleh dibuka role ini (level === "none"). Kompatibel dengan kode lama. */
   deny: ModuleKey[];
   /** Tab Keuangan yang boleh dibuka; null = semua. */
   finTabs: string[] | null;
 }
+
+export { COLLECTION_TO_MODULE } from "./policy.js";
 
 const EXEC_ONLY: ModuleKey[] = ["analytics", "laporan"];
 
@@ -36,7 +42,19 @@ export const DEFAULT_ACCESS: Record<Role, ModuleAccess> = Object.fromEntries(ROL
     deny.push("sdm", "absensi", "payroll", "qc", "procurement", "inventori", "equipment");
     finTabs = ["Invoice"];
   }
-  return [r, { deny, finTabs }];
+
+  const levels = {} as Record<ModuleKey, AccessLevel>;
+  for (const m of MODULE_KEYS) {
+    if (deny.includes(m)) {
+      levels[m] = "none";
+    } else if (r === "viewer") {
+      levels[m] = "view";
+    } else {
+      levels[m] = "crud";
+    }
+  }
+
+  return [r, { levels, deny, finTabs }];
 })) as Record<Role, ModuleAccess>;
 
 type Override = Partial<Record<Role, Partial<ModuleAccess>>>;
@@ -48,7 +66,30 @@ function clean(raw: unknown): Override {
     if (!(ROLES as readonly string[]).includes(role) || !v || typeof v !== "object") continue;
     const o = v as Record<string, unknown>;
     const entry: Partial<ModuleAccess> = {};
-    if (Array.isArray(o.deny)) entry.deny = o.deny.filter((k): k is ModuleKey => (MODULE_KEYS as readonly string[]).includes(String(k)));
+
+    if (o.levels && typeof o.levels === "object") {
+      const lvls = {} as Record<ModuleKey, AccessLevel>;
+      const rawLvls = o.levels as Record<string, unknown>;
+      for (const m of MODULE_KEYS) {
+        const val = String(rawLvls[m] ?? "");
+        if (val === "crud" || val === "view" || val === "none") {
+          lvls[m] = val;
+        } else {
+          lvls[m] = DEFAULT_ACCESS[role as Role]?.levels[m] ?? "crud";
+        }
+      }
+      entry.levels = lvls;
+      entry.deny = MODULE_KEYS.filter((m) => lvls[m] === "none");
+    } else if (Array.isArray(o.deny)) {
+      const deny = o.deny.filter((k): k is ModuleKey => (MODULE_KEYS as readonly string[]).includes(String(k)));
+      entry.deny = deny;
+      const lvls = {} as Record<ModuleKey, AccessLevel>;
+      for (const m of MODULE_KEYS) {
+        lvls[m] = deny.includes(m) ? "none" : (role === "viewer" ? "view" : "crud");
+      }
+      entry.levels = lvls;
+    }
+
     if (o.finTabs === null) entry.finTabs = null;
     else if (Array.isArray(o.finTabs)) entry.finTabs = o.finTabs.map(String).filter((t) => (FIN_TABS as readonly string[]).includes(t));
     out[role as Role] = entry;
@@ -72,10 +113,16 @@ export async function loadOverride(): Promise<Override> {
 export async function moduleAccessFor(role: unknown): Promise<ModuleAccess> {
   const r = normalizeRole(role);
   const base = DEFAULT_ACCESS[r];
-  // Developer selalu bisa membuka semua modul agar tidak mengunci dirinya sendiri.
-  if (r === "developer") return { deny: [], finTabs: null };
+  // Developer selalu bisa membuka semua modul dengan akses CRUD penuh.
+  if (r === "developer") {
+    const allCrud = Object.fromEntries(MODULE_KEYS.map((m) => [m, "crud"])) as Record<ModuleKey, AccessLevel>;
+    return { levels: allCrud, deny: [], finTabs: null };
+  }
   const o = (await loadOverride())[r] ?? {};
-  return { deny: o.deny ?? base.deny, finTabs: o.finTabs !== undefined ? o.finTabs : base.finTabs };
+  const levels = o.levels ?? base.levels;
+  const deny = o.deny ?? (o.levels ? MODULE_KEYS.filter((m) => levels[m] === "none") : base.deny);
+  const finTabs = o.finTabs !== undefined ? o.finTabs : base.finTabs;
+  return { levels, deny, finTabs };
 }
 
 export async function canOpenModule(role: unknown, key: ModuleKey): Promise<boolean> {

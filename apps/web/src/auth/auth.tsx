@@ -52,15 +52,28 @@ export function hasPermission(
 
 const SESSION_KEY = "isms.session";
 
-/** Akses modul dari server (moduleAccess.ts): modul terlarang + tab Keuangan. */
+export type AccessLevel = "crud" | "view" | "none";
+
+/** Akses modul dari server (moduleAccess.ts): level akses per modul + modul terlarang + tab Keuangan. */
 export interface ModuleAccess {
+  levels?: Record<string, AccessLevel>;
   deny: string[];
   finTabs: string[] | null;
 }
 
 /** Boleh membuka modul (kunci = segmen path menu, mis. "proyek", "laporan")? */
 export function canOpenModule(user: { modules?: ModuleAccess } | null | undefined, key: string): boolean {
-  return !user?.modules || !user.modules.deny.includes(key);
+  if (!user?.modules) return true;
+  if (user.modules.levels?.[key]) {
+    return user.modules.levels[key] !== "none";
+  }
+  return !user.modules.deny.includes(key);
+}
+
+/** Apakah user memiliki izin tulis/ubah di modul ini (level "crud")? */
+export function canWriteModule(user: { modules?: ModuleAccess } | null | undefined, key: string): boolean {
+  if (!user?.modules?.levels) return true;
+  return user.modules.levels[key] === "crud";
 }
 
 export interface Session {

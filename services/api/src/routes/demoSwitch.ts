@@ -69,10 +69,11 @@ async function issueDemoToken(role: string): Promise<DemoIssue> {
     return { error: "Scope cabang akun demo tidak dapat diverifikasi", status: 503, code: "BRANCH_SCOPE_UNAVAILABLE" };
   }
   const token = signToken({ id: user.id, username: user.username, role: user.role, branch, v: user.token_version ?? 0 });
+  const modules = await moduleAccessFor(user.role);
   return {
     token,
-    permissions: permissionsFor(user.role),
-    modules: await moduleAccessFor(user.role),
+    permissions: permissionsFor(user.role, modules),
+    modules,
     user: { id: user.id, username: user.username, name: user.name, role: user.role, branch, email: user.email, employeeId: user.employee_id },
   };
 }

@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { fail } from "./envelope.js";
+import type { ModuleAccess, ModuleKey } from "./moduleAccess.js";
 
 // Daftar peran resmi sistem ISMS sesuai ADR-0004 & keputusan Q2 (7 Okt 2026).
 export const ROLES = [
@@ -99,6 +100,110 @@ const ALL_ENVELOPE_COLLECTIONS = [
 const ALL_OPERATIONAL_COLLECTIONS = ALL_ENVELOPE_COLLECTIONS.filter(
   (c) => !["payroll", "employees", "journals", "coa", "settings", "invoices", "payables", "taxPeriods"].includes(c),
 );
+
+/** Pemetaan setiap koleksi sistem ISMS ke modul induknya */
+export const COLLECTION_TO_MODULE: Record<string, ModuleKey> = {
+  // CRM
+  clients: "crm",
+  quotations: "crm",
+  contracts: "crm",
+  termins: "crm",
+  clientPos: "crm",
+
+  // Procurement
+  purchaseOrders: "procurement",
+  requisitions: "procurement",
+  vendors: "procurement",
+  rfqs: "procurement",
+
+  // Keuangan
+  invoices: "keuangan",
+  payables: "keuangan",
+  journals: "keuangan",
+  taxPeriods: "keuangan",
+  coa: "keuangan",
+  assets: "keuangan",
+  rabItems: "keuangan",
+
+  // Proyek
+  projects: "proyek",
+  boq: "proyek",
+  boqDocs: "proyek",
+  materialRequests: "proyek",
+  changeOrders: "proyek",
+  risks: "proyek",
+  drawings: "proyek",
+  bast: "proyek",
+  trials: "proyek",
+  requests: "proyek",
+  wbs_by_project: "proyek",
+  team_by_project: "proyek",
+
+  // Monitoring
+  activities: "monitoring",
+  timesheets: "monitoring",
+
+  // Drydock
+  drydocks: "drydock",
+  dockSlots: "drydock",
+  surveys: "drydock",
+
+  // Inventori
+  inventory: "inventori",
+  movements: "inventori",
+  warehouses: "inventori",
+  spareparts: "inventori",
+  bomItems: "inventori",
+
+  // Equipment
+  equipment: "equipment",
+  bookings: "equipment",
+  maintenances: "equipment",
+  calibrations: "equipment",
+
+  // Subkontraktor
+  subcontractors: "subkontraktor",
+  workOrders: "subkontraktor",
+
+  // QC
+  ncr: "qc",
+  incidents: "qc",
+  inspections: "qc",
+  checklistTemplates: "qc",
+  checklistResponses: "qc",
+  toolbox: "qc",
+  warranties: "qc",
+  walks: "qc",
+  auditPlans: "qc",
+
+  // SDM
+  employees: "sdm",
+  leaves: "sdm",
+  trainings: "sdm",
+
+  // Absensi
+  attendance: "absensi",
+
+  // Payroll
+  payroll: "payroll",
+
+  // Kapal
+  vessels: "kapal",
+  services: "kapal",
+
+  // Dokumen
+  documents: "dokumen",
+  letters: "dokumen",
+
+  // Pengaturan & Sistem
+  settings: "pengaturan",
+  branches: "pengaturan",
+  communications: "pengaturan",
+  users: "pengaturan",
+
+  // Audit
+  audit: "audit",
+};
 
 function makeDeveloperMatrix(): Record<string, Action[]> {
   const m: Record<string, Action[]> = {};
@@ -399,19 +504,91 @@ export const MATRIX: Record<Role, Record<string, Action[]>> = {
 /**
  * Mengecek apakah peran memiliki izin tertentu pada koleksi.
  */
-export function can(role: unknown, collection: string, action: Action): boolean {
+export function can(role: unknown, collection: string, action: Action, moduleAccess?: ModuleAccess): boolean {
   const r = normalizeRole(role);
-  const perms = MATRIX[r]?.[collection];
-  if (!perms) return false;
-  return perms.includes(action);
+  if (r === "developer") return true;
+  const perms = permissionsFor(r, moduleAccess);
+  const acts = perms[collection];
+  if (!acts) return false;
+  return acts.includes(action);
 }
 
 /**
  * Mengembalikan seluruh peta izin untuk peran yang diberikan (untuk dikirim ke /api/auth/me).
+ * Bila moduleAccess diberikan, izin per koleksi disesuaikan dengan tingkat akses modul (crud/view/none).
  */
-export function permissionsFor(role: unknown): Record<string, Action[]> {
+export function permissionsFor(role: unknown, moduleAccess?: ModuleAccess): Record<string, Action[]> {
   const r = normalizeRole(role);
-  return MATRIX[r] ?? {};
+  const base = MATRIX[r] ?? {};
+  if (r === "developer") return base;
+
+  if (!moduleAccess?.levels) {
+    return base;
+  }
+
+  const effective: Record<string, Action[]> = {};
+  for (const [col, acts] of Object.entries(base)) {
+    effective[col] = [...acts];
+  }
+
+  for (const [col, mod] of Object.entries(COLLECTION_TO_MODULE)) {
+    const level = moduleAccess.levels[mod];
+    if (!level) continue;
+
+    const SENSITIVE_SYS_COLLECTIONS = ["settings", "users", "audit", "coa"];
+
+    // Pengecualian domain: Keuangan mengelola payroll lewat tab Payroll di modul Keuangan (#281)
+    if (col === "payroll" && (r === "finance" || r === "pajak")) {
+      const finLevel = moduleAccess.levels.keuangan ?? "crud";
+      if (finLevel === "none") {
+        effective[col] = [];
+      } else if (finLevel === "view") {
+        effective[col] = ["r"];
+      } else {
+        effective[col] = [...(base[col] ?? [])];
+      }
+      continue;
+    }
+
+    if (level === "none") {
+      // Modul ditutup: hapus izin tulis/hapus. Bila base hanya memiliki izin baca referensi (["r"]),
+      // pertahankan ["r"] untuk relasi lintas modul (mis. Procurement memilih project di PO),
+      // namun bila peran memiliki "w" di base pada modul ini, cabut seluruh aksesnya.
+      if (base[col] && base[col].length === 1 && base[col][0] === "r") {
+        effective[col] = ["r"];
+      } else {
+        effective[col] = [];
+      }
+    } else if (level === "view") {
+      // Modul hanya baca: jika peran diizinkan membaca koleksi ini di base, batasi ke ["r"]
+      if (base[col] && base[col].includes("r")) {
+        effective[col] = ["r"];
+      } else {
+        effective[col] = [];
+      }
+    } else if (level === "crud") {
+      // CRUD: jika peran tidak memiliki akses di base, tetap kosong;
+      // jika punya, izinkan RWD kecuali koleksi sensitif sistem
+      if (!base[col] || base[col].length === 0) {
+        effective[col] = [];
+      } else if (SENSITIVE_SYS_COLLECTIONS.includes(col)) {
+        effective[col] = [...base[col]];
+      } else {
+        effective[col] = ["r", "w", "d"];
+      }
+    }
+  }
+
+  return effective;
+}
+
+let _moduleAccessFor: ((role: unknown) => Promise<ModuleAccess>) | null = null;
+async function resolveModuleAccess(role: unknown): Promise<ModuleAccess> {
+  if (!_moduleAccessFor) {
+    const mod = await import("./moduleAccess.js");
+    _moduleAccessFor = mod.moduleAccessFor;
+  }
+  return _moduleAccessFor(role);
 }
 
 /**
@@ -423,7 +600,8 @@ export function requirePermission(collection: string, action: Action) {
     if (!req.user) {
       return reply.status(401).send({ ok: false, error: { message: "Unauthorized", code: "UNAUTHORIZED" } });
     }
-    if (!can(req.user.role, collection, action)) {
+    const access = await resolveModuleAccess(req.user.role);
+    if (!can(req.user.role, collection, action, access)) {
       return reply
         .status(403)
         .send(fail(`Peran ${req.user.role} tidak boleh ${actionLabel} ${collection}`, "FORBIDDEN"));
@@ -449,7 +627,8 @@ export function requireManageUsers() {
     if (!req.user) {
       return reply.status(401).send({ ok: false, error: { message: "Unauthorized", code: "UNAUTHORIZED" } });
     }
-    if (!can(req.user.role, "users", "w")) {
+    const access = await resolveModuleAccess(req.user.role);
+    if (!can(req.user.role, "users", "w", access)) {
       return reply.status(403).send(fail(`Peran ${req.user.role} tidak dapat mengelola pengguna`, "FORBIDDEN"));
     }
   };
