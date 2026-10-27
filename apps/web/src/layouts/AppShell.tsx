@@ -544,17 +544,6 @@ export default function AppShell() {
         })}
       </nav>
 
-      {/* Mini Widget Galangan (seperti Recent trips di referensi) */}
-      {!mini && (
-        <div className="mx-3 mb-3 overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500/10 via-red-500/5 to-transparent border border-rose-100/80 p-3.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">ISMS Galangan</span>
-            <span className="flex h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          </div>
-          <p className="mt-1 text-xs font-bold text-slate-800">Operasional Samarinda</p>
-          <p className="text-[11px] text-slate-400">Tugboat & Barge Fleet Live</p>
-        </div>
-      )}
 
       <div className="border-t border-slate-100 p-3 bg-slate-50/60">
         <div className={`flex items-center gap-3 px-2 py-1.5 ${mini ? "justify-center" : ""}`}>
@@ -661,19 +650,6 @@ export default function AppShell() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Live Operational Status Pill - Enterprise Maritime */}
-            <div
-              className="hidden items-center gap-2 rounded-full border border-steel-200/80 bg-white/80 px-2.5 py-1 text-xs shadow-xs backdrop-blur-sm sm:flex"
-              title={S.shYardStatusTooltip}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="text-[11px] font-medium text-steel-600">
-                <span className="font-semibold text-navy-800">Samarinda Yard</span> · {locale === "en" ? "Live" : "Aktif"}
-              </span>
-            </div>
 
             {moduleSyncing && (
               <span className="hidden items-center gap-1.5 rounded-full bg-ocean-50 px-2.5 py-1 text-[11px] font-semibold text-ocean-600 sm:inline-flex" role="status" aria-live="polite">
