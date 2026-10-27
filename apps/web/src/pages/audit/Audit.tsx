@@ -278,7 +278,7 @@ export default function Audit() {
         )}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
-            <thead>
+            <thead className="bg-surface sticky top-0 z-10">
               <tr className="border-b border-steel-100 text-left text-xs uppercase tracking-wide text-steel-400">
                 <SortTh label={S.auSortTime} sortKey="waktu" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                 <SortTh label={S.auSortActor} sortKey="aktor" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />

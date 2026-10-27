@@ -1127,7 +1127,7 @@ const exportPdfReport = async () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface">
+                  <thead className="bg-surface sticky top-0 z-10">
                     <tr><SortTh label={S.sortCategory} sortKey="kategori" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortIncidents} sortKey="kejadian" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><SortTh label={S.sortImpact} sortKey="dampak" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} /><th className="th">{S.sortTrend}</th><th className="th">{locale === "en" ? "Open NCR" : "NCR Terbuka"}</th></tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">

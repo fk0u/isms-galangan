@@ -190,7 +190,7 @@ export default function ChecklistTab() {
       {view === "projects" && !pid && (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead><tr>{[T.colProject, T.colInspections, T.colLast, T.colAvg, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
+            <thead className="bg-surface sticky top-0 z-10"><tr>{[T.colProject, T.colInspections, T.colLast, T.colAvg, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-steel-100">
               {projects.map((p) => {
                 const rs = respOf(String(p.id));
@@ -216,7 +216,7 @@ export default function ChecklistTab() {
           <p className="mb-2 text-sm font-semibold text-navy-900">{pid} · {String((data.projects ?? []).find((p) => String(p.id) === pid)?.vessel ?? "")}</p>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr>{[T.colTask, T.colAssignee, T.colProgress, T.colLast, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
+              <thead className="bg-surface sticky top-0 z-10"><tr>{[T.colTask, T.colAssignee, T.colProgress, T.colLast, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-steel-100">
                 {wbsFor(pid).map((w) => {
                   const rs = respOf(pid, String(w.task));
@@ -263,7 +263,7 @@ export default function ChecklistTab() {
       {view === "workers" && (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead><tr>{[T.colWorker, T.colInspections, T.colLast, T.colAvg, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
+            <thead className="bg-surface sticky top-0 z-10"><tr>{[T.colWorker, T.colInspections, T.colLast, T.colAvg, ""].map((h, i) => <th key={i} className="th">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-steel-100">
               {workers.map((e) => {
                 const rs = hseOf(String(e.id));

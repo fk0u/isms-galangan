@@ -452,7 +452,7 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-surface">
+              <thead className="bg-surface sticky top-0 z-10">
                 <tr>
                   <SortTh label={S.colNo} sortKey="id" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                   <SortTh label={S.colItem} sortKey="name" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />

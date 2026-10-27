@@ -86,7 +86,7 @@ export default function ServiceApprovalsTab() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
-            <thead>
+            <thead className="bg-surface sticky top-0 z-10">
               <tr>
                 {[T.colNo, T.colDesc, T.colProject, T.colTech, T.colCost, T.colStatus, T.colAction].map((h) => <th key={h} className="th">{h}</th>)}
               </tr>

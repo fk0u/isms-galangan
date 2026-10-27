@@ -2582,7 +2582,7 @@ const sparkVendors = useMemo(() => {
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-steel-500">{locale === "en" ? "Lines" : "Rincian baris"}</p>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface"><tr><th className="th">{S.item}</th><th className="th">{S.qty}</th><th className="th">{S.satuan}</th><th className="th">{S.harga}</th><th className="th">{S.nilai}</th></tr></thead>
+                  <thead className="bg-surface sticky top-0 z-10"><tr><th className="th">{S.item}</th><th className="th">{S.qty}</th><th className="th">{S.satuan}</th><th className="th">{S.harga}</th><th className="th">{S.nilai}</th></tr></thead>
                   <tbody className="divide-y divide-steel-100">
                     {poLines(poDetail).map((l, i) => (
                       <tr key={i}>
@@ -2951,7 +2951,7 @@ const sparkVendors = useMemo(() => {
             <h4 className="text-xs font-semibold uppercase tracking-wider text-steel-700 mb-2">{S.daftarItemPo}</h4>
             <div className="overflow-x-auto rounded-lg border border-steel-200">
               <table className="w-full text-left text-xs">
-                <thead className="bg-steel-50 text-steel-600 font-semibold border-b border-steel-200">
+                <thead className="bg-steel-50 text-steel-600 font-semibold border-b border-steel-200 sticky top-0 z-10">
                   <tr>
                     <th className="px-3 py-2">{S.kolomItem}</th>
                     <th className="px-3 py-2 text-right">{S.kolomDipesan}</th>

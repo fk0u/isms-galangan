@@ -153,8 +153,11 @@ export default function ProjectAddModal({
     if (scopeItems.length === 0) { toast(S.prjToastScopeMin, "info"); return; }
     if (!form.start || !form.end) { toast(S.prjToastDatesReq, "info"); return; }
     if (form.end < form.start) { toast(S.prjToastDateOrder, "info"); return; }
-    const budget = totalScopePrice > 0 ? totalScopePrice : parseRupiah(form.budget);
-    if (!Number.isFinite(budget) || budget <= 0) { toast(S.prjToastBudget, "info"); return; }
+    const budget = totalScopePrice;
+    if (!Number.isFinite(budget) || budget <= 0) {
+      toast(locale === "en" ? "Please specify prices in the scope of work to calculate the project value." : "Mohon isi harga pada ruang lingkup pekerjaan untuk menentukan nilai proyek.", "info");
+      return;
+    }
     if (!form.manager) { toast(S.prjToastPm, "info"); return; }
     if (form.type === "New Build" && projects.some((p) => String(p.vessel ?? "").trim().toLowerCase() === form.vessel.trim().toLowerCase() && String(p.type) === "New Build")) {
       toast(S.prjToastDup, "info");
@@ -315,13 +318,13 @@ export default function ProjectAddModal({
               </FormGrid>
             </div>
           )}
-          <Field label={S.prjBudget} hint={totalScopePrice > 0 ? (S.prjScopePriceAutoTotal || "Total otomatis dihitung dari harga ruang lingkup") : undefined}>
+          <Field label={S.prjBudget} hint={locale === "en" ? "Project value is automatically calculated from the scope items below" : "Nilai proyek otomatis dihitung dari rincian harga ruang lingkup pekerjaan di bawah"} required>
             <MoneyInput
-              className={`input ${totalScopePrice > 0 ? "bg-steel-50/80 font-semibold text-navy-900 cursor-not-allowed" : ""}`}
-              value={totalScopePrice > 0 ? String(totalScopePrice) : form.budget}
-              onChange={(v) => setF("budget", v)}
-              placeholder={S.prjBudgetPh}
-              disabled={totalScopePrice > 0}
+              className="input bg-steel-50/80 font-semibold text-navy-900 cursor-not-allowed"
+              value={String(totalScopePrice)}
+              onChange={() => {}}
+              placeholder="Rp 0"
+              disabled
             />
           </Field>
           <div className="rounded-xl border border-steel-200 p-3">

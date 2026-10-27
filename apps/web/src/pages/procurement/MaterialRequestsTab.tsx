@@ -177,7 +177,7 @@ export default function MaterialRequestsTab() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px]">
-            <thead>
+            <thead className="bg-surface sticky top-0 z-10">
               <tr>
                 {[T.colNo, T.colId, T.colProject, T.colItem, T.colRequested, T.colIssued, T.colShortage, T.colPr, T.colStatus, T.colAction].map((h) => (
                   <th key={h} className="th">{h}</th>

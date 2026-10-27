@@ -1134,7 +1134,7 @@ export default function Drydock() {
         <div className="overflow-x-auto p-4 pt-0">
           {waiting.length === 0 ? <p className="text-sm text-steel-400">{S.waitEmpty}</p> : (
             <table className="w-full text-sm">
-              <thead><tr><th className="th">#</th><th className="th">{S.waitColProject}</th><th className="th">{S.waitColVessel}</th><th className="th">{S.waitColSince}</th><th className="th">{S.waitColEta}</th><th className="th" /></tr></thead>
+              <thead className="bg-surface sticky top-0 z-10"><tr><th className="th">#</th><th className="th">{S.waitColProject}</th><th className="th">{S.waitColVessel}</th><th className="th">{S.waitColSince}</th><th className="th">{S.waitColEta}</th><th className="th" /></tr></thead>
               <tbody className="divide-y divide-steel-100">
                 {waiting.map((w, i) => (
                   <tr key={w.project.id}>

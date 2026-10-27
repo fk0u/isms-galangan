@@ -1307,7 +1307,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               {/* F3-I-02: tabel WO rinci (No WO · Subkon · Kapal · Proyek · Pekerjaan · Nilai · Progres · Status). */}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[980px]">
-                  <thead>
+                  <thead className="bg-surface sticky top-0 z-10">
                     <tr>{[T.colWo, T.colSub, T.colVessel, T.colProject, T.colWork, T.colValue, T.colProgress, T.colStatus, T.colAction].map((h) => <th key={h} className="th">{h}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">

@@ -1535,7 +1535,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invLines, invForm.skdt, invForm.dpApplied, invForm.retentionPct, invForm.billingType, isTMForm, data.settings]);
-  const retentionAmtPreview = sbPreview.retentionAmt;
 
   const approveThreshold = getSetting(data, "APPROVE_INVOICE", 5000000);
   const needsDirector = (inv: StoreItem): boolean =>
@@ -2087,8 +2086,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       }
     }
     const total = validLines.reduce((s, l) => s + lineAmount(l, isTMForm), 0);
-    const pct = isAdvanceBilling(invForm.billingType) || invForm.billingType === "T&M" ? 0 : num(invForm.retentionPct);
-    const retentionAmt = Math.round(total * (pct / 100));
     const jasaTotal = validLines.filter((l) => (l.kategori || "Jasa") === "Jasa").reduce((s, l) => s + lineAmount(l, isTMForm), 0);
     const matTotal = validLines.filter((l) => l.kategori === "Material").reduce((s, l) => s + lineAmount(l, isTMForm), 0);
     // Tarif DISIMPAN per invoice - laporan pajak memakai tarif historis ini,
@@ -2102,7 +2099,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       pphRate: pphRateUsed,
       skdt: invForm.skdt,
       dpApplied: num(invForm.dpApplied),
-      retentionPct: pct,
+      retentionPct: 0,
     });
     // H-03: recompute PPN/PPh vs stored - tolak bila tidak konsisten.
     const verify = sbInvoiceMath({
@@ -2112,9 +2109,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       pphRate: pphRateUsed,
       skdt: invForm.skdt,
       dpApplied: num(invForm.dpApplied),
-      retentionPct: pct,
+      retentionPct: 0,
     });
-    if (verify.dpp !== sb.dpp || verify.ppn !== sb.ppn || verify.pph !== sb.pph || verify.grand !== sb.grand || verify.retentionAmt !== retentionAmt) {
+    if (verify.dpp !== sb.dpp || verify.ppn !== sb.ppn || verify.pph !== sb.pph || verify.grand !== sb.grand) {
       toast(S.taxMismatch, "info");
       return;
     }
@@ -2150,13 +2147,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       paymentTerm: invForm.milestoneRef.trim() || invForm.paymentTerm,
       billingType: invForm.billingType,
       milestoneRef: invForm.milestoneRef.trim(),
-      serviceRef: invForm.serviceRef.trim(),
+      serviceRef: "",
       ...(invForm.clientPO ? { clientPO: invForm.clientPO } : {}),
-      ...(invForm.dpRef.trim() ? { dpRef: invForm.dpRef.trim() } : {}),
+      dpRef: "",
       lines: storedLines,
-      retentionPct: pct,
-      retentionAmt,
-      retentionStatus: retentionAmt > 0 ? "Ditahan" : "-",
+      retentionPct: 0,
+      retentionAmt: 0,
+      retentionStatus: "-",
       jasaTotal: sb.jasa,
       matTotal: sb.material,
       dpp: sb.dpp,
@@ -2177,7 +2174,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     }
     toast(S.invCreated.replace("{a}", created.id));
     setShowInv(false);
-    setInvForm({ project: "", billingType: "DP 1", milestoneRef: "", serviceRef: "", clientPO: "", retentionPct: "5", due: "", paymentTerm: "Termin 1", nsfp: "", noFaktur: "", kodePembantu: "", skdt: false, dpApplied: "", dpRef: "" });
+    setInvForm({ project: "", billingType: "DP 1", milestoneRef: "", serviceRef: "", clientPO: "", retentionPct: "0", due: "", paymentTerm: "Termin 1", nsfp: "", noFaktur: "", kodePembantu: "", skdt: false, dpApplied: "", dpRef: "" });
     setInvLines([emptyLine()]);
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
   };
@@ -3186,16 +3183,73 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           )}
 
           {tab === "Piutang (AR)" && (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-              <div className="lg:col-span-2">
+            <div className="space-y-5">
+              <div>
                 <CardHeader title={S.invListTitle} subtitle={S.arSub} />
                 <div className="px-5 pb-2">
                   <SearchBox value={arQ} onChange={setArQ} placeholder={S.cardSearchPh} ariaLabel={locale === "en" ? "Search receivables" : "Cari piutang"} />
                 </div>
-                <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
+                <div className="mb-4 flex flex-wrap items-center gap-2 px-1">
                   <HistFilterBar value={invHist} onChange={setInvHist} idPrefix="ar" />
                   <span className="text-xs text-steel-400">{S.arCountFilt.replace("{n}", String(sortedAr.length))}</span>
                 </div>
+
+                {/* Card Aging Piutang dipindahkan ke bawah button filter periode */}
+                <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-12">
+                  <div className="rounded-xl border border-steel-200 bg-white p-4 shadow-sm lg:col-span-5">
+                    <CardHeader title={S.agingDonutTitle} subtitle={S.agingDonutSub} />
+                    <div className="flex items-center gap-4 p-1">
+                      <Donut
+                        data={agingDonut}
+                        colors={agingDonut.map((a) => a.color)}
+                        size={130}
+                        thickness={16}
+                        centerValue={String(Math.round(agingDonutTotal * 10) / 10)}
+                        centerLabel="M"
+                      />
+                      <div className="flex-1 space-y-1.5 text-xs">
+                        {agingReal.map((b, i) => (
+                          <div key={b.name} className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: AR_DONUT_COLORS[i % AR_DONUT_COLORS.length] }} />
+                            <span className="text-steel-600 truncate">{b.name} ({fmtJumlah(b.count)})</span>
+                            <span className="ml-auto font-semibold text-navy-900">{fmtMiliar(b.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Card className="p-4 lg:col-span-7">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <CardHeader title={S.agingTitle} subtitle={S.agingSub} />
+                      <p className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1 text-xs text-amber-700">
+                        <Receipt className="h-3.5 w-3.5 shrink-0" /> {S.lateBanner.replace("{n}", String(lateCount))}
+                        <button className="font-semibold underline ml-1" onClick={() => { if (firstLate) { setPayTarget(firstLate); setProof(emptyProof()); setProofImg(""); } }}>{S.markPaidLink}</button>
+                      </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-surface sticky top-0 z-10">
+                          <tr>
+                            <SortTh label={S.colBucket} sortKey="name" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                            <SortTh label={S.colJumlah} sortKey="count" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                            <SortTh label={S.colTotal} sortKey="total" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-steel-100">
+                          {sortRows(agingReal, arSort, (b, k) => k === "count" ? Number(b.count) : k === "total" ? Number(b.total) : String(b.name)).map((b) => (
+                            <tr key={b.name} className="hover:bg-surface">
+                              <td className="td font-medium text-navy-900">{b.name}</td>
+                              <td className="td text-steel-600">{S.countInvoice.replace("{n}", fmtJumlah(b.count))}</td>
+                              <td className="td font-semibold text-navy-900">{fmtRupiah(b.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </div>
+
                 <div className="overflow-x-auto rounded-xl border border-steel-200 bg-white shadow-sm">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-steel-50/80 text-steel-700 font-semibold border-b border-steel-200 sticky top-0 z-10">
@@ -3321,60 +3375,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </div>
                 {sortedAr.length === 0 && <EmptyState title={S.emptyInvTitle} subtitle={S.emptyInvSub} />}
                 {arPager.bar}
-              </div>
-              <div className="space-y-5">
-                <div>
-                  <CardHeader title={S.agingDonutTitle} subtitle={S.agingDonutSub} />
-                  <div className="flex items-center gap-4 p-1">
-                    <Donut
-                      data={agingDonut}
-                      colors={agingDonut.map((a) => a.color)}
-                      size={140}
-                      thickness={18}
-                      centerValue={String(Math.round(agingDonutTotal * 10) / 10)}
-                      centerLabel="M"
-                    />
-                    <div className="flex-1 space-y-2">
-                      {agingReal.map((b, i) => (
-                        <div key={b.name} className="flex items-center gap-2 text-sm">
-                          <span className="h-3 w-3 rounded-sm" style={{ background: AR_DONUT_COLORS[i % AR_DONUT_COLORS.length] }} />
-                          <span className="text-steel-600">{b.name} ({fmtJumlah(b.count)})</span>
-                          <span className="ml-auto font-semibold text-navy-900">{fmtMiliar(b.total)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Aging Piutang di sebelah kanan (notulen 26 Okt) */}
-                <Card className="p-4">
-                  <CardHeader title={S.agingTitle} subtitle={S.agingSub} />
-                  <div className="overflow-x-auto px-4 pb-4">
-                    <table className="w-full text-xs">
-                      <thead className="bg-surface sticky top-0 z-10">
-                        <tr>
-                          <SortTh label={S.colBucket} sortKey="name" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colJumlah} sortKey="count" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.colTotal} sortKey="total" sort={arSort} onSort={(k) => setArSort((s) => toggleSort(s, k))} />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-steel-100">
-                        {sortRows(agingReal, arSort, (b, k) => k === "count" ? Number(b.count) : k === "total" ? Number(b.total) : String(b.name)).map((b) => (
-                          <tr key={b.name} className="hover:bg-surface">
-                            <td className="td font-medium text-navy-900">{b.name}</td>
-                            <td className="td text-steel-600">{S.countInvoice.replace("{n}", fmtJumlah(b.count))}</td>
-                            <td className="td font-semibold text-navy-900">{fmtRupiah(b.total)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-
-                <p className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                  <Receipt className="h-3.5 w-3.5" /> {S.lateBanner.replace("{n}", String(lateCount))}
-                  <button className="font-semibold underline" onClick={() => { if (firstLate) { setPayTarget(firstLate); setProof(emptyProof()); setProofImg(""); } }}>{S.markPaidLink}</button>
-                </p>
               </div>
             </div>
           )}
@@ -3863,7 +3863,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       <SortTh label={S.colInvoice} sortKey="id" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colTipe} sortKey="tipe" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colLines} sortKey="lines" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
-                      <SortTh label={S.colRetensi} sortKey="retensi" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colEfaktur} sortKey="efaktur" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colNilai} sortKey="amount" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
                       <SortTh label={S.colStatus} sortKey="status" sort={invSort} onSort={(k) => setInvSort((s) => toggleSort(s, k))} />
@@ -3891,13 +3890,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         </td>
                         <td className="td text-xs text-steel-600">{String(inv.billingType ?? inv.paymentTerm ?? "-")}{inv.serviceRef ? ` · ${inv.serviceRef}` : ""}</td>
                         <td className="td text-xs text-steel-600">{S.linesCount.replace("{n}", String(Array.isArray(inv.lines) ? inv.lines.length : 1))}</td>
-                        <td className="td text-xs">
-                          {num(inv.retentionAmt) > 0 ? (
-                            <span className="flex items-center gap-2">
-                              {fmtRupiah(num(inv.retentionAmt))} <StatusBadge status={String(inv.retentionStatus ?? "Ditahan")} />
-                            </span>
-                          ) : <span className="text-steel-400">-</span>}
-                        </td>
                         <td className="td font-mono text-[11px] text-steel-600">{inv.nsfp || inv.noFaktur ? `${inv.nsfp || "-"} / ${inv.noFaktur || "-"}` : "-"}</td>
                         <td className="td font-semibold">{fmtRupiah(invNeto(inv))}
                           {needsDirector(inv) && <span className="ml-2 inline-block"><Badge tone="amber">{S.needDirector}</Badge></span>}
@@ -3952,10 +3944,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td font-bold" colSpan={3}>
                           {S.colTotal} ({sortedInv.length} invoice)
                         </td>
-                        <td className="td text-steel-700">
-                          {fmtRupiah(sortedInv.reduce((s, inv) => s + num(inv.retentionAmt), 0))}
-                        </td>
-                        <td className="td"></td>
+                        <td className="td font-mono text-steel-500">-</td>
                         <td className="td font-bold text-navy-900">
                           {fmtRupiah(sortedInv.reduce((s, inv) => s + invNeto(inv), 0))}
                         </td>
@@ -5148,38 +5137,23 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <input className="input font-mono" value={invForm.noFaktur} onChange={(e) => setInv("noFaktur", e.target.value)} placeholder={S.noFakturShort} />
             </Field>
           </FormGrid>
-          <FormGrid>
-            <Field label={S.fDpAmort} hint={S.dpAmortHint}>
-              <NumInput min={0} className="input" value={invForm.dpApplied} onChange={(e) => setInv("dpApplied", e.target.value)} placeholder="0" />
-            </Field>
-            <Field label={S.fDpRef} hint={S.dpRefHint}>
-              <input className="input font-mono" value={invForm.dpRef} onChange={(e) => setInv("dpRef", e.target.value)} placeholder={S.dpRefPh} />
-            </Field>
-          </FormGrid>
+          <Field label={S.fDpAmort} hint={S.dpAmortHint}>
+            <NumInput min={0} className="input" value={invForm.dpApplied} onChange={(e) => setInv("dpApplied", e.target.value)} placeholder="0" />
+          </Field>
           <label className="flex items-center gap-2 text-sm text-steel-600">
             <input type="checkbox" checked={invForm.skdt} onChange={(e) => setInvForm((f) => ({ ...f, skdt: e.target.checked }))} />
             {S.skdtCheck}
           </label>
-          {isTMForm && (
-            <Field label={S.fServiceRef} hint={S.serviceRefHint}>
-              <input className="input font-mono" value={invForm.serviceRef} onChange={(e) => setInv("serviceRef", e.target.value)} placeholder="SRV-002" />
-            </Field>
-          )}
           {!isTMForm && !isAdvanceBilling(invForm.billingType) && (
-            <FormGrid>
-              <Field label={S.fRetentionPct}>
-                <NumInput min={0} max={100} className="input" value={invForm.retentionPct} onChange={(e) => setInv("retentionPct", e.target.value)} />
-              </Field>
-              <Field label={S.fTermLabel} required>
-                <select className="input" value={invForm.paymentTerm} onChange={(e) => setInv("paymentTerm", e.target.value)}>
-                  {["Termin 1", "Termin 2", "Termin 3", "Milestone 1", "Milestone 2", "Milestone 3", "Progress", "Final"].map((t) => <option key={t}>{t}</option>)}
-                </select>
-              </Field>
-            </FormGrid>
+            <Field label={S.fTermLabel} required>
+              <select className="input" value={invForm.paymentTerm} onChange={(e) => setInv("paymentTerm", e.target.value)}>
+                {["Termin 1", "Termin 2", "Termin 3", "Milestone 1", "Milestone 2", "Milestone 3", "Progress", "Final"].map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </Field>
           )}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <p className="label">{S.linesTotal.replace("{a}", fmtRupiah(invTotal))}{retentionAmtPreview > 0 ? S.retentionSuffix.replace("{a}", fmtRupiah(retentionAmtPreview)) : ""}</p>              <div className="flex gap-2">
+              <p className="label">{S.linesTotal.replace("{a}", fmtRupiah(invTotal))}</p>              <div className="flex gap-2">
                 {isTMForm && (
                   <AsyncButton className="btn-secondary px-2 py-1 text-xs" onAction={pullTimesheetLines}>{S.pullTimesheet}</AsyncButton>
                 )}
@@ -5819,7 +5793,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.detLines.replace("{n}", String(lines.length))}</p>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-surface"><tr><th className="th">{S.colUraian}</th><th className="th">{S.detQty}</th><th className="th">{S.detPrice}</th><th className="th">{S.detAmount}</th></tr></thead>
+                    <thead className="bg-surface sticky top-0 z-10"><tr><th className="th">{S.colUraian}</th><th className="th">{S.detQty}</th><th className="th">{S.detPrice}</th><th className="th">{S.detAmount}</th></tr></thead>
                     <tbody className="divide-y divide-steel-100">
                       {lines.map((l: unknown, i: number) => {
                         const r = l as Record<string, unknown>;
@@ -5886,7 +5860,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   </div>
                   <div className="overflow-x-auto rounded-lg border border-steel-200">
                     <table className="w-full text-xs">
-                      <thead className="bg-surface border-b border-steel-200">
+                      <thead className="bg-surface border-b border-steel-200 sticky top-0 z-10">
                         <tr>
                           <th className="th">Termin / Tahap</th>
                           <th className="th">Tanggal Bayar</th>
@@ -5916,7 +5890,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   </div>
                   <div className="overflow-x-auto rounded-lg border border-steel-200">
                     <table className="w-full text-xs">
-                      <thead className="bg-surface border-b border-steel-200">
+                      <thead className="bg-surface border-b border-steel-200 sticky top-0 z-10">
                         <tr>
                           <th className="th">Pos Biaya / Subkon / Vendor</th>
                           <th className="th text-right">Nominal Biaya</th>

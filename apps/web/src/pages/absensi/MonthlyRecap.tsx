@@ -85,9 +85,9 @@ export default function MonthlyRecap() {
       {!hasData ? <EmptyState title={T.empty} /> : (
         <div className="overflow-x-auto rounded-xl border border-steel-200">
           <table className="w-full border-collapse text-xs">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr className="bg-surface">
-                <th className="sticky left-0 z-10 min-w-40 bg-surface px-3 py-2 text-left font-medium text-steel-600">{T.colEmp}</th>
+                <th className="sticky left-0 z-30 min-w-40 bg-surface px-3 py-2 text-left font-medium text-steel-600">{T.colEmp}</th>
                 {dayList.map((d) => <th key={d} className="w-8 px-0.5 py-2 text-center font-medium tabular-nums text-steel-500">{Number(d.slice(8))}</th>)}
                 {[T.colPresent, T.colAbsent, T.colHours, T.colOt].map((h) => <th key={h} className="px-2 py-2 text-right font-medium text-steel-600">{h}</th>)}
               </tr>

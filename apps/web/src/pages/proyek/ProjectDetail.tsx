@@ -1118,23 +1118,25 @@ const createWarranty = async (wbsTask?: string) => {
      Kolom: Jenis pekerjaan | Lokasi | Deskripsi. Baris judul dilewati otomatis;
      baris tanpa jenis pekerjaan dilaporkan nomornya, bukan disimpan setengah. */
   const downloadScopeTemplate = (): void => {
-    void exportExcel([[S.detScopeColService, S.detScopeColLoc, S.detScopeColDesc], [S.detScopeTplEx1, S.detScopeTplEx2, S.detScopeTplEx3]], "template-ruang-lingkup", "Ruang Lingkup");
+    const priceCol = locale === "en" ? "Price (IDR)" : "Harga (Rp)";
+    void exportExcel([[S.detScopeColService, priceCol, S.detScopeColDesc], [S.detScopeTplEx1, "15000000", S.detScopeTplEx3]], "template-ruang-lingkup", "Ruang Lingkup");
   };
   const importScope = async (file: File): Promise<void> => {
     try {
       const rows = await readSheetRows(file);
       const header = rows[0] && /jenis|pekerjaan|service|lingkup|scope|work/i.test(rows[0][0] ?? "") ? 1 : 0;
-      const key = (service: string, lokasi = ""): string => `${service.trim().toLowerCase()}|${lokasi.trim().toLowerCase()}`;
-      const seen = new Set(scopeList(project.scope).map((x) => key(x.service, x.lokasi)));
-      const items: { service: string; lokasi?: string; deskripsi?: string }[] = [];
+      const key = (service: string): string => service.trim().toLowerCase();
+      const seen = new Set(scopeList(project.scope).map((x) => key(x.service)));
+      const items: ScopeItem[] = [];
       const preview: ImportPreviewRow[] = rows.slice(header).map((row, i) => {
         const cells = [row[0] ?? "", row[1] ?? "", row[2] ?? ""].map((c) => c.trim());
-        const [service, lokasi, deskripsi] = cells as [string, string, string];
+        const [service, hargaRaw, deskripsi] = cells as [string, string, string];
         const line = i + header + 1;
         if (!service) return { line, cells, error: S.detScopeImpNoService };
-        if (seen.has(key(service, lokasi))) return { line, cells, error: S.detScopeImpDup };
-        seen.add(key(service, lokasi));
-        items.push({ service, ...(lokasi ? { lokasi } : {}), ...(deskripsi ? { deskripsi } : {}) });
+        if (seen.has(key(service))) return { line, cells, error: S.detScopeImpDup };
+        seen.add(key(service));
+        const h = parseRupiah(hargaRaw);
+        items.push({ service, ...(Number.isFinite(h) && h > 0 ? { harga: h } : {}), ...(deskripsi ? { deskripsi } : {}) });
         return { line, cells };
       });
       if (preview.length === 0) { toast(S.detScopeImportEmpty, "info"); return; }
@@ -2130,7 +2132,7 @@ const createWarranty = async (wbsTask?: string) => {
                     </div>
                     <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-surface">
+                      <thead className="bg-surface sticky top-0 z-10">
                         <tr><SortTh label={S.colStageName} sortKey="task" sort={sort2} onSort={(k) => setSort2((s) => toggleSort(s, k))} /><SortTh label={S.detPlanBase} sortKey="planned" sort={sort2} onSort={(k) => setSort2((s) => toggleSort(s, k))} /><SortTh label={S.detActualCol} sortKey="actual" sort={sort2} onSort={(k) => setSort2((s) => toggleSort(s, k))} /><SortTh label={S.detDevCol} sortKey="dev" sort={sort2} onSort={(k) => setSort2((s) => toggleSort(s, k))} /></tr>
                       </thead>
                       <tbody className="divide-y divide-steel-100">
@@ -2187,7 +2189,7 @@ const createWarranty = async (wbsTask?: string) => {
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-surface"><tr>
+                      <thead className="bg-surface sticky top-0 z-10"><tr>
                         <th className="th">{S.eqStageCol}</th><th className="th">WO</th><th className="th">{S.subBudgetColSub}</th>
                         <th className="th text-right">{S.subBudgetColValue}</th><th className="th text-right">{S.subBudgetColPaid}</th>
                       </tr></thead>
@@ -2339,7 +2341,7 @@ const createWarranty = async (wbsTask?: string) => {
                   {equipCost.bookingRows.length > 0 && (
                     <div className="mt-4 overflow-x-auto">
                       <table className="w-full">
-                        <thead className="bg-surface">
+                        <thead className="bg-surface sticky top-0 z-10">
                           <tr>
                             <SortTh label={locale === "en" ? "Booking" : "Booking"} sortKey="id" sort={sort4} onSort={(k) => setSort4((s) => toggleSort(s, k))} />
                             <SortTh label={locale === "en" ? "Equipment" : "Equipment"} sortKey="eq" sort={sort4} onSort={(k) => setSort4((s) => toggleSort(s, k))} />
@@ -2657,7 +2659,7 @@ const createWarranty = async (wbsTask?: string) => {
                           <SearchBox value={cardBkQ} onChange={setCardBkQ} className="mb-2 max-w-xs" placeholder={locale === "en" ? "Search bookings..." : "Cari booking..."} ariaLabel={locale === "en" ? "Search bookings" : "Cari booking"} />
                           <div className="overflow-x-auto">
                             <table className="w-full">
-                            <thead className="bg-surface">
+                            <thead className="bg-surface sticky top-0 z-10">
                               <tr>
                                 <th className="th">{S.eqStageCol}</th>
                                 <th className="th">Booking</th>
@@ -2701,7 +2703,7 @@ const createWarranty = async (wbsTask?: string) => {
                           <SearchBox value={cardMaintQ} onChange={setCardMaintQ} className="mb-2 max-w-xs" placeholder={locale === "en" ? "Search maintenance..." : "Cari maintenance..."} ariaLabel={locale === "en" ? "Search maintenance" : "Cari maintenance"} />
                           <div className="overflow-x-auto">
                             <table className="w-full">
-                            <thead className="bg-surface">
+                            <thead className="bg-surface sticky top-0 z-10">
                               <tr>
                                 <th className="th">{locale === "en" ? "Maintenance" : "Maintenance"}</th>
                                 <th className="th">{locale === "en" ? "Equipment" : "Equipment"}</th>
@@ -2798,7 +2800,7 @@ const createWarranty = async (wbsTask?: string) => {
                 <p className="mb-2 text-xs text-steel-400">{S.detRiskAutoNote}</p>
                 <div className="mb-3 overflow-x-auto">
                   <table className="w-full text-center text-xs">
-                    <thead>
+                    <thead className="bg-surface sticky top-0 z-10">
                       <tr>
                         <SortTh label={S.detMatrixCorner} sortKey="level" sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} />
                         {RISK_LEVEL.map((l) => <SortTh key={l} label={l} sortKey={l} sort={sort3} onSort={(k) => setSort3((s) => toggleSort(s, k))} />)}
@@ -3096,7 +3098,7 @@ const createWarranty = async (wbsTask?: string) => {
               <SearchBox value={breakdownMaintQ} onChange={setBreakdownMaintQ} className="mb-2 max-w-xs" placeholder={locale === "en" ? "Search maintenance..." : "Cari maintenance..."} ariaLabel={locale === "en" ? "Search maintenance" : "Cari maintenance"} />
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface">
+                  <thead className="bg-surface sticky top-0 z-10">
                     <tr>
                       <th className="th">{locale === "en" ? "ID" : "ID"}</th>
                       <th className="th">{locale === "en" ? "Equipment" : "Equipment"}</th>
@@ -3499,12 +3501,6 @@ const createWarranty = async (wbsTask?: string) => {
               <option value="Selesai">Selesai</option>
             </select>
           </Field>
-          <Field label={S.detPred} hint={S.detPredHint}>
-            <select className="input" value={wbsUpdateForm.predecessor} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, predecessor: e.target.value })}>
-              <option value="">{S.detNoPred}</option>
-              {wbs.filter((w) => w.task !== wbsTaskUpdate).map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
-            </select>
-          </Field>
         </div>
       </Modal>
 
@@ -3514,7 +3510,7 @@ const createWarranty = async (wbsTask?: string) => {
         open={scopePreview !== null}
         title={S.detScopeImpPreviewTitle}
         fileName={scopePreview?.file ?? ""}
-        columns={[S.detScopeColService, S.detScopeColLoc, S.detScopeColDesc]}
+        columns={[S.detScopeColService, locale === "en" ? "Price (IDR)" : "Harga (Rp)", S.detScopeColDesc]}
         rows={scopePreview?.rows ?? []}
         onCancel={() => setScopePreview(null)}
         onConfirm={confirmScopeImport}
