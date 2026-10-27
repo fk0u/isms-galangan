@@ -23,6 +23,7 @@ import {
   Camera,
   History,
   Trash2,
+  Check,
 } from "lucide-react";
 import {
   AreaChart,
@@ -3082,7 +3083,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                       }}
                                     />
                                   ) : (
-                                    <span className="text-emerald-500 font-bold text-xs">✓</span>
+                                    <Check className="h-4 w-4 text-emerald-600 inline" />
                                   )}
                                 </td>
                                 <td className="td">
@@ -3389,7 +3390,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                       }}
                                     />
                                   ) : (
-                                    <span className="text-emerald-500 font-bold text-xs">✓</span>
+                                    <Check className="h-4 w-4 text-emerald-600 inline" />
                                   )}
                                 </td>
                                 <td className="td">

@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from "react";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { ApiError, apiFetch, getJwt, isBackendConfigured } from "../../services/http";
 import { useParams, Link, useSearchParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass, Upload, Boxes } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Plus, Trash2, FileDown, Eye, Pencil, UserPlus, History, FileText, GitBranch, Compass, Upload, Boxes, Check, CheckCircle2, Clock, Camera, AlertTriangle } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -1657,7 +1657,7 @@ const createWarranty = async (wbsTask?: string) => {
                           {/* Item Selesai */}
                           <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
                             <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60 text-xs font-semibold text-emerald-800">
-                              <span>✓ {locale === "en" ? "Completed Items" : "Item Selesai"}</span>
+                              <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" />{locale === "en" ? "Completed Items" : "Item Selesai"}</span>
                               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{doneItems.length}</span>
                             </div>
                             <ul className="mt-2 space-y-1.5 text-xs text-steel-700">
@@ -1667,7 +1667,7 @@ const createWarranty = async (wbsTask?: string) => {
                                 doneItems.map((it) => (
                                   <li key={it.id} className="flex items-center justify-between gap-1.5">
                                     <div className="flex items-start gap-1.5 min-w-0">
-                                      <span className="text-emerald-600 font-bold shrink-0">✔</span>
+                                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                                       <span className="font-medium text-navy-900 truncate">{locale === "en" ? it.nameEn : it.name}</span>
                                     </div>
 
@@ -1680,12 +1680,12 @@ const createWarranty = async (wbsTask?: string) => {
                           {/* Item Belum Selesai (Pending) dengan Status & Tombol Buka Bagian */}
                           <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
                             <div className="flex items-center justify-between pb-2 border-b border-amber-200/60 text-xs font-semibold text-amber-800">
-                              <span>⏳ {locale === "en" ? "Pending Items" : "Belum Selesai (Pending)"}</span>
+                              <span className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-amber-600" />{locale === "en" ? "Pending Items" : "Belum Selesai (Pending)"}</span>
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">{pendingItems.length}</span>
                             </div>
                             <ul className="mt-2 space-y-2 text-xs text-steel-700">
                               {pendingItems.length === 0 ? (
-                                <li className="italic text-emerald-600 py-1">🎉 {locale === "en" ? "All items completed!" : "Semua item telah rampung!"}</li>
+                                <li className="flex items-center gap-1.5 italic text-emerald-600 py-1"><CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />{locale === "en" ? "All items completed!" : "Semua item telah rampung!"}</li>
                               ) : (
                                 pendingItems.map((it) => {
                                   const blk = classBlockers.find((b) => b.id === `SUBCLASS_${it.id}`);
@@ -1964,7 +1964,7 @@ const createWarranty = async (wbsTask?: string) => {
                                     {w.task}
                                     {w.station ? <span className="ml-2 rounded bg-navy-50 px-1.5 py-0.5 text-[11px] font-semibold text-navy-700">{w.station}</span> : null}
                                     {w.dft !== undefined && w.dft !== null && String(w.dft) !== "" ? <span className="ml-1 text-[11px] text-steel-400">DFT {w.dft}</span> : null}
-                                    {w.photos && w.photos.length > 0 && <span className="ml-1 rounded bg-ocean-50 px-1.5 py-0.5 text-[11px] font-semibold text-ocean-700">📷 {w.photos.length}</span>}
+                                    {w.photos && w.photos.length > 0 && <span className="ml-1 inline-flex items-center gap-1 rounded bg-ocean-50 px-1.5 py-0.5 text-[11px] font-semibold text-ocean-700"><Camera className="h-3 w-3" />{w.photos.length}</span>}
                                   </td>
                                   <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.start)}</td>
                                   <td className="td font-mono text-xs text-steel-500">{fmtBulan(w.end)}</td>
@@ -3229,7 +3229,7 @@ const createWarranty = async (wbsTask?: string) => {
             {isBlocked && (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs">
                 <div className="flex items-center gap-1.5 font-semibold text-amber-900">
-                  <span className="text-amber-600">⚠️</span>
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                   <h4>{S.detBlockerTitle}</h4>
                 </div>
                 <p className="mt-1 text-amber-800">

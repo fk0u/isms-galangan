@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, KeyRound, Plus, RefreshCw, Pencil, Link2, UserX, UserCheck, Eye, History } from "lucide-react";
+import { Download, KeyRound, Plus, RefreshCw, Pencil, Link2, UserX, UserCheck, Eye, History, Check } from "lucide-react";
 import { Badge, Card, ConfirmModal, Field, KpiCard, Modal, PageHeader, SortTh, sortRows, toast, toggleSort, usePager, AsyncButton, SearchBox, rowMatches, RowAction } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useAuth, hasPermission } from "../../auth/auth";
@@ -833,7 +833,7 @@ export default function Peran() {
                     const ok = granted(role, m, a);
                     return (
                       <td key={a} className="px-3 py-2.5 text-center">
-                        {ok ? <Badge tone="green">✓ Siap</Badge> : <Badge tone="gray">-</Badge>}
+                        {ok ? <Badge tone="green"><Check className="h-3 w-3 inline mr-1" />Siap</Badge> : <Badge tone="gray">-</Badge>}
                       </td>
                     );
                   })}

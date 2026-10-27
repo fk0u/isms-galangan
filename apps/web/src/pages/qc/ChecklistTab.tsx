@@ -3,7 +3,7 @@
  * server) + riwayat; skor di bawah ambang menawarkan NCR terisi otomatis.
  * Editor template sederhana untuk QC/direktur (ADR-0009). */
 import { useMemo, useState } from "react";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { ClipboardCheck, Plus, Check, CheckCircle2 } from "lucide-react";
 import { AsyncButton, Badge, EmptyState, Field, FormGrid, Modal, NumInput, ProgressBar, toast } from "../../components/ui";
 import { useStore, type StoreItem } from "../../data/store";
 import { useAuth, hasPermission } from "../../auth/auth";
@@ -447,7 +447,7 @@ export default function ChecklistTab() {
                   <span className="font-semibold text-navy-900">{T.progressLabel}: </span>
                   <span className="tabular-nums text-steel-600">{preview.answered} / {preview.total} {T.item}</span>
                   {preview.answered === preview.total ? (
-                    <span className="ml-2 text-emerald-600 font-medium">✓ {T.allAnswered}</span>
+                    <span className="ml-2 inline-flex items-center gap-1 text-emerald-600 font-medium"><CheckCircle2 className="h-3.5 w-3.5" />{T.allAnswered}</span>
                   ) : (
                     <span className="ml-2 text-amber-600 font-medium">{T.incompleteWarn.replace("{n}", String(preview.total - preview.answered))}</span>
                   )}
@@ -484,7 +484,7 @@ export default function ChecklistTab() {
                           )}
                         </p>
                         {answered ? (
-                          <span className="inline-flex shrink-0 items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">✓</span>
+                          <span className="inline-flex shrink-0 items-center rounded bg-emerald-50 p-1 text-[11px] font-medium text-emerald-700"><Check className="h-3 w-3" /></span>
                         ) : (
                           <span className="inline-flex shrink-0 items-center rounded bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">•</span>
                         )}

@@ -5,6 +5,7 @@
  * - Tutup (no access): modul dan data tertutup sama sekali.
  * Tab Keuangan juga dapat dibatasi per peran. */
 import { useEffect, useState } from "react";
+import { Check, Eye, Ban } from "lucide-react";
 import { AsyncButton, Card, toast } from "../../components/ui";
 import { apiFetch } from "../../services/http";
 import { useT } from "../../i18n/LanguageContext";
@@ -96,14 +97,14 @@ export default function ModuleAccessCard() {
           <h3 className="text-base font-semibold text-navy-900">{S.rbacTitle}</h3>
           <p className="text-xs text-steel-500">{S.rbacSub}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 border border-emerald-200" title={S.rbacLevelCrudTip}>
-              <span className="font-bold">✓</span> {S.rbacLevelCrud}
+            <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 border border-emerald-200" title={S.rbacLevelCrudTip}>
+              <Check className="h-3.5 w-3.5 text-emerald-700" /> {S.rbacLevelCrud}
             </span>
-            <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 font-medium text-sky-800 border border-sky-200" title={S.rbacLevelViewTip}>
-              <span>👁</span> {S.rbacLevelView}
+            <span className="inline-flex items-center gap-1.5 rounded bg-sky-50 px-2 py-0.5 font-medium text-sky-800 border border-sky-200" title={S.rbacLevelViewTip}>
+              <Eye className="h-3.5 w-3.5 text-sky-700" /> {S.rbacLevelView}
             </span>
-            <span className="inline-flex items-center gap-1 rounded bg-steel-100 px-2 py-0.5 font-medium text-steel-600 border border-steel-200" title={S.rbacLevelNoneTip}>
-              <span>✕</span> {S.rbacLevelNone}
+            <span className="inline-flex items-center gap-1.5 rounded bg-steel-100 px-2 py-0.5 font-medium text-steel-600 border border-steel-200" title={S.rbacLevelNoneTip}>
+              <Ban className="h-3.5 w-3.5 text-steel-500" /> {S.rbacLevelNone}
             </span>
           </div>
         </div>
@@ -165,13 +166,13 @@ export default function ModuleAccessCard() {
                         }
                       >
                         <option value="crud" className="bg-white text-emerald-800 font-medium">
-                          ✓ {S.rbacLevelCrud}
+                          {S.rbacLevelCrud}
                         </option>
                         <option value="view" className="bg-white text-sky-800 font-medium">
-                          👁 {S.rbacLevelView}
+                          {S.rbacLevelView}
                         </option>
                         <option value="none" className="bg-white text-steel-500 font-medium">
-                          ✕ {S.rbacLevelNone}
+                          {S.rbacLevelNone}
                         </option>
                       </select>
                     </td>

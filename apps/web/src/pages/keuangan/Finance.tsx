@@ -4533,8 +4533,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
               <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} />
-              <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
-                {nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}
+              <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
+                {nrNeraca.selisih === 0 && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
+                <span>{nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}</span>
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {([

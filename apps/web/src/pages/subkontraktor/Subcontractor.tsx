@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, HardHat, FileSignature, Receipt, Pencil, Trash2 } from "lucide-react";
+import { Plus, HardHat, FileSignature, Receipt, Pencil, Trash2, Check, Circle } from "lucide-react";
 import { Card, PageHeader, Badge, KpiCard, Tabs, ProgressBar, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, usePager, toast, SearchBox, rowMatches,
   NumInput, MoneyInput, FlowStrip,
   AsyncButton,
@@ -1444,7 +1444,10 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                             return (
                               <div className="mt-1 space-y-0.5">
                                 {docs.map((d) => (
-                                  <p key={d.label} className="text-[11px] text-steel-500">{d.done ? "✓" : "○"} {d.label}</p>
+                                  <p key={d.label} className="flex items-center gap-1.5 text-[11px] text-steel-500">
+                                    {d.done ? <Check className="h-3 w-3 text-emerald-600 shrink-0" /> : <Circle className="h-2.5 w-2.5 text-steel-400 shrink-0" />}
+                                    <span>{d.label}</span>
+                                  </p>
                                 ))}
                               </div>
                             );

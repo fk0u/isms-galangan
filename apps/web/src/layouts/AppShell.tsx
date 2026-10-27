@@ -31,6 +31,8 @@ import {
   KeyRound,
   Settings as SettingsIcon,
   ChevronDown,
+  ChevronUp,
+  ArrowRight,
   PanelLeft,
   Loader2,
   AlertTriangle,
@@ -278,7 +280,7 @@ export default function AppShell() {
       items: [
         { to: "/notifikasi", label: t.nav.notifikasi, icon: Bell },
         { to: "/pengaturan", label: t.nav.pengaturan, icon: SettingsIcon, col: "settings" },
-        { to: "/pengaturan/peran", label: t.nav.peran, icon: KeyRound, child: true, col: "users" },
+        { to: "/pengaturan/peran", label: t.nav.peran, icon: KeyRound, col: "users" },
         { to: "/audit", label: t.nav.audit, icon: ShieldCheck, col: "audit" },
       ],
     },
@@ -515,8 +517,6 @@ export default function AppShell() {
                     className={({ isActive }) => {
                       const active = isActive || activeProjectOrigin === item.to;
                       return `group relative flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14px] leading-snug transition-all duration-150 active:scale-[0.98] motion-reduce:transform-none ${mini ? "justify-center" : ""} ${
-                        item.child && !mini ? "ml-4" : ""
-                      } ${
                         active
                           ? "bg-gradient-to-r from-red-500 via-rose-500 to-rose-600 font-semibold text-white shadow-md shadow-rose-500/25"
                           : "font-medium text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
@@ -747,10 +747,11 @@ export default function AppShell() {
                         ))}
                         {alerts.length > 5 && (
                           <button
-                            className="block w-full px-4 py-2 text-center text-[11px] font-semibold text-ocean-600 hover:bg-surface"
+                            className="flex items-center justify-center gap-1 w-full px-4 py-2 text-center text-[11px] font-semibold text-ocean-600 hover:bg-surface"
                             onClick={() => setBellExpanded((v) => !v)}
                           >
-                            {bellExpanded ? t.notif.showLess : `${t.notif.showAll} ${alerts.length} ↓`}
+                            <span>{bellExpanded ? t.notif.showLess : `${t.notif.showAll} ${alerts.length}`}</span>
+                            {bellExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                           </button>
                         )}
                       </>
@@ -779,7 +780,10 @@ export default function AppShell() {
                       onClick={() => { setNotifOpen(false); setBellExpanded(false); setBellMin(false); }}
                       className="block shrink-0 border-t border-steel-100 px-4 py-2.5 text-center text-xs font-semibold text-ocean-600 hover:bg-surface"
                     >
-                      {t.notif.seeAll}
+                      <span className="inline-flex items-center gap-1">
+                        {t.notif.seeAll}
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
                     </Link>
                   </div>
                 </>

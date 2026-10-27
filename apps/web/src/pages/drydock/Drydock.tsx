@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench, User, Eye, ArrowLeftRight } from "lucide-react";
+import { Plus, Ship, CalendarRange, AlertTriangle, GripVertical, Trash2, Wrench, User, Eye, ArrowLeftRight, ArrowDown, ArrowUp } from "lucide-react";
 import { Card, CardHeader, PageHeader, SearchBox, Badge, KpiCard, Modal, Field, FormGrid, ConfirmModal, StatusBadge, toast, SortTh, toggleSort, sortRows, usePager,
   NumInput, MoneyInput, FlowStrip,
   RowAction, rowMatches,
@@ -995,9 +995,9 @@ export default function Drydock() {
                       <p className="mt-1 text-[11px] text-steel-500">{formatSlotDateRange(s)}</p>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
                         <StatusBadge status={st} label={mappingStatusLabel(st)} />
-                        {st === "Terjadwal" && <Badge tone="gray">↓ {S.posMasuk}</Badge>}
+                        {st === "Terjadwal" && <Badge tone="gray"><ArrowDown className="h-3 w-3 inline mr-1" />{S.posMasuk}</Badge>}
                         {st === "Berjalan" && <Badge tone="blue">{S.mapBadgeDocking}</Badge>}
-                        {st === "Selesai" && <Badge tone="green">↑ {S.posKeluar}</Badge>}
+                        {st === "Selesai" && <Badge tone="green"><ArrowUp className="h-3 w-3 inline mr-1" />{S.posKeluar}</Badge>}
                       </span>
                     </button>
                     );
@@ -1161,9 +1161,9 @@ export default function Drydock() {
             </select>
             <select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
               <option value="Semua">{S.mapPositionPrefix.replace("{a}", S.mapAll)}</option>
-              <option value="Masuk">↓ {S.posMasuk} ({S.mapStatusScheduled})</option>
-              <option value="Berjalan">● {S.mapStatusRunning}</option>
-              <option value="Keluar">↑ {S.posKeluar} ({S.mapStatusComplete})</option>
+              <option value="Masuk">{S.posMasuk} ({S.mapStatusScheduled})</option>
+              <option value="Berjalan">{S.mapStatusRunning}</option>
+              <option value="Keluar">{S.posKeluar} ({S.mapStatusComplete})</option>
             </select>
             <select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
               {STATUS_FILTERS.map((s) => <option key={s} value={s}>{mappingStatusLabel(s)}</option>)}

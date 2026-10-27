@@ -1468,7 +1468,7 @@ export default function Payroll() {
           confirmAdv
             ? ((Number(confirmAdv.net || 0) > 0)
               ? ""
-              : `⚠ Peringatan: net ${fmtRupiah(Number(confirmAdv.net || 0))} ≤ 0 (minus/potongan berlebih). Lanjutkan? `)
+              : `Peringatan: net ${fmtRupiah(Number(confirmAdv.net || 0))} ≤ 0 (minus/potongan berlebih). Lanjutkan? `)
               + S.advDesc.replace("{a}", empNameOf(String(confirmAdv.employeeId))).replace("{b}", rowType(confirmAdv)).replace("{c}", fmtBulan(period)).replace("{d}", fmtRupiah(Number(confirmAdv.net || 0))).replace("{e}", String(confirmAdv.status)).replace("{f}", NEXT_STATUS[String(confirmAdv.status)] ?? "?")
             : ""
         }

@@ -1978,7 +1978,13 @@ const sparkVendors = useMemo(() => {
                               const gr = Number(po.receivedQty || 0) > 0;
                               if (!gr && !ap) return null;
                               const ok = gr && !!ap && !!po.noFaktur;
-                              return <p className="mt-0.5"><Badge tone={ok ? "green" : "amber"}>{ok ? "3-way ✓" : "3-way …"}</Badge></p>;
+                              return (
+                                <p className="mt-0.5">
+                                  <Badge tone={ok ? "green" : "amber"}>
+                                    {ok ? <span className="inline-flex items-center gap-1">3-way <Check className="h-3 w-3" /></span> : "3-way Menunggu"}
+                                  </Badge>
+                                </p>
+                              );
                             })()}
                           </td>
                             <td className="td text-steel-600">
