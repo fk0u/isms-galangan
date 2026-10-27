@@ -2050,7 +2050,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     if (!proj) { toast(S.pickProjectFirst, "info"); return; }
     if (!invForm.due) { toast(S.dueRequired, "info"); return; }
     if (!invForm.paymentTerm.trim()) { toast(S.termLabelRequired, "info"); return; }
-    if (num(invForm.dpApplied) > 0 && !invForm.dpRef.trim()) { toast(S.dpRefRequired, "info"); return; }
+    // Notulen 26 Okt: invoice tidak perlu referensi
     const validLines = invLines.filter((l) => l.desc.trim() && lineAmount(l, isTMForm) > 0);
     if (validLines.length === 0) { toast(S.minOneLine, "info"); return; }
     if (invForm.nsfp.trim() && (data.invoices ?? []).some((i) => String(i.nsfp ?? "") === invForm.nsfp.trim())) { toast(S.nsfpUsed, "info"); return; }
@@ -5667,7 +5667,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fKodePembantu}><input className="input font-mono" value={invEditForm.kodePembantu} onChange={(e) => setInvEditForm({ ...invEditForm, kodePembantu: e.target.value })} /></Field>
             <Field label={S.dueLabel} required><input type="date" required className="input" value={invEditForm.due} onChange={(e) => setInvEditForm({ ...invEditForm, due: e.target.value })} /></Field>
             <Field label={S.fTermin}><input className="input" value={invEditForm.paymentTerm} onChange={(e) => setInvEditForm({ ...invEditForm, paymentTerm: e.target.value })} /></Field>
-            <Field label={S.fMilestone}><input className="input" value={invEditForm.milestoneRef} onChange={(e) => setInvEditForm({ ...invEditForm, milestoneRef: e.target.value })} /></Field>
             <Field label={S.noFakturShort}><input className="input font-mono" value={invEditForm.noFaktur} onChange={(e) => setInvEditForm({ ...invEditForm, noFaktur: e.target.value })} /></Field>
           </FormGrid>
         </div>
