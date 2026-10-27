@@ -242,8 +242,8 @@ export default function RabTab() {
           </>
         }
       >
-        <div className="flex flex-col gap-6">
-          <div className="rounded-xl border border-steel-200 bg-surface/40 p-4">
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-steel-200 bg-surface/40 p-3.5">
             <FormGrid>
               <Field label={S.rabName} required>
                 <input
@@ -292,7 +292,7 @@ export default function RabTab() {
               </button>
             </div>
 
-            <div className="max-h-80 overflow-y-auto overflow-x-auto rounded-xl border border-steel-200">
+            <div className="max-h-60 sm:max-h-72 overflow-y-auto overflow-x-auto rounded-xl border border-steel-200">
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 z-10 border-b border-steel-200 bg-surface text-steel-600">
                   <tr>

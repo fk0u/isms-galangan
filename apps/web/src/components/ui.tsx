@@ -7,6 +7,7 @@ import { statusLabel } from "../i18n/status";
 import { norm24 } from "../utils/time24";
 import { maskTimeDigits, shouldEmitTime } from "../utils/timeMask";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowDownRight,
@@ -860,12 +861,12 @@ export function Modal({
     };
   }, [open]);
 
-  return (
+  const content = (
     <AnimatePresence>
       {open && (
-        <div className={`fixed inset-0 z-50 flex items-center justify-center ${fullScreen ? "p-2 sm:p-4" : "p-2 sm:p-6"}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
           <motion.div
-            className="absolute inset-0 bg-navy-900/40 backdrop-blur-[2px]"
+            className="fixed inset-0 bg-navy-900/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -877,7 +878,7 @@ export function Modal({
             aria-modal="true"
             aria-label={title}
             tabIndex={-1}
-            className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-lift ${
+            className={`relative flex max-h-[86vh] w-full flex-col overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-2xl ${
               fullScreen ? "sm:max-w-6xl" : fullWidth ? "sm:max-w-[min(96vw,90rem)]" : extraWide ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg"
             }`}
             /* Masuk dari scale 0.96 (tidak pernah dari 0), ease-out kuat;
@@ -926,6 +927,9 @@ export function Modal({
       )}
     </AnimatePresence>
   );
+
+  if (typeof document === "undefined") return content;
+  return createPortal(content, document.body);
 }
 
 export function ConfirmModal({
