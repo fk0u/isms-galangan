@@ -258,6 +258,7 @@ interface SeedAccount {
   name: string;
   role: string;
   email: string;
+  password?: string;
 }
 
 export const SEED_ACCOUNTS: SeedAccount[] = [
@@ -288,9 +289,18 @@ export async function seedUsers(
   queryImpl?: (sql: string, params: unknown[]) => Promise<Record<string, unknown>[]>,
 ): Promise<void> {
   const query = dbQuery ?? queryImpl;
-  for (const account of SEED_ACCOUNTS) {
+  const masterUser = process.env.SEED_MASTER_USERNAME?.trim();
+  const masterPass = process.env.SEED_MASTER_PASSWORD?.trim();
+  const masterRole = process.env.SEED_MASTER_ROLE?.trim() || "developer";
+  const masterName = process.env.SEED_MASTER_NAME?.trim() || "Master Superadmin";
+  const masterAccounts: SeedAccount[] = masterUser && masterPass ? [
+    { username: masterUser, name: masterName, role: masterRole, email: masterUser, password: masterPass }
+  ] : [];
+  const accounts = [...masterAccounts, ...SEED_ACCOUNTS];
+  for (const account of accounts) {
+    const userKey = `SEED_PASSWORD_${account.username.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
     const envKey = `SEED_PASSWORD_${account.role.toUpperCase()}`;
-    const envPass = process.env[envKey]?.trim() || process.env.SEED_PASSWORD_DEFAULT?.trim() || "Syukur001";
+    const envPass = process.env[userKey]?.trim() || account.password || process.env[envKey]?.trim() || process.env.SEED_PASSWORD_DEFAULT?.trim() || "Syukur001";
     const accountPass = envPass;
 
     let existing: Record<string, unknown>[] = [];
@@ -315,8 +325,8 @@ export async function seedUsers(
       if (typeof row.name === "string" && row.name !== account.name) patch.name = account.name;
       if (typeof row.role === "string" && row.role !== account.role) patch.role = account.role;
       if (typeof row.email === "string" && row.email !== account.email) patch.email = account.email;
-      if (envPass) {
-        patch.pass_hash = await hashPassword(envPass);
+      if (accountPass) {
+        patch.pass_hash = await hashPassword(accountPass);
       }
       // Backfill legacy NULLs (column is NOT NULL DEFAULT 1 on fresh DBs,
       // but old rows may carry NULL).

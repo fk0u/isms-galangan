@@ -55,7 +55,7 @@ export function normalizeRole(raw: unknown): Role {
   const r = String(raw ?? "").toLowerCase().trim();
   if (ROLES.includes(r as Role)) return r as Role;
   if (r === "admin" || r === "direksi" || r.includes("direktur")) return "direktur";
-  if (r.includes("developer") || r === "dev") return "developer";
+  if (r.includes("developer") || r === "dev" || r === "superadmin" || r.includes("superadmin")) return "developer";
   if (r.includes("manager") || r.includes("manajer")) return "manager";
   if (/qc|hse|inspector|quality|safety/i.test(r)) return "qc";
   if (/gudang|warehouse|inventory|logistik/i.test(r)) return "gudang";

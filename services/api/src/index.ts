@@ -1,11 +1,14 @@
 import { buildApp } from "./app.js";
 import { loadEnv } from "./env.js";
 import { migrate } from "./migrate.js";
+import { exec, q } from "./db.js";
+import { seedUsers } from "./auth.js";
 import { initFonts, fontFilesAvailable } from "./pdf/font.js";
 
 async function main(): Promise<void> {
   const env = loadEnv();
   await migrate();
+  await seedUsers(exec, q);
   /* initFonts() WAJIB dipanggil sebelum render pertama. Tanpa itu fontsDir
      tetap kosong dan loadFontFiles() selalu mengembalikan null - jadi
      menaruh TTF di assets/fonts pun tidak pernah terpakai, dan dokumen

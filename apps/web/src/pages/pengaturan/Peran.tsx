@@ -11,7 +11,10 @@ import { apiFetch, isBackendConfigured } from "../../services/http";
 import { exportExcel } from "../../utils/export";
 import ModuleAccessCard from "./ModuleAccessCard";
 
-const isDeveloper = (r: unknown): boolean => String(r ?? "").toLowerCase() === "developer";
+const isDeveloper = (r: unknown): boolean => {
+  const s = String(r ?? "").toLowerCase();
+  return s === "developer" || s === "superadmin";
+};
 
 const ACTIONS = ["Lihat", "Buat", "Ubah", "Hapus", "Setujui", "Bayar", "Ekspor"] as const;
 type RoleAction = (typeof ACTIONS)[number];
@@ -58,7 +61,7 @@ export const ROLES = [
 ] as const;
 
 export const ROLE_LABELS: Record<string, string> = {
-  developer: "Developer",
+  developer: "Developer / Superadmin",
   direktur: "Direktur",
   manager: "Manager",
   finance: "Finance",

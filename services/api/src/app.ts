@@ -239,9 +239,10 @@ export function buildApp(): FastifyInstance {
       return reply.status(400).send(fail("Validation failed", "VALIDATION_ERROR"));
     }
     const { username, password } = parsed.data;
-    let rows = await q<UserRow>("SELECT id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users WHERE username = ?", [
-      username,
-    ]);
+    let rows = await q<UserRow>(
+      "SELECT id, username, pass_hash, name, role, email, is_active, employee_id, token_version FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)",
+      [username, username],
+    );
     if (rows.length === 0) {
       // Login via NIK karyawan: cocokkan employees.data.username → akun tertaut.
       try {
