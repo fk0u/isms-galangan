@@ -36,6 +36,8 @@ import {
   PanelLeft,
   Loader2,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAuth, hasPermission, canOpenModule } from "../auth/auth";
 import { moduleKeyOf, canSeePath, canSeeActivity } from "../utils/moduleKey";
@@ -318,6 +320,8 @@ export default function AppShell() {
 
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
+  const [showOldPw, setShowOldPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
   const doChangePassword = async () => {
     if (!isBackendConfigured()) {
       toast(S.tLocalPasswordInfo, "info");
@@ -885,22 +889,46 @@ export default function AppShell() {
         </Field>
         <Field label={S.shChangePasswordLabel}>
           <div className="grid gap-2">
-            <input
-              type="password"
-              className="input"
-              placeholder={S.shOldPasswordPh}
-              aria-label={S.shOldPasswordPh}
-              value={oldPw}
-              onChange={(e) => setOldPw(e.target.value)}
-            />
-            <input
-              type="password"
-              className="input"
-              placeholder={S.shNewPasswordPh}
-              aria-label={S.shNewPasswordPh}
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                type={showOldPw ? "text" : "password"}
+                className="input pr-10"
+                placeholder={S.shOldPasswordPh}
+                aria-label={S.shOldPasswordPh}
+                value={oldPw}
+                onChange={(e) => setOldPw(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowOldPw((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-steel-400 transition-colors hover:text-steel-600 focus:outline-none"
+                tabIndex={-1}
+                aria-label={showOldPw ? "Hide password" : "Show password"}
+                title={showOldPw ? "Hide password" : "Show password"}
+              >
+                {showOldPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showNewPw ? "text" : "password"}
+                className="input pr-10"
+                placeholder={S.shNewPasswordPh}
+                aria-label={S.shNewPasswordPh}
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPw((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-steel-400 transition-colors hover:text-steel-600 focus:outline-none"
+                tabIndex={-1}
+                aria-label={showNewPw ? "Hide password" : "Show password"}
+                title={showNewPw ? "Hide password" : "Show password"}
+              >
+                {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             <button onClick={() => void doChangePassword()} className="btn-secondary w-full justify-center">
               <KeyRound className="h-4 w-4" /> {S.shSaveNewPassword}
             </button>

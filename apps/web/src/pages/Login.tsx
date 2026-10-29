@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Anchor, Boxes, ShieldCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, User, AlertCircle, ArrowRight, Container, ShipWheel, Loader2 } from "lucide-react";
+import { Lock, User, AlertCircle, ArrowRight, Container, ShipWheel, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../auth/auth";
 import { takeSessionExpired } from "../auth/sessionExpired";
 import { useT } from "../i18n/LanguageContext";
@@ -17,6 +17,7 @@ export default function Login() {
   const { t, locale } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   // Datang dari sesi yang berakhir (AppShell): tampilkan alasannya di form.
   const [error, setError] = useState<string | null>(() => (takeSessionExpired() ? t.auth.sessionExpired : null));
   const [shake, setShake] = useState(0);
@@ -180,14 +181,24 @@ export default function Login() {
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-steel-400" />
                 <input
-                  type="password"
-                  className="input pl-9"
+                  type={showPassword ? "text" : "password"}
+                  className="input pl-9 pr-10"
                   placeholder={t.auth.passwordPh}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   disabled={busy !== null}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-steel-400 transition-colors hover:bg-steel-100 hover:text-steel-600 focus:outline-none focus:ring-1 focus:ring-crimson-500"
+                  tabIndex={-1}
+                  aria-label={showPassword ? (locale === "id" ? "Sembunyikan kata sandi" : "Hide password") : (locale === "id" ? "Tampilkan kata sandi" : "Show password")}
+                  title={showPassword ? (locale === "id" ? "Sembunyikan kata sandi" : "Hide password") : (locale === "id" ? "Tampilkan kata sandi" : "Show password")}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </label>
             <button type="submit" className="btn-primary-gradient w-full justify-center py-2.5" disabled={busy !== null}>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, KeyRound, Plus, RefreshCw, Pencil, Link2, UserX, UserCheck, Eye, History, Check } from "lucide-react";
+import { Download, KeyRound, Plus, RefreshCw, Pencil, Link2, UserX, UserCheck, Eye, EyeOff, History, Check } from "lucide-react";
 import { Badge, Card, ConfirmModal, Field, KpiCard, Modal, PageHeader, SortTh, sortRows, toast, toggleSort, usePager, AsyncButton, SearchBox, rowMatches, RowAction } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useAuth, hasPermission } from "../../auth/auth";
@@ -341,6 +341,8 @@ export default function Peran() {
   const [form, setForm] = useState({ username: "", name: "", role: "manager", password: "", email: "", employeeId: "" });
   const [pwTarget, setPwTarget] = useState<ManagedUser | null>(null);
   const [pwValue, setPwValue] = useState("");
+  const [showCreatePw, setShowCreatePw] = useState(false);
+  const [showResetPw, setShowResetPw] = useState(false);
   // Ubah user: nama + peran + email via PATCH.
   const [editUser, setEditUser] = useState<ManagedUser | null>(null);
   const [editUserForm, setEditUserForm] = useState({ name: "", role: "manager", email: "" });
@@ -878,7 +880,25 @@ export default function Peran() {
             <input type="email" className="input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder={S.emailPh} />
           </Field>
           <Field label={S.pwInitial}>
-            <input type="password" className="input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder={S.pwMinPh} />
+            <div className="relative">
+              <input
+                type={showCreatePw ? "text" : "password"}
+                className="input pr-10"
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder={S.pwMinPh}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCreatePw((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-steel-400 transition-colors hover:text-steel-600 focus:outline-none"
+                tabIndex={-1}
+                aria-label={showCreatePw ? "Hide password" : "Show password"}
+                title={showCreatePw ? "Hide password" : "Show password"}
+              >
+                {showCreatePw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </Field>
           <Field label={S.linkedEmployee} hint={S.linkedEmployeeHint}>
             <select className="input" value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}>
@@ -926,13 +946,25 @@ export default function Peran() {
         }
       >
         <Field label={S.newPw}>
-          <input
-            type="password"
-            className="input"
-            value={pwValue}
-            onChange={(e) => setPwValue(e.target.value)}
-            placeholder={S.newPwPh}
-          />
+          <div className="relative">
+            <input
+              type={showResetPw ? "text" : "password"}
+              className="input pr-10"
+              value={pwValue}
+              onChange={(e) => setPwValue(e.target.value)}
+              placeholder={S.newPwPh}
+            />
+            <button
+              type="button"
+              onClick={() => setShowResetPw((v) => !v)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-steel-400 transition-colors hover:text-steel-600 focus:outline-none"
+              tabIndex={-1}
+              aria-label={showResetPw ? "Hide password" : "Show password"}
+              title={showResetPw ? "Hide password" : "Show password"}
+            >
+              {showResetPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </Field>
       </Modal>
 
