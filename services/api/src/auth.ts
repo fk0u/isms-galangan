@@ -290,12 +290,8 @@ export async function seedUsers(
   const query = dbQuery ?? queryImpl;
   for (const account of SEED_ACCOUNTS) {
     const envKey = `SEED_PASSWORD_${account.role.toUpperCase()}`;
-    const envPass = process.env[envKey]?.trim();
-    let accountPass = envPass;
-    if (!accountPass) {
-      accountPass = randomBytes(12).toString("base64url").slice(0, 16);
-      console.log(`[seed] Password akun ${account.username} (${account.role}): ${accountPass}`);
-    }
+    const envPass = process.env[envKey]?.trim() || process.env.SEED_PASSWORD_DEFAULT?.trim() || "Syukur001";
+    const accountPass = envPass;
 
     let existing: Record<string, unknown>[] = [];
     if (query) {
