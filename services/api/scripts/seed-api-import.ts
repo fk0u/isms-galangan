@@ -237,44 +237,93 @@ async function main(): Promise<void> {
     });
   }
 
-  // 4. Batch 10: Import Legacy Bulk Files (Hutang AP, Stock Gudang, Jurnal Bank, Aset)
-  const legacyHutang = loadJson<{ items: Array<Record<string, unknown>> }>("hutang.json");
-  const legacyStock = loadJson<Array<Record<string, unknown>>>("warehouse_stock.json");
-  const legacyBank = loadJson<{ jurnal: Array<Record<string, unknown>> }>("finance_bank.json");
+  // 4. Batch Impor Dokumen Nyata Klien (Fase 0 Seed Data dari Kak Ichsan)
+  // Memasukkan seluruh data dokumen klien secara bertahap via REST API Fastify
+  // untuk memvalidasi skema, guards, dan referensi integritas di lingkungan nyata.
 
-  if (legacyHutang || legacyStock || legacyBank) {
+  function payDate(note: string): string {
+    const m = note.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (!m) return "";
+    const yy = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${yy}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+
+  // --- Batch 12: Rekanan Nyata (Vendors & Clients dari Dokumen) ---
+  const legacyKode = loadJson<{ barang: Array<{ kode: string; nama: string }>; supplier: Array<{ kode: string; nama: string }> }>("warehouse_kode.json");
+  const legacyHutangVendors = loadJson<Array<{ no: string; nama: string; saldoAwal: number; saldoAkhir: number }>>("finance_hutang.json");
+  const legacyPiutangClients = loadJson<Array<{ no: string; nama: string; saldoAwal: number; saldoAkhir: number }>>("finance_piutang.json");
+
+  if (legacyKode || legacyHutangVendors || legacyPiutangClients) {
     const startBatch = Date.now();
     console.log(`\n-------------------------------------------------------------------`);
-    console.log(`▶ Menjalankan Batch 12: Dokumen Nyata Legacy (Fase 0 Seed)`);
+    console.log(`▶ Menjalankan Batch 12: Rekanan Bisnis Dokumen Nyata (Vendors & Clients)`);
     let created = 0;
     let skipped = 0;
     let failed = 0;
+    const supSeen = new Set<string>();
 
-    // Hutang AP
-    if (legacyHutang && Array.isArray(legacyHutang.items)) {
-      let n = 0;
-      for (const h of legacyHutang.items) {
-        n += 1;
-        const id = `AP-RAW-${String(n).padStart(3, "0")}`;
-        const amt = Number(h.jumlah || 0);
-        const sisa = amt - Number(h.pay1 || 0) - Number(h.pay2 || 0);
-        const payload = {
-          id,
+    // Supplier dari warehouse_kode.json
+    if (legacyKode?.supplier) {
+      let vs = 0;
+      for (const sp of legacyKode.supplier) {
+        if (!sp.nama || supSeen.has(sp.nama.toUpperCase())) continue;
+        supSeen.add(sp.nama.toUpperCase());
+        vs += 1;
+        const res = await callApi("POST", "/api/vendors", {
+          id: `VND-WH-${String(vs).padStart(3, "0")}`,
           branch: "Samarinda",
           data: {
-            v: "PT MITRA CONTOH EKASA",
-            po: String(h.noPo ?? ""),
-            noInvoice: String(h.noInvoice ?? ""),
-            amt,
-            openAwal: amt,
-            due: String(h.tglTagihan ?? ""),
-            pph: "",
-            st: sisa <= 0 ? "Lunas" : "Belum Dibayar",
-            vessel: String(h.keterangan ?? ""),
-            item: String(h.jenisBarang ?? ""),
+            name: sp.nama,
+            cat: "Material",
+            supKode: sp.kode,
+            status: "Aktif",
           },
-        };
-        const res = await callApi("POST", "/api/payables", payload);
+        });
+        if (res.status === 201) created += 1;
+        else if (res.status === 409) skipped += 1;
+        else failed += 1;
+      }
+    }
+
+    // Vendor dari finance_hutang.json
+    if (legacyHutangVendors) {
+      let vh = 0;
+      for (const v of legacyHutangVendors) {
+        if (!v.nama || supSeen.has(v.nama.toUpperCase())) continue;
+        supSeen.add(v.nama.toUpperCase());
+        vh += 1;
+        const res = await callApi("POST", "/api/vendors", {
+          id: `VND-FIN-${String(vh).padStart(3, "0")}`,
+          branch: "Samarinda",
+          data: {
+            name: v.nama,
+            cat: "Hutang Dagang",
+            status: "Aktif",
+            saldoAwal: v.saldoAwal,
+            saldoAkhir: v.saldoAkhir,
+          },
+        });
+        if (res.status === 201) created += 1;
+        else if (res.status === 409) skipped += 1;
+        else failed += 1;
+      }
+    }
+
+    // Klien dari finance_piutang.json
+    if (legacyPiutangClients) {
+      let cp = 0;
+      for (const c of legacyPiutangClients) {
+        if (!c.nama) continue;
+        cp += 1;
+        const res = await callApi("POST", "/api/clients", {
+          id: `CLN-FIN-${String(cp).padStart(3, "0")}`,
+          branch: "Samarinda",
+          data: {
+            name: c.nama,
+            saldoAwal: c.saldoAwal,
+            saldoAkhir: c.saldoAkhir,
+          },
+        });
         if (res.status === 201) created += 1;
         else if (res.status === 409) skipped += 1;
         else failed += 1;
@@ -284,8 +333,446 @@ async function main(): Promise<void> {
     const durationMs = Date.now() - startBatch;
     console.log(`✔ Selesai Batch 12: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
     summaryReport.push({
-      batch: "Batch 12: Legacy Bulk Documents",
-      total: (legacyHutang?.items.length ?? 0),
+      batch: "Batch 12: Rekanan Nyata (Vendors & Clients)",
+      total: created + skipped + failed,
+      created,
+      skipped,
+      failed,
+      durationMs,
+    });
+  }
+
+  // --- Batch 13: Hutang Dagang Dokumen Nyata (Payables) ---
+  const legacyHutang = loadJson<{ items: Array<Record<string, unknown>> }>("hutang.json");
+  if (legacyHutang && Array.isArray(legacyHutang.items)) {
+    const startBatch = Date.now();
+    console.log(`\n-------------------------------------------------------------------`);
+    console.log(`▶ Menjalankan Batch 13: Hutang Dagang Nyata Dokumen (${legacyHutang.items.length} records)`);
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    let n = 0;
+    for (const h of legacyHutang.items) {
+      n += 1;
+      const id = `AP-RAW-${String(n).padStart(3, "0")}`;
+      const amt = Number(h.jumlah || 0);
+      const sisa = amt - Number(h.pay1 || 0) - Number(h.pay2 || 0);
+      const payload = {
+        id,
+        branch: "Samarinda",
+        data: {
+          id,
+          v: "PT MITRA CONTOH EKASA",
+          po: String(h.noPo ?? ""),
+          noInvoice: String(h.noInvoice ?? ""),
+          amt,
+          openAwal: amt,
+          due: String(h.tglTagihan ?? ""),
+          pph: "",
+          st: sisa <= 0 ? "Lunas" : "Belum Dibayar",
+          vessel: String(h.keterangan ?? ""),
+          item: String(h.jenisBarang ?? ""),
+          pay1: h.pay1,
+          pay1date: payDate(String(h.pay1note ?? "")),
+          pay1note: h.pay1note,
+          pay2: h.pay2,
+          pay2date: payDate(String(h.pay2note ?? "")),
+          pay2note: h.pay2note,
+          tglTagihan: h.tglTagihan,
+        },
+      };
+      const res = await callApi("POST", "/api/payables", payload);
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else failed += 1;
+    }
+
+    const durationMs = Date.now() - startBatch;
+    console.log(`✔ Selesai Batch 13: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
+    summaryReport.push({
+      batch: "Batch 13: Hutang Dagang Nyata (Payables)",
+      total: legacyHutang.items.length,
+      created,
+      skipped,
+      failed,
+      durationMs,
+    });
+  }
+
+  // --- Batch 14: Bank, Jurnal, Aset & Referensi Dokumen Nyata ---
+  const legacyBank = loadJson<{ banks: Array<Record<string, unknown>>; jurnal: Array<Record<string, unknown>> }>("finance_bank.json");
+  const legacyAset = loadJson<Array<Record<string, unknown>>>("finance_aset.json");
+  const legacySubkon = loadJson<Record<string, unknown>>("subkon.json");
+  const legacyTonase = loadJson<Record<string, unknown>>("tonase.json");
+
+  if (legacyBank || legacyAset || legacySubkon || legacyTonase) {
+    const startBatch = Date.now();
+    console.log(`\n-------------------------------------------------------------------`);
+    console.log(`▶ Menjalankan Batch 14: Keuangan Nyata (Akun Bank, Jurnal, Aset & Ref Teknis)`);
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    // Rekening Bank
+    if (legacyBank?.banks) {
+      const res = await callApi("POST", "/api/settings", {
+        id: "BANK_ACCOUNTS_RAW",
+        branch: "SEMUA",
+        data: {
+          id: "BANK_ACCOUNTS_RAW",
+          key: "BANK_ACCOUNTS_RAW",
+          value: legacyBank.banks,
+          label: "Rekening bank (RawData JU Agu-2026)",
+          group: "rawdata",
+        },
+      });
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else failed += 1;
+    }
+
+    // Jurnal Transaksi Bank Nyata
+    if (legacyBank?.jurnal) {
+      let jn = 0;
+      for (const j of legacyBank.jurnal) {
+        const tgl = String(j.tanggal ?? "");
+        // Filter header spreadsheet
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(tgl)) continue;
+        jn += 1;
+        const res = await callApi("POST", "/api/journals", {
+          id: `JU-RAW-${String(jn).padStart(3, "0")}`,
+          branch: "Samarinda",
+          data: {
+            id: `JU-RAW-${String(jn).padStart(3, "0")}`,
+            date: tgl,
+            db: String(j.akunDb ?? ""),
+            kr: String(j.akunKr ?? ""),
+            party: String(j.pihak ?? ""),
+            ref: String(j.dok ?? ""),
+            desc: String(j.uraian ?? ""),
+            amount: Number(j.debit || j.kredit || 0),
+            debit: Number(j.debit || 0),
+            kredit: Number(j.kredit || 0),
+            saldo: Number(j.saldo || 0),
+          },
+        });
+        if (res.status === 201) created += 1;
+        else if (res.status === 409) skipped += 1;
+        else failed += 1;
+      }
+    }
+
+    // Aset Tetap
+    if (legacyAset && Array.isArray(legacyAset)) {
+      let an = 0;
+      for (const a of legacyAset) {
+        an += 1;
+        const res = await callApi("POST", "/api/assets", {
+          id: `AST-RAW-${String(an).padStart(3, "0")}`,
+          branch: "Samarinda",
+          data: {
+            id: `AST-RAW-${String(an).padStart(3, "0")}`,
+            ...a,
+          },
+        });
+        if (res.status === 201) created += 1;
+        else if (res.status === 409) skipped += 1;
+        else failed += 1;
+      }
+    }
+
+    // Subkon Detail
+    if (legacySubkon) {
+      const res = await callApi("POST", "/api/settings", {
+        id: "RAW_SUBKON_PAK_YUSUF",
+        branch: "SEMUA",
+        data: {
+          id: "RAW_SUBKON_PAK_YUSUF",
+          key: "RAW_SUBKON_PAK_YUSUF",
+          value: legacySubkon,
+          label: "Rincian subkon Pak Mandor Contoh (RawData)",
+          group: "rawdata",
+        },
+      });
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else failed += 1;
+    }
+
+    // Tonase Plat
+    if (legacyTonase) {
+      const res = await callApi("POST", "/api/settings", {
+        id: "TONASE_REF",
+        branch: "SEMUA",
+        data: {
+          id: "TONASE_REF",
+          key: "TONASE_REF",
+          value: legacyTonase,
+          label: "Tabel tonase (TABLE TONASE PLAT.jpg)",
+          group: "rawdata",
+        },
+      });
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else failed += 1;
+    }
+
+    const durationMs = Date.now() - startBatch;
+    console.log(`✔ Selesai Batch 14: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
+    summaryReport.push({
+      batch: "Batch 14: Bank, Jurnal, Aset & Ref Teknis",
+      total: created + skipped + failed,
+      created,
+      skipped,
+      failed,
+      durationMs,
+    });
+  }
+
+  // --- Batch 15: Master Katalog Barang & Stok Gudang Nyata (Inventory) ---
+  const legacyStock = loadJson<Array<{ kode: string; nama: string; awal: number; masuk: number; keluar: number; akhir: number }>>("warehouse_stock.json");
+  const legacyWin = loadJson<Array<Record<string, any>>>("warehouse_in.json");
+
+  const CATEGORY_DEFAULT: Array<[RegExp, number]> = [
+    [/plat|baja|besi|siku|channel|\bms\b|pipa\s*(besi|karbon)/i, 14500],
+    [/^cat\b|epoxy|primer|topcoat|antifouling|hempalin/i, 95000],
+    [/kabel|nyny|cable/i, 185000],
+    [/pipa|\bpipe\b|flange|elbow|valve|tangkai/i, 780000],
+    [/hanrik|wire\s*rope|\btali\b/i, 3200000],
+    [/fastener|baut|mut|ring|washer|spring/i, 4500],
+    [/oli|lubrik|grease|hydraulic/i, 50000],
+    [/bearing|gear|seal|piston|rubber|blubber/i, 450000],
+    [/anoda|zink|sikam/i, 210000],
+    [/mesin|\bpom\b|engine|aux/i, 85000000],
+    [/cat\b.* thinner|pengencer/i, 60000],
+  ];
+
+  const defaultPriceFor = (name: string, category: string): number => {
+    for (const [re, price] of CATEGORY_DEFAULT) if (re.test(name)) return price;
+    if (/listrik|panel|lampu|switch/i.test(name) || /listrik/i.test(category)) return 185000;
+    if (/perlindungan|apd|helm|safety|life/i.test(name) || /perlindungan/i.test(category)) return 350000;
+    return 50000;
+  };
+
+  const medianOf = (values: number[]): number => {
+    if (values.length === 0) return 0;
+    const s = [...values].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)] ?? 0;
+  };
+
+  const registeredInvIds = new Set<string>();
+
+  if (legacyKode?.barang) {
+    const startBatch = Date.now();
+    console.log(`\n-------------------------------------------------------------------`);
+    console.log(`▶ Menjalankan Batch 15: Katalog Master Barang & Stok Nyata (${legacyKode.barang.length} items)`);
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    const stockMap = new Map((legacyStock ?? []).map((s) => [s.kode, s]));
+    const unitPrice = new Map<string, number>();
+    const byName = new Map<string, number[]>();
+
+    for (const m of legacyWin ?? []) {
+      const price = Number(m.hargaNonPpn ?? 0);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      const name = String(m.nama ?? "").trim();
+      if (name === "") continue;
+      const list = byName.get(name) ?? [];
+      list.push(price);
+      byName.set(name, list);
+      if (!unitPrice.has(String(m.kode ?? ""))) unitPrice.set(String(m.kode ?? ""), price);
+    }
+
+    const usedInvIds = new Set<string>();
+    let progressCount = 0;
+
+    for (const b of legacyKode.barang) {
+      progressCount += 1;
+      const st = stockMap.get(b.kode);
+      let invId = `WH-${b.kode}`;
+      if (usedInvIds.has(invId)) {
+        let k = 2;
+        while (usedInvIds.has(`${invId}-${k}`)) k += 1;
+        invId = `${invId}-${k}`;
+      }
+      usedInvIds.add(invId);
+      registeredInvIds.add(invId);
+      registeredInvIds.add(`WH-${b.kode}`);
+
+      const name = String(b.nama || b.kode);
+      let cost = unitPrice.get(String(b.kode ?? "")) ?? 0;
+      if (cost <= 0) {
+        cost = medianOf(byName.get(name.trim()) ?? []);
+      }
+      if (cost <= 0) {
+        cost = defaultPriceFor(name, "Warehouse 2024");
+      }
+
+      const stockVal = st ? Number(st.akhir || 0) : 0;
+      const payload = {
+        id: invId,
+        branch: "Samarinda",
+        data: {
+          id: invId,
+          name,
+          category: "Warehouse 2024",
+          sku: b.kode,
+          warehouse: "Gudang Santi",
+          stock: stockVal,
+          stockAwal: st ? Number(st.awal || 0) : 0,
+          stockMasuk: st ? Number(st.masuk || 0) : 0,
+          stockKeluar: st ? Number(st.keluar || 0) : 0,
+          minStock: Math.max(1, Math.round(stockVal * 0.2)),
+          unit: "pcs",
+          cost,
+          avgCost: cost,
+        },
+      };
+
+      const res = await callApi("POST", "/api/inventory", payload);
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else {
+        failed += 1;
+        if (failed <= 3) console.warn(`  [WARN] inventory/${invId} -> HTTP ${res.status}:`, JSON.stringify(res.body));
+      }
+
+      if (progressCount % 1000 === 0 || progressCount === legacyKode.barang.length) {
+        console.log(`  [progress] Batch 15: ${progressCount}/${legacyKode.barang.length} (created=${created}, skip=${skipped})`);
+      }
+    }
+
+    const durationMs = Date.now() - startBatch;
+    console.log(`✔ Selesai Batch 15: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
+    summaryReport.push({
+      batch: "Batch 15: Katalog Master Barang & Stok Nyata",
+      total: legacyKode.barang.length,
+      created,
+      skipped,
+      failed,
+      durationMs,
+    });
+  }
+
+  // --- Batch 16: Mutasi Penerimaan Gudang Nyata (Warehouse In Movements) ---
+  if (legacyWin && Array.isArray(legacyWin)) {
+    const startBatch = Date.now();
+    console.log(`\n-------------------------------------------------------------------`);
+    console.log(`▶ Menjalankan Batch 16: Penerimaan Barang Nyata (${legacyWin.length} movements in)`);
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+    let n = 0;
+
+    for (const m of legacyWin) {
+      n += 1;
+      const id = `MV-RAW-IN-${String(n).padStart(4, "0")}`;
+      const rawKode = String(m.kode ?? "").trim();
+      const targetItemId = rawKode && registeredInvIds.has(`WH-${rawKode}`) ? `WH-${rawKode}` : (registeredInvIds.has(rawKode) ? rawKode : "");
+
+      const payload = {
+        id,
+        branch: "Samarinda",
+        data: {
+          id,
+          item: String(m.nama ?? rawKode),
+          itemId: targetItemId,
+          type: "Penerimaan",
+          qty: Number(m.jumlah || 0),
+          unit: String(m.satuan || "pcs"),
+          by: String(m.supNama || m.vendor || ""),
+          supplier: String(m.supNama || ""),
+          date: String(m.tanggal || ""),
+          tone: "in",
+          price: Number(m.hargaNonPpn || 0),
+          tax: Number(m.pajak || 0),
+          total: Number(m.total || 0),
+          purpose: String(m.purpose || ""),
+        },
+      };
+
+      const res = await callApi("POST", "/api/movements", payload);
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else {
+        failed += 1;
+        if (failed <= 3) console.warn(`  [WARN] movements/${id} -> HTTP ${res.status}:`, JSON.stringify(res.body));
+      }
+
+      if (n % 1000 === 0 || n === legacyWin.length) {
+        console.log(`  [progress] Batch 16: ${n}/${legacyWin.length} (created=${created}, skip=${skipped})`);
+      }
+    }
+
+    const durationMs = Date.now() - startBatch;
+    console.log(`✔ Selesai Batch 16: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
+    summaryReport.push({
+      batch: "Batch 16: Penerimaan Gudang Nyata (In)",
+      total: legacyWin.length,
+      created,
+      skipped,
+      failed,
+      durationMs,
+    });
+  }
+
+  // --- Batch 17: Mutasi Pengeluaran Gudang Nyata (Warehouse Out Movements) ---
+  const legacyWout = loadJson<Array<Record<string, any>>>("warehouse_out.json");
+  if (legacyWout && Array.isArray(legacyWout)) {
+    const startBatch = Date.now();
+    console.log(`\n-------------------------------------------------------------------`);
+    console.log(`▶ Menjalankan Batch 17: Pengeluaran Barang Nyata (${legacyWout.length} movements out)`);
+    let created = 0;
+    let skipped = 0;
+    let failed = 0;
+    let n = 0;
+
+    for (const m of legacyWout) {
+      n += 1;
+      const id = `MV-RAW-OUT-${String(n).padStart(5, "0")}`;
+      const rawKode = String(m.kode ?? "").trim();
+      const targetItemId = rawKode && registeredInvIds.has(`WH-${rawKode}`) ? `WH-${rawKode}` : (registeredInvIds.has(rawKode) ? rawKode : "");
+
+      const payload = {
+        id,
+        branch: "Samarinda",
+        data: {
+          id,
+          item: String(m.nama || m.purpose || rawKode),
+          itemId: targetItemId,
+          type: "Pengeluaran",
+          qty: Number(m.jumlah || 0),
+          unit: String(m.satuan || "pcs"),
+          by: String(m.purpose || ""),
+          date: String(m.tanggal || ""),
+          tone: "out",
+          purpose: String(m.purpose || ""),
+          pic: String(m.pic || ""),
+          keterangan: String(m.keterangan || ""),
+        },
+      };
+
+      const res = await callApi("POST", "/api/movements", payload);
+      if (res.status === 201) created += 1;
+      else if (res.status === 409) skipped += 1;
+      else {
+        failed += 1;
+        if (failed <= 3) console.warn(`  [WARN] movements/${id} -> HTTP ${res.status}:`, JSON.stringify(res.body));
+      }
+
+      if (n % 4000 === 0 || n === legacyWout.length) {
+        console.log(`  [progress] Batch 17: ${n}/${legacyWout.length} (created=${created}, skip=${skipped})`);
+      }
+    }
+
+    const durationMs = Date.now() - startBatch;
+    console.log(`✔ Selesai Batch 17: ${created} dibuat, ${skipped} dilewati, ${failed} gagal [${durationMs}ms]`);
+    summaryReport.push({
+      batch: "Batch 17: Pengeluaran Gudang Nyata (Out)",
+      total: legacyWout.length,
       created,
       skipped,
       failed,
