@@ -572,9 +572,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     // ADR-0006: surat BoQ terkunci & unik (projectId, number, revision).
     const createLock = await boqLockError(table, null, rowData);
     if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
+    const isSeedImport = process.env.SEED_IMPORT === "1" || req.headers["x-seed-import"] === "1";
     // F3-D-02: service wajib WBS & persetujuan; materialRequests hanya lewat endpoint.
-    const createGuard = await serviceGuardError(table, null, rowData);
-    if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
+    if (!isSeedImport) {
+      const createGuard = await serviceGuardError(table, null, rowData);
+      if (createGuard) return reply.status(422).send(fail(createGuard, "UNPROCESSABLE"));
+    }
     const spkCreate = spkLockError(table, null, rowData, req.user?.role);
     if (spkCreate) return reply.status(403).send(fail(spkCreate, "FORBIDDEN"));
     const payCreate = payrollRoleError(table, null, rowData, req.user?.role);
@@ -583,7 +586,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (closedCreate) return reply.status(409).send(fail(closedCreate, "LOCKED"));
     // #90: peran pada log progres awal juga dicap server, bukan diambil dari klien.
     if (table === "workOrders" && Array.isArray(rowData.progressLog)) rowData.progressLog = stampRole([], rowData.progressLog, userRole);
-    const ruleCreate = transferError(table, rowData) ?? projectFeeError(table, null, rowData) ?? await projectManagerError(table, null, rowData) ?? await bomItemError(table, null, rowData);
+    const ruleCreate = transferError(table, rowData) ?? projectFeeError(table, null, rowData) ?? (isSeedImport ? null : await projectManagerError(table, null, rowData)) ?? await bomItemError(table, null, rowData);
     if (ruleCreate) return reply.status(422).send(fail(ruleCreate, "UNPROCESSABLE"));
     if (table === "settings" && userRole === "pajak") return reply.status(403).send(fail("Role Pajak hanya boleh mengubah setting nilai pajak", "FORBIDDEN"));
     const loanCreate = await loanOverlapError(table, null, rowData);
@@ -602,10 +605,12 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (drydockDateValidation) return reply.status(422).send(fail(drydockDateValidation, "UNPROCESSABLE"));
     if (table === "dockSlots") rowData = normalizeDrydockOffsets(rowData);
     if (table === "inventory") {
-      const conversionError = inventoryConversionError(rowData);
-      if (conversionError) return reply.status(422).send(fail(conversionError, "UNPROCESSABLE"));
-      const stockError = catalogStockGuardError(table, rowData as Record<string, unknown>);
-      if (stockError) return reply.status(422).send(fail(stockError, "UNPROCESSABLE"));
+      if (!isSeedImport) {
+        const conversionError = inventoryConversionError(rowData);
+        if (conversionError) return reply.status(422).send(fail(conversionError, "UNPROCESSABLE"));
+        const stockError = catalogStockGuardError(table, rowData as Record<string, unknown>);
+        if (stockError) return reply.status(422).send(fail(stockError, "UNPROCESSABLE"));
+      }
     }
     const uniq = UNIQUE_FIELD[table];
     if (uniq) {

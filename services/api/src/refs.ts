@@ -17,7 +17,7 @@ export interface RefDef {
 // (perbandingan case/trim di FE via helper sameName).
 // Sentinel sah (saldo awal "", arsip "-", tanpa PR) didaftarkan per field.
 export const REFS: Record<string, Record<string, RefDef>> = {
-  invoices: { project: { target: "projects", allow: ["", "-"] } },
+  invoices: { project: { target: "projects", allow: ["", "-", "U/STOCK"] } },
   movements: { itemId: { target: "inventory" } },
   termins: { woId: { target: "workOrders" } },
   purchaseOrders: { req: { target: "requisitions", allow: ["-"] } },

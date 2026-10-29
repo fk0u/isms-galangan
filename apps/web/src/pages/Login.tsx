@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Anchor, Boxes, ShieldCheck } from "lucide-react";
-import { fetchLoginRoles, loginAsRole, type LoginRole } from "../auth/demoSwitch";
-import { isBackendConfigured } from "../services/http";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock, User, AlertCircle, ArrowRight, Container, ShipWheel, Loader2 } from "lucide-react";
@@ -27,29 +25,6 @@ export default function Login() {
   // Mencegah double-submit selama autentikasi; sinkronisasi dilakukan per modul.
   const [busy, setBusy] = useState<null | "auth">(null);
   const S = n_misc[locale];
-
-  /* Pilihan peran untuk presentasi (permintaan 14 Okt): hanya muncul bila
-     server mengaktifkan DEMO_LOGIN_PAGE. */
-  const [loginRoles, setLoginRoles] = useState<LoginRole[]>([]);
-  const [roleBusy, setRoleBusy] = useState<string | null>(null);
-  useEffect(() => {
-    if (!isBackendConfigured()) return;
-    let alive = true;
-    void fetchLoginRoles().then((r) => { if (alive) setLoginRoles(r); });
-    return () => { alive = false; };
-  }, []);
-  // Satu klik pada tombol peran = langsung masuk (catatan CTO 14 Okt).
-  const enterAsRole = async (role: string) => {
-    if (roleBusy) return;
-    setRoleBusy(role);
-    setError(null);
-    try {
-      await loginAsRole(role, from);
-    } catch (e) {
-      setRoleBusy(null);
-      fail(e instanceof Error ? e.message : t.auth.roleLoginFail);
-    }
-  };
 
   const fail = (message: string) => {
     setError(message);
@@ -226,35 +201,6 @@ export default function Login() {
               )}
             </button>
           </motion.form>
-
-          {loginRoles.length > 0 && (
-            <div className="mt-5">
-              <div className="flex items-center gap-3 text-xs font-medium text-steel-500">
-                <span className="h-px flex-1 bg-steel-200" />
-                {t.auth.roleLoginTitle}
-                <span className="h-px flex-1 bg-steel-200" />
-              </div>
-              {/* Ringkas: tombol pil berisi nama peran saja (catatan 14 Okt). */}
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {loginRoles.map((r) => (
-                  <button
-                    key={r.role}
-                    type="button"
-                    onClick={() => void enterAsRole(r.role)}
-                    disabled={roleBusy !== null}
-                    title={`${t.auth.roleGo}: ${r.name}`}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-steel-200 bg-white px-3.5 py-1.5 text-[13px] font-medium text-navy-800 transition-[background-color,border-color,color,transform] duration-150 hover:border-ocean-300 hover:bg-ocean-50 hover:text-ocean-700 active:scale-[0.97] disabled:opacity-60 motion-reduce:transform-none"
-                  >
-                    {roleBusy === r.role && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-3 text-center text-xs text-steel-500">{t.auth.roleLoginHint}</p>
-            </div>
-          )}
-
-
         </motion.div>
       </div>
     </div>

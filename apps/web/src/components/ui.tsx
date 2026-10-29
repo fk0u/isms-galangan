@@ -825,6 +825,10 @@ export function Modal({
   const { locale } = useT();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const prevActive = document.activeElement as HTMLElement | null;
@@ -928,7 +932,7 @@ export function Modal({
     </AnimatePresence>
   );
 
-  if (typeof document === "undefined") return content;
+  if (!mounted || typeof document === "undefined" || !document?.body) return content;
   return createPortal(content, document.body);
 }
 

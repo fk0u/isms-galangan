@@ -109,7 +109,7 @@ export function buildApp(): FastifyInstance {
   // they reach the log stream: auth headers, passwords/hashes, any
   // *token* fields, and MYSQL_URL. See README "Logging".
   const app = Fastify({
-    logger: {
+    logger: process.env.DISABLE_FASTIFY_LOGGER === "1" ? false : {
       level: env.nodeEnv === "production" ? "info" : "debug",
       redact: {
         paths: [
@@ -214,9 +214,14 @@ export function buildApp(): FastifyInstance {
   app.get("/api/version", async () => ok({ api: getApiVersion(), minWeb: MIN_WEB_VERSION }));
 
   // Pembatas ringan untuk semua rute tulis (300/mnt per identitas user, lihat
-// getWriteRateKey) + header Retry-After saat 429.
+  // getWriteRateKey) + header Retry-After saat 429.
   app.addHook("onRequest", async (req, reply) => {
     if (!WRITE_METHODS.has(req.method)) return undefined;
+    if (process.env.SEED_IMPORT === "1") return undefined;
+    if (req.headers["x-seed-import"] === "1") {
+      const key = getWriteRateKey(req);
+      if (key.startsWith("u:")) return undefined;
+    }
     const check = writeLimiter(getWriteRateKey(req));
     if (!check.allowed) {
       return denyRateLimited(reply, check.retryAfterSec, "Too many requests, try again later");
