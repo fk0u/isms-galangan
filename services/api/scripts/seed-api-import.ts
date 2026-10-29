@@ -532,7 +532,7 @@ async function main(): Promise<void> {
 
   // --- Batch 15: Master Katalog Barang & Stok Gudang Nyata (Inventory) ---
   const legacyStock = loadJson<Array<{ kode: string; nama: string; awal: number; masuk: number; keluar: number; akhir: number }>>("warehouse_stock.json");
-  const legacyWin = loadJson<Array<Record<string, any>>>("warehouse_in.json");
+  const legacyWin = loadJson<Array<Record<string, unknown>>>("warehouse_in.json");
 
   const CATEGORY_DEFAULT: Array<[RegExp, number]> = [
     [/plat|baja|besi|siku|channel|\bms\b|pipa\s*(besi|karbon)/i, 14500],
@@ -720,7 +720,7 @@ async function main(): Promise<void> {
   }
 
   // --- Batch 17: Mutasi Pengeluaran Gudang Nyata (Warehouse Out Movements) ---
-  const legacyWout = loadJson<Array<Record<string, any>>>("warehouse_out.json");
+  const legacyWout = loadJson<Array<Record<string, unknown>>>("warehouse_out.json");
   if (legacyWout && Array.isArray(legacyWout)) {
     const startBatch = Date.now();
     console.log(`\n-------------------------------------------------------------------`);

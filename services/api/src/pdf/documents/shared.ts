@@ -1,4 +1,4 @@
-﻿/* Helper yang dipakai semua factory dokumen resmi.
+/* Helper yang dipakai semua factory dokumen resmi.
  *
  * Isi di sini - kop perusahaan, format angka/tanggal, pemuat baris dari DB -
  * TIDAK duplikat di 21 factory. Kesalahan seperti "kwitansi pakai ejaan
@@ -88,7 +88,7 @@ export function kopImageSrc(): string | null {
   }
   return kopCache || null;
 }
-const KOP_RATIO = 214 / 1142;
+const KOP_RATIO = 102 / 686;
 
 /** Kop perusahaan. Semua dokumen resmi memakai ini tanpa variasi: kop gambar
  *  klien selebar area isi; kop teks (bisa diubah lewat setting) hanya bila

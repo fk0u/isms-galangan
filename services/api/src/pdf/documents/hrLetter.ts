@@ -175,7 +175,7 @@ class Pen {
 
 /* Layout seragam dengan semua dokumen (permintaan user 21 Okt): kop, jarak
    kop → judul, dan footer alamat sama dengan dokumen lain. */
-const KOP_RATIO = 214 / 1142;
+const KOP_RATIO = 102 / 686;
 const KOP_GAP = 7;
 
 /** "26 (Dua Puluh Enam) bulan Juni tahun 2026" - kalimat tanggal PHK. */
