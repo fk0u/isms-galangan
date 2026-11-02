@@ -82,7 +82,7 @@ export function complianceSummary(v: StoreItem): { total: number; valid: number;
 }
 
 const emptyForm = {
-  name: "", type: "", owner: "", loa: "", lbp: "", beam: "", depth: "", draft: "",
+  name: "", type: "", owner: "", loa: "", lbp: "", beam: "", depth: "",
   class: "BKI", status: "Dalam Operasi",
 };
 
@@ -91,7 +91,7 @@ type VesselForm = typeof emptyForm;
 function validateForm(form: VesselForm, S: (typeof n_eqp)["id"]): string | null {
   if (!form.name.trim() || !form.owner.trim()) return S.vsReqBasic;
   if (!form.type.trim()) return S.vsTypeReq;
-  const dims = { loa: Number(form.loa), beam: Number(form.beam), draft: Number(form.draft) };
+  const dims = { loa: Number(form.loa), beam: Number(form.beam) };
   if (Object.values(dims).some((n) => !Number.isFinite(n))) return S.vsDimsNum;
   // "Dalam Pembangunan" hanya ada pada kapal lama (status tidak lagi diisi di form).
   if (form.status !== "Dalam Pembangunan" && Object.values(dims).some((n) => n <= 0)) return S.vsDimsPos;
@@ -118,7 +118,6 @@ function formToPayload(form: VesselForm) {
     lbp: optNum(form.lbp),
     beam: Number(form.beam),
     depth: optNum(form.depth),
-    draft: Number(form.draft),
   };
 }
 
@@ -132,7 +131,6 @@ function vesselToForm(v: StoreItem): VesselForm {
     lbp: str(v.lbp),
     beam: str(v.beam),
     depth: str(v.depth),
-    draft: str(v.draft),
     class: String(v.class ?? "BKI"),
     status: String(v.status ?? "Dalam Operasi"),
   };
@@ -264,7 +262,7 @@ export default function Vessels() {
     try {
     const err = validateForm(form, S);
     if (err) { toast(err, "info"); return; }
-    const dimsZero = [form.loa, form.beam, form.draft].some((n) => Number(n) <= 0);
+    const dimsZero = [form.loa, form.beam].some((n) => Number(n) <= 0);
     const warnZero = form.status === "Dalam Pembangunan" && dimsZero;
     const created = await add("vessels", {
       ...formToPayload(form),
@@ -346,7 +344,6 @@ export default function Vessels() {
         <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={f.lbp} onChange={(e) => setF({ ...f, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
         <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={f.beam} onChange={(e) => setF({ ...f, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
         <Field label={S.vsDepthField}><NumInput min={0} step={0.1} className="input" value={f.depth} onChange={(e) => setF({ ...f, depth: e.target.value })} placeholder={S.vsDepthPh} /></Field>
-        <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={f.draft} onChange={(e) => setF({ ...f, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
       </FormGrid>
     </div>
   );

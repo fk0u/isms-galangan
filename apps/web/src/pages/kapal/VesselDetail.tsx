@@ -109,9 +109,7 @@ export default function VesselDetail() {
   const [surveyForm, setSurveyForm] = useState({ type: "Annual Survey", date: "", status: "Terjadwal", linkedTrial: "" });
   const [tab, setTab] = useState("Sertifikat & Timeline");
   const [showSpec, setShowSpec] = useState(false);
-  /* Spesifikasi mengikuti form pendaftaran kapal (K17-KPL-01). Field lama (IMO,
-     GT, BHP, …) tidak ikut di-patch sehingga nilainya tetap tersimpan. */
-  const [specForm, setSpecForm] = useState({ owner: "", type: "", class: "", loa: "", lbp: "", beam: "", depth: "", draft: "" });
+  const [specForm, setSpecForm] = useState({ owner: "", type: "", class: "", loa: "", lbp: "", beam: "", depth: "" });
   const [showPsc, setShowPsc] = useState(false);
   const [pscForm, setPscForm] = useState({ date: todayISO(), port: "", deficiencies: "0", status: "Bersih" });
   const [showDock, setShowDock] = useState(false);
@@ -226,7 +224,7 @@ export default function VesselDetail() {
     const str = (x: unknown): string => (x === undefined || x === null ? "" : String(x));
     setSpecForm({
       owner: str(v.owner), type: str(v.type), class: str(v.class),
-      loa: str(v.loa), lbp: str(v.lbp), beam: str(v.beam), depth: str(v.depth), draft: str(v.draft),
+      loa: str(v.loa), lbp: str(v.lbp), beam: str(v.beam), depth: str(v.depth),
     });
     setShowSpec(true);
   };
@@ -235,7 +233,7 @@ export default function VesselDetail() {
     try {
     if (!specForm.owner.trim()) { toast(S.vsReqBasic, "info"); return; }
     if (!specForm.type.trim()) { toast(S.vsTypeReq, "info"); return; }
-    const dimensions = [specForm.loa, specForm.beam, specForm.draft].map(Number);
+    const dimensions = [specForm.loa, specForm.beam].map(Number);
     if (dimensions.some((value) => !Number.isFinite(value))) { toast(S.vsDimsNum, "info"); return; }
     if (String(v.status) !== "Dalam Pembangunan" && dimensions.some((value) => value <= 0)) { toast(S.vsDimsPos, "info"); return; }
     const opt = (x: string): number | null => (x.trim() === "" ? null : Number(x));
@@ -246,7 +244,7 @@ export default function VesselDetail() {
       owner: specForm.owner.trim(),
       type: specForm.type.trim(),
       class: specForm.class,
-      loa: dimensions[0], lbp, beam: dimensions[1], depth, draft: dimensions[2],
+      loa: dimensions[0], lbp, beam: dimensions[1], depth,
     });
     toast(S.vdSpecUpdated);
     setShowSpec(false);
@@ -403,8 +401,8 @@ export default function VesselDetail() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
-        {([["vdKpiLoa", v.loa], ["vdKpiLbp", v.lbp], ["vdKpiBeam", v.beam], ["vdKpiDepth", v.depth], ["vdKpiDraft", v.draft]] as const).map(([k, val]) => (
+      <div className={`grid grid-cols-2 gap-4 ${v.draft ? "sm:grid-cols-3 xl:grid-cols-5" : "sm:grid-cols-4"}`}>
+        {([["vdKpiLoa", v.loa], ["vdKpiLbp", v.lbp], ["vdKpiBeam", v.beam], ["vdKpiDepth", v.depth], ...(v.draft ? [["vdKpiDraft", v.draft] as const] : [])] as const).map(([k, val]) => (
           <KpiCard key={k} label={S[k]} value={val === undefined || val === null || val === "" ? "-" : `${String(val)} m`} icon={<Ship className="h-5 w-5" />} />
         ))}
       </div>
@@ -562,7 +560,7 @@ export default function VesselDetail() {
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.typeLabel}</dt><dd className="text-sm font-medium text-navy-900">{v.type}</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsOwnerField}</dt><dd className="text-sm font-medium text-navy-900">{v.owner}</dd></div>
                 <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vsClassField}</dt><dd className="text-sm font-medium text-navy-900">{v.class}</dd></div>
-                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecLoa}</dt><dd className="text-sm font-medium text-navy-900">{v.loa ?? "-"} / {v.lbp ?? "-"} / {v.beam ?? "-"} / {v.depth ?? "-"} / {v.draft ?? "-"} m</dd></div>
+                <div className="rounded-lg bg-surface p-3"><dt className="text-xs text-steel-500">{S.vdSpecLoa}</dt><dd className="text-sm font-medium text-navy-900">{v.loa ?? "-"} / {v.lbp ?? "-"} / {v.beam ?? "-"} / {v.depth ?? "-"}{v.draft ? ` / ${v.draft}` : ""} m</dd></div>
               </dl>
             </Card>
           )}
@@ -859,7 +857,6 @@ export default function VesselDetail() {
           <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={specForm.lbp} onChange={(e) => setSpecForm({ ...specForm, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
           <Field label={S.vsBeamField}><NumInput min={0} step={0.1} className="input" value={specForm.beam} onChange={(e) => setSpecForm({ ...specForm, beam: e.target.value })} placeholder={S.vsBeamPh} /></Field>
           <Field label={S.vsDepthField}><NumInput min={0} step={0.1} className="input" value={specForm.depth} onChange={(e) => setSpecForm({ ...specForm, depth: e.target.value })} placeholder={S.vsDepthPh} /></Field>
-          <Field label={S.vsDraftField}><NumInput min={0} step={0.1} className="input" value={specForm.draft} onChange={(e) => setSpecForm({ ...specForm, draft: e.target.value })} placeholder={S.vsDraftPh} /></Field>
         </FormGrid>
       </Modal>
 

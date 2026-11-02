@@ -49,12 +49,12 @@ export function signToken(payload: AuthUser): string {
       employeeId: payload.employeeId ?? null,
     },
     getSecret(),
-    { expiresIn: "8h" },
+    { expiresIn: "8h", algorithm: "HS256" },
   );
 }
 
 export function verifyToken(token: string): AuthUser {
-  const raw = jwt.verify(token, getSecret()) as Partial<AuthUser>;
+  const raw = jwt.verify(token, getSecret(), { algorithms: ["HS256"] }) as Partial<AuthUser>;
   /* Token yang dibuat sebelum claim `branch` ada tidak punya field itu.
      Default "SEMUA" (= tidak dibatasi) dipilih karena itu perilaku lama:
     Versi yang lebih ketat tiba-tiba lewat diam-diam. Batas yang lebih ketat

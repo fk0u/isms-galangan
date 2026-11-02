@@ -283,7 +283,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       }
     }
 
-    if (self && !privileged) {
+    if (self) {
       const oldOk =
         typeof parsed.data.oldPassword === "string" &&
         parsed.data.oldPassword.length > 0 &&
@@ -301,7 +301,7 @@ export function registerUserRoutes(app: FastifyInstance): void {
       action: "password_change",
       table: "users",
       rowId: target.id,
-      diff: { username: target.username, self, verifiedOldPassword: self && !privileged },
+      diff: { username: target.username, self, verifiedOldPassword: self },
       ip: requestIp(req),
     });
     invalidateUserCache(target.id);
