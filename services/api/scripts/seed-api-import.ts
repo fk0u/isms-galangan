@@ -620,7 +620,7 @@ async function main(): Promise<void> {
           name,
           category: "Warehouse 2024",
           sku: b.kode,
-          warehouse: "Gudang Santi",
+          warehouse: "Gudang Material",
           stock: stockVal,
           stockAwal: st ? Number(st.awal || 0) : 0,
           stockMasuk: st ? Number(st.masuk || 0) : 0,

@@ -472,9 +472,9 @@ export const inventory: InventoryItem[] = [
   { id: "INV-021", name: "Cat Antifouling (drum 200 L)", category: "Cat", sku: "AF-DRUM", warehouse: "Gudang B", stock: 6, minStock: 2, unit: "drum", cost: 18500000, location: "B2-14", eceran: true, conversion: { baseUnit: "liter", perUnit: 200 } },
   { id: "INV-022", name: "Plat Baja AH36 12mm (6000×1500)", category: "Plat", sku: "AH36-12-LBR", warehouse: "Gudang Baja A", stock: 12, minStock: 4, unit: "lembar", cost: 12300000, location: "A1-04", conversion: { baseUnit: "kg", perUnit: 848, dims: { lengthMm: 6000, widthMm: 1500, thicknessMm: 12, weightKg: 848 } } },
   // RawData REPORT WAREHOUSE 2024 (sheet KODE + STOCK ALL).
-  { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Santi", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
-  { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Santi", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },
-  { id: "INV-SB-003", name: "PLAT 8MM 5x20", category: "Baja", sku: "EO0000LAT15", warehouse: "Gudang Santi", stock: 6, minStock: 4, unit: "LBR", cost: 6500000, location: "S-03" },
+  { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Material", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
+  { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Material", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },
+  { id: "INV-SB-003", name: "PLAT 8MM 5x20", category: "Baja", sku: "EO0000LAT15", warehouse: "Gudang Material", stock: 6, minStock: 4, unit: "LBR", cost: 6500000, location: "S-03" },
 ];
 
 /* `fuelPrice` = harga solar per liter.

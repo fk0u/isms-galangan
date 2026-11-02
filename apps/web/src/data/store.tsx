@@ -239,7 +239,7 @@ const seedSettings: StoreItem[] = [
      {namaGudang: kapasitas}; Inventory menjumlahkan stock per gudang lalu
      membandingkan dengan angka ini (satuan dicampur, jadi ini pembatas
      perkiraan, bukan hitungan volume riil). */
-  { id: "SET-WHCAP", key: "WAREHOUSE_CAP", value: '{"Gudang Baja A":8000,"Gudang B":2000,"Gudang Listrik":1800,"Gudang Pipa":60,"Gudang Rig":40,"Gudang Mesin":30,"Gudang Santi":40}', label: "Kapasitas gudang (JSON {gudang: kapasitas})", group: "Gudang" },
+  { id: "SET-WHCAP", key: "WAREHOUSE_CAP", value: '{"Gudang Baja A":8000,"Gudang B":2000,"Gudang Listrik":1800,"Gudang Pipa":60,"Gudang Rig":40,"Gudang Mesin":30,"Gudang Material":40}', label: "Kapasitas gudang (JSON {gudang: kapasitas})", group: "Gudang" },
   { id: "SET-APPINV", key: "APPROVE_INVOICE", value: 5000000, label: "Ambang Director invoice (Rp)", group: "Approval" },
   { id: "SET-APPTERM", key: "APPROVE_TERMIN", value: 2000000, label: "Ambang Director termin (Rp)", group: "Approval" },
   { id: "SET-APPPO", key: "APPROVE_PO", value: 1000000, label: "Ambang Director PO (Rp)", group: "Approval" },

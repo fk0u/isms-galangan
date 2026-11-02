@@ -639,7 +639,7 @@ export const seedWarehouses: StoreItem[] = [
   { id: "GDG-004", name: "Gudang Pipa", type: "Pipa & Fitting", capacity: 60, lokasi: "Area D - Pipa", pic: "Fajar N.", aktif: true },
   { id: "GDG-005", name: "Gudang Rig", type: "Rigging & Wire", capacity: 40, lokasi: "Area E - Rigging", pic: "Fajar N.", aktif: true },
   { id: "GDG-006", name: "Gudang Mesin", type: "Sparepart Mesin", capacity: 30, lokasi: "Area F - Ruang Mesin", pic: "Budi Santoso", aktif: true },
-  { id: "GDG-007", name: "Gudang Santi", type: "Consumable & Cat", capacity: 40, lokasi: "Area G - Consumable", pic: "Budi Santoso", aktif: true },
+  { id: "GDG-007", name: "Gudang Material", type: "Consumable & Cat", capacity: 40, lokasi: "Area G - Consumable", pic: "Budi Santoso", aktif: true },
 ];
 
 /* Siklus maintenance equipment. Dulu status hidup tersebar di nextService +
