@@ -4,7 +4,7 @@
    - /assets/* (nama ber-hash, tidak pernah berubah): cache-first.
    - /api, /files, /health: TIDAK PERNAH di-cache (data selalu dari server;
      cache data offline sudah ditangani store + IndexedDB). */
-const VERSION = "isms-shell-v3";
+const VERSION = "isms-shell-v4";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(VERSION).then((c) => c.addAll(["/", "/favicon.ico", "/favicon.svg", "/favicon.png", "/manifest.webmanifest"])));
