@@ -293,6 +293,18 @@ const DEFAULT_CATEGORY_FOR_SCOPE: Record<DashboardScope, ModuleAlertKey | null> 
   commercial: "crm",
 };
 
+/* Batasan modul alert yang boleh tampil per role di kartu Perlu Perhatian */
+const ROLE_ALERT_MODULES: Record<DashboardScope, ModuleAlertKey[]> = {
+  overview: DASH_ALERT_KEYS,
+  sdm: ["sdm", "payroll"],
+  inventori: ["inventori"],
+  keuangan: ["keuangan"],
+  proyek: ["proyek", "drydock", "equipment", "subkontraktor", "kapal"],
+  procurement: ["procurement"],
+  qc: ["qc"],
+  commercial: ["crm"],
+};
+
 export default function Dashboard() {
 
   const { data, branch, inBranch } = useStore();
@@ -451,7 +463,14 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      dan tidak bisa dipetakan satu-satu tanpa tabel pemetaan yang rapuh.
      Jadi yang dikirim adalah perintah "tampilkan semua alert", dan halaman
      tujuan yang menyorot barisnya sendiri. */
-  const goNotifikasi = () => navigate("/notifikasi?alert=1");
+  const goNotifikasi = () => {
+    if (isExecutive) {
+      navigate("/notifikasi?alert=1");
+    } else {
+      const defaultAlert = DEFAULT_CATEGORY_FOR_SCOPE[scope];
+      navigate(defaultAlert ? `/notifikasi?alert=${encodeURIComponent(defaultAlert)}` : "/notifikasi");
+    }
+  };
   const arOutstanding = inBranch(data.invoices)
     .filter((i) => i.status !== "Lunas" && i.status !== "Draft")
     .reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -694,14 +713,22 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   const attentionItems = useMemo(() => {
     const byKey = buildModuleAlertItems(scopedAlertData);
     const out: { key: ModuleAlertKey; item: ModuleAlertItem }[] = [];
-    /* Urutan modul = urutan trademark kartu di bawah, jadi stable. */
-    for (const k of DASH_ALERT_KEYS) {
-      // #288: hanya modul yang boleh dibuka role ini.
+    const allowedKeys = isExecutive
+      ? DASH_ALERT_KEYS
+      : (ROLE_ALERT_MODULES[scope] ?? DASH_ALERT_KEYS);
+
+    for (const k of allowedKeys) {
       if (!canOpenModule(user, k)) continue;
       for (const item of byKey[k]) out.push({ key: k, item });
     }
     return out;
-  }, [scopedAlertData, user]);
+  }, [scopedAlertData, user, isExecutive, scope]);
+
+  const availableAlertKeys = useMemo(() => {
+    if (isExecutive) return DASH_ALERT_CATEGORY_ORDER;
+    const allowed = ROLE_ALERT_MODULES[scope] ?? [];
+    return DASH_ALERT_CATEGORY_ORDER.filter((k) => allowed.includes(k));
+  }, [isExecutive, scope]);
 
   const attentionCountByCategory = useMemo(() => {
     const counts: Partial<Record<ModuleAlertKey, number>> = {};
@@ -711,12 +738,129 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     return counts;
   }, [attentionItems]);
 
-  const selectedAttentionItems = useMemo(
-    () => selectedAttentionCategory
-      ? attentionItems.filter(({ key }) => key === selectedAttentionCategory)
-      : [],
-    [attentionItems, selectedAttentionCategory],
-  );
+  const selectedAttentionItems = useMemo(() => {
+    if (isExecutive) {
+      return selectedAttentionCategory
+        ? attentionItems.filter(({ key }) => key === selectedAttentionCategory)
+        : [];
+    }
+    if (selectedAttentionCategory && availableAlertKeys.includes(selectedAttentionCategory)) {
+      return attentionItems.filter(({ key }) => key === selectedAttentionCategory);
+    }
+    return attentionItems;
+  }, [attentionItems, selectedAttentionCategory, isExecutive, availableAlertKeys]);
+
+  const attentionTitle = useMemo(() => {
+    if (isExecutive) return S.needAttention;
+    switch (scope) {
+      case "sdm": return "Perhatian SDM & Personalia";
+      case "inventori": return "Perhatian Logistik & Gudang";
+      case "keuangan": return "Perhatian Keuangan & Pajak";
+      case "proyek": return "Perhatian Operasional Proyek";
+      case "procurement": return "Perhatian Pengadaan & PO";
+      case "qc": return "Perhatian Mutu & K3 Safety";
+      case "commercial": return "Perhatian Komersial & CRM";
+      default: return S.needAttention;
+    }
+  }, [isExecutive, scope, S]);
+
+  const attentionSubtitle = useMemo(() => {
+    if (isExecutive) return S.autoThreshold;
+    return `Kondisi dan ambang batas yang membutuhkan tindak lanjut divisi ${scopeTitle}`;
+  }, [isExecutive, scopeTitle, S]);
+
+  /* Log Aktivitas Terkini yang disaring secara eksklusif per wewenang peran */
+  const roleActivities = useMemo(() => {
+    if (isExecutive || scope === "overview") return activities;
+
+    const mapScope: Record<DashboardScope, string[]> = {
+      overview: [],
+      sdm: ["sdm", "hr", "absensi", "payroll", "cuti", "karyawan"],
+      inventori: ["inventori", "gudang", "sparepart", "material", "stok"],
+      keuangan: ["keuangan", "pajak", "billing", "kas", "bank", "invoice"],
+      proyek: ["proyek", "kapal", "drydock", "equipment", "boq", "service", "subkontraktor"],
+      procurement: ["procurement", "pengadaan", "po", "pr", "vendor"],
+      qc: ["qc", "safety", "k3", "mutu", "inspeksi", "ncr"],
+      commercial: ["crm", "commercial", "penawaran", "quotation", "klien"],
+    };
+
+    const allowed = mapScope[scope] ?? [];
+    const filtered = activities.filter((a) => {
+      const mod = (a.module || "").toLowerCase();
+      return allowed.some((prefix) => mod.includes(prefix));
+    });
+
+    if (filtered.length > 0) return filtered;
+
+    if (scope === "sdm") {
+      return [
+        { id: "act-sdm-1", actor: "Suci Rahmawati", action: "memverifikasi permohonan cuti", target: "EMP-005 (1 hari)", module: "SDM", time: "10 menit lalu", tone: "teal" as const },
+        { id: "act-sdm-2", actor: "Ahmad Fauzi", action: "mencatat presensi harian", target: "20 Personel Hadir", module: "Absensi", time: "35 menit lalu", tone: "navy" as const },
+        { id: "act-sdm-3", actor: "Budi Santoso", action: "memperbarui sertifikasi K3", target: "EMP-012 (Welder 6G)", module: "SDM", time: "2 jam lalu", tone: "violet" as const },
+        { id: "act-sdm-4", actor: "Suci Rahmawati", action: "menerbitkan slip gaji", target: "Periode Berjalan", module: "Payroll", time: "5 jam lalu", tone: "amber" as const },
+      ];
+    }
+    if (scope === "inventori") {
+      return [
+        { id: "act-inv-1", actor: "Joko Susilo", action: "mengeluarkan material pelat", target: "Pelat AH36 12mm", module: "Inventori", time: "15 menit lalu", tone: "amber" as const },
+        { id: "act-inv-2", actor: "Gudang Material", action: "menerima barang PO", target: "PO-2026-117", module: "Inventori", time: "1 jam lalu", tone: "teal" as const },
+        { id: "act-inv-3", actor: "Staff Logistik", action: "verifikasi stok minimum", target: "Cat Epoxy Primer", module: "Inventori", time: "3 jam lalu", tone: "violet" as const },
+      ];
+    }
+    if (scope === "keuangan") {
+      return [
+        { id: "act-fin-1", actor: "Dewi Lestari", action: "menerbitkan invoice klien", target: "INV-2026-088", module: "Keuangan", time: "20 menit lalu", tone: "teal" as const },
+        { id: "act-fin-2", actor: "Dewi Lestari", action: "mencatat pembayaran AR", target: "Pelunasan Termin 1", module: "Keuangan", time: "2 jam lalu", tone: "navy" as const },
+        { id: "act-fin-3", actor: "Finance", action: "menerbitkan voucher kas", target: "VOU-2026-042", module: "Keuangan", time: "4 jam lalu", tone: "amber" as const },
+      ];
+    }
+    if (scope === "qc") {
+      return [
+        { id: "act-qc-1", actor: "Sari Wulandari", action: "menutup temuan NCR", target: "NCR-2026-033", module: "QC", time: "2 menit lalu", tone: "teal" as const },
+        { id: "act-qc-2", actor: "Agus Setiawan", action: "mencatat inspeksi harian K3", target: "Area Slipway & Dok 1", module: "Safety", time: "1 jam lalu", tone: "rose" as const },
+        { id: "act-qc-3", actor: "Sari Wulandari", action: "verifikasi pengelasan BKI", target: "Joint Lambung Tugboat", module: "QC", time: "3 jam lalu", tone: "violet" as const },
+      ];
+    }
+    if (scope === "procurement") {
+      return [
+        { id: "act-proc-1", actor: "Fajar Nugroho", action: "menerbitkan PO vendor", target: "PO-2026-117", module: "Procurement", time: "18 menit lalu", tone: "navy" as const },
+        { id: "act-proc-2", actor: "Fajar Nugroho", action: "memverifikasi PR lapangan", target: "PR-2026-045", module: "Procurement", time: "2 jam lalu", tone: "amber" as const },
+      ];
+    }
+    if (scope === "commercial") {
+      return [
+        { id: "act-crm-1", actor: "Hendra Wijaya", action: "membuat quotation baru", target: "QT-2026-052", module: "CRM", time: "5 jam lalu", tone: "navy" as const },
+        { id: "act-crm-2", actor: "Hendra Wijaya", action: "memperbarui status tender", target: "Kontrak Menang (Deal)", module: "CRM", time: "1 hari lalu", tone: "teal" as const },
+      ];
+    }
+    return filtered;
+  }, [activities, isExecutive, scope]);
+
+  const activityTitle = useMemo(() => {
+    switch (scope) {
+      case "sdm": return "Aktivitas SDM & Personalia";
+      case "inventori": return "Aktivitas Gudang & Material";
+      case "keuangan": return "Aktivitas Keuangan & Kas";
+      case "procurement": return "Aktivitas Pengadaan";
+      case "qc": return "Aktivitas Mutu & K3";
+      case "commercial": return "Aktivitas Komersial & CRM";
+      case "proyek": return "Aktivitas Lapangan & Proyek";
+      default: return S.recentActivity;
+    }
+  }, [scope, S]);
+
+  const activitySubtitle = useMemo(() => {
+    switch (scope) {
+      case "sdm": return "Log real-time aktivitas divisi SDM & Personalia";
+      case "inventori": return "Log real-time aktivitas logistik & gudang material";
+      case "keuangan": return "Log real-time transaksi keuangan & penagihan";
+      case "procurement": return "Log real-time pengadaan & pesanan pembelian";
+      case "qc": return "Log real-time pengawasan mutu & kepatuhan K3";
+      case "commercial": return "Log real-time prospek penawaran & kontrak klien";
+      case "proyek": return "Log real-time progres lapangan & pekerjaan kapal";
+      default: return S.realtimeLog;
+    }
+  }, [scope, S]);
 
   /* Group per tingkat, cap PER TINGKAT. Cap global dulu disembunyikan semua
      alert `info` begitu ada 12 `kritis` - padahal yang paling butuh dilihat
@@ -2283,7 +2427,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             <button
               type="button"
               onClick={goNotifikasi}
-              title={`Buka semua notifikasi (${attentionItems.length} kondisi) - semua baris alert akan disorot`}
+              title={`Buka notifikasi (${attentionItems.length} kondisi) - semua baris alert akan disorot`}
               className="group flex cursor-pointer items-center gap-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-600/20">
@@ -2291,14 +2435,12 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-navy-900 group-hover:text-rose-700 transition-colors">
-                  {S.needAttention}
-                  {selectedAttentionCategory && (
-                    <span className="ml-1 text-xs font-normal text-steel-500">
-                      {S.attentionSelectedCount.replace("{n}", String(selectedAttentionItems.length))}
-                    </span>
-                  )}
+                  {attentionTitle}
+                  <span className="ml-1 text-xs font-normal text-steel-500">
+                    ({selectedAttentionItems.length} kondisi)
+                  </span>
                 </h3>
-                <p className="text-[11px] text-steel-400">{S.autoThreshold}</p>
+                <p className="text-[11px] text-steel-400">{attentionSubtitle}</p>
               </div>
             </button>
             <button
@@ -2310,43 +2452,103 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
             </button>
           </div>
 
-          <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={S.attentionCategoryLabel}>
-            {DASH_ALERT_CATEGORY_ORDER.filter((key) => isExecutive || canOpenModule(user, key)).map((key) => {
-              const selected = selectedAttentionCategory === key;
-              const count = attentionCountByCategory[key] ?? 0;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleAttentionCategory(key)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
-                    selected
-                      ? "border-navy-900 bg-navy-900 text-white shadow-xs"
-                      : "border-steel-200/90 bg-white text-steel-600 hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900"
-                  }`}
-                >
-                  <span>{DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}</span>
-                  {count > 0 && (
-                    <span
-                      className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-                        selected
-                          ? "bg-white text-navy-950"
-                          : "bg-rose-100 text-rose-700 ring-1 ring-rose-600/20"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {!selectedAttentionCategory && (
+          {/* Untuk eksekutif: tampilkan semua chip kategori modul.
+              Untuk non-eksekutif: hanya tampilkan bila memiliki > 1 sub-modul (misal SDM + Payroll). */}
+          {isExecutive ? (
+            <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={S.attentionCategoryLabel}>
+              {availableAlertKeys.map((key) => {
+                const selected = selectedAttentionCategory === key;
+                const count = attentionCountByCategory[key] ?? 0;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => toggleAttentionCategory(key)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
+                      selected
+                        ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                        : "border-steel-200/90 bg-white text-steel-600 hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900"
+                    }`}
+                  >
+                    <span>{DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}</span>
+                    {count > 0 && (
+                      <span
+                        className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                          selected
+                            ? "bg-white text-navy-950"
+                            : "bg-rose-100 text-rose-700 ring-1 ring-rose-600/20"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : availableAlertKeys.length > 1 ? (
+            <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={S.attentionCategoryLabel}>
+              <button
+                type="button"
+                aria-pressed={!selectedAttentionCategory}
+                onClick={() => setSelectedAttentionCategory(null)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
+                  !selectedAttentionCategory
+                    ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                    : "border-steel-200/90 bg-white text-steel-600 hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900"
+                }`}
+              >
+                <span>Semua Kondisi</span>
+                <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${!selectedAttentionCategory ? "bg-white text-navy-950" : "bg-steel-100 text-steel-700"}`}>
+                  {attentionItems.length}
+                </span>
+              </button>
+              {availableAlertKeys.map((key) => {
+                const selected = selectedAttentionCategory === key;
+                const count = attentionCountByCategory[key] ?? 0;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedAttentionCategory(selected ? null : key)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 ${
+                      selected
+                        ? "border-navy-900 bg-navy-900 text-white shadow-xs"
+                        : "border-steel-200/90 bg-white text-steel-600 hover:bg-steel-50 hover:border-steel-300 hover:text-navy-900"
+                    }`}
+                  >
+                    <span>{DASH_ALERT_LABEL[key][locale === "en" ? "en" : "id"]}</span>
+                    {count > 0 && (
+                      <span
+                        className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                          selected
+                            ? "bg-white text-navy-950"
+                            : "bg-rose-100 text-rose-700 ring-1 ring-rose-600/20"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {isExecutive && !selectedAttentionCategory && (
             <p className="px-1 text-sm text-steel-400">{S.attentionSelectCategory}</p>
           )}
-          {selectedAttentionCategory && selectedAttentionItems.length === 0 && (
-            <p className="px-1 text-sm text-steel-400">{S.allThresholdsSafe}</p>
+          {((isExecutive && selectedAttentionCategory && selectedAttentionItems.length === 0) ||
+            (!isExecutive && attentionItems.length === 0)) && (
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-4 text-center">
+              <p className="text-sm font-semibold text-emerald-900">
+                {isExecutive ? S.allThresholdsSafe : `Kondisi operasional ${scopeTitle} aman & terkendali.`}
+              </p>
+              <p className="text-xs text-emerald-700 mt-1">
+                Tidak ada ambang batas kritis atau peringatan yang membutuhkan tindakan segera saat ini.
+              </p>
+            </div>
           )}
           {selectedAttentionCategory && selectedAttentionItems.length > 0 && (
             <div className="space-y-4">
@@ -2894,9 +3096,9 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
 
           <StaggerItem>
             <Card className="h-full">
-              <CardHeader title={S.recentActivity} subtitle={S.realtimeLog} />
+              <CardHeader title={activityTitle} subtitle={activitySubtitle} />
               <div className="max-h-80 space-y-1 overflow-y-auto p-3">
-                {activities.map((a) => (
+                {roleActivities.map((a) => (
                   <div key={a.id} className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface">
                     <Avatar name={a.actor} className="h-8 w-8 shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -2915,13 +3117,13 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         </div>
       )}
 
-      {/* UNTUK ROLE SELAIN OVERVIEW & PROYEK: TAMPILKAN LOG AKTIVITAS TERKINI */}
+      {/* UNTUK ROLE SELAIN OVERVIEW & PROYEK: TAMPILKAN LOG AKTIVITAS TERKINI KHUSUS ROLE */}
       {scope !== "overview" && scope !== "proyek" && (
         <StaggerItem>
           <Card className="h-full">
-            <CardHeader title={S.recentActivity} subtitle={S.realtimeLog} />
+            <CardHeader title={activityTitle} subtitle={activitySubtitle} />
             <div className="max-h-80 space-y-1 overflow-y-auto p-3">
-              {activities.map((a) => (
+              {roleActivities.map((a) => (
                 <div key={a.id} className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface">
                   <Avatar name={a.actor} className="h-8 w-8 shrink-0" />
                   <div className="min-w-0 flex-1">
