@@ -20,7 +20,6 @@ import {
   ShoppingCart,
   ShieldCheck,
   Briefcase,
-  Layers,
   CheckCircle2,
   Building,
   Warehouse,
@@ -283,16 +282,16 @@ function defaultScopeForRole(role?: string): DashboardScope {
   return "overview";
 }
 
-const DASH_SCOPES: { id: DashboardScope; labelKey: keyof typeof n_misc.id; icon: typeof Layers; tone: string }[] = [
-  { id: "overview", labelKey: "dashScopeOverview", icon: Layers, tone: "from-sky-500 to-indigo-600" },
-  { id: "inventori", labelKey: "dashScopeInventory", icon: Boxes, tone: "from-amber-500 to-orange-600" },
-  { id: "sdm", labelKey: "dashScopeHr", icon: Users, tone: "from-blue-500 to-cyan-600" },
-  { id: "keuangan", labelKey: "dashScopeFinance", icon: Wallet, tone: "from-emerald-500 to-teal-600" },
-  { id: "proyek", labelKey: "dashScopeProject", icon: Anchor, tone: "from-indigo-500 to-blue-700" },
-  { id: "procurement", labelKey: "dashScopeProcurement", icon: ShoppingCart, tone: "from-violet-500 to-purple-600" },
-  { id: "qc", labelKey: "dashScopeQc", icon: ShieldCheck, tone: "from-rose-500 to-red-600" },
-  { id: "commercial", labelKey: "dashScopeCommercial", icon: Briefcase, tone: "from-teal-500 to-emerald-600" },
-];
+const DEFAULT_CATEGORY_FOR_SCOPE: Record<DashboardScope, ModuleAlertKey | null> = {
+  overview: null,
+  inventori: "inventori",
+  sdm: "sdm",
+  keuangan: "keuangan",
+  proyek: "proyek",
+  procurement: "procurement",
+  qc: "qc",
+  commercial: "crm",
+};
 
 export default function Dashboard() {
 
@@ -316,38 +315,23 @@ export default function Dashboard() {
   const projects = branchProjects;
   const activities = data.activities;
   const [range, setRange] = useState<(typeof RANGES)[number]>("12B");
-  const [selectedAttentionCategory, setSelectedAttentionCategory] = useState<ModuleAlertKey | null>(loadAttentionCategory);
+  const [selectedAttentionCategory, setSelectedAttentionCategory] = useState<ModuleAlertKey | null>(() => {
+    const userR = (user?.role ?? "").toLowerCase();
+    const isExec = ["developer", "direktur", "manager", "admin"].includes(userR);
+    if (!isExec) {
+      const sc = defaultScopeForRole(userR);
+      return DEFAULT_CATEGORY_FOR_SCOPE[sc] ?? null;
+    }
+    return loadAttentionCategory();
+  });
   const [targets, setTargets] = useState<Record<string, BranchTarget>>(() => loadTargets());
   const [showTarget, setShowTarget] = useState(false);
   const [tgtRev, setTgtRev] = useState("");
   const [tgtProj, setTgtProj] = useState("");
 
-  const [scope, setScope] = useState<DashboardScope>(() => defaultScopeForRole(user?.role));
-  useEffect(() => {
-    if (user?.role) {
-      setScope(defaultScopeForRole(user.role));
-    }
-  }, [user?.role]);
-
-  const handleScopeChange = (newScope: DashboardScope) => {
-    setScope(newScope);
-    const mapAlert: Record<DashboardScope, ModuleAlertKey | null> = {
-      overview: null,
-      inventori: "inventori",
-      sdm: "sdm",
-      keuangan: "keuangan",
-      proyek: "proyek",
-      procurement: "procurement",
-      qc: "qc",
-      commercial: "crm",
-    };
-    const nextAlert = mapAlert[newScope];
-    setSelectedAttentionCategory(nextAlert);
-    try {
-      if (nextAlert) window.localStorage.setItem(DASH_ALERT_CATEGORY_STORAGE_KEY, nextAlert);
-      else window.localStorage.removeItem(DASH_ALERT_CATEGORY_STORAGE_KEY);
-    } catch {}
-  };
+  const userRole = (user?.role ?? "").toLowerCase();
+  const isExecutive = ["developer", "direktur", "manager", "admin"].includes(userRole);
+  const scope: DashboardScope = isExecutive ? "overview" : defaultScopeForRole(user?.role);
 
   const scopeTitle = useMemo(() => {
     switch (scope) {
@@ -529,7 +513,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         projects,
       };
     });
-  }, [data.invoices, branch, revAxis, monthCount, locale]);
+  }, [data.invoices, inBranch, revAxis, monthCount, locale]);
   const utilDrydock = drydocks.length
     ? Math.round((drydocks.filter((d) => d.status === "Terpakai").length / drydocks.length) * 100)
     : 0;
@@ -634,23 +618,40 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     .filter((x) => x.stage !== "Menang")
     .reduce((s, x) => s + Number(x.value || 0), 0);
 
-  const userRole = (user?.role ?? "").toLowerCase();
-  const isExecutive = ["developer", "direktur", "manager", "admin"].includes(userRole);
+  /* Data Helper Khusus Tampilan Peran */
+  const deptDist = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const e of inBranch(data.employees)) {
+      const d = String(e.dept || "Operasional");
+      counts[d] = (counts[d] ?? 0) + 1;
+    }
+    const colors = ["#0284C7", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#64748B", "#06B6D4"];
+    return Object.entries(counts).map(([name, value], i) => ({
+      name,
+      value,
+      color: colors[i % colors.length],
+    }));
+  }, [data.employees, inBranch]);
 
-  const availableScopes = useMemo(() => {
-    if (isExecutive) return DASH_SCOPES;
-    return DASH_SCOPES.filter((sc) => {
-      if (sc.id === "overview") return true;
-      if (sc.id === "inventori") return canOpenModule(user, "inventori");
-      if (sc.id === "sdm") return canOpenModule(user, "sdm");
-      if (sc.id === "keuangan") return canOpenModule(user, "keuangan");
-      if (sc.id === "proyek") return canOpenModule(user, "proyek");
-      if (sc.id === "procurement") return canOpenModule(user, "procurement");
-      if (sc.id === "qc") return canOpenModule(user, "qc");
-      if (sc.id === "commercial") return canOpenModule(user, "crm");
-      return false;
-    });
-  }, [isExecutive, user]);
+  const leavesList = useMemo(() => {
+    return inBranch(data.leaves ?? []).slice(0, 6);
+  }, [data.leaves, inBranch]);
+
+  const criticalItems = useMemo(() => {
+    return lowStock.slice(0, 6);
+  }, [lowStock]);
+
+  const overdueInvoices = useMemo(() => {
+    return arRows.slice(0, 6);
+  }, [arRows]);
+
+  const qcOpenList = useMemo(() => {
+    return openNcrList.slice(0, 6);
+  }, [openNcrList]);
+
+  const commercialQuotationList = useMemo(() => {
+    return inBranch(data.quotations ?? []).slice(0, 6);
+  }, [data.quotations, inBranch]);
 
   /* Metrik Inventori */
   const inventoryList = inBranch(data.inventory);
@@ -763,60 +764,77 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
           subtitle={scopeSubtitle}
           icon={scopeIcon}
           actions={
-            /* Filter, tombol presentasi, dan "Proyek Baru" adalah kontrol UI. */
             <div className="flex items-center gap-2">
               <button className="btn-secondary" onClick={togglePresent} title={isFs ? S.exitFullscreen : S.presentBtn}>
                 {isFs ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />} {isFs ? S.exitFullscreen : S.presentBtn}
               </button>
-              <AsyncButton className="btn-secondary" onAction={exportSummary}>
-                <Download className="h-4 w-4" /> {S.exportBtn}
-              </AsyncButton>
-              <button className="btn-primary-gradient" onClick={() => navigate("/proyek?create=1&alert=proyek")}>
-                <Plus className="h-4 w-4" /> {S.newProjectBtn}
-              </button>
+              {scope === "sdm" ? (
+                <>
+                  <Link to="/absensi" className="btn-secondary">
+                    <CalendarCheck className="h-4 w-4" /> Rekap Absensi
+                  </Link>
+                  <Link to="/sdm" className="btn-primary-gradient">
+                    <Users className="h-4 w-4" /> Kelola SDM
+                  </Link>
+                </>
+              ) : scope === "inventori" ? (
+                <>
+                  <Link to="/inventori?tab=keluar" className="btn-secondary">
+                    <Truck className="h-4 w-4" /> Pengeluaran
+                  </Link>
+                  <Link to="/inventori?tab=terima" className="btn-primary-gradient">
+                    <Boxes className="h-4 w-4" /> Terima Barang
+                  </Link>
+                </>
+              ) : scope === "keuangan" ? (
+                <>
+                  <Link to="/keuangan?tab=ArusKas" className="btn-secondary">
+                    <Wallet className="h-4 w-4" /> Arus Kas
+                  </Link>
+                  <Link to="/keuangan?tab=Invoice" className="btn-primary-gradient">
+                    <CreditCard className="h-4 w-4" /> Buat Invoice
+                  </Link>
+                </>
+              ) : scope === "procurement" ? (
+                <>
+                  <Link to="/procurement?tab=pr" className="btn-secondary">
+                    <FileText className="h-4 w-4" /> Review PR
+                  </Link>
+                  <Link to="/procurement?tab=po" className="btn-primary-gradient">
+                    <ShoppingCart className="h-4 w-4" /> Buat PO
+                  </Link>
+                </>
+              ) : scope === "qc" ? (
+                <>
+                  <Link to="/qc?tab=ptw" className="btn-secondary">
+                    <HardHat className="h-4 w-4" /> Izin Kerja (PTW)
+                  </Link>
+                  <Link to="/qc?tab=ncr" className="btn-primary-gradient">
+                    <ShieldCheck className="h-4 w-4" /> Catat NCR
+                  </Link>
+                </>
+              ) : scope === "commercial" ? (
+                <>
+                  <Link to="/crm?tab=klien" className="btn-secondary">
+                    <Building className="h-4 w-4" /> Mitra Klien
+                  </Link>
+                  <Link to="/crm" className="btn-primary-gradient">
+                    <Briefcase className="h-4 w-4" /> Buat Penawaran
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <AsyncButton className="btn-secondary" onAction={exportSummary}>
+                    <Download className="h-4 w-4" /> {S.exportBtn}
+                  </AsyncButton>
+                  <button className="btn-primary-gradient" onClick={() => navigate("/proyek?create=1&alert=proyek")}>
+                    <Plus className="h-4 w-4" /> {S.newProjectBtn}
+                  </button>
+                </>
+              )}
             </div>
           }
         />
-      </StaggerItem>
-
-      {/* SCOPE SELECTOR & ROLE BAR */}
-      <StaggerItem>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-steel-200/90 bg-white p-2.5 shadow-2xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs font-semibold text-steel-500 shrink-0">
-              {S.dashScopeLabel || "Lingkup"}:
-            </span>
-            <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Pilih Lingkup Dashboard">
-              {availableScopes.map((sc) => {
-                const active = scope === sc.id;
-                const ScIcon = sc.icon;
-                return (
-                  <button
-                    key={sc.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => handleScopeChange(sc.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                      active
-                        ? "bg-navy-900 text-white shadow-xs"
-                        : "bg-steel-50 text-steel-600 hover:bg-steel-100 hover:text-navy-900"
-                    }`}
-                  >
-                    <ScIcon className="h-3.5 w-3.5" />
-                    <span>{S[sc.labelKey] ?? sc.id}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-300/60">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              <span>{S.roleScopeBadge || "Peran"}: <strong className="font-semibold text-slate-900 uppercase">{userRole || "User"}</strong></span>
-            </span>
-          </div>
-        </div>
       </StaggerItem>
 
       {/* EXECUTIVE OVERVIEW GRID (Apple HIG Luminous Cockpit - Vibrant, High-Contrast & Alive) */}
@@ -2293,7 +2311,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
           </div>
 
           <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={S.attentionCategoryLabel}>
-            {DASH_ALERT_CATEGORY_ORDER.map((key) => {
+            {DASH_ALERT_CATEGORY_ORDER.filter((key) => isExecutive || canOpenModule(user, key)).map((key) => {
               const selected = selectedAttentionCategory === key;
               const count = attentionCountByCategory[key] ?? 0;
               return (
@@ -2395,66 +2413,510 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         </Card>
       </StaggerItem>
 
-      {/* STATUS + ACTIVITY - tepat di bawah Perlu Perhatian */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <StaggerItem>
-          <Card>
-            <CardHeader
-              title={S.activeProjectStatus}
-              subtitle={S.latestProgress}
-              action={
-                <Link to="/proyek" className="inline-flex items-center gap-1 text-sm font-semibold text-ocean-600 hover:text-ocean-500">
-                  {S.seeAll} <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              }
-            />
-            <div className="flex flex-wrap gap-1.5 px-5 pb-3" role="group" aria-label="Distribusi status proyek aktif">
-              {(() => {
-                const groups: Record<string, number> = {};
-                for (const p of branchProjects) groups[String(p.status)] = (groups[String(p.status)] ?? 0) + 1;
-                const order = ["Sedang Berjalan", "Dalam Proses", "Tertunda", "Terlambat", "Batal", "Selesai"];
-const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
-                  s === "Terlambat" ? "red" : s === "Selesai" ? "green" : s === "Tertunda" ? "amber" : s === "Batal" ? "gray" : "blue";
-                return order.filter((s) => (groups[s] ?? 0) > 0 || s !== "Selesai").map((s) => (
-                  <Link key={s} to={`/proyek?status=${encodeURIComponent(s)}`} className="inline-flex items-center gap-1.5 rounded-full border border-steel-200 px-2.5 py-1 text-xs font-semibold hover:border-ocean-400" title={`Filter proyek ${s}`}>
-                    <Badge tone={toneFor(s)}>{statusLabel(s, locale)}</Badge>
-                    <span className="text-navy-900">{groups[s] ?? 0}</span>
+      {/* ROLE-SPECIFIC CONTENT SECTIONS */}
+      {/* 1. KHUSUS SDM & PERSONALIA (HR) */}
+      {scope === "sdm" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Komposisi Tenaga Kerja Galangan"
+                subtitle="Distribusi personel aktif berdasarkan departemen"
+                action={
+                  <Link to="/sdm" className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-500">
+                    Kelola SDM <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
-                ));
-              })()}
-            </div>
-            <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
-              {branchProjects.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/proyek/${p.id}`}
-                  state={{ from: "/dashboard" }}
-                  className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-navy-900 truncate" title={p.vessel}>{p.vessel}</p>
-                    <p className="text-xs text-steel-500">{p.id} · {p.client}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const prog = projectProgressOf(p, data.wbsByProject, data.boq);
-                      return (
-                        <div className="w-24">
-                          <ProgressBar value={prog} tone={p.status === "Terlambat" ? "red" : "navy"} />
-                          <p className="mt-1 text-right text-[11px] text-steel-500">{prog}%</p>
-                        </div>
-                      );
-                    })()}
-                    <Badge tone={p.status === "Terlambat" ? "red" : p.status === "Selesai" ? "green" : p.status === "Tertunda" ? "amber" : p.status === "Batal" ? "gray" : "blue"}>
-                      {statusLabel(String(p.status), locale)}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Card>
-        </StaggerItem>
+                }
+              />
+              <div className="flex flex-col items-center gap-4 p-4">
+                <Donut
+                  data={deptDist}
+                  colors={deptDist.map((d) => d.color)}
+                  size={170}
+                  thickness={22}
+                  centerValue={String(totalEmployees)}
+                  centerLabel="Personel"
+                />
+                <div className="grid w-full grid-cols-2 gap-2">
+                  {deptDist.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2 text-sm">
+                      <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
+                      <span className="text-steel-600 truncate">{d.name}</span>
+                      <span className="ml-auto font-semibold text-navy-900">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </StaggerItem>
 
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Permohonan Cuti & Izin"
+                subtitle={`${pendingLeaves} pengajuan cuti menunggu proses HR`}
+                action={
+                  <Link to="/sdm?tab=cuti" className="inline-flex items-center gap-1 text-sm font-semibold text-sky-600 hover:text-sky-500">
+                    Semua Cuti <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {leavesList.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Tidak ada pengajuan cuti yang tertunda.</p>
+                ) : (
+                  leavesList.map((l) => (
+                    <div key={l.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{l.employeeName || l.employeeId}</p>
+                        <p className="text-xs text-steel-500">{l.type || "Cuti Tahunan"} · {l.startDate} s/d {l.endDate}</p>
+                      </div>
+                      <Badge tone={l.status === "Menunggu" || l.status === "Diajukan" ? "amber" : l.status === "Disetujui" ? "green" : "gray"}>
+                        {l.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 2. KHUSUS LOGISTIK & GUDANG MATERIAL */}
+      {scope === "inventori" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Material Kritis & Stok Minimum"
+                subtitle={`${criticalStockCount} item perlu restock segera untuk proyek`}
+                action={
+                  <Link to="/inventori" className="inline-flex items-center gap-1 text-sm font-semibold text-amber-600 hover:text-amber-500">
+                    Katalog Stok <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {criticalItems.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Semua stok material dalam batas aman.</p>
+                ) : (
+                  criticalItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{item.name}</p>
+                        <p className="text-xs text-steel-500">{item.code || item.id} · Lokasi: {item.location || "Gudang Utama"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-rose-600 tabular-nums">{item.quantity} {item.unit}</span>
+                        <p className="text-[11px] text-steel-400">Min: {item.minStock ?? item.min_stock ?? 10}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Permintaan Pengeluaran Material (PR)"
+                subtitle={`${openRequisitions.length} permintaan barang dari proyek lapangan`}
+                action={
+                  <Link to="/inventori?tab=keluar" className="inline-flex items-center gap-1 text-sm font-semibold text-amber-600 hover:text-amber-500">
+                    Pengeluaran <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {openRequisitions.slice(0, 6).length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Tidak ada permintaan material yang menunggu.</p>
+                ) : (
+                  openRequisitions.slice(0, 6).map((r) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{r.code || r.id}</p>
+                        <p className="text-xs text-steel-500">{r.project || "Proyek Lapangan"} · {r.requester || "Staff"}</p>
+                      </div>
+                      <Badge tone={r.status === "Menunggu Approval" ? "amber" : "blue"}>
+                        {r.status || "Terbuka"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 3. KHUSUS KEUANGAN & PERPAJAKAN */}
+      {scope === "keuangan" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Piutang (AR) Belum Lunas"
+                subtitle={`${arRows.length} invoice klien belum terbayar`}
+                action={
+                  <Link to="/keuangan?tab=Invoice" className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-500">
+                    Buka Billing <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {overdueInvoices.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Semua invoice klien telah lunas.</p>
+                ) : (
+                  overdueInvoices.map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{inv.client || inv.customer || "Klien"}</p>
+                        <p className="text-xs text-steel-500">{inv.number || inv.id} · Jatuh tempo: {inv.due || inv.dueDate || "-"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-navy-900 tabular-nums">{fmtMiliar(Number(inv.amount || 0))}</span>
+                        <div><Badge tone={inv.status === "Overdue" ? "red" : "amber"}>{inv.status || "Belum Lunas"}</Badge></div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Hutang Usaha (AP) ke Vendor"
+                subtitle={`${apRows.length} kewajiban pembayaran pengadaan material`}
+                action={
+                  <Link to="/keuangan?tab=Hutang" className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-500">
+                    Kelola AP <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {apRows.slice(0, 6).length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Semua hutang vendor telah diselesaikan.</p>
+                ) : (
+                  apRows.slice(0, 6).map((ap) => (
+                    <div key={ap.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{ap.vendor || ap.supplier || "Vendor"}</p>
+                        <p className="text-xs text-steel-500">{ap.number || ap.id} · Jatuh tempo: {ap.due || "-"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-rose-700 tabular-nums">{fmtMiliar(Number(ap.amount || 0))}</span>
+                        <div><Badge tone="amber">{ap.status || "Belum Bayar"}</Badge></div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 4. KHUSUS QC & MUTU */}
+      {scope === "qc" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Temuan Ketidaksesuaian (NCR) Aktif"
+                subtitle={`${openNcr} kasus inspeksi mutu dalam pemantauan`}
+                action={
+                  <Link to="/qc?tab=ncr" className="inline-flex items-center gap-1 text-sm font-semibold text-rose-600 hover:text-rose-500">
+                    Modul QC <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {qcOpenList.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Nihil temuan NCR terbuka.</p>
+                ) : (
+                  qcOpenList.map((n) => (
+                    <div key={n.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{n.title || n.description || n.id}</p>
+                        <p className="text-xs text-steel-500">{n.id} · Proyek: {n.project || "-"}</p>
+                      </div>
+                      <Badge tone={n.severity === "Critical" ? "red" : "amber"}>
+                        {n.severity || "Major"}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Keselamatan Kerja (K3) & Kelaikan BKI"
+                subtitle="Status kepatuhan keselamatan galangan"
+                action={
+                  <Link to="/qc?tab=ptw" className="inline-flex items-center gap-1 text-sm font-semibold text-rose-600 hover:text-rose-500">
+                    Izin Kerja PTW <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-6 w-6 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-950">Zero Accident Performance</p>
+                      <p className="text-xs text-emerald-700">Galangan beroperasi tanpa insiden fatal</p>
+                    </div>
+                  </div>
+                  <Badge tone="green">Aman</Badge>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-steel-100">
+                    <span className="text-steel-600">Izin Kerja Panas (Hot Work)</span>
+                    <span className="font-semibold text-navy-900">100% Berizin</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-steel-100">
+                    <span className="text-steel-600">Izin Ruang Terbatas (Confined Space)</span>
+                    <span className="font-semibold text-navy-900">Gas Test Terverifikasi</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-steel-100">
+                    <span className="text-steel-600">Sertifikasi Surveyor BKI</span>
+                    <span className="font-semibold text-navy-900">Berlaku</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 5. KHUSUS PENGADAAN (PROCUREMENT) */}
+      {scope === "procurement" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Purchase Order (PO) Berjalan"
+                subtitle={`${activePOs.length} pesanan aktif dalam pengiriman`}
+                action={
+                  <Link to="/procurement?tab=po" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 hover:text-violet-500">
+                    Semua PO <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {activePOs.slice(0, 6).length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Tidak ada Purchase Order berjalan.</p>
+                ) : (
+                  activePOs.slice(0, 6).map((po) => (
+                    <div key={po.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{po.vendor || po.vendorName || "Vendor"}</p>
+                        <p className="text-xs text-steel-500">{po.code || po.id} · Tgl: {po.date || "-"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-navy-900 tabular-nums">{fmtMiliar(Number(po.total || 0))}</span>
+                        <div><Badge tone="blue">{po.status || "Proses"}</Badge></div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Purchase Requisition (PR) Pending"
+                subtitle={`${pendingPrCount} pengajuan barang butuh approval / PO`}
+                action={
+                  <Link to="/procurement?tab=pr" className="inline-flex items-center gap-1 text-sm font-semibold text-violet-600 hover:text-violet-500">
+                    Review PR <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {openRequisitions.slice(0, 6).length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Semua PR telah diproses.</p>
+                ) : (
+                  openRequisitions.slice(0, 6).map((pr) => (
+                    <div key={pr.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{pr.code || pr.id}</p>
+                        <p className="text-xs text-steel-500">{pr.project || "Proyek"} · Pemohon: {pr.requester || "Staff"}</p>
+                      </div>
+                      <Badge tone="amber">{pr.status || "Diajukan"}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 6. KHUSUS KOMERSIAL & CRM */}
+      {scope === "commercial" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Pipeline Penawaran (Quotation)"
+                subtitle="Prospek tender & estimasi nilai penawaran"
+                action={
+                  <Link to="/crm" className="inline-flex items-center gap-1 text-sm font-semibold text-teal-600 hover:text-teal-500">
+                    Semua Penawaran <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {commercialQuotationList.length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Tidak ada penawaran aktif.</p>
+                ) : (
+                  commercialQuotationList.map((q) => (
+                    <div key={q.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{q.client || q.clientName || "Klien"}</p>
+                        <p className="text-xs text-steel-500">{q.number || q.id} · Kapal: {q.vessel || "-"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-navy-900 tabular-nums">{fmtMiliar(Number(q.value || 0))}</span>
+                        <div><Badge tone={q.stage === "Menang" ? "green" : q.stage === "Kalah" ? "gray" : "blue"}>{q.stage || "Terkirim"}</Badge></div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader
+                title="Kontrak Menang (Deal) Terbaru"
+                subtitle={`${wonContracts.length} kontrak disepakati klien`}
+                action={
+                  <Link to="/crm?tab=kontrak" className="inline-flex items-center gap-1 text-sm font-semibold text-teal-600 hover:text-teal-500">
+                    Buka Kontrak <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {wonContracts.slice(0, 6).length === 0 ? (
+                  <p className="p-6 text-center text-sm text-steel-400">Belum ada kontrak tercatat.</p>
+                ) : (
+                  wonContracts.slice(0, 6).map((k) => (
+                    <div key={k.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-navy-900 truncate">{k.client || "Klien"}</p>
+                        <p className="text-xs text-steel-500">{k.number || k.id} · {k.title || "Kontrak Galangan"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">{fmtMiliar(Number(k.value || 0))}</span>
+                        <div><Badge tone="green">Menang</Badge></div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* 7. UNTUK EKSEKUTIF & PROYEK: STATUS PROYEK AKTIF */}
+      {(scope === "overview" || scope === "proyek") && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <StaggerItem>
+            <Card>
+              <CardHeader
+                title={S.activeProjectStatus}
+                subtitle={S.latestProgress}
+                action={
+                  <Link to="/proyek" className="inline-flex items-center gap-1 text-sm font-semibold text-ocean-600 hover:text-ocean-500">
+                    {S.seeAll} <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              />
+              <div className="flex flex-wrap gap-1.5 px-5 pb-3" role="group" aria-label="Distribusi status proyek aktif">
+                {(() => {
+                  const groups: Record<string, number> = {};
+                  for (const p of branchProjects) groups[String(p.status)] = (groups[String(p.status)] ?? 0) + 1;
+                  const order = ["Sedang Berjalan", "Dalam Proses", "Tertunda", "Terlambat", "Batal", "Selesai"];
+                  const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
+                    s === "Terlambat" ? "red" : s === "Selesai" ? "green" : s === "Tertunda" ? "amber" : s === "Batal" ? "gray" : "blue";
+                  return order.filter((s) => (groups[s] ?? 0) > 0 || s !== "Selesai").map((s) => (
+                    <Link key={s} to={`/proyek?status=${encodeURIComponent(s)}`} className="inline-flex items-center gap-1.5 rounded-full border border-steel-200 px-2.5 py-1 text-xs font-semibold hover:border-ocean-400" title={`Filter proyek ${s}`}>
+                      <Badge tone={toneFor(s)}>{statusLabel(s, locale)}</Badge>
+                      <span className="text-navy-900">{groups[s] ?? 0}</span>
+                    </Link>
+                  ));
+                })()}
+              </div>
+              <div className="max-h-80 divide-y divide-steel-100 overflow-y-auto">
+                {branchProjects.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/proyek/${p.id}`}
+                    state={{ from: "/dashboard" }}
+                    className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-navy-900 truncate" title={p.vessel}>{p.vessel}</p>
+                      <p className="text-xs text-steel-500">{p.id} · {p.client}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {(() => {
+                        const prog = projectProgressOf(p, data.wbsByProject, data.boq);
+                        return (
+                          <div className="w-24">
+                            <ProgressBar value={prog} tone={p.status === "Terlambat" ? "red" : "navy"} />
+                            <p className="mt-1 text-right text-[11px] text-steel-500">{prog}%</p>
+                          </div>
+                        );
+                      })()}
+                      <Badge tone={p.status === "Terlambat" ? "red" : p.status === "Selesai" ? "green" : p.status === "Tertunda" ? "amber" : p.status === "Batal" ? "gray" : "blue"}>
+                        {statusLabel(String(p.status), locale)}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader title={S.recentActivity} subtitle={S.realtimeLog} />
+              <div className="max-h-80 space-y-1 overflow-y-auto p-3">
+                {activities.map((a) => (
+                  <div key={a.id} className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface">
+                    <Avatar name={a.actor} className="h-8 w-8 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm text-steel-700">
+                        <span className="font-semibold text-navy-900">{a.actor}</span> {a.action}{" "}
+                        <span className="font-medium text-navy-800">{a.target}</span>
+                      </p>
+                      <p className="text-[11px] text-steel-400">{a.time}</p>
+                    </div>
+                    <span className="shrink-0"><Badge tone={a.tone as never}>{a.module}</Badge></span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* UNTUK ROLE SELAIN OVERVIEW & PROYEK: TAMPILKAN LOG AKTIVITAS TERKINI */}
+      {scope !== "overview" && scope !== "proyek" && (
         <StaggerItem>
           <Card className="h-full">
             <CardHeader title={S.recentActivity} subtitle={S.realtimeLog} />
@@ -2463,7 +2925,6 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
                 <div key={a.id} className="flex items-start gap-3 rounded-xl px-2 py-2 hover:bg-surface">
                   <Avatar name={a.actor} className="h-8 w-8 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    {/* #79: isi aktivitas dibungkus, tidak dipotong - target panjang (kode proyek + nama) tetap terbaca. */}
                     <p className="break-words text-sm text-steel-700">
                       <span className="font-semibold text-navy-900">{a.actor}</span> {a.action}{" "}
                       <span className="font-medium text-navy-800">{a.target}</span>
@@ -2476,246 +2937,246 @@ const toneFor = (s: string): "blue" | "amber" | "red" | "gray" | "green" =>
             </div>
           </Card>
         </StaggerItem>
-      </div>
+      )}
 
-      {/* MAIN CHARTS */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <StaggerItem className="lg:col-span-2">
-          <Card>
-            <CardHeader
-              title={S.revenueVsVolume}
-              subtitle={`${S.trend12Months} · Bulan berjalan paling kanan`}
-              action={
-                <div className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface p-0.5">
-                  {RANGES.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setRange(r)}
-                      className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
-                        range === r ? "bg-white text-navy-800 shadow-sm" : "text-steel-500 hover:text-navy-700"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              }
-            />
-            <div className="h-64 p-4 pt-0 sm:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0284C7" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#0284C7" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                  <XAxis dataKey="bln" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="rev" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? `Rp ${v} M` : v)} />} />
-                  <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0284C7" strokeWidth={3} fill="url(#revGrad)" isAnimationActive />
-                  <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
-                  <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#F43F5E" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3, fill: "#F43F5E" }} isAnimationActive />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </StaggerItem>
-
-        <StaggerItem>
-          <Card className="h-full">
-            <CardHeader title={S.projectComposition} subtitle={S.byJobType} />
-            <div className="flex flex-col items-center gap-4 p-4">
-              <Donut
-                data={typeDist}
-                colors={typeDist.map((d) => d.color)}
-                size={170}
-                thickness={22}
-                centerValue={String(typeDist.reduce((s, d) => s + d.value, 0))}
-                centerLabel={S.donutProjects}
-              />
-              <div className="grid w-full grid-cols-2 gap-2">
-                {typeDist.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2 text-sm">
-                    <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
-                    <span className="text-steel-600">{d.name}</span>
-                    <span className="ml-auto font-semibold text-navy-900">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </StaggerItem>
-      </div>
-
-      {/* GAUGES + HEATMAP + INSIGHTS */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
-        {/* 3D TUGBOAT FLEET CAPACITY CARD (Inspired by Modern Logistics 3D Reference) */}
-        <StaggerItem className="lg:col-span-2">
-          <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-slate-50 to-white border border-slate-200/80 p-5 shadow-soft h-full">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600" />
-
-            {/* Header */}
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-500/20">
-                    <Ship className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">Kapasitas Armada &amp; Fasilitas Galangan</h3>
-                    <p className="text-[11px] text-slate-500">Tugboat, Tongkang &amp; Daya Tampung Drydock</p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-bold text-cyan-800 ring-1 ring-cyan-600/30">
-                  <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
-                  Operasional Aktif
-                </span>
-              </div>
-
-              {/* Big Metric & 3D Render Layout */}
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                {/* Metrics on left (5 cols) */}
-                <div className="sm:col-span-5 space-y-3">
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Utilisasi Dok &amp; Slipway</span>
-                    <div className="flex items-baseline gap-2 mt-0.5">
-                      <span className="text-4xl font-black text-slate-900 tracking-tight">{utilDrydock}%</span>
-                      <span className="text-xs font-semibold text-emerald-600">+4.2% bln ini</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-1 border-t border-slate-100">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Daya Tampung DWT</span>
-                      <span className="font-bold text-slate-800 tabular-nums">14.800 DWT</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Armada Dikerjakan</span>
-                      <span className="font-bold text-slate-800 tabular-nums">{branchProjects.length} Unit Kapal</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Fasilitas Dok</span>
-                      <span className="font-bold text-slate-800">{drydocks.length} Area Dok</span>
-                    </div>
-                  </div>
-
-                  {/* Top 2 Drydock facility status */}
-                  <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                    {drydockLoad.slice(0, 2).map((d) => (
-                      <div key={d.dock}>
-                        <div className="mb-0.5 flex justify-between text-[11px]">
-                          <span className="font-medium text-slate-600 truncate">{d.dock}</span>
-                          <span className="font-semibold text-slate-800">{d.kapasitas}%</span>
-                        </div>
-                        <ProgressBar value={d.kapasitas} tone={d.kapasitas > 85 ? "red" : d.kapasitas > 70 ? "amber" : "navy"} />
-                      </div>
+      {/* MAIN CHARTS - HANYA TAMPIL UNTUK OVERVIEW (EKSEKUTIF) */}
+      {scope === "overview" && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <StaggerItem className="lg:col-span-2">
+            <Card>
+              <CardHeader
+                title={S.revenueVsVolume}
+                subtitle={`${S.trend12Months} · Bulan berjalan paling kanan`}
+                action={
+                  <div className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface p-0.5">
+                    {RANGES.map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setRange(r)}
+                        className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${
+                          range === r ? "bg-white text-navy-800 shadow-sm" : "text-steel-500 hover:text-navy-700"
+                        }`}
+                      >
+                        {r}
+                      </button>
                     ))}
                   </div>
+                }
+              />
+              <div className="h-64 p-4 pt-0 sm:h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0284C7" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#0284C7" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                    <XAxis dataKey="bln" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="rev" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="proj" orientation="right" tick={{ fontSize: 12, fill: "#64748B" }} stroke="#CBD5E1" axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? `Rp ${v} M` : v)} />} />
+                    <Area yAxisId="rev" type="monotone" dataKey="revenue" name={S.legendRevenue} stroke="#0284C7" strokeWidth={3} fill="url(#revGrad)" isAnimationActive />
+                    <Bar yAxisId="proj" dataKey="projects" name={S.legendProjectCount} fill="#10B981" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive />
+                    <Line yAxisId="rev" type="monotone" dataKey="cost" name={S.legendCost} stroke="#F43F5E" strokeWidth={2.5} strokeDasharray="5 3" dot={{ r: 3, fill: "#F43F5E" }} isAnimationActive />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </StaggerItem>
+
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader title={S.projectComposition} subtitle={S.byJobType} />
+              <div className="flex flex-col items-center gap-4 p-4">
+                <Donut
+                  data={typeDist}
+                  colors={typeDist.map((d) => d.color)}
+                  size={170}
+                  thickness={22}
+                  centerValue={String(typeDist.reduce((s, d) => s + d.value, 0))}
+                  centerLabel={S.donutProjects}
+                />
+                <div className="grid w-full grid-cols-2 gap-2">
+                  {typeDist.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2 text-sm">
+                      <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
+                      <span className="text-steel-600">{d.name}</span>
+                      <span className="ml-auto font-semibold text-navy-900">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
+
+      {/* GAUGES + TUGBOAT + INSIGHTS - HANYA UNTUK OVERVIEW ATAU PROYEK */}
+      {(scope === "overview" || scope === "proyek") && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
+          {/* 3D TUGBOAT FLEET CAPACITY CARD */}
+          <StaggerItem className="lg:col-span-2">
+            <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-white via-slate-50 to-white border border-slate-200/80 p-5 shadow-soft h-full">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600" />
+
+              {/* Header */}
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-500/20">
+                      <Ship className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Kapasitas Armada &amp; Fasilitas Galangan</h3>
+                      <p className="text-[11px] text-slate-500">Tugboat, Tongkang &amp; Daya Tampung Drydock</p>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-bold text-cyan-800 ring-1 ring-cyan-600/30">
+                    <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
+                    Operasional Aktif
+                  </span>
                 </div>
 
-                {/* 3D Vessel Render on right (7 cols) */}
-                <div className="sm:col-span-7 relative">
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 p-1.5 shadow-lg border border-slate-700/50 group">
-                    <div className="relative h-44 w-full overflow-hidden rounded-lg bg-slate-950">
-                      <img
-                        src="/tugboat-render.jpg"
-                        alt="3D Tugboat Fleet Vessel"
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-                      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
-                        <span className="font-bold drop-shadow-sm flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          Armada Tugboat 3.200 BHP
-                        </span>
-                        <span className="rounded bg-black/50 px-2 py-0.5 backdrop-blur-xs text-[10px] text-slate-200">
-                          Standar BKI / SOLAS
-                        </span>
+                {/* Big Metric & 3D Render Layout */}
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  <div className="sm:col-span-5 space-y-3">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Utilisasi Dok &amp; Slipway</span>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-4xl font-black text-slate-900 tracking-tight">{utilDrydock}%</span>
+                        <span className="text-xs font-semibold text-emerald-600">+4.2% bln ini</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-1 border-t border-slate-100">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Daya Tampung DWT</span>
+                        <span className="font-bold text-slate-800 tabular-nums">14.800 DWT</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Armada Dikerjakan</span>
+                        <span className="font-bold text-slate-800 tabular-nums">{branchProjects.length} Unit Kapal</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">Fasilitas Dok</span>
+                        <span className="font-bold text-slate-800">{drydocks.length} Area Dok</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                      {drydockLoad.slice(0, 2).map((d) => (
+                        <div key={d.dock}>
+                          <div className="mb-0.5 flex justify-between text-[11px]">
+                            <span className="font-medium text-slate-600 truncate">{d.dock}</span>
+                            <span className="font-semibold text-slate-800">{d.kapasitas}%</span>
+                          </div>
+                          <ProgressBar value={d.kapasitas} tone={d.kapasitas > 85 ? "red" : d.kapasitas > 70 ? "amber" : "navy"} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-7 relative">
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-900 p-1.5 shadow-lg border border-slate-700/50 group">
+                      <div className="relative h-44 w-full overflow-hidden rounded-lg bg-slate-950">
+                        <img
+                          src="/tugboat-render.jpg"
+                          alt="3D Tugboat Fleet Vessel"
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
+                          <span className="font-bold drop-shadow-sm flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Armada Tugboat 3.200 BHP
+                          </span>
+                          <span className="rounded bg-black/50 px-2 py-0.5 backdrop-blur-xs text-[10px] text-slate-200">
+                            Standar BKI / SOLAS
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Quick Action Navigation */}
-            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="text-slate-400 text-[11px]">Monitoring real-time slipway &amp; floating dock</span>
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/kapal"
-                  className="inline-flex items-center gap-1 font-semibold text-cyan-700 hover:text-cyan-800 px-2.5 py-1 rounded-lg hover:bg-cyan-50 transition-colors"
-                >
-                  <span>Daftar Armada</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-                <Link
-                  to="/drydock"
-                  className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                >
-                  <span>Jadwal Dok</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-slate-400 text-[11px]">Monitoring real-time slipway &amp; floating dock</span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/kapal"
+                    className="inline-flex items-center gap-1 font-semibold text-cyan-700 hover:text-cyan-800 px-2.5 py-1 rounded-lg hover:bg-cyan-50 transition-colors"
+                  >
+                    <span>Daftar Armada</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <Link
+                    to="/drydock"
+                    className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-slate-900 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+                  >
+                    <span>Jadwal Dok</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        </StaggerItem>
+          </StaggerItem>
 
-        <StaggerItem>
-          <Card className="h-full">
-            <CardHeader title={S.productionUtil} subtitle={S.drydockVsEquip} />
-            <div className="flex items-center justify-center gap-6 p-4">
-              <RadialGauge value={utilDrydock} label="Drydock" color="#2563EB" />
-              <RadialGauge value={utilEquipment} label="Equipment" color="#F59E0B" />
-            </div>
-            <div className="mt-2 -mb-1 h-16 px-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={utilSeries} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="utilGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.45} />
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="equipment" stroke="#F59E0B" strokeWidth={2.5} fill="url(#utilGrad)" isAnimationActive />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </StaggerItem>
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader title={S.productionUtil} subtitle={S.drydockVsEquip} />
+              <div className="flex items-center justify-center gap-6 p-4">
+                <RadialGauge value={utilDrydock} label="Drydock" color="#2563EB" />
+                <RadialGauge value={utilEquipment} label="Equipment" color="#F59E0B" />
+              </div>
+              <div className="mt-2 -mb-1 h-16 px-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={utilSeries} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="utilGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="equipment" stroke="#F59E0B" strokeWidth={2.5} fill="url(#utilGrad)" isAnimationActive />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </StaggerItem>
 
-        <StaggerItem>
-          <Card className="h-full">
-            <CardHeader title={S.smartInsights} subtitle={S.autoRecommendations} />
-            <div className="max-h-80 space-y-2.5 overflow-y-auto p-4 pt-0">
-              {insights.map((i) => {
-                const borderTone =
-                  i.tone === "rose"
-                    ? "border-l-4 border-l-rose-500 bg-rose-50/40"
-                    : i.tone === "teal"
-                    ? "border-l-4 border-l-emerald-500 bg-emerald-50/40"
-                    : i.tone === "violet"
-                    ? "border-l-4 border-l-indigo-500 bg-indigo-50/40"
-                    : "border-l-4 border-l-sky-500 bg-sky-50/40";
-                const dot =
-                  i.tone === "rose" ? "bg-rose-500" : i.tone === "teal" ? "bg-emerald-500" : i.tone === "violet" ? "bg-indigo-500" : "bg-sky-500";
-                return (
-                  <div key={i.id} className={`rounded-xl border border-steel-100 p-3 shadow-2xs ${borderTone}`}>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${dot}`} />
-                      <p className="text-sm font-bold text-navy-900">{i.title}</p>
+          <StaggerItem>
+            <Card className="h-full">
+              <CardHeader title={S.smartInsights} subtitle={S.autoRecommendations} />
+              <div className="max-h-80 space-y-2.5 overflow-y-auto p-4 pt-0">
+                {insights.map((i) => {
+                  const borderTone =
+                    i.tone === "rose"
+                      ? "border-l-4 border-l-rose-500 bg-rose-50/40"
+                      : i.tone === "teal"
+                      ? "border-l-4 border-l-emerald-500 bg-emerald-50/40"
+                      : i.tone === "violet"
+                      ? "border-l-4 border-l-indigo-500 bg-indigo-50/40"
+                      : "border-l-4 border-l-sky-500 bg-sky-50/40";
+                  const dot =
+                    i.tone === "rose" ? "bg-rose-500" : i.tone === "teal" ? "bg-emerald-500" : i.tone === "violet" ? "bg-indigo-500" : "bg-sky-500";
+                  return (
+                    <div key={i.id} className={`rounded-xl border border-steel-100 p-3 shadow-2xs ${borderTone}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${dot}`} />
+                        <p className="text-sm font-bold text-navy-900">{i.title}</p>
+                      </div>
+                      <p className="mt-1 text-xs text-steel-600 leading-relaxed">{i.desc}</p>
                     </div>
-                    <p className="mt-1 text-xs text-steel-600 leading-relaxed">{i.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        </StaggerItem>
-      </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </StaggerItem>
+        </div>
+      )}
 
 
     </Stagger>
