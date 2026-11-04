@@ -64,7 +64,7 @@ import { getSetting } from "../../utils/settings";
 import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
-import { exportExcel, exportExcelSheets } from "../../utils/export";
+import { exportExcel, exportExcelSheets, styledRow } from "../../utils/export";
 import { buildFinancialFormatSheets, fmtPeriodeLaporan } from "../../data/financialWorkbookBuilder";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
@@ -1381,121 +1381,89 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manJournals, kasHist, coaRows]);
 
-  /* === EXPORT 4 LAPORAN HISTORIKAL ===
+  /* === EXPORT LAPORAN KEUANGAN (PER TAB MAUPUN WORKBOOK KESELURUHAN) ===
    *
-   * Angka as-of yang sudah diperbaiki tidak bisa diekspor kalau tidak ada
-   * jalurnya:(reportExcel hanya dipakai Jadwal Bayar dan SPT, jadi hasil
-   * koreksi saldo hanya bisa dibaca di layar lalu hilang begitu tab ditutup.
-   *
-   * Setiap sheet membawa baris "As-of" supaya angka bisa ditelusuri
-   * kembali - file Excel tanpa tanggal acuan tidak bisa dipertanggungjawabkan
-   * saat Someone membukanya enam bulan kemudian. */
-  const exportHist = async (which: "kas" | "bb" | "lr" | "nr" | "all"): Promise<void> => {
+   * Kak Nanda CTO: "ekspor laba rugi jangan langsung seluruh workbook,
+   * ekspor sesuai tab yang dipilih. Seluruh laporan hanya pada tombol
+   * 'Ekspor seluruh laporan keuangan'".
+   * Format Excel mengikuti template standar: kop PT Syukur Bersaudara,
+   * border tipis pada semua cell data, dan showGridLines. */
+  const exportHist = async (
+    which: "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl"
+  ): Promise<void> => {
     try {
+      const apAsOf = asOfOrToday(apHist, lastTxDate);
+      const arAsOf = asOfOrToday(invHist, lastTxDate);
+      const juAsOf = asOfOrToday(juHist, lastTxDate);
+
+      const makeSheets = (asOfDate: string, periodStr: string) =>
+        buildFinancialFormatSheets({
+          asOf: asOfDate,
+          periodLabel: periodStr,
+          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
+          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
+          nrNeraca,
+          lrLive,
+          kasLiveRows,
+          kasRep,
+          hutLive,
+          piuLive,
+          plMonthly,
+        });
+
       if (which === "kas") {
-        await exportExcelSheets([
-          {
-            name: "Kas & Bank",
-            rows: [
-              ["Rekening", "Nama", "Saldo awal", "Masuk periode", "Keluar periode", "Saldo akhir"],
-              ...kasLiveRows.map((r) => [
-                r.kode, r.nama,
-                kasRep.saldo[r.kode] ?? 0,
-                kasRep.masuk[r.kode] ?? 0,
-                kasRep.keluar[r.kode] ?? 0,
-                kasRep.saldo[r.kode] ?? 0,
-              ] as (string | number)[]),
-              [],
-              ["As-of", kasAsOf],
-              ["Periode", kasHist.mode === "Semua" ? "Semua" : `${kasHist.mode} ${kasHist.bulan || kasHist.tahun || kasHist.hari || `${kasHist.dari}..${kasHist.sampai}`}`],
-            ],
-          },
-          {
-            name: "Voucher",
-            rows: [
-              ["Tanggal", "Dokumen", "Uraian", "DB", "KR", "Nominal"],
-              ...manJournals
-                .filter((j) => j.status !== "Void" && (j.sumber === "Kas" || j.sumber === "Bank") && matchHist(String(j.date ?? ""), kasHist))
-                .map((j) => [String(j.date ?? ""), String(j.dokumen ?? "-"), String(j.uraian ?? ""), String(j.db ?? "-"), String(j.kr ?? "-"), num(j.amount)] as (string | number)[]),
-            ],
-          },
-        ], `Kas-Bank-${kasAsOf}`);
+        const sheets = makeSheets(kasAsOf, fmtPeriodeLaporan(kasHist, kasAsOf));
+        const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
+        await exportExcelSheets(target, `Kas-Bank-${kasAsOf}`);
       } else if (which === "bb") {
-        await exportExcelSheets([
-          {
-            name: "Buku Besar",
-            rows: [
-              ["Kode", "Nama akun", "Debit s.d. tanggal", "Kredit s.d. tanggal", "Saldo", "Debit periode", "Kredit periode", "Baris"],
-              ...bbLive.map((r) => [r.kode, r.nama, r.dAll, r.kAll, r.dAll - r.kAll, r.d, r.k, r.n] as (string | number)[]),
-              [],
-              ["As-of", bbAsOf],
-              ["Total debit", bbDAll],
-              ["Total kredit", bbKAll],
-              ["Selisih", bbDAll - bbKAll],
-            ],
-          },
-          ...(bbAkun ? [{
+        const sheets = makeSheets(bbAsOf, fmtPeriodeLaporan(bbHist, bbAsOf));
+        const target = sheets.filter((s) => s.name === "Buku Besar");
+        if (bbAkun) {
+          target.push({
             name: `Mutasi ${bbAkun}`,
+            header: {
+              company: "PT Syukur Bersaudara",
+              title: `Buku Besar Pembantu - ${bbAkun} ${String(coaRows.find((c) => String(c.kode) === bbAkun)?.nama ?? "")}`,
+              period: `Per ${bbAsOf}`,
+            },
             rows: [
-              ["Akun", `${bbAkun} ${String(coaRows.find((c) => String(c.kode) === bbAkun)?.nama ?? "")}`],
-              ["Saldo awal", bbMutasi.awal],
-              ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"],
-              ...bbMutasi.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo] as (string | number)[]),
+              styledRow("section", ["Saldo Awal", bbMutasi.awal, "", "", "", ""]),
+              styledRow("head", ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"]),
+              ...bbMutasi.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
             ],
-          }] : []),
-        ], `Buku-Besar-${bbAkun ? `${bbAkun}-` : ""}${bbAsOf}`);
+          });
+        }
+        await exportExcelSheets(target, `Buku-Besar-${bbAkun ? `${bbAkun}-` : ""}${bbAsOf}`);
       } else if (which === "lr") {
-        const rawSheets = buildFinancialFormatSheets({
-          asOf: lrAsOf,
-          periodLabel: fmtPeriodeLaporan(lrHist, lrAsOf),
-          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
-          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
-          nrNeraca,
-          lrLive,
-          kasLiveRows,
-          kasRep,
-          hutLive,
-          piuLive,
-          plMonthly,
-        });
-        const lrSheet = rawSheets.find((s) => s.name === "Laba Rugi");
-        const dashSheet = rawSheets.find((s) => s.name === "Dashboard & Grafik");
-        const rest = rawSheets.filter((s) => s.name !== "Laba Rugi" && s.name !== "Dashboard & Grafik");
-        const ordered = [
-          ...(dashSheet ? [dashSheet] : []),
-          ...(lrSheet ? [lrSheet] : []),
-          ...rest,
-        ];
-        await exportExcelSheets(ordered, `Laba-Rugi-${lrAsOf}`);
+        const sheets = makeSheets(lrAsOf, fmtPeriodeLaporan(lrHist, lrAsOf));
+        const target = sheets.filter((s) => s.name === "Laba Rugi");
+        await exportExcelSheets(target, `Laba-Rugi-${lrAsOf}`);
       } else if (which === "nr") {
-        const sheets = buildFinancialFormatSheets({
-          asOf: nrAsOf,
-          periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf),
-          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
-          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
-          nrNeraca,
-          lrLive,
-          kasLiveRows,
-          kasRep,
-          hutLive,
-          piuLive,
-          plMonthly,
-        });
-        await exportExcelSheets(sheets, `Neraca-${nrAsOf}`);
+        const sheets = makeSheets(nrAsOf, fmtPeriodeLaporan(nrHist, nrAsOf));
+        const target = sheets.filter((s) => s.name === "Neraca");
+        await exportExcelSheets(target, `Neraca-${nrAsOf}`);
+      } else if (which === "nl") {
+        const sheets = makeSheets(nrAsOf, fmtPeriodeLaporan(nrHist, nrAsOf));
+        const target = sheets.filter((s) => s.name === "Neraca Lajur");
+        await exportExcelSheets(target, `Neraca-Lajur-${nrAsOf}`);
+      } else if (which === "hutang") {
+        const sheets = makeSheets(apAsOf, fmtPeriodeLaporan(apHist, apAsOf));
+        const target = sheets.filter((s) => s.name === "Hutang");
+        await exportExcelSheets(target, `Hutang-${apAsOf}`);
+      } else if (which === "piutang") {
+        const sheets = makeSheets(arAsOf, fmtPeriodeLaporan(invHist, arAsOf));
+        const target = sheets.filter((s) => s.name === "Piutang");
+        await exportExcelSheets(target, `Piutang-${arAsOf}`);
+      } else if (which === "jurnal") {
+        const sheets = makeSheets(juAsOf, fmtPeriodeLaporan(juHist, juAsOf));
+        const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
+        await exportExcelSheets(target, `Jurnal-JU-Kas-Bank-${juAsOf}`);
+      } else if (which === "akun") {
+        const sheets = makeSheets(todayISO(), `Per ${todayISO()}`);
+        const target = sheets.filter((s) => s.name === "Akun");
+        await exportExcelSheets(target, `Daftar-Akun-COA-${todayISO()}`);
       } else {
-        const sheets = buildFinancialFormatSheets({
-          asOf: nrAsOf || todayISO(),
-          periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()),
-          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
-          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
-          nrNeraca,
-          lrLive,
-          kasLiveRows,
-          kasRep,
-          hutLive,
-          piuLive,
-          plMonthly,
-        });
+        const sheets = makeSheets(nrAsOf || todayISO(), fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()));
         await exportExcelSheets(sheets, `Laporan-Keuangan-Format-Standar-${nrAsOf || todayISO()}`);
       }
       toast(S.histExported, "info");
@@ -3182,13 +3150,27 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 setShowCoa(true);
               }}
               onDelete={(c) => setDelCoa(c)}
+              onExport={() => { void exportHist("akun"); }}
             />
           )}
 
           {tab === "Piutang (AR)" && (
             <div className="space-y-5">
               <div>
-                <CardHeader title={S.invListTitle} subtitle={S.arSub} />
+                <CardHeader
+                  title={S.invListTitle}
+                  subtitle={S.arSub}
+                  action={
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs"
+                      onClick={() => { void exportHist("piutang"); }}
+                      title={S.histExported}
+                    >
+                      {S.histExport}
+                    </button>
+                  }
+                />
                 <div className="px-5 pb-2">
                   <SearchBox value={arQ} onChange={setArQ} placeholder={S.cardSearchPh} ariaLabel={locale === "en" ? "Search receivables" : "Cari piutang"} />
                 </div>
@@ -3387,7 +3369,19 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.apTitle}
                 subtitle={S.apSub}
-                action={canWriteBills ? <button className="btn-secondary text-xs" onClick={() => setShowAp(true)}>{S.addHutang}</button> : undefined}
+                action={
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs"
+                      onClick={() => { void exportHist("hutang"); }}
+                      title={S.histExported}
+                    >
+                      {S.histExport}
+                    </button>
+                    {canWriteBills && <button className="btn-secondary text-xs" onClick={() => setShowAp(true)}>{S.addHutang}</button>}
+                  </div>
+                }
               />
               <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
                 <HistFilterBar value={apHist} onChange={setApHist} idPrefix="ap" />
@@ -4544,7 +4538,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
-              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} />
+              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} onExport={() => { void exportHist("nl"); }} />
               <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
                 {nrNeraca.selisih === 0 && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                 <span>{nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}</span>
@@ -4918,7 +4912,19 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.juTitle}
                 subtitle={S.juSub}
-                action={canWriteJournals ? <button className="btn-primary text-xs" onClick={() => setShowJu(true)}>{S.addJurnal}</button> : undefined}
+                action={
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs"
+                      onClick={() => { void exportHist("jurnal"); }}
+                      title={S.histExported}
+                    >
+                      {S.histExport}
+                    </button>
+                    {canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowJu(true)}>{S.addJurnal}</button>}
+                  </div>
+                }
               />
               <div className="mb-3 flex flex-wrap items-center gap-2 px-1">
                 <HistFilterBar value={juHist} onChange={setJuHist} idPrefix="ju" />

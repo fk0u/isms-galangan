@@ -151,7 +151,9 @@ export interface MirrorRow {
   data: Record<string, unknown>;
 }
 
-export const FE_MIRROR_ROWS: MirrorRow[] = ${JSON.stringify(rows, null, 2)};
+export const FE_MIRROR_ROWS: MirrorRow[] = JSON.parse(
+  ${JSON.stringify(JSON.stringify(rows))}
+);
 `;
 
 fs.writeFileSync(path.join(here, "seedFeMirror.ts"), out);

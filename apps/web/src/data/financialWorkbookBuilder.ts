@@ -523,6 +523,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   let rollingSaldo = 0;
   for (const j of manJournals) {
     if (j.status === "Void") continue;
+    if (asOf && String(j.date ?? "").slice(0, 10) > asOf) continue;
     const isKasOrBank = j.sumber === "Kas" || j.sumber === "Bank";
     const amount = Number(j.amount ?? 0);
     const dbAmt = isKasOrBank && String(j.db ?? "").startsWith("1-1") ? amount : 0;
@@ -546,7 +547,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 6. SHEET: HUTANG
    * ======================================================================= */
   const hutangRows: unknown[][] = [
-    ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR SALDO"],
+    styledRow("head", ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR SALDO"]),
   ];
   hutLive.forEach((h, idx) => {
     hutangRows.push([idx + 1, h.v, Math.round(h.total), Math.round(h.total)]);
@@ -556,7 +557,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 7. SHEET: PIUTANG
    * ======================================================================= */
   const piutangRows: unknown[][] = [
-    ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR BULAN"],
+    styledRow("head", ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR BULAN"]),
   ];
   piuLive.forEach((p, idx) => {
     piutangRows.push([idx + 1, p.c, Math.round(p.total), Math.round(p.total)]);
@@ -566,7 +567,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 8. SHEET: BUKU BESAR
    * ======================================================================= */
   const bbRows: unknown[][] = [
-    ["KODE AKUN", "NAMA AKUN", "D/K", "TOTAL DEBIT", "TOTAL KREDIT", "SALDO AKHIR"],
+    styledRow("head", ["KODE AKUN", "NAMA AKUN", "D/K", "TOTAL DEBIT", "TOTAL KREDIT", "SALDO AKHIR"]),
   ];
   for (const c of Array.from(coaMap.values())) {
     const d = debitMap.get(c.kode) ?? 0;
@@ -579,7 +580,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 9. SHEET: AKUN (COA)
    * ======================================================================= */
   const akunRows: unknown[][] = [
-    ["NO AKUN", "NAMA AKUN", "AKUN D/K", "AKUN NR/LR"],
+    styledRow("head", ["NO AKUN", "NAMA AKUN", "AKUN D/K", "AKUN NR/LR"]),
   ];
   for (const c of Array.from(coaMap.values())) {
     akunRows.push(isJudul(c) ? styledRow("section", [c.kode, c.nama, "", ""]) : [c.kode, c.nama, c.dk, c.nrlr]);

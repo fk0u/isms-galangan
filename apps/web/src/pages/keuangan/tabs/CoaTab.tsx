@@ -25,6 +25,7 @@ interface CoaTabProps {
   onAdd: () => void;
   onEdit: (item: StoreItem) => void;
   onDelete: (item: StoreItem) => void;
+  onExport?: () => void;
 }
 
 /** Tentukan klasifikasi tipe akun (Aset, Liabilitas, Ekuitas, Pendapatan, Beban). */
@@ -143,7 +144,7 @@ export function buildCoaTree(rows: StoreItem[]): CoaTreeNode[] {
   return roots;
 }
 
-export function CoaTab({ coaRows, onAdd, onEdit, onDelete }: CoaTabProps) {
+export function CoaTab({ coaRows, onAdd, onEdit, onDelete, onExport }: CoaTabProps) {
   const { locale } = useT();
   const S = n_fin[locale];
   const [q, setQ] = useState("");
@@ -245,9 +246,16 @@ export function CoaTab({ coaRows, onAdd, onEdit, onDelete }: CoaTabProps) {
         title={S.akunTitle}
         subtitle={S.akunSub}
         action={
-          <button className="btn-primary text-xs" onClick={onAdd}>
-            {S.addAkun}
-          </button>
+          <div className="flex items-center gap-2">
+            {onExport && (
+              <button className="btn-secondary text-xs" onClick={onExport} title={S.histExported}>
+                {S.histExport}
+              </button>
+            )}
+            <button className="btn-primary text-xs" onClick={onAdd}>
+              {S.addAkun}
+            </button>
+          </div>
         }
       />
 

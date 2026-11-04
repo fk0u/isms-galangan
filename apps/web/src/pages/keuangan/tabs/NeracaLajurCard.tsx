@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { Card, CardHeader } from "../../../components/ui";
 import type { StoreItem } from "../../../data/store";
-import { exportExcelSheets } from "../../../utils/export";
+import { exportExcelSheets, styledRow } from "../../../utils/export";
 import { fmtRupiah } from "../../../utils/format";
 import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
@@ -44,7 +44,7 @@ export function buildLajur(journals: StoreItem[], coa: StoreItem[], inPeriod: (d
 
 const COLS = ["awal", "mutasi", "adj", "ns", "lr", "nr"] as const;
 
-export default function NeracaLajurCard({ journals, coa, inPeriod, asOf }: { journals: StoreItem[]; coa: StoreItem[]; inPeriod: (d: string) => boolean; asOf: string }) {
+export default function NeracaLajurCard({ journals, coa, inPeriod, asOf, onExport }: { journals: StoreItem[]; coa: StoreItem[]; inPeriod: (d: string) => boolean; asOf: string; onExport?: () => void }) {
   const { locale } = useT();
   const S = n_fin[locale];
   const rows = useMemo(() => buildLajur(journals, coa, inPeriod, asOf), [journals, coa, inPeriod, asOf]);
@@ -56,18 +56,19 @@ export default function NeracaLajurCard({ journals, coa, inPeriod, asOf }: { jou
 
   const exportXls = () => exportExcelSheets([{
     name: "Neraca Lajur",
+    header: { company: "PT Syukur Bersaudara", title: "Neraca Lajur", period: `Per ${asOf}` },
     rows: [
-      ["Kode", "Akun", ...head.flatMap((h) => [`${h} Debit`, `${h} Kredit`])],
+      styledRow("head", ["Kode", "Akun", ...head.flatMap((h) => [`${h} Debit`, `${h} Kredit`])]),
       ...rows.map((r) => [r.kode, r.nama, ...COLS.flatMap((c) => r[c])]),
-      ["", "Jumlah", ...tot.flat()],
-      ["", laba >= 0 ? "Laba bersih" : "Rugi bersih", 0, 0, 0, 0, 0, 0, 0, 0, laba >= 0 ? laba : 0, laba < 0 ? -laba : 0, laba < 0 ? -laba : 0, laba >= 0 ? laba : 0],
-      ["As-of", asOf],
+      styledRow("total", ["", "Jumlah", ...tot.flat()]),
+      styledRow("total", ["", laba >= 0 ? "Laba bersih" : "Rugi bersih", 0, 0, 0, 0, 0, 0, 0, 0, laba >= 0 ? laba : 0, laba < 0 ? -laba : 0, laba < 0 ? -laba : 0, laba >= 0 ? laba : 0]),
+      styledRow("note", ["As-of", asOf]),
     ],
   }], `Neraca-Lajur-${asOf}`);
 
   return (
     <Card className="p-4">
-      <CardHeader title={S.nlTitle} subtitle={S.nlSub.replace("{d}", asOf)} action={<button className="btn-secondary text-xs" onClick={() => void exportXls()}>{S.histExport}</button>} />
+      <CardHeader title={S.nlTitle} subtitle={S.nlSub.replace("{d}", asOf)} action={<button className="btn-secondary text-xs" onClick={() => { if (onExport) onExport(); else void exportXls(); }}>{S.histExport}</button>} />
       <div className="max-h-[28rem] overflow-auto">
         <table className="w-full text-xs">
           <thead className="bg-surface sticky top-0 z-10">

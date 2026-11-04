@@ -459,24 +459,9 @@ export interface InventoryItem {
   openBase?: number;
 }
 
-export const inventory: InventoryItem[] = [
-  { id: "INV-001", name: "Pelat Baja AH36 12mm", category: "Baja", sku: "AH36-12", warehouse: "Gudang Material", stock: 5200, minStock: 2000, unit: "kg", cost: 14500, location: "A1-01" },
-  { id: "INV-002", name: "Mesin Bantu (Aux Engine)", category: "Mesin", sku: "AUX-MAK", warehouse: "Gudang Material", stock: 3, minStock: 2, unit: "unit", cost: 850000000, location: "M-02" },
-  { id: "INV-003", name: "Cat Epoxy Primer", category: "Cat", sku: "EPO-PRIM", warehouse: "Gudang Material", stock: 44, minStock: 20, unit: "liter", cost: 95000, location: "B2-11" },
-  { id: "INV-004", name: "Pipa Schedule 40 6 inch", category: "Pipa", sku: "PIP-S40-6", warehouse: "Gudang Material", stock: 18, minStock: 30, unit: "batang", cost: 780000, location: "P-04" },
-  { id: "INV-005", name: "Anoda Zink", category: "Perlindungan", sku: "ZN-ANODE", warehouse: "Gudang Material", stock: 8, minStock: 12, unit: "pcs", cost: 210000, location: "B3-07" },
-  { id: "INV-006", name: "Kabel Listrik Marine 4x50", category: "Listrik", sku: "KBL-4X50", warehouse: "Gudang Material", stock: 1200, minStock: 800, unit: "meter", cost: 185000, location: "L-01" },
-  { id: "INV-007", name: "Baut Marine M20", category: "Fastener", sku: "BLT-M20", warehouse: "Gudang Material", stock: 1500, minStock: 2000, unit: "pcs", cost: 4500, location: "B1-05" },
-  { id: "INV-008", name: "Winch Wire Rope", category: "Rigging", sku: "WIRE-ROPE", warehouse: "Gudang Material", stock: 6, minStock: 4, unit: "roll", cost: 3200000, location: "R-02" },
-  /* F3-G-03 demo: item berkonversi satuan untuk barang keluar eceran & potongan. */
-  { id: "INV-021", name: "Cat Antifouling (drum 200 L)", category: "Cat", sku: "AF-DRUM", warehouse: "Gudang Material", stock: 6, minStock: 2, unit: "drum", cost: 18500000, location: "B2-14", eceran: true, conversion: { baseUnit: "liter", perUnit: 200 } },
-  { id: "INV-022", name: "Plat Baja AH36 12mm (6000×1500)", category: "Plat", sku: "AH36-12-LBR", warehouse: "Gudang Material", stock: 12, minStock: 4, unit: "lembar", cost: 12300000, location: "A1-04", conversion: { baseUnit: "kg", perUnit: 848, dims: { lengthMm: 6000, widthMm: 1500, thicknessMm: 12, weightKg: 848 } } },
-  // RawData REPORT WAREHOUSE 2024 (sheet KODE + STOCK ALL).
-  { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Material", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
-  { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Material", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },
-  { id: "INV-SB-003", name: "PLAT 8MM 5x20", category: "Baja", sku: "EO0000LAT15", warehouse: "Gudang Material", stock: 6, minStock: 4, unit: "LBR", cost: 6500000, location: "S-03" },
-  { id: "INV-SB-004", name: "PLAT 12MM X 6' X 20'", category: "Baja", sku: "EO0000LAT20", warehouse: "Gudang Material", stock: 75, minStock: 10, unit: "lbr", cost: 11701250, location: "S-04" },
-];
+import { inventoryCatalog } from "./materialsSeed";
+
+export const inventory: InventoryItem[] = inventoryCatalog;
 
 /* `fuelPrice` = harga solar per liter.
    Angkanya sekarang referring ke utils/rates.ts (Bio Solar Industri B40,
@@ -619,23 +604,23 @@ export interface MaterialRequest {
    sintetis; sebelumnya satu daftar generik dipakai semua proyek. */
 export interface BomItem { id: string; projectId: string; itemId: string; item: string; unit: string; need: number; note?: string }
 export const seedBomItems: BomItem[] = [
-  { id: "BOM-NB12-01", projectId: "NB-2025-012", itemId: "INV-001", item: "Pelat Baja AH36 12mm", unit: "kg", need: 82000 },
-  { id: "BOM-NB12-02", projectId: "NB-2025-012", itemId: "INV-002", item: "Mesin Bantu (Aux Engine)", unit: "unit", need: 2 },
-  { id: "BOM-NB12-03", projectId: "NB-2025-012", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", need: 1200 },
-  { id: "BOM-NB12-04", projectId: "NB-2025-012", itemId: "INV-004", item: "Pipa Schedule 40 6 inch", unit: "batang", need: 240 },
-  { id: "BOM-NB12-05", projectId: "NB-2025-012", itemId: "INV-006", item: "Kabel Listrik Marine 4x50", unit: "meter", need: 3500 },
-  { id: "BOM-NB12-06", projectId: "NB-2025-012", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 86 },
-  { id: "BOM-NB12-07", projectId: "NB-2025-012", itemId: "INV-007", item: "Baut Marine M20", unit: "pcs", need: 400 },
-  { id: "BOM-RP03-01", projectId: "RP-2026-003", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", need: 120 },
-  { id: "BOM-RP03-02", projectId: "RP-2026-003", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 40 },
-  { id: "BOM-RP05-01", projectId: "RP-2026-005", itemId: "INV-021", item: "Cat Antifouling (drum 200 L)", unit: "drum", need: 6 },
-  { id: "BOM-RP05-02", projectId: "RP-2026-005", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", need: 24 },
+  { id: "BOM-NB12-01", projectId: "NB-2025-012", itemId: "STK-MAT-0537", item: "Plat 14mmx6'x20' BKI", unit: "LBR", need: 50 },
+  { id: "BOM-NB12-02", projectId: "NB-2025-012", itemId: "STK-MAT-0001", item: "BAUT 1/2X1 1/2 BIASA", unit: "PCS", need: 200 },
+  { id: "BOM-NB12-03", projectId: "NB-2025-012", itemId: "STK-MAT-0015", item: "BAUT 3/4X1 1/2 BIASA", unit: "PCS", need: 30 },
+  { id: "BOM-NB12-04", projectId: "NB-2025-012", itemId: "STK-MAT-0539", item: "Pipa 12\"x6mtr SCH 80", unit: "BTG", need: 2 },
+  { id: "BOM-NB12-05", projectId: "NB-2025-012", itemId: "STK-MAT-0018", item: "BAUT 3/4X2 SS", unit: "PCS", need: 50 },
+  { id: "BOM-NB12-06", projectId: "NB-2025-012", itemId: "STK-MAT-0013", item: "BAUT 5/8X2 SS", unit: "PCS", need: 86 },
+  { id: "BOM-NB12-07", projectId: "NB-2025-012", itemId: "STK-MAT-0002", item: "BAUT 1/2X2 BIASA", unit: "PCS", need: 100 },
+  { id: "BOM-RP03-01", projectId: "RP-2026-003", itemId: "STK-MAT-0001", item: "BAUT 1/2X1 1/2 BIASA", unit: "PCS", need: 50 },
+  { id: "BOM-RP03-02", projectId: "RP-2026-003", itemId: "STK-MAT-0015", item: "BAUT 3/4X1 1/2 BIASA", unit: "PCS", need: 20 },
+  { id: "BOM-RP05-01", projectId: "RP-2026-005", itemId: "STK-MAT-0537", item: "Plat 14mmx6'x20' BKI", unit: "LBR", need: 6 },
+  { id: "BOM-RP05-02", projectId: "RP-2026-005", itemId: "STK-MAT-0003", item: "BAUT 1/2X2 1/2 BIASA", unit: "PCS", need: 24 },
 ];
 
 export const seedMaterialRequests: MaterialRequest[] = [
-  { id: "MR-2026-001", projectId: "RP-2026-003", itemId: "INV-003", item: "Cat Epoxy Primer", unit: "liter", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 20, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Rudi Hartono", date: "2026-10-02", movementIds: ["M-MR-001"], requisitionId: null, sparepartId: null, note: "" },
-  { id: "MR-2026-002", projectId: "RP-2026-003", itemId: "INV-005", item: "Anoda Zink", unit: "pcs", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 0, shortage: 20, status: "Menunggu PO", requestedBy: "Agus Setiawan", date: "2026-10-05", movementIds: [], requisitionId: "PR-2026-211", sparepartId: null, note: "Penggantian anoda lambung" },
-  { id: "MR-2026-003", projectId: "NB-2025-012", itemId: "INV-007", item: "Baut Marine M20", unit: "pcs", purpose: "wbs", wbsTask: "Hull Assembly", requested: 400, issued: 400, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Fajar Nugroho", date: "2026-10-07", movementIds: ["M-MR-003"], requisitionId: null, sparepartId: null, note: "" },
+  { id: "MR-2026-001", projectId: "RP-2026-003", itemId: "STK-MAT-0001", item: "BAUT 1/2X1 1/2 BIASA", unit: "PCS", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 20, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Rudi Hartono", date: "2026-10-02", movementIds: ["M-MR-001"], requisitionId: null, sparepartId: null, note: "" },
+  { id: "MR-2026-002", projectId: "RP-2026-003", itemId: "STK-MAT-0015", item: "BAUT 3/4X1 1/2 BIASA", unit: "PCS", purpose: "wbs", wbsTask: "Outfitting - Machinery", requested: 20, issued: 0, shortage: 20, status: "Menunggu PO", requestedBy: "Agus Setiawan", date: "2026-10-05", movementIds: [], requisitionId: "PR-2026-211", sparepartId: null, note: "Penggantian baut coupling" },
+  { id: "MR-2026-003", projectId: "NB-2025-012", itemId: "STK-MAT-0002", item: "BAUT 1/2X2 BIASA", unit: "PCS", purpose: "wbs", wbsTask: "Hull Assembly", requested: 100, issued: 100, shortage: 0, status: "Dipenuhi dari stok", requestedBy: "Fajar Nugroho", date: "2026-10-07", movementIds: ["M-MR-003"], requisitionId: null, sparepartId: null, note: "" },
 ];
 
 /* ====== SPAREPART ====== */
@@ -941,18 +926,18 @@ export const equipmentHours = [
 /* ====== INVENTORY MOVEMENT ====== */
 
 export const inventoryMovement = [
-  { id: "M-MR-001", item: "Cat Epoxy Primer", itemId: "INV-003", type: "Pengeluaran", qty: 20, unit: "liter", by: "Rudi Hartono (WBS: Outfitting - Machinery)", date: "2026-10-02", tone: "out", ref: { projectId: "RP-2026-003", materialRequestId: "MR-2026-001" } },
-  { id: "M-MR-003", item: "Baut Marine M20", itemId: "INV-007", type: "Pengeluaran", qty: 400, unit: "pcs", by: "Fajar Nugroho (WBS: Hull Assembly)", date: "2026-10-07", tone: "out", ref: { projectId: "NB-2025-012", materialRequestId: "MR-2026-003" } },
-  { id: "M-0901", item: "Pelat Baja AH36 12mm", type: "Pengeluaran", qty: 420, by: "NB-2025-012", date: "2026-08-01", tone: "out" },
-  { id: "M-0902", item: "Cat Epoxy Primer", type: "Penerimaan", qty: 60, by: "PO-2026-116", date: "2026-08-01", tone: "in" },
-  { id: "M-0903", item: "Baut Marine M20", type: "Pengeluaran", qty: 850, by: "RP-2026-003", date: "2026-07-31", tone: "out" },
-  { id: "M-0904", item: "Kabel Listrik Marine 4x50", type: "Pengeluaran", qty: 540, by: "RF-2026-001", date: "2026-07-30", tone: "out" },
-  { id: "M-0905", item: "Winch Wire Rope", type: "Penerimaan", qty: 3, by: "PO-2026-117", date: "2026-07-29", tone: "in" },
-  { id: "M-0906", item: "Anoda Zink", type: "Pengeluaran", qty: 14, by: "RP-2026-005", date: "2026-07-29", tone: "out" },
-  { id: "M-0907", item: "Mesin Bantu (Aux Engine)", type: "Penerimaan", qty: 1, by: "PO-2026-115", date: "2026-07-28", tone: "in" },
+  { id: "M-MR-001", item: "BAUT 1/2X1 1/2 BIASA", itemId: "STK-MAT-0001", type: "Pengeluaran", qty: 20, unit: "PCS", by: "Rudi Hartono (WBS: Outfitting - Machinery)", date: "2026-10-02", tone: "out", ref: { projectId: "RP-2026-003", materialRequestId: "MR-2026-001" } },
+  { id: "M-MR-003", item: "BAUT 1/2X2 BIASA", itemId: "STK-MAT-0002", type: "Pengeluaran", qty: 100, unit: "PCS", by: "Fajar Nugroho (WBS: Hull Assembly)", date: "2026-10-07", tone: "out", ref: { projectId: "NB-2025-012", materialRequestId: "MR-2026-003" } },
+  { id: "M-0901", item: "Plat 14mmx6'x20' BKI", itemId: "STK-MAT-0537", type: "Pengeluaran", qty: 2, by: "NB-2025-012", date: "2026-08-01", tone: "out" },
+  { id: "M-0902", item: "BAUT 1/2X1 1/2 BIASA", itemId: "STK-MAT-0001", type: "Penerimaan", qty: 60, by: "PO-2026-116", date: "2026-08-01", tone: "in" },
+  { id: "M-0903", item: "BAUT 1/2X2 BIASA", itemId: "STK-MAT-0002", type: "Pengeluaran", qty: 50, by: "RP-2026-003", date: "2026-07-31", tone: "out" },
+  { id: "M-0904", item: "BAUT 3/4X2 SS", itemId: "STK-MAT-0018", type: "Pengeluaran", qty: 40, by: "RF-2026-001", date: "2026-07-30", tone: "out" },
+  { id: "M-0905", item: "BAUT 3/4X1 1/2 BIASA", itemId: "STK-MAT-0015", type: "Penerimaan", qty: 20, by: "PO-2026-117", date: "2026-07-29", tone: "in" },
+  { id: "M-0906", item: "BAUT 5/8X2 SS", itemId: "STK-MAT-0013", type: "Pengeluaran", qty: 14, by: "RP-2026-005", date: "2026-07-29", tone: "out" },
+  { id: "M-0907", item: "Pipa 12\"x6mtr SCH 80", itemId: "STK-MAT-0539", type: "Penerimaan", qty: 1, by: "PO-2026-115", date: "2026-07-28", tone: "in" },
   // RawData REPORT WAREHOUSE 2024 (sheet IN/OUT JAN-DES).
-  { id: "M-SB-IN-001", item: "PLAT 8MM 5x20", itemId: "INV-SB-003", type: "Penerimaan", qty: 6, by: "UD MITRA CONTOH UTAMA 2", date: "2024-01-02", tone: "in", supplier: "UD MITRA CONTOH UTAMA 2", purpose: "TB SYUKUR 75", pic: "PERORANGAN CONTOH GADING" },
-  { id: "M-SB-OUT-001", item: "HEMPALIN ENAMEL GREEN 40640 @5LTR", itemId: "INV-SB-002", type: "Pengeluaran", qty: 2, by: "TB SYUKUR 72", date: "2024-01-02", tone: "out", purpose: "TB SYUKUR 72", pic: "ABK" },
+  { id: "M-SB-IN-001", item: "BAUT 1/2X1 1/2 BIASA", itemId: "STK-MAT-0001", type: "Penerimaan", qty: 6, by: "UD MITRA CONTOH UTAMA 2", date: "2024-01-02", tone: "in", supplier: "UD MITRA CONTOH UTAMA 2", purpose: "TB SYUKUR 75", pic: "PERORANGAN CONTOH GADING" },
+  { id: "M-SB-OUT-001", item: "BAUT 1/2X2 BIASA", itemId: "STK-MAT-0002", type: "Pengeluaran", qty: 2, by: "TB SYUKUR 72", date: "2024-01-02", tone: "out", purpose: "TB SYUKUR 72", pic: "ABK" },
 ];
 
 export const stockTrend = [

@@ -107,15 +107,24 @@ function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | nu
   // Nol tampil "-" seperti laporan akuntansi; sel tetap angka.
   const base = raw === 0 ? { value: 0, format: '#,##0;-#,##0;"-"' } : asMoney(raw, money);
   const cell = typeof base === "object" && !(base instanceof Date) ? { ...base } : { value: base };
-  const border = { bottomBorderStyle: THIN, bottomBorderColor: TEMA.line };
+  const border = {
+    topBorderStyle: THIN,
+    topBorderColor: TEMA.line,
+    bottomBorderStyle: THIN,
+    bottomBorderColor: TEMA.line,
+    leftBorderStyle: THIN,
+    leftBorderColor: TEMA.line,
+    rightBorderStyle: THIN,
+    rightBorderColor: TEMA.line,
+  };
   // Bar teks dasbor (█░) diwarnai merek agar terbaca sebagai grafik.
   const bar = typeof raw === "string" && /^[█░]/.test(raw) ? { textColor: TEMA.brand } : {};
   switch (kind) {
-    case "head": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 22 };
+    case "head": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 22, ...border, topBorderColor: TEMA.brandDark, bottomBorderColor: TEMA.brandDark, leftBorderColor: TEMA.brandDark, rightBorderColor: TEMA.brandDark };
     case "section": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
-    case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, topBorderStyle: THIN, topBorderColor: TEMA.muted, ...border };
-    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, textColor: TEMA.white, backgroundColor: TEMA.ink, height: 22, alignVertical: "center" as const };
-    case "note": return { ...cell, fontStyle: "italic" as const, textColor: TEMA.muted };
+    case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
+    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, textColor: TEMA.white, backgroundColor: TEMA.ink, height: 22, alignVertical: "center" as const, ...border, topBorderColor: TEMA.ink, bottomBorderColor: TEMA.ink, leftBorderColor: TEMA.ink, rightBorderColor: TEMA.ink };
+    case "note": return { ...cell, fontStyle: "italic" as const, textColor: TEMA.muted, ...border };
     default: return { ...cell, ...(zebra ? { backgroundColor: TEMA.zebra } : {}), ...border, ...bar };
   }
 }
@@ -172,7 +181,7 @@ function themedSheet(s: ExcelSheet, header: NonNullable<ExcelSheet["header"]>, n
     data: [...headerRows(header, span), ...data],
     sheet: name,
     columns: widths.map((w) => ({ width: w })),
-    showGridLines: false,
+    showGridLines: true,
   };
 }
 
