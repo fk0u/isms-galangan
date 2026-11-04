@@ -1447,7 +1447,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else if (which === "lr") {
         const rawSheets = buildFinancialFormatSheets({
           asOf: lrAsOf,
-          companyName: companyKopName,
           periodLabel: fmtPeriodeLaporan(lrHist, lrAsOf),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
@@ -1471,7 +1470,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else if (which === "nr") {
         const sheets = buildFinancialFormatSheets({
           asOf: nrAsOf,
-          companyName: companyKopName,
           periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
@@ -1487,7 +1485,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else {
         const sheets = buildFinancialFormatSheets({
           asOf: nrAsOf || todayISO(),
-          companyName: companyKopName,
           periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
@@ -2572,14 +2569,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
   const nrAsOf = asOfOrToday(nrHist, lastTxDate);
-  const companyKopName = useMemo(() => {
-    const row = (data.settings ?? []).find((s) => s.key === "COMPANY_KOP");
-    try {
-      const val = typeof row?.value === "string" ? JSON.parse(row.value) : (row?.value as Record<string, unknown> | undefined);
-      if (val && typeof val.name === "string" && val.name.trim()) return val.name.trim();
-    } catch { /* parse error */ }
-    return "PT OELANGAN KARYA ETAM";
-  }, [data.settings]);
   const nrSnap = isSnapMonth(nrAsOf.slice(0, 7));
   const hutLive = apOutAsOf(payables, nrAsOf);
   const piuLive = arOutAsOf(invoices, nrAsOf);
