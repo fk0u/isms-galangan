@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check, ExternalLink, Download } from "lucide-react";
+import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check, ExternalLink, Download, Code } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { openFileUrl } from "../../services/files";
@@ -66,6 +66,7 @@ import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets } from "../../utils/export";
 import { buildFinancialFormatSheets } from "../../data/financialWorkbookBuilder";
+import { downloadVbaModule } from "../../data/vbaMacroSource";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
@@ -3118,7 +3119,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         subtitle={S.pageSubtitle}
         icon={<Wallet className="h-5 w-5" />}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               className="btn-secondary text-xs flex items-center gap-1.5"
@@ -3126,6 +3127,17 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               title={S.exportFullWorkbookTip}
             >
               <Download className="h-4 w-4" /> {S.exportFullWorkbook}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary text-xs flex items-center gap-1.5"
+              onClick={() => {
+                downloadVbaModule("ISMS_Financial_Macros.bas");
+                toast(S.vbaDownloaded, "info");
+              }}
+              title={S.downloadVbaTip}
+            >
+              <Code className="h-4 w-4" /> {S.downloadVbaBtn}
             </button>
             {canWriteInvoices && (
               <button className="btn-primary-gradient" onClick={() => setShowInv(true)}>

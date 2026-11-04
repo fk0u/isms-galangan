@@ -1,5 +1,6 @@
 import { type ExcelSheet } from "../utils/export";
 import { COA_EXCEL, type CoaExcel } from "./financeExcel";
+import { VBA_MACRO_SOURCE } from "./vbaMacroSource";
 
 export interface FinancialWorkbookParams {
   asOf: string;
@@ -76,15 +77,16 @@ function yearOrFull(parts: string[], y: string): string {
 }
 
 function makeBar(pct: number, maxBlocks = 20): string {
-  const p = Math.max(0, Math.min(100, pct));
+  const p = Math.max(0, Math.min(100, isNaN(pct) ? 0 : pct));
   const filled = Math.round((p / 100) * maxBlocks);
-  const empty = maxBlocks - filled;
+  const empty = Math.max(0, maxBlocks - filled);
   return "█".repeat(filled) + "░".repeat(empty) + ` ${p.toFixed(1)}%`;
 }
 
 /**
  * Membangun seluruh sheets laporan keuangan standar sesuai format referensi klien
- * (Financial Format (1).xlsx).
+ * (Financial Format (1).xlsx) plus modul aplikasi Macro VBA interaktif dan
+ * Semi-Dashboard Keuangan Lanjutan.
  */
 export function buildFinancialFormatSheets(params: FinancialWorkbookParams): ExcelSheet[] {
   const {
@@ -142,6 +144,10 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * ======================================================================= */
   const leftRows: Array<[string, string, string, number | string, number | string]> = [];
   const rightRows: Array<[string, string, string, number | string, number | string]> = [];
+
+  // Baris Tombol Menu Navigasi di paling atas
+  leftRows.push(["[ 🏠 KEMBALI KE DASHBOARD ]", "", "", "", ""]);
+  rightRows.push(["[ 📈 BUKA LABA RUGI ]", "", "", "", ""]);
 
   // AKTIVA LANCAR (1-100 s.d. 1-199)
   leftRows.push(["1-000", "A K T I V A", "", "", ""]);
@@ -218,9 +224,9 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const balancing = nrNeraca.selisih;
   const sumEkuitas = modalUsaha + labaDitahan + labaBerjalan + balancing;
 
-  rightRows.push(["3-100", "Modal Usaha", "", modalUsaha, ""]);
+  rightRows.push(["3-100", "Modal", "", modalUsaha, ""]);
   rightRows.push(["3-200", "Laba Ditahan", "", labaDitahan, ""]);
-  rightRows.push(["", "Laba (Rugi) Berjalan", "", labaBerjalan, ""]);
+  rightRows.push(["3-300", "Laba Tahun Berjalan", "", labaBerjalan, ""]);
   if (balancing !== 0) {
     rightRows.push(["3-999", "Historical Balancing", "", balancing, ""]);
   }
@@ -230,47 +236,66 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const grandTotalPasiva = sumKewajibanLancar + sumKewajibanJp + sumEkuitas;
   rightRows.push(["", "TOTAL PASIVA", "", "", grandTotalPasiva]);
 
-  // Gabungkan Aktiva (Kiri: A-E) dan Pasiva (Kanan: G-K) dengan F sebagai pemisah
+  // Sejajarkan jumlah baris aktiva dan pasiva
+  const maxRows = Math.max(leftRows.length, rightRows.length);
+  while (leftRows.length < maxRows) leftRows.push(["", "", "", "", ""]);
+  while (rightRows.length < maxRows) rightRows.push(["", "", "", "", ""]);
+
+  const isBalance = Math.abs(grandTotalAktiva - grandTotalPasiva) < 1;
+  const auditStatusStr = isBalance ? "✅ STATUS AUDIT: SEIMBANG / 100% BALANCE (Rp 0 Selisih)" : `⚠️ STATUS AUDIT: ADA SELISIH Rp ${Math.abs(grandTotalAktiva - grandTotalPasiva).toLocaleString("id-ID")}`;
+
   const neracaRows: unknown[][] = [
     ["PT SYUKUR BERSAUDARA", "", "", "", "", "", "PT SYUKUR BERSAUDARA", "", "", "", ""],
     ["NERACA", "", "", "", "", "", "NERACA", "", "", "", ""],
     [periodeStr, "", "", "", "", "", periodeStr, "", "", "", ""],
-    ["NO", "POS-POS", "", "SUB-TOTAL", "TOTAL", "", "NO", "POS-POS", "", "SUB-TOTAL", "TOTAL"],
-    ["AKUN", "", "", "", "", "", "AKUN", "", "", "", ""],
+    [auditStatusStr, "", "", "", "", "", auditStatusStr, "", "", "", ""],
+    ["NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL", "", "NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL"],
   ];
 
-  const maxLen = Math.max(leftRows.length, rightRows.length);
-  for (let i = 0; i < maxLen; i++) {
-    const l = leftRows[i] ?? ["", "", "", "", ""];
-    const r = rightRows[i] ?? ["", "", "", "", ""];
-    neracaRows.push([...l, "", ...r]);
+  for (let i = 0; i < maxRows; i++) {
+    const l = leftRows[i];
+    const r = rightRows[i];
+    neracaRows.push([l[0], l[1], l[2], l[3], l[4], "", r[0], r[1], r[2], r[3], r[4]]);
   }
 
+  // Baris footer audit di bagian paling bawah
+  neracaRows.push([]);
+  neracaRows.push([
+    "AUDIT BALANCE CHECK",
+    `Total Aktiva: ${grandTotalAktiva.toLocaleString("id-ID")}`,
+    "", "", "", "",
+    "AUDIT BALANCE CHECK",
+    `Total Pasiva: ${grandTotalPasiva.toLocaleString("id-ID")}`,
+    "",
+    auditStatusStr,
+    "",
+  ]);
+
   /* =======================================================================
-   * 2. SHEET: LABA RUGI (RINCIAN COA LENGKAP 4-000 s/d 7-000)
+   * 2. SHEET: LABA RUGI (LENGKAP RINCIAN POS COA)
    * ======================================================================= */
   const lrExcelRows: unknown[][] = [
+    ["[ 🏠 KEMBALI KE DASHBOARD ]", "", "", "", "[ 📑 BUKA NERACA ]"],
     ["PT SYUKUR BERSAUDARA", "", "", "", ""],
-    ["LAPORAN LABA-RUGI", "", "", "", ""],
+    ["LAPORAN LABA RUGI", "", "", "", ""],
     [periodeStr, "", "", "", ""],
-    ["NO", "POS-POS", "", "SUB-TOTAL", "TOTAL"],
-    ["AKUN", "", "", "", ""],
+    ["NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL"],
   ];
 
   // 4-000 PENDAPATAN
   lrExcelRows.push(["4-000", "P E N D A P A T A N", "", "", ""]);
-  const revAccs = Array.from(coaMap.values()).filter((c) => c.kode.startsWith("4-"));
+  const pendAccs = Array.from(coaMap.values()).filter((c) => c.kode.startsWith("4-"));
   let totPendapatan = 0;
-  for (const acc of revAccs) {
+  for (const acc of pendAccs) {
     const v = getSaldo(acc.kode);
     totPendapatan += v;
     lrExcelRows.push([acc.kode, acc.nama, "", v, ""]);
   }
-  lrExcelRows.push(["", "Total Pendapatan", "", "", totPendapatan]);
+  lrExcelRows.push(["", "Jumlah Pendapatan Operasional", "", "", totPendapatan]);
   lrExcelRows.push(["", "", "", "", ""]);
 
   // 5-000 BEBAN POKOK PENDAPATAN (HPP)
-  lrExcelRows.push(["5-000", "B E B A N   P O K O K   P E N D A P A T A N", "", "", ""]);
+  lrExcelRows.push(["5-000", "B E B A N   P O K O K   P E N D A P A T A N   ( H P P )", "", "", ""]);
   const hppAccs = Array.from(coaMap.values()).filter((c) => c.kode.startsWith("5-"));
   let totHpp = 0;
   for (const acc of hppAccs) {
@@ -278,14 +303,15 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     totHpp += v;
     lrExcelRows.push([acc.kode, acc.nama, "", v, ""]);
   }
-  lrExcelRows.push(["", "Total Beban Pokok Pendapatan", "", "", totHpp]);
-
-  const labaKotor = totPendapatan - totHpp;
-  lrExcelRows.push(["", "LABA KOTOR", "", "", labaKotor]);
+  lrExcelRows.push(["", "Jumlah Beban Pokok Pendapatan", "", "", totHpp]);
   lrExcelRows.push(["", "", "", "", ""]);
 
-  // 6-000 BIAYA USAHA (OPERASIONAL)
-  lrExcelRows.push(["6-000", "B I A Y A   U S A H A", "", "", ""]);
+  const labaKotor = totPendapatan - totHpp;
+  lrExcelRows.push(["", "Laba Kotor Usaha (Gross Profit)", "", "", labaKotor]);
+  lrExcelRows.push(["", "", "", "", ""]);
+
+  // 6-000 BIAYA USAHA / OPERASIONAL (OPEX)
+  lrExcelRows.push(["6-000", "B I A Y A   U S A H A   /   O P E R A S I O N A L", "", "", ""]);
   const opexAccs = Array.from(coaMap.values()).filter((c) => c.kode.startsWith("6-"));
   let totOpex = 0;
   for (const acc of opexAccs) {
@@ -293,10 +319,11 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     totOpex += v;
     lrExcelRows.push([acc.kode, acc.nama, "", v, ""]);
   }
-  lrExcelRows.push(["", "Jumlah Biaya Usaha", "", "", totOpex]);
+  lrExcelRows.push(["", "Jumlah Biaya Usaha / Operasional", "", "", totOpex]);
+  lrExcelRows.push(["", "", "", "", ""]);
 
   const labaUsaha = labaKotor - totOpex;
-  lrExcelRows.push(["", "LABA USAHA", "", "", labaUsaha]);
+  lrExcelRows.push(["", "Laba Usaha Operasional (EBIT)", "", "", labaUsaha]);
   lrExcelRows.push(["", "", "", "", ""]);
 
   // 7-000 PENDAPATAN & BIAYA LAIN-LAIN
@@ -306,7 +333,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   let totOtherExpense = 0;
   for (const acc of otherAccs) {
     const v = getSaldo(acc.kode);
-    // 7-100 / 7-200 = pendapatan lain, 7-300 / 7-400 = biaya lain
     if (acc.kode.startsWith("7-1") || acc.kode.startsWith("7-2")) {
       totOtherIncome += v;
     } else {
@@ -321,33 +347,75 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   lrExcelRows.push(["", "Laba Bersih Usaha Sebelum Pajak", "", "", labaBersih]);
 
   /* =======================================================================
-   * 3. SHEET: DASHBOARD & VISUAL GRAFIK
+   * 3. SHEET: DASHBOARD & GRAFIK (SEMI-DASHBOARD ADVANCED COCKPIT)
    * ======================================================================= */
   const marginPct = totPendapatan > 0 ? (labaBersih / totPendapatan) * 100 : 0;
   const hppPct = totPendapatan > 0 ? (totHpp / totPendapatan) * 100 : 0;
   const opexPct = totPendapatan > 0 ? (totOpex / totPendapatan) * 100 : 0;
+  const grossMarginPct = totPendapatan > 0 ? (labaKotor / totPendapatan) * 100 : 0;
+
+  // Rasio Keuangan
+  const currentRatio = sumKewajibanLancar > 0 ? sumAktivaLancar / sumKewajibanLancar : 99;
+  const derRatio = sumEkuitas > 0 ? (sumKewajibanLancar + sumKewajibanJp) / sumEkuitas : 0;
+  const totalKasBank = kasLiveRows.reduce((s, r) => s + (kasRep.saldo[r.kode] ?? 0), 0);
+  const totalHutangVal = hutLive.reduce((s, h) => s + h.total, 0);
+  const totalPiutangVal = piuLive.reduce((s, p) => s + p.total, 0);
 
   const dashboardRows: unknown[][] = [
-    ["PT SYUKUR BERSAUDARA", "", "", "", ""],
-    ["RINGKASAN & GRAFIK KEUANGAN EKSEKUTIF", "", "", "", ""],
-    [periodeStr, "", "", "", ""],
+    ["PT SYUKUR BERSAUDARA", "ISMS INTEGRATED SHIPYARD MANAGEMENT SYSTEM", "", "", ""],
+    ["EXECUTIVE FINANCIAL COCKPIT & DASHBOARD APLIKASI", "", "", "", ""],
+    [`Periode: ${periodeStr}`, `As-Of: ${asOf || "Live"}`, "Mata Uang: IDR (Rupiah)", `Integritas: ${auditStatusStr}`, ""],
     [],
-    ["INDIKATOR KEUANGAN UTAMA (KPI)", "NILAI (RP)", "STATUS / TARGET", "VISUAL BAR", "% DARI PENDAPATAN"],
-    ["Total Pendapatan (Revenue)", totPendapatan, "Utama", makeBar(100), 100],
-    ["Beban Pokok Pendapatan (HPP)", totHpp, "Biaya Proyek", makeBar(hppPct), `${hppPct.toFixed(1)}%`],
-    ["Laba Kotor (Gross Profit)", labaKotor, labaKotor >= 0 ? "Sehat" : "Defisit", makeBar(100 - hppPct), `${(100 - hppPct).toFixed(1)}%`],
-    ["Biaya Usaha / Operasional (Opex)", totOpex, "Overhead", makeBar(opexPct), `${opexPct.toFixed(1)}%`],
-    ["Laba Bersih (Net Profit)", labaBersih, labaBersih >= 0 ? "SURPLUS" : "DEFISIT", makeBar(marginPct), `${marginPct.toFixed(1)}%`],
+    // MENU BAR TOMBOL NAVIGASI APLIKASI
+    ["NAVIGASI CEPAT (KLIK SHEET / JALANKAN MACRO):", "", "", "", ""],
+    ["[ 🏠 1. DASHBOARD ]", "[ 📑 2. NERACA ]", "[ 📈 3. LABA RUGI ]", "[ 🏛 4. NERACA LAJUR ]", "[ 💰 5. KAS & BANK ]"],
+    ["[ 🤝 6. HUTANG ]", "[ 💳 7. PIUTANG ]", "[ 📜 8. BUKU BESAR ]", "[ ⚙️ 9. COA ]", "[ ⚡ 10. MODUL MACRO VB ]"],
     [],
-    ["STRUKTUR NERACA & POSISI KEUANGAN", "NILAI (RP)", "KOMPOSISI", "VISUAL BAR", ""],
+    // KARTU KINERJA UTAMA (SCORECARD)
+    ["KARTU KINERJA KEUANGAN EKSEKUTIF (SCORECARD)", "NILAI", "STATUS / BENCHMARK", "BAR VISUALISASI", "ANALISIS VERTIKAL"],
+    ["Total Pendapatan (Revenue)", totPendapatan, "100% Target Operasional", makeBar(100), "100.0%"],
+    ["Beban Pokok Pendapatan (HPP)", totHpp, hppPct <= 75 ? "Efisien" : "Perlu Efisiensi", makeBar(hppPct), `${hppPct.toFixed(1)}%`],
+    ["Laba Kotor (Gross Profit)", labaKotor, grossMarginPct >= 25 ? "Sangat Sehat" : "Waspada", makeBar(grossMarginPct), `${grossMarginPct.toFixed(1)}%`],
+    ["Biaya Operasional (Opex)", totOpex, opexPct <= 20 ? "Terkendali" : "Tinggi", makeBar(opexPct), `${opexPct.toFixed(1)}%`],
+    ["Laba Bersih Usaha (Net Profit)", labaBersih, labaBersih >= 0 ? "SURPLUS" : "DEFISIT", makeBar(marginPct), `${marginPct.toFixed(1)}%`],
+    [],
+    // KESEHATAN KEUANGAN & LIKUIDITAS
+    ["INDIKATOR KESEHATAN KEUANGAN & RASIO", "NILAI RASIO", "STANDAR INDUSTRI GALANGAN", "STATUS KESEHATAN", ""],
+    ["Likuiditas (Current Ratio)", `${currentRatio.toFixed(2)}x`, "Min. 1.2x s.d. 2.0x", currentRatio >= 1.5 ? "SANGAT AMAN" : (currentRatio >= 1.0 ? "CUKUP" : "KETAT"), ""],
+    ["Solvabilitas (Debt to Equity / DER)", `${derRatio.toFixed(2)}x`, "Maks. 2.5x", derRatio <= 1.5 ? "SEHAT" : (derRatio <= 2.5 ? "SEDANG" : "TINGGI"), ""],
+    ["Total Kas & Bank Siap Pakai", totalKasBank, "Buffer Minimal Operasional", totalKasBank >= 50000000 ? "LANCAR" : "PERLU INJEKSI", ""],
+    ["Posisi Likuiditas Netto (Piutang - Hutang)", totalPiutangVal - totalHutangVal, "Surplus Modal Kerja", totalPiutangVal >= totalHutangVal ? "SURPLUS MODAL" : "DEFISIT AP", ""],
+    [],
+    // STRUKTUR ASET & PASIVA
+    ["STRUKTUR ASSET & MODAL GALANGAN", "NOMINAL (RP)", "PORSI %", "VISUAL BAR", ""],
     ["Total Aktiva (Aset Galangan)", grandTotalAktiva, "100%", makeBar(100), ""],
     ["- Aktiva Lancar (Kas/Bank/Piutang)", sumAktivaLancar, `${((sumAktivaLancar / (grandTotalAktiva || 1)) * 100).toFixed(1)}%`, makeBar((sumAktivaLancar / (grandTotalAktiva || 1)) * 100), ""],
-    ["- Aktiva Tetap Bersih (Aset Fisik)", nilaiBukuTetap, `${((nilaiBukuTetap / (grandTotalAktiva || 1)) * 100).toFixed(1)}%`, makeBar((nilaiBukuTetap / (grandTotalAktiva || 1)) * 100), ""],
-    ["Total Kewajiban (Hutang)", sumKewajibanLancar + sumKewajibanJp, `${(((sumKewajibanLancar + sumKewajibanJp) / (grandTotalPasiva || 1)) * 100).toFixed(1)}%`, makeBar(((sumKewajibanLancar + sumKewajibanJp) / (grandTotalPasiva || 1)) * 100), ""],
-    ["Total Ekuitas (Modal & Laba)", sumEkuitas, `${((sumEkuitas / (grandTotalPasiva || 1)) * 100).toFixed(1)}%`, makeBar((sumEkuitas / (grandTotalPasiva || 1)) * 100), ""],
+    ["- Aktiva Tetap Bersih (Fasilitas Dok)", nilaiBukuTetap, `${((nilaiBukuTetap / (grandTotalAktiva || 1)) * 100).toFixed(1)}%`, makeBar((nilaiBukuTetap / (grandTotalAktiva || 1)) * 100), ""],
+    ["Total Kewajiban (Hutang AP)", sumKewajibanLancar + sumKewajibanJp, `${(((sumKewajibanLancar + sumKewajibanJp) / (grandTotalPasiva || 1)) * 100).toFixed(1)}%`, makeBar(((sumKewajibanLancar + sumKewajibanJp) / (grandTotalPasiva || 1)) * 100), ""],
+    ["Total Ekuitas (Modal Saham & Laba)", sumEkuitas, `${((sumEkuitas / (grandTotalPasiva || 1)) * 100).toFixed(1)}%`, makeBar((sumEkuitas / (grandTotalPasiva || 1)) * 100), ""],
     [],
-    ["DATA TREN BULANAN (SIAP BUAT GRAFIK EXCEL)", "PENDAPATAN", "HPP", "OPEX", "LABA BERSIH"],
+    // TABEL TREN MULTI-BULAN
+    ["TREN KINERJA KEUANGAN PER BULAN", "PENDAPATAN", "HPP PROYEK", "OPEX GAJI/ADM", "LABA BERSIH"],
     ...plMonthly.map((p) => [p.period, p.revenue, p.costProj, p.salary, p.laba]),
+    [],
+    // TOP 5 HUTANG & PIUTANG
+    ["TOP 5 REKAPITULASI HUTANG USAHA (AP)", "TOTAL HUTANG", "JUMLAH PO", "STATUS JATUH TEMPO", ""],
+    ...hutLive.slice(0, 5).map((h) => [h.v, Math.round(h.total), `${h.count} Dokumen`, "Aktif Berjalan", ""]),
+    [],
+    ["TOP 5 REKAPITULASI PIUTANG USAHA (AR)", "TOTAL PIUTANG", "JUMLAH INVOICE", "STATUS PENAGIHAN", ""],
+    ...piuLive.slice(0, 5).map((p) => [p.c, Math.round(p.total), `${p.count} Dokumen`, "Aktif Berjalan", ""]),
+    [],
+    // PANEL KONTROL MACRO VBA
+    ["PUSAT KONTROL APLIKASI MACRO VB (VBA)", "", "", "", ""],
+    ["Nama Macro", "Deskripsi Kegunaan", "Shortcut / Cara Akses", "Status", ""],
+    ["GoTo_Dashboard", "Lompat langsung ke lembar Dashboard Eksekutif", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
+    ["GoTo_Neraca", "Membuka Neraca 2-Kolom Seimbang", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
+    ["GoTo_LabaRugi", "Membuka Laporan Laba Rugi Pos Rinci", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
+    ["CekKeseimbanganNeraca", "Audit otomatis kesetaraan Aktiva vs Pasiva dengan pop-up konfirmasi", "Alt+F8 -> Run CekKeseimbanganNeraca", "Tersedia di Sheet 10", ""],
+    ["FilterCepatTransaksi", "Kotak dialog filter transaksi kas & bank secara interaktif", "Alt+F8 -> Run FilterCepatTransaksi", "Tersedia di Sheet 10", ""],
+    ["CariAkunBukuBesar", "Pencarian cepat akun COA langsung ke baris Buku Besar", "Alt+F8 -> Run CariAkunBukuBesar", "Tersedia di Sheet 10", ""],
+    ["ModeAplikasiDashboard", "Menyembunyikan gridline & heading untuk sensasi software aplikasi", "Alt+F8 -> Run ModeAplikasiDashboard", "Tersedia di Sheet 10", ""],
+    ["EksporLembarKePDF", "Satu klik ekspor lembar kerja aktif ke berkas PDF resmi", "Alt+F8 -> Run EksporLembarKePDF", "Tersedia di Sheet 10", ""],
   ];
 
   /* =======================================================================
@@ -370,30 +438,33 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     if (net >= 0) nsD = net;
     else nsK = Math.abs(net);
 
-    let lrD = 0, lrK = 0, nrD = 0, nrK = 0;
+    let lD = 0, lK = 0, nD = 0, nK = 0;
     if (c.nrlr === "LR") {
-      lrD = nsD;
-      lrK = nsK;
+      lD = nsD;
+      lK = nsK;
     } else {
-      nrD = nsD;
-      nrK = nsK;
+      nD = nsD;
+      nK = nsK;
     }
 
-    nsTotD += nsD; nsTotK += nsK;
-    lrTotD += lrD; lrTotK += lrK;
-    nrTotD += nrD; nrTotK += nrK;
+    nsTotD += nsD;
+    nsTotK += nsK;
+    lrTotD += lD;
+    lrTotK += lK;
+    nrTotD += nD;
+    nrTotK += nK;
 
     neracaLajurRows.push([
       c.kode, c.nama, c.dk,
       nsD, nsK,
       c.nrlr,
-      lrD, lrK,
-      nrD, nrK,
+      lD, lK,
+      nD, nK,
     ]);
   }
 
   neracaLajurRows.push([
-    "JUMLAH", "", "",
+    "", "TOTAL", "",
     nsTotD, nsTotK,
     "",
     lrTotD, lrTotK,
@@ -504,6 +575,37 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     akunRows.push([c.kode, c.nama, c.dk, c.nrlr]);
   }
 
+  /* =======================================================================
+   * 10. SHEET: APLIKASI MACRO VB (VBA)
+   * ======================================================================= */
+  const vbaLines = VBA_MACRO_SOURCE.split("\n");
+  const vbaRows: unknown[][] = [
+    ["MODUL APLIKASI MACRO VISUAL BASIC FOR APPLICATIONS (VBA)", ""],
+    ["PT SYUKUR BERSAUDARA - ISMS FINANCIAL ENTERPRISE ENGINE", ""],
+    [],
+    ["PETUNJUK AKTIVASI APLIKASI MACRO DI MICROSOFT EXCEL:", ""],
+    ["1. Buka file Excel ini di Microsoft Excel pada komputer Anda.", ""],
+    ["2. Tekan kombinasi tombol 'Alt + F11' pada keyboard untuk membuka jendela Microsoft Visual Basic.", ""],
+    ["3. Pada menu bar atas, klik 'Insert' lalu pilih 'Module'.", ""],
+    ["4. Salin (Copy) seluruh teks kode VBA di bawah baris 'SOURCE CODE MACRO' dan Tempel (Paste) ke jendela modul tersebut.", ""],
+    ["5. Atau klik menu 'File' -> 'Import File...' lalu pilih berkas 'ISMS_Financial_Macros.bas' yang Anda unduh dari sistem web.", ""],
+    ["6. Simpan file Excel ini dengan memilih 'Save As' -> ganti format menjadi 'Excel Macro-Enabled Workbook (*.xlsm)'.", ""],
+    ["7. Tutup jendela Visual Basic. Sekarang tombol navigasi, filter cepat, dan audit neraca telah aktif secara otomatis!", ""],
+    [],
+    ["DAFTAR PROSEDUR MACRO YANG DAPAT DIJALANKAN (ALT + F8):", ""],
+    ["• GoTo_Dashboard      : Membuka dashboard eksekutif dan memfokuskan layar ke A1", ""],
+    ["• GoTo_Neraca         : Membuka lembar Neraca format 2-kolom", ""],
+    ["• GoTo_LabaRugi       : Membuka laporan Laba Rugi dengan rincian COA", ""],
+    ["• CekKeseimbanganNeraca: Menjalankan audit matematis keseimbangan Aktiva dan Pasiva dengan pop-up", ""],
+    ["• FilterCepatTransaksi: Membuka inputbox pencarian transaksi di sheet Kas & Bank", ""],
+    ["• CariAkunBukuBesar   : Membuka inputbox pencarian kode akun COA langsung ke baris Buku Besar", ""],
+    ["• ModeAplikasiDashboard: Menghilangkan garis kisi untuk pengalaman seperti aplikasi desktop", ""],
+    ["• EksporLembarKePDF   : Satu klik mencetak sheet yang sedang aktif ke file PDF resmi", ""],
+    [],
+    ["SOURCE CODE MACRO VBA (SALIN SEMUA BARIS DI BAWAH INI):", ""],
+    ...vbaLines.map((line) => [line, ""]),
+  ];
+
   return [
     { name: "Dashboard & Grafik", rows: dashboardRows },
     { name: "Neraca", rows: neracaRows },
@@ -514,6 +616,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     { name: "Piutang", rows: piutangRows },
     { name: "Buku Besar", rows: bbRows },
     { name: "Akun", rows: akunRows },
+    { name: "Aplikasi Macro VB", rows: vbaRows },
   ];
 }
-
