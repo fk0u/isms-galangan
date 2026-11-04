@@ -3,6 +3,10 @@ import { COA_EXCEL, type CoaExcel } from "./financeExcel";
 
 export interface FinancialWorkbookParams {
   asOf: string;
+  /** Nama perusahaan untuk kop tiap sheet. */
+  companyName: string;
+  /** Periode terpilih di filter (mis. "November 2026"); kosong → turunan asOf. */
+  periodLabel?: string;
   coaRows: Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>;
   manJournals: Array<{
     date?: string;
@@ -68,6 +72,25 @@ export function formatPeriodeJudul(asOf: string): string {
   return `Per ${asOf}`;
 }
 
+/** Periode kop laporan dari filter historis halaman (Bulan → "November 2026"). */
+export function fmtPeriodeLaporan(
+  hist: { mode: string; hari: string; bulan: string; tahun: string; dari: string; sampai: string },
+  asOf: string,
+): string {
+  const tgl = (iso: string): string => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return `${d} ${BULAN_ID[(m || 1) - 1]} ${y}`;
+  };
+  if (hist.mode === "Bulan" && hist.bulan) {
+    const [y, m] = hist.bulan.split("-").map(Number);
+    return `${BULAN_ID[(m || 1) - 1]} ${y}`;
+  }
+  if (hist.mode === "Tahun" && hist.tahun) return `Tahun ${hist.tahun}`;
+  if (hist.mode === "Hari" && hist.hari) return `Per ${tgl(hist.hari)}`;
+  if (hist.mode === "Rentang" && hist.dari && hist.sampai) return `${tgl(hist.dari)} – ${tgl(hist.sampai)}`;
+  return /^\d{4}-\d{2}-\d{2}$/.test(asOf) ? `Per ${tgl(asOf)}` : "";
+}
+
 function yearOrFull(parts: string[], y: string): string {
   if (parts.length === 3) {
     return `${y} (Per ${parts[2]} ${BULAN_ID[Number(parts[1]) - 1] ?? ""} ${y})`;
@@ -84,12 +107,14 @@ function makeBar(pct: number, maxBlocks = 20): string {
 
 /**
  * Membangun seluruh sheets laporan keuangan standar sesuai format referensi klien
- * (Financial Format (1).xlsx) plus modul aplikasi Macro VBA interaktif dan
- * Semi-Dashboard Keuangan Lanjutan.
+ * (Financial Format (1).xlsx) plus Semi-Dashboard Keuangan; tiap sheet
+ * memakai kop laporan resmi (perusahaan, judul, periode).
  */
 export function buildFinancialFormatSheets(params: FinancialWorkbookParams): ExcelSheet[] {
   const {
     asOf,
+    companyName,
+    periodLabel,
     coaRows,
     manJournals,
     nrNeraca,
@@ -100,7 +125,8 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     plMonthly = [],
   } = params;
 
-  const periodeStr = formatPeriodeJudul(asOf);
+  const periodeStr = periodLabel || formatPeriodeJudul(asOf);
+  const kop = (title: string): ExcelSheet["header"] => ({ company: companyName, title, period: periodeStr });
 
   // Map master COA
   const coaMap = new Map<string, CoaExcel>();
@@ -143,10 +169,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * ======================================================================= */
   const leftRows: Array<[string, string, string, number | string, number | string]> = [];
   const rightRows: Array<[string, string, string, number | string, number | string]> = [];
-
-  // Baris Tombol Menu Navigasi di paling atas
-  leftRows.push(["[ 🏠 KEMBALI KE DASHBOARD ]", "", "", "", ""]);
-  rightRows.push(["[ 📈 BUKA LABA RUGI ]", "", "", "", ""]);
 
   // AKTIVA LANCAR (1-100 s.d. 1-199)
   leftRows.push(["1-000", "A K T I V A", "", "", ""]);
@@ -244,10 +266,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const auditStatusStr = isBalance ? "✅ STATUS AUDIT: SEIMBANG / 100% BALANCE (Rp 0 Selisih)" : `⚠️ STATUS AUDIT: ADA SELISIH Rp ${Math.abs(grandTotalAktiva - grandTotalPasiva).toLocaleString("id-ID")}`;
 
   const neracaRows: unknown[][] = [
-    ["PT SYUKUR BERSAUDARA", "", "", "", "", "", "PT SYUKUR BERSAUDARA", "", "", "", ""],
-    ["NERACA", "", "", "", "", "", "NERACA", "", "", "", ""],
-    [periodeStr, "", "", "", "", "", periodeStr, "", "", "", ""],
-    [auditStatusStr, "", "", "", "", "", auditStatusStr, "", "", "", ""],
     ["NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL", "", "NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL"],
   ];
 
@@ -274,10 +292,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 2. SHEET: LABA RUGI (LENGKAP RINCIAN POS COA)
    * ======================================================================= */
   const lrExcelRows: unknown[][] = [
-    ["[ 🏠 KEMBALI KE DASHBOARD ]", "", "", "", "[ 📑 BUKA NERACA ]"],
-    ["PT SYUKUR BERSAUDARA", "", "", "", ""],
-    ["LAPORAN LABA RUGI", "", "", "", ""],
-    [periodeStr, "", "", "", ""],
     ["NO AKUN", "NAMA AKUN", "", "JUMLAH", "TOTAL"],
   ];
 
@@ -361,14 +375,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const totalPiutangVal = piuLive.reduce((s, p) => s + p.total, 0);
 
   const dashboardRows: unknown[][] = [
-    ["PT SYUKUR BERSAUDARA", "ISMS INTEGRATED SHIPYARD MANAGEMENT SYSTEM", "", "", ""],
-    ["EXECUTIVE FINANCIAL COCKPIT & DASHBOARD APLIKASI", "", "", "", ""],
-    [`Periode: ${periodeStr}`, `As-Of: ${asOf || "Live"}`, "Mata Uang: IDR (Rupiah)", `Integritas: ${auditStatusStr}`, ""],
-    [],
-    // MENU BAR TOMBOL NAVIGASI APLIKASI
-    ["NAVIGASI CEPAT (KLIK SHEET / JALANKAN MACRO):", "", "", "", ""],
-    ["[ 🏠 1. DASHBOARD ]", "[ 📑 2. NERACA ]", "[ 📈 3. LABA RUGI ]", "[ 🏛 4. NERACA LAJUR ]", "[ 💰 5. KAS & BANK ]"],
-    ["[ 🤝 6. HUTANG ]", "[ 💳 7. PIUTANG ]", "[ 📜 8. BUKU BESAR ]", "[ ⚙️ 9. COA ]", "[ ⚡ 10. MODUL MACRO VB ]"],
+    [`As-Of: ${asOf || "Live"}`, "Mata Uang: IDR (Rupiah)", `Integritas: ${auditStatusStr}`, "", ""],
     [],
     // KARTU KINERJA UTAMA (SCORECARD)
     ["KARTU KINERJA KEUANGAN EKSEKUTIF (SCORECARD)", "NILAI", "STATUS / BENCHMARK", "BAR VISUALISASI", "ANALISIS VERTIKAL"],
@@ -409,8 +416,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 4. SHEET: NERACA LAJUR (10 KOLOM)
    * ======================================================================= */
   const neracaLajurRows: unknown[][] = [
-    ["NERACA LAJUR", "", "", "", "", "", "", "", "", ""],
-    [periodeStr, "", "", "", "", "", "", "", "", ""],
     ["NO", "NAMA AKUN", "AKUN", "NERACA SALDO", "", "AKUN", "LABA-RUGI", "", "NERACA", ""],
     ["AKUN", "", "D/K", "DEBIT", "KREDIT", "NR/LR", "DEBIT", "KREDIT", "DEBIT", "KREDIT"],
   ];
@@ -462,8 +467,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 5. SHEET: JU, KAS, BANK
    * ======================================================================= */
   const kasBankRows: unknown[][] = [
-    ["BANK & JURNAL TRANSAKSI", "", "", "", "", "", "", "", ""],
-    [periodeStr, "", "", "", "", "", "", "", ""],
   ];
 
   if (kasLiveRows.length > 0) {
@@ -516,8 +519,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 6. SHEET: HUTANG
    * ======================================================================= */
   const hutangRows: unknown[][] = [
-    ["HUTANG DAGANG", "", "", ""],
-    [periodeStr, "", "", ""],
     ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR SALDO"],
   ];
   hutLive.forEach((h, idx) => {
@@ -528,8 +529,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 7. SHEET: PIUTANG
    * ======================================================================= */
   const piutangRows: unknown[][] = [
-    ["PIUTANG USAHA", "", "", ""],
-    [periodeStr, "", "", ""],
     ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR BULAN"],
   ];
   piuLive.forEach((p, idx) => {
@@ -540,8 +539,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 8. SHEET: BUKU BESAR
    * ======================================================================= */
   const bbRows: unknown[][] = [
-    ["BUKU BESAR", "", "", "", "", ""],
-    [periodeStr, "", "", "", "", ""],
     ["KODE AKUN", "NAMA AKUN", "D/K", "TOTAL DEBIT", "TOTAL KREDIT", "SALDO AKHIR"],
   ];
   for (const c of Array.from(coaMap.values())) {
@@ -555,7 +552,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
    * 9. SHEET: AKUN (COA)
    * ======================================================================= */
   const akunRows: unknown[][] = [
-    ["DAFTAR AKUN", "", "", ""],
     ["NO AKUN", "NAMA AKUN", "AKUN D/K", "AKUN NR/LR"],
   ];
   for (const c of Array.from(coaMap.values())) {
@@ -563,14 +559,14 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   }
 
   return [
-    { name: "Dashboard & Grafik", rows: dashboardRows },
-    { name: "Neraca", rows: neracaRows },
-    { name: "Laba Rugi", rows: lrExcelRows },
-    { name: "Neraca Lajur", rows: neracaLajurRows },
-    { name: "JU, Kas, Bank", rows: kasBankRows },
-    { name: "Hutang", rows: hutangRows },
-    { name: "Piutang", rows: piutangRows },
-    { name: "Buku Besar", rows: bbRows },
-    { name: "Akun", rows: akunRows },
+    { name: "Dashboard & Grafik", rows: dashboardRows, header: kop("Dashboard Keuangan") },
+    { name: "Neraca", rows: neracaRows, header: kop("Neraca") },
+    { name: "Laba Rugi", rows: lrExcelRows, header: kop("Laba Rugi") },
+    { name: "Neraca Lajur", rows: neracaLajurRows, header: kop("Neraca Lajur") },
+    { name: "JU, Kas, Bank", rows: kasBankRows, header: kop("Jurnal Kas & Bank") },
+    { name: "Hutang", rows: hutangRows, header: kop("Hutang Dagang") },
+    { name: "Piutang", rows: piutangRows, header: kop("Piutang Usaha") },
+    { name: "Buku Besar", rows: bbRows, header: kop("Buku Besar") },
+    { name: "Akun", rows: akunRows, header: kop("Daftar Akun") },
   ];
 }

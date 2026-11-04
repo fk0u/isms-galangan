@@ -82,6 +82,27 @@ export interface ExcelSheet {
   name: string;
   /** Baris 0 = header tabel (tebal + fill), baris berikutnya = data. */
   rows: unknown[][];
+  /** Kop laporan resmi (format klien): jam & tanggal ekspor di kiri atas,
+   *  nama perusahaan, judul laporan, dan periode di tengah. */
+  header?: { company: string; title: string; period: string };
+}
+
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+/** Baris kop laporan; dibentang selebar tabel supaya judul tepat di tengah. */
+function headerRows(h: NonNullable<ExcelSheet["header"]>, span: number, now = new Date()): SheetData {
+  const jam = `${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
+  const tgl = `${now.getDate()} ${BULAN[now.getMonth()]}, ${now.getFullYear()}`;
+  const mid = (value: string, style: { fontSize: number; textColor: string }) =>
+    [{ value: sanitizeCell(value), fontWeight: "bold" as const, align: "center" as const, columnSpan: span, ...style }, ...Array<null>(span - 1).fill(null)];
+  return [
+    [jam, tgl],
+    [null],
+    mid(h.company, { fontSize: 14, textColor: "#0A0A0A" }),
+    mid(h.title, { fontSize: 22, textColor: "#1F7FB5" }),
+    mid(h.period, { fontSize: 12, textColor: "#7F1D1D" }),
+    [null],
+  ];
 }
 
 const SHEET_NAME_BANNED = /[[\]:*?/\\]/g;
@@ -110,11 +131,13 @@ export async function exportExcelSheets(sheets: ExcelSheet[], filename: string):
         return asMoney(raw, moneyCol[cIdx] ?? null) ?? "";
       })
     );
+    const kop = s.header ? headerRows(s.header, Math.max(2, widths.length)) : [];
     return {
-      data,
+      data: [...kop, ...data],
       sheet: name,
       columns: widths.map((w) => ({ width: w })),
-      stickyRowsCount: 1,
+      // Kop laporan tidak dibekukan: 7 baris beku menghabiskan layar.
+      ...(kop.length ? {} : { stickyRowsCount: 1 }),
     };
   });
   if (built.length === 0) throw new Error("Tidak ada sheet untuk diekspor");
