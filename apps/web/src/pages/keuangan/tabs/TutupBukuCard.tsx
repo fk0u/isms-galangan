@@ -1,7 +1,8 @@
 /* Tutup buku bulanan & tahunan (#283). Aturan & penguncian jurnal ada di
  * server (closing.ts); kartu ini hanya memanggil /api/closing. */
 import { useEffect, useState } from "react";
-import { AsyncButton, Badge, Card, CardHeader, toast } from "../../../components/ui";
+import { Lock, Unlock } from "lucide-react";
+import { Card, CardHeader, ConfirmModal, toast } from "../../../components/ui";
 import { apiFetch } from "../../../services/http";
 import { useAuth } from "../../../auth/auth";
 import { fmtRupiah, todayISO } from "../../../utils/format";
@@ -17,6 +18,9 @@ export default function TutupBukuCard() {
   const canReopen = ["direktur", "developer"].includes(String(user?.role ?? ""));
   const [st, setSt] = useState<Closed | null>(null);
   const [month, setMonth] = useState(todayISO().slice(0, 7));
+  const [confirmClose, setConfirmClose] = useState<{ period: string; isYear: boolean } | null>(null);
+  const [confirmReopen, setConfirmReopen] = useState<string | null>(null);
+
   const load = () => apiFetch<Closed>("/api/closing").then(setSt).catch(() => setSt(null));
   useEffect(() => { void load(); }, []);
 
@@ -34,23 +38,90 @@ export default function TutupBukuCard() {
 
   if (!st) return null;
   const year = month.slice(0, 4);
+  const allClosed = [...st.years, ...st.months];
+
   return (
     <Card className="p-4">
       <CardHeader title={S.tbTitle} subtitle={S.tbSub.replace("{a}", fmtRupiah(st.stockValue))} />
       <div className="flex flex-wrap items-center gap-2">
         <input type="month" className="input w-auto" value={month} onChange={(e) => setMonth(e.target.value)} aria-label={S.tbTitle} />
-        <AsyncButton className="btn-secondary text-xs" onAction={() => close(month)}>{S.tbCloseMonth.replace("{a}", month)}</AsyncButton>
-        <AsyncButton className="btn-primary text-xs" onAction={() => close(year)}>{S.tbCloseYear.replace("{a}", year)}</AsyncButton>
+        <button
+          type="button"
+          className="btn-secondary text-xs inline-flex items-center gap-1.5"
+          onClick={() => setConfirmClose({ period: month, isYear: false })}
+        >
+          <Lock className="h-3.5 w-3.5" />
+          <span>{S.tbCloseMonth.replace("{a}", month)}</span>
+        </button>
+        <button
+          type="button"
+          className="btn-primary text-xs inline-flex items-center gap-1.5"
+          onClick={() => setConfirmClose({ period: year, isYear: true })}
+        >
+          <Lock className="h-3.5 w-3.5" />
+          <span>{S.tbCloseYear.replace("{a}", year)}</span>
+        </button>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {[...st.years, ...st.months].length === 0 && <span className="text-xs text-steel-400">{S.tbNone}</span>}
-        {[...st.years, ...st.months].map((p) => (
-          <span key={p} className="flex items-center gap-1">
-            <Badge tone="navy">{S.tbClosedTag.replace("{a}", p)}</Badge>
-            {canReopen && <button className="text-[11px] font-semibold text-amber-600 hover:underline" onClick={() => void reopen(p)}>{S.tbReopen}</button>}
-          </span>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-steel-500">{S.tbLockStatus}:</span>
+        {allClosed.length === 0 && <span className="text-xs text-steel-400">{S.tbNone}</span>}
+        {allClosed.map((p) => (
+          <div
+            key={p}
+            className="inline-flex items-center gap-2 rounded-lg border border-steel-200 bg-surface px-2.5 py-1 text-xs shadow-xs"
+          >
+            <span className="inline-flex items-center gap-1.5 font-medium text-navy-900">
+              <Lock className="h-3.5 w-3.5 text-navy-600 shrink-0" />
+              <span>{S.tbLockedBadge.replace("{a}", p)}</span>
+            </span>
+            {canReopen && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                onClick={() => setConfirmReopen(p)}
+                title={S.tbConfirmReopenTitle.replace("{a}", p)}
+              >
+                <Unlock className="h-3 w-3" />
+                <span>{S.tbUnlockBtn}</span>
+              </button>
+            )}
+          </div>
         ))}
       </div>
+
+      <ConfirmModal
+        open={!!confirmClose}
+        title={S.tbConfirmCloseTitle.replace("{a}", confirmClose?.period ?? "")}
+        desc={confirmClose?.isYear
+          ? S.tbConfirmCloseYearDesc.replace("{a}", confirmClose.period).replace("{s}", fmtRupiah(st.stockValue))
+          : S.tbConfirmCloseDesc.replace("{a}", confirmClose?.period ?? "")
+        }
+        confirmLabel={confirmClose?.isYear ? S.tbCloseYear.replace("{a}", confirmClose.period) : S.tbCloseMonth.replace("{a}", confirmClose?.period ?? "")}
+        onCancel={() => setConfirmClose(null)}
+        onConfirm={async () => {
+          if (confirmClose) {
+            const p = confirmClose.period;
+            setConfirmClose(null);
+            await close(p);
+          }
+        }}
+      />
+
+      <ConfirmModal
+        open={!!confirmReopen}
+        title={S.tbConfirmReopenTitle.replace("{a}", confirmReopen ?? "")}
+        desc={S.tbConfirmReopenDesc.replace("{a}", confirmReopen ?? "")}
+        confirmLabel={S.tbUnlockBtn}
+        danger
+        onCancel={() => setConfirmReopen(null)}
+        onConfirm={async () => {
+          if (confirmReopen) {
+            const p = confirmReopen;
+            setConfirmReopen(null);
+            await reopen(p);
+          }
+        }}
+      />
     </Card>
   );
 }

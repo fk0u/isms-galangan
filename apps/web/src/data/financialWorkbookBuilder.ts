@@ -1,6 +1,5 @@
 import { type ExcelSheet } from "../utils/export";
 import { COA_EXCEL, type CoaExcel } from "./financeExcel";
-import { VBA_MACRO_SOURCE } from "./vbaMacroSource";
 
 export interface FinancialWorkbookParams {
   asOf: string;
@@ -404,18 +403,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     [],
     ["TOP 5 REKAPITULASI PIUTANG USAHA (AR)", "TOTAL PIUTANG", "JUMLAH INVOICE", "STATUS PENAGIHAN", ""],
     ...piuLive.slice(0, 5).map((p) => [p.c, Math.round(p.total), `${p.count} Dokumen`, "Aktif Berjalan", ""]),
-    [],
-    // PANEL KONTROL MACRO VBA
-    ["PUSAT KONTROL APLIKASI MACRO VB (VBA)", "", "", "", ""],
-    ["Nama Macro", "Deskripsi Kegunaan", "Shortcut / Cara Akses", "Status", ""],
-    ["GoTo_Dashboard", "Lompat langsung ke lembar Dashboard Eksekutif", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
-    ["GoTo_Neraca", "Membuka Neraca 2-Kolom Seimbang", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
-    ["GoTo_LabaRugi", "Membuka Laporan Laba Rugi Pos Rinci", "Tombol Navigasi / Alt+F8", "Tersedia di Sheet 10", ""],
-    ["CekKeseimbanganNeraca", "Audit otomatis kesetaraan Aktiva vs Pasiva dengan pop-up konfirmasi", "Alt+F8 -> Run CekKeseimbanganNeraca", "Tersedia di Sheet 10", ""],
-    ["FilterCepatTransaksi", "Kotak dialog filter transaksi kas & bank secara interaktif", "Alt+F8 -> Run FilterCepatTransaksi", "Tersedia di Sheet 10", ""],
-    ["CariAkunBukuBesar", "Pencarian cepat akun COA langsung ke baris Buku Besar", "Alt+F8 -> Run CariAkunBukuBesar", "Tersedia di Sheet 10", ""],
-    ["ModeAplikasiDashboard", "Menyembunyikan gridline & heading untuk sensasi software aplikasi", "Alt+F8 -> Run ModeAplikasiDashboard", "Tersedia di Sheet 10", ""],
-    ["EksporLembarKePDF", "Satu klik ekspor lembar kerja aktif ke berkas PDF resmi", "Alt+F8 -> Run EksporLembarKePDF", "Tersedia di Sheet 10", ""],
   ];
 
   /* =======================================================================
@@ -575,37 +562,6 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     akunRows.push([c.kode, c.nama, c.dk, c.nrlr]);
   }
 
-  /* =======================================================================
-   * 10. SHEET: APLIKASI MACRO VB (VBA)
-   * ======================================================================= */
-  const vbaLines = VBA_MACRO_SOURCE.split("\n");
-  const vbaRows: unknown[][] = [
-    ["MODUL APLIKASI MACRO VISUAL BASIC FOR APPLICATIONS (VBA)", ""],
-    ["PT SYUKUR BERSAUDARA - ISMS FINANCIAL ENTERPRISE ENGINE", ""],
-    [],
-    ["PETUNJUK AKTIVASI APLIKASI MACRO DI MICROSOFT EXCEL:", ""],
-    ["1. Buka file Excel ini di Microsoft Excel pada komputer Anda.", ""],
-    ["2. Tekan kombinasi tombol 'Alt + F11' pada keyboard untuk membuka jendela Microsoft Visual Basic.", ""],
-    ["3. Pada menu bar atas, klik 'Insert' lalu pilih 'Module'.", ""],
-    ["4. Salin (Copy) seluruh teks kode VBA di bawah baris 'SOURCE CODE MACRO' dan Tempel (Paste) ke jendela modul tersebut.", ""],
-    ["5. Atau klik menu 'File' -> 'Import File...' lalu pilih berkas 'ISMS_Financial_Macros.bas' yang Anda unduh dari sistem web.", ""],
-    ["6. Simpan file Excel ini dengan memilih 'Save As' -> ganti format menjadi 'Excel Macro-Enabled Workbook (*.xlsm)'.", ""],
-    ["7. Tutup jendela Visual Basic. Sekarang tombol navigasi, filter cepat, dan audit neraca telah aktif secara otomatis!", ""],
-    [],
-    ["DAFTAR PROSEDUR MACRO YANG DAPAT DIJALANKAN (ALT + F8):", ""],
-    ["• GoTo_Dashboard      : Membuka dashboard eksekutif dan memfokuskan layar ke A1", ""],
-    ["• GoTo_Neraca         : Membuka lembar Neraca format 2-kolom", ""],
-    ["• GoTo_LabaRugi       : Membuka laporan Laba Rugi dengan rincian COA", ""],
-    ["• CekKeseimbanganNeraca: Menjalankan audit matematis keseimbangan Aktiva dan Pasiva dengan pop-up", ""],
-    ["• FilterCepatTransaksi: Membuka inputbox pencarian transaksi di sheet Kas & Bank", ""],
-    ["• CariAkunBukuBesar   : Membuka inputbox pencarian kode akun COA langsung ke baris Buku Besar", ""],
-    ["• ModeAplikasiDashboard: Menghilangkan garis kisi untuk pengalaman seperti aplikasi desktop", ""],
-    ["• EksporLembarKePDF   : Satu klik mencetak sheet yang sedang aktif ke file PDF resmi", ""],
-    [],
-    ["SOURCE CODE MACRO VBA (SALIN SEMUA BARIS DI BAWAH INI):", ""],
-    ...vbaLines.map((line) => [line, ""]),
-  ];
-
   return [
     { name: "Dashboard & Grafik", rows: dashboardRows },
     { name: "Neraca", rows: neracaRows },
@@ -616,6 +572,5 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     { name: "Piutang", rows: piutangRows },
     { name: "Buku Besar", rows: bbRows },
     { name: "Akun", rows: akunRows },
-    { name: "Aplikasi Macro VB", rows: vbaRows },
   ];
 }
