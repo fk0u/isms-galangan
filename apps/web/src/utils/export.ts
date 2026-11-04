@@ -22,7 +22,7 @@ function normalizeCell(c: unknown): CellRaw {
    dijumlah di Excel) dengan format "Rp" #,##0; pemisah ribuan mengikuti
    locale Excel (titik pada Excel berbahasa Indonesia). Kolom dianggap uang
    bila judulnya bernada nominal, atau - tanpa judul jelas - angkanya ≥ 10.000. */
-const RP_FORMAT = '"Rp" #,##0';
+const RP_FORMAT = '"Rp" #,##0;[Red]-"Rp" #,##0';
 const MONEY_HEAD = /rp|nilai|harga|total|gaji|pokok|tunjangan|lembur|pph|ppn|bpjs|potongan|kasbon|net|nominal|saldo|debit|kredit|bruto|dpp|biaya|hutang|piutang|amount|beban|bayar|upah|sisa|pendapatan|laba|jasa|material|retensi|denda|diskon|anggaran|rab|aset|susut|thr|bonus|pesangon|price|cost|value|salary/i;
 const NOT_MONEY_HEAD = /qty|kuantitas|hari|jam|%|persen|kode|\bno\b|baris|jumlah item|count|dokumen|masa|tahun|bulan|umur|stok/i;
 
@@ -82,12 +82,98 @@ export interface ExcelSheet {
   name: string;
   /** Baris 0 = header tabel (tebal + fill), baris berikutnya = data. */
   rows: unknown[][];
+  /** Kop laporan resmi (format klien): jam & tanggal ekspor di kiri atas,
+   *  nama perusahaan, judul laporan, dan periode di tengah. */
+  header?: { company: string; title: string; period: string };
+}
+
+/* Tema laporan keuangan mengikuti DESIGN.md: putih netral + merah merek. */
+const TEMA = { brand: "#B91C1C", brandDark: "#7F1D1D", tint: "#FEF2F2", ink: "#09090B", line: "#E4E4E7", zebra: "#FAFAFA", muted: "#71717A", total: "#F4F4F5", white: "#FFFFFF" };
+
+/** Jenis baris untuk pewarnaan tema; dipasang builder lewat styledRow(). */
+export type RowKind = "head" | "section" | "total" | "grand" | "note";
+type RowKinds = RowKind | Array<RowKind | undefined>;
+const ROW_KIND = new WeakMap<unknown[], RowKinds>();
+
+/** Tandai satu baris (array yang sama dikembalikan) supaya diberi gaya tema.
+ *  Larik jenis per kolom dipakai neraca 2 sisi (aktiva kiri, pasiva kanan). */
+export function styledRow(kind: RowKinds, cells: unknown[]): unknown[] {
+  ROW_KIND.set(cells, kind);
+  return cells;
+}
+
+const THIN = "thin" as const;
+function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | null, zebra: boolean) {
+  // Nol tampil "-" seperti laporan akuntansi; sel tetap angka.
+  const base = raw === 0 ? { value: 0, format: '#,##0;-#,##0;"-"' } : asMoney(raw, money);
+  const cell = typeof base === "object" && !(base instanceof Date) ? { ...base } : { value: base };
+  const border = { bottomBorderStyle: THIN, bottomBorderColor: TEMA.line };
+  // Bar teks dasbor (█░) diwarnai merek agar terbaca sebagai grafik.
+  const bar = typeof raw === "string" && /^[█░]/.test(raw) ? { textColor: TEMA.brand } : {};
+  switch (kind) {
+    case "head": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 22 };
+    case "section": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
+    case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, topBorderStyle: THIN, topBorderColor: TEMA.muted, ...border };
+    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, textColor: TEMA.white, backgroundColor: TEMA.ink, height: 22, alignVertical: "center" as const };
+    case "note": return { ...cell, fontStyle: "italic" as const, textColor: TEMA.muted };
+    default: return { ...cell, ...(zebra ? { backgroundColor: TEMA.zebra } : {}), ...border, ...bar };
+  }
+}
+
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+/** Baris kop laporan; dibentang selebar tabel supaya judul tepat di tengah. */
+function headerRows(h: NonNullable<ExcelSheet["header"]>, span: number, now = new Date()): SheetData {
+  const jam = `${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
+  const tgl = `${now.getDate()} ${BULAN[now.getMonth()]}, ${now.getFullYear()}`;
+  const mid = (value: string, style: { fontSize: number; textColor: string }) =>
+    [{ value: sanitizeCell(value), fontWeight: "bold" as const, align: "center" as const, columnSpan: span, ...style }, ...Array<null>(span - 1).fill(null)];
+  return [
+    [{ value: jam, textColor: TEMA.muted, fontSize: 9 }, { value: tgl, textColor: TEMA.muted, fontSize: 9 }],
+    [null],
+    mid(h.company, { fontSize: 14, textColor: TEMA.ink }),
+    mid(h.title, { fontSize: 24, textColor: TEMA.brand }),
+    mid(h.period, { fontSize: 12, textColor: TEMA.brandDark }),
+    // Garis aksen merek di bawah kop.
+    Array.from({ length: span }, () => ({ value: "", backgroundColor: TEMA.brand, height: 4 })),
+    [null],
+  ];
 }
 
 const SHEET_NAME_BANNED = /[[\]:*?/\\]/g;
 
 function cleanSheetName(name: string): string {
   return (String(name || "").trim() || "Sheet").replace(SHEET_NAME_BANNED, "-").slice(0, 31);
+}
+
+/** Sheet laporan bertema: kop resmi, header merah, seksi/total berwarna,
+ *  zebra tipis, tanpa gridline supaya tampak seperti laporan cetak. */
+function themedSheet(s: ExcelSheet, header: NonNullable<ExcelSheet["header"]>, name: string, moneyCol: Array<boolean | null>) {
+  const span = Math.max(2, ...s.rows.map((row) => row?.length ?? 0));
+  const widths: number[] = Array<number>(span).fill(10);
+  let zebra = false;
+  const data: SheetData = s.rows.map((row, r) => {
+    // Baris kosong = jeda antartabel: tanpa gaya, zebra mulai ulang.
+    if (!row?.some((c) => c !== "" && c != null)) { zebra = false; return [null]; }
+    const kinds = ROW_KIND.get(row) ?? (r === 0 ? "head" : undefined);
+    const kindAt = (c: number) => (Array.isArray(kinds) ? kinds[c] : kinds);
+    zebra = kinds && !Array.isArray(kinds) ? false : !zebra;
+    // Isi baris sampai lebar tabel agar warna latar menutup satu baris penuh.
+    return Array.from({ length: span }, (_, cIdx) => {
+      let raw = normalizeCell(row?.[cIdx]);
+      if (typeof raw === "string") raw = sanitizeCell(raw);
+      // Angka tampil "Rp 1.234.567": lebar ikut teks terformat supaya tidak jadi ###.
+      const shown = typeof raw === "number" ? `Rp -${Math.round(raw).toLocaleString("id-ID")}` : String(raw ?? "");
+      widths[cIdx] = Math.max(widths[cIdx], Math.min(shown.length + 3, 48));
+      return themedCell(raw ?? "", kindAt(cIdx), moneyCol[cIdx] ?? null, zebra);
+    });
+  });
+  return {
+    data: [...headerRows(header, span), ...data],
+    sheet: name,
+    columns: widths.map((w) => ({ width: w })),
+    showGridLines: false,
+  };
 }
 
 /** Workbook multi-sheet bergaya seragam: header tebal, lebar kolom otomatis,
@@ -101,6 +187,7 @@ export async function exportExcelSheets(sheets: ExcelSheet[], filename: string):
     usedNames.add(name);
     const widths: number[] = [];
     const moneyCol = moneyColumns(s.rows?.[0]);
+    if (s.header) return themedSheet(s, s.header, name, moneyCol);
     const data: SheetData = (s.rows ?? []).map((row, r) =>
       (row ?? []).map((c, cIdx) => {
         let raw = normalizeCell(c);

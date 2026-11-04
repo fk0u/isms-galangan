@@ -52,7 +52,6 @@ import PayrollTab from "./tabs/PayrollTab";
 import RabTab from "./tabs/RabTab";
 import TutupBukuCard from "./tabs/TutupBukuCard";
 import NeracaLajurCard from "./tabs/NeracaLajurCard";
-import FinanceReportHeader, { fmtPeriodeLaporan } from "./tabs/FinanceReportHeader";
 import { useT } from "../../i18n/LanguageContext";
 import { useStore } from "../../data/store";
 import type { StoreItem, WbsItem } from "../../data/store";
@@ -66,7 +65,7 @@ import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets } from "../../utils/export";
-import { buildFinancialFormatSheets } from "../../data/financialWorkbookBuilder";
+import { buildFinancialFormatSheets, fmtPeriodeLaporan } from "../../data/financialWorkbookBuilder";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
@@ -1448,6 +1447,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else if (which === "lr") {
         const rawSheets = buildFinancialFormatSheets({
           asOf: lrAsOf,
+          periodLabel: fmtPeriodeLaporan(lrHist, lrAsOf),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
           nrNeraca,
@@ -1470,6 +1470,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else if (which === "nr") {
         const sheets = buildFinancialFormatSheets({
           asOf: nrAsOf,
+          periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
           nrNeraca,
@@ -1484,6 +1485,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else {
         const sheets = buildFinancialFormatSheets({
           asOf: nrAsOf || todayISO(),
+          periodLabel: fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()),
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
           nrNeraca,
@@ -2567,14 +2569,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
   const nrAsOf = asOfOrToday(nrHist, lastTxDate);
-  const companyKopName = useMemo(() => {
-    const row = (data.settings ?? []).find((s) => s.key === "COMPANY_KOP");
-    try {
-      const val = typeof row?.value === "string" ? JSON.parse(row.value) : (row?.value as Record<string, unknown> | undefined);
-      if (val && typeof val.name === "string" && val.name.trim()) return val.name.trim();
-    } catch { /* parse error */ }
-    return "PT OELANGAN KARYA ETAM";
-  }, [data.settings]);
   const nrSnap = isSnapMonth(nrAsOf.slice(0, 7));
   const hutLive = apOutAsOf(payables, nrAsOf);
   const piuLive = arOutAsOf(invoices, nrAsOf);
@@ -4550,7 +4544,6 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
-              <FinanceReportHeader title="Neraca" period={fmtPeriodeLaporan(nrHist, nrAsOf, locale)} companyName={companyKopName} />
               <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} />
               <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
                 {nrNeraca.selisih === 0 && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
