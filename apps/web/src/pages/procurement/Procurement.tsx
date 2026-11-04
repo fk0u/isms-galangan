@@ -430,6 +430,7 @@ export default function Procurement() {
   const [recvDendaPct, setRecvDendaPct] = useState("0.1");
   const [signPo, setSignPo] = useState<StoreItem | null>(null);
   const [signForm, setSignForm] = useState<Record<string, string>>({});
+  const [signTermsForm, setSignTermsForm] = useState({ paymentTerms: "", deliveryTerms: "", notes: "" });
   const [inventoryLookupRows, setInventoryLookupRows] = useState<StoreItem[]>([]);
   const [retPo, setRetPo] = useState<StoreItem | null>(null);
   const [retQty, setRetQty] = useState("");
@@ -1190,24 +1191,43 @@ export default function Procurement() {
   /* K17-PROC-02 (Q21): nama penanda tangan diisi sebelum ekspor PDF dan
      disimpan di PO (`signers`) supaya cetak ulang menghasilkan dokumen sama.
      PO Besar: Supplier + Direktur; PO Kecil: Request by, Approved by, Driver, Logistic. */
-  const signKeys = (po: StoreItem): string[] => (po.poType === "Kecil" ? ["requestBy", "approvedBy", "driver", "logistic"] : ["supplier", "direktur"]);
+  const signKeys = (po: StoreItem): string[] => (po.poType === "Kecil" ? ["requestBy", "approvedBy", "driver", "logistic"] : ["direktur"]);
   const openSignPo = (po: StoreItem) => {
     const saved = (po.signers && typeof po.signers === "object" ? po.signers : {}) as Record<string, unknown>;
     const appr = apprOf(po);
     const defaults: Record<string, string> = {
       requestBy: String(po.requester ?? ""), approvedBy: appr.length > 0 ? String(appr[appr.length - 1]?.by ?? "") : "",
-      driver: "", logistic: "", supplier: String(po.vendor ?? ""), direktur: "",
+      driver: "", logistic: "", direktur: "",
     };
     setSignForm(Object.fromEntries(signKeys(po).map((k) => [k, String(saved[k] ?? "").trim() || (defaults[k] ?? "")])));
+    setSignTermsForm({
+      paymentTerms: String(po.paymentTerms ?? ""),
+      deliveryTerms: String(po.deliveryTerms ?? ""),
+      notes: String(po.notes ?? po.catatan ?? ""),
+    });
     setSignPo(po);
   };
   const confirmSignPo = async () => {
     if (!signPo) return;
     const signers = Object.fromEntries(signKeys(signPo).map((k) => [k, String(signForm[k] ?? "").trim().slice(0, 80)]));
+    const paymentTerms = signTermsForm.paymentTerms.trim();
+    const deliveryTerms = signTermsForm.deliveryTerms.trim();
+    const notes = signTermsForm.notes.trim();
     try {
-      await update("purchaseOrders", String(signPo.id), { signers });
+      await update("purchaseOrders", String(signPo.id), {
+        signers,
+        paymentTerms,
+        deliveryTerms,
+        notes,
+      });
     } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); return; }
-    const po = signPo;
+    const po = {
+      ...signPo,
+      signers,
+      paymentTerms,
+      deliveryTerms,
+      notes,
+    };
     setSignPo(null);
     await cetakPoPdf(po);
   };
@@ -2805,16 +2825,29 @@ const sparkVendors = useMemo(() => {
         </div>
       </Modal>
 
-      {/* Nama penanda tangan sebelum ekspor PDF PO (K17-PROC-02) */}
+      {/* Nama penanda tangan & syarat/catatan sebelum ekspor PDF PO (K17-PROC-02) */}
       <Modal open={signPo !== null} onClose={() => setSignPo(null)} title={S.signT.replace("{n}", String(signPo?.id ?? ""))} subtitle={S.signS}
         footer={<><button className="btn-secondary" onClick={() => setSignPo(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={confirmSignPo}>{S.signGo}</AsyncButton></>}>
-        <FormGrid>
-          {signPo && signKeys(signPo).map((k) => (
-            <Field key={k} label={S[`sign_${k}` as keyof typeof S] as string}>
-              <input className="input" maxLength={80} value={signForm[k] ?? ""} onChange={(e) => setSignForm((f) => ({ ...f, [k]: e.target.value }))} placeholder={S.signPh} />
+        <div className="space-y-3">
+          <FormGrid>
+            {signPo && signKeys(signPo).map((k) => (
+              <Field key={k} label={S[`sign_${k}` as keyof typeof S] as string}>
+                <input className="input" maxLength={80} value={signForm[k] ?? ""} onChange={(e) => setSignForm((f) => ({ ...f, [k]: e.target.value }))} placeholder={S.signPh} />
+              </Field>
+            ))}
+          </FormGrid>
+          <FormGrid>
+            <Field label={S.fPaymentTerms}>
+              <input className="input" value={signTermsForm.paymentTerms} onChange={(e) => setSignTermsForm((f) => ({ ...f, paymentTerms: e.target.value }))} placeholder="Contoh: NET 30 / DP 50% / Cash" />
             </Field>
-          ))}
-        </FormGrid>
+            <Field label={S.fDeliveryTerms}>
+              <input className="input" value={signTermsForm.deliveryTerms} onChange={(e) => setSignTermsForm((f) => ({ ...f, deliveryTerms: e.target.value }))} placeholder="Contoh: Franco Samarinda / 7 Hari" />
+            </Field>
+          </FormGrid>
+          <Field label={S.fPoNotes} hint={S.fPoNotesHint}>
+            <textarea rows={2} className="input text-xs" value={signTermsForm.notes} onChange={(e) => setSignTermsForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Catatan tambahan yang akan tercetak pada PO..." />
+          </Field>
+        </div>
       </Modal>
 
       {/* Modal PO Kecil */}

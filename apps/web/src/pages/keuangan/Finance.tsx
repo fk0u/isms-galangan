@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check } from "lucide-react";
+import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check, ExternalLink } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { openFileUrl } from "../../services/files";
@@ -868,7 +868,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const { user: finUser } = useAuth();
   const canWriteInvoices = hasPermission(finUser?.permissions, "invoices", "w");
   const canDeleteInvoices = hasPermission(finUser?.permissions, "invoices", "d");
-  const canWriteBills = hasPermission(finUser?.permissions, "bills", "w");
+  const canWriteBills = hasPermission(finUser?.permissions, "payables", "w") || hasPermission(finUser?.permissions, "bills", "w") || ["finance", "direktur", "developer", "keuangan"].includes(finUser?.role ?? "");
   const canWriteJournals = hasPermission(finUser?.permissions, "journals", "w");
   const canWriteAssets = hasPermission(finUser?.permissions, "assets", "w");
   const canDeleteAssets = hasPermission(finUser?.permissions, "assets", "d");
@@ -960,6 +960,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [invLines, setInvLines] = useDraftState<InvLine[]>("isms.draft.finance.invLines", [emptyLine()]);
   const [payTarget, setPayTarget] = useState<StoreItem | null>(null);
   const [apTarget, setApTarget] = useState<StoreItem | null>(null);
+  const [apDetail, setApDetail] = useState<StoreItem | null>(null);
   const [apPayAmt, setApPayAmt] = useState("");
   const [proof, setProof] = useState(emptyProof);
   const [invPayAmt, setInvPayAmt] = useState("");
@@ -3407,7 +3408,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       <SortTh label={S.colDue} sortKey="due" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
                       <th className="th">{S.pph23}</th>
                       <SortTh label={S.colStatus} sortKey="st" sort={apSort} onSort={(k) => setApSort((s) => toggleSort(s, k))} />
-                      {canWriteBills && <th className="th">{S.actionTh}</th>}
+                      <th className="th">{S.actionTh}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-steel-100">
@@ -3429,42 +3430,56 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                         <td className="td text-steel-600">{String(a.pph ?? "2%")}</td>
                         <td className="td"><StatusBadge status={String(a.st)} />
                           {a.persetujuan === "Menunggu" && <p className="mt-1 text-[11px] font-medium text-amber-700">{num(a.amt) > 0 ? S.apInvMenunggu : S.apInvNol}</p>}</td>
-                        {canWriteBills && (
-                          <td className="td">
-                            <div className="flex flex-wrap gap-1.5">
-                              {/* Q27: invoice dari PO menunggu persetujuan Keuangan sebelum
-                                  barang boleh diterima; nilai 0 = nota PO Kecil belum lengkap. */}
-                              {a.persetujuan === "Menunggu" && (
-                                <RowAction icon={Check} tone="success" label={S.apInvSetujui} ariaLabel={`${S.apInvSetujui} ${String(a.po)}`}
-                                  disabled={!(num(a.amt) > 0)}
-                                  onClick={() => void update("payables", String(a.id), { persetujuan: "Disetujui", disetujuiAt: new Date().toISOString() })
-                                    .then(() => toast(S.apInvOk.replace("{n}", String(a.po))))
-                                    .catch((e: unknown) => toast(e instanceof Error ? e.message : S.saveFail, "info"))} />
-                              )}
-                              {a.st !== "Lunas" && (
-                                <>
-                                  <RowAction
-                                    disabled={a.persetujuan === "Menunggu"}
-                                    icon={Wallet}
-                                    tone="success"
-                                    label={S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")}
-                                    ariaLabel={`${S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")} ${String(a.po)}`}
-                                    onClick={() => { setApTarget(a); setProof(emptyProof()); setProofImg(""); setApPayAmt(String(Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2)))); }}
-                                  />
-                                  <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.v)}`} onClick={() => {
-                                    setApEdit(a);
-                                    setApEditForm({
-                                      v: String(a.v ?? ""), kodePembantu: String(a.kodePembantu ?? a.v ?? ""),
-                                      openAwal: String(a.openAwal ?? ""), amt: String(a.amt ?? ""),
-                                      due: String(a.due ?? ""), nonPpn: String(a.pph ?? "") === "Non-PPn",
-                                      vessel: String(a.vessel ?? ""), item: String(a.item ?? ""),
-                                    });
-                                  }} />
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        )}
+                        <td className="td">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {/* Q27: invoice dari PO menunggu persetujuan Keuangan sebelum barang boleh diterima */}
+                            {canWriteBills && a.persetujuan === "Menunggu" && (
+                              <RowAction icon={Check} tone="success" label={S.apInvSetujui} ariaLabel={`${S.apInvSetujui} ${String(a.po)}`}
+                                disabled={!(num(a.amt) > 0)}
+                                onClick={() => void update("payables", String(a.id), { persetujuan: "Disetujui", disetujuiAt: new Date().toISOString() })
+                                  .then(() => toast(S.apInvOk.replace("{n}", String(a.po))))
+                                  .catch((e: unknown) => toast(e instanceof Error ? e.message : S.saveFail, "info"))} />
+                            )}
+                            {/* Tombol Bayar Langsung */}
+                            {a.st !== "Lunas" && canWriteBills && (
+                              <button
+                                type="button"
+                                disabled={a.persetujuan === "Menunggu"}
+                                className="btn-primary px-2.5 py-1 text-xs"
+                                title={`Bayar ${num(a.pay1) ? "Tahap II" : "Tahap I"} untuk ${String(a.po)}`}
+                                onClick={() => {
+                                  setApTarget(a);
+                                  setProof(emptyProof());
+                                  setProofImg("");
+                                  setApPayAmt(String(Math.max(0, num(a.amt) - num(a.pay1) - num(a.pay2))));
+                                }}
+                              >
+                                {S.payStage.replace("{a}", num(a.pay1) ? " II" : " I")}
+                              </button>
+                            )}
+                            {/* Tombol Detail & Histori Lengkap */}
+                            <button
+                              type="button"
+                              className="btn-secondary px-2.5 py-1 text-xs"
+                              onClick={() => setApDetail(a)}
+                              title={locale === "en" ? "View order details & payment history" : "Lihat rincian barang, PO, dan histori termin"}
+                            >
+                              {locale === "en" ? "Details" : "Detail"}
+                            </button>
+                            {/* Tombol Edit Data */}
+                            {canWriteBills && a.st !== "Lunas" && (
+                              <RowAction icon={Pencil} tone="neutral" label={S.editBtn} ariaLabel={`${S.editBtn} ${String(a.v)}`} onClick={() => {
+                                setApEdit(a);
+                                setApEditForm({
+                                  v: String(a.v ?? ""), kodePembantu: String(a.kodePembantu ?? a.v ?? ""),
+                                  openAwal: String(a.openAwal ?? ""), amt: String(a.amt ?? ""),
+                                  due: String(a.due ?? ""), nonPpn: String(a.pph ?? "") === "Non-PPn",
+                                  vessel: String(a.vessel ?? ""), item: String(a.item ?? ""),
+                                });
+                              }} />
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -5371,6 +5386,239 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             )}
           </Field>
         </div>
+      </Modal>
+
+      {/* Modal Detail & Histori Pembayaran Hutang (AP) */}
+      <Modal
+        open={apDetail !== null}
+        onClose={() => setApDetail(null)}
+        title={S.apDetailTitle}
+        subtitle={apDetail ? `${String(apDetail.po ?? apDetail.id ?? "")} · ${String(apDetail.v ?? "")}` : ""}
+        wide
+        footer={
+          <div className="flex w-full items-center justify-between">
+            <div className="text-xs text-steel-500">
+              {apDetail && (
+                <span>
+                  {S.colDue}: <strong className="text-navy-900">{fmtTanggal(String(apDetail.due ?? ""))}</strong>
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setApDetail(null)}>
+                {S.tutupBtn}
+              </button>
+              {apDetail && apDetail.st !== "Lunas" && canWriteBills && (
+                <button
+                  type="button"
+                  disabled={apDetail.persetujuan === "Menunggu"}
+                  className="btn-primary"
+                  onClick={() => {
+                    const target = apDetail;
+                    setApDetail(null);
+                    setApTarget(target);
+                    setProof(emptyProof());
+                    setProofImg("");
+                    setApPayAmt(String(Math.max(0, num(target.amt) - num(target.pay1) - num(target.pay2))));
+                  }}
+                >
+                  <Wallet className="mr-1.5 h-4 w-4 inline" />
+                  {S.apPayAction} ({num(apDetail.pay1) ? "Tahap II" : "Tahap I"})
+                </button>
+              )}
+            </div>
+          </div>
+        }
+      >
+        {apDetail && (() => {
+          const totalAmt = num(apDetail.amt);
+          const pay1 = num(apDetail.pay1);
+          const pay2 = num(apDetail.pay2);
+          const sisaHutang = Math.max(0, totalAmt - pay1 - pay2);
+
+          // Cari PO terkait
+          const poRef = String(apDetail.po ?? "");
+          const poIdRef = String(apDetail.poId ?? "");
+          const matchedPo = (data.purchaseOrders ?? []).find((p) => {
+            const pId = String(p.id ?? "");
+            const docNo = String(p.docNo ?? "");
+            return (pId && poRef.includes(pId)) || (docNo && poRef.includes(docNo)) || (poIdRef && pId === poIdRef);
+          });
+
+          // Rincian lines dari PO atau fallback
+          const rawLines = matchedPo && Array.isArray(matchedPo.lines) && matchedPo.lines.length > 0
+            ? matchedPo.lines
+            : null;
+
+          return (
+            <div className="space-y-5">
+              {/* Ringkasan Finansial Hutang */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.apSummarySec}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="rounded-xl border border-steel-200 bg-surface p-3">
+                    <span className="text-xs text-steel-500">{S.colSaldoAkhir}</span>
+                    <p className="text-base font-bold text-navy-900">{fmtRupiah(totalAmt)}</p>
+                  </div>
+                  <div className="rounded-xl border border-steel-200 bg-surface p-3">
+                    <span className="text-xs text-steel-500">{S.colBayar1}</span>
+                    <p className="text-base font-semibold text-emerald-700">{pay1 ? fmtRupiah(pay1) : "-"}</p>
+                  </div>
+                  <div className="rounded-xl border border-steel-200 bg-surface p-3">
+                    <span className="text-xs text-steel-500">{S.colBayar2}</span>
+                    <p className="text-base font-semibold text-emerald-700">{pay2 ? fmtRupiah(pay2) : "-"}</p>
+                  </div>
+                  <div className="rounded-xl border border-steel-200 bg-amber-50/60 p-3">
+                    <span className="text-xs text-amber-700 font-medium">{S.colSisa}</span>
+                    <p className="text-base font-bold text-amber-900">{fmtRupiah(sisaHutang)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rincian Asal Dokumen (PO / Subkon / Operasional) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">{S.apOriginSec}</p>
+                  {matchedPo && (
+                    <a
+                      href={`/procurement?tab=PO&search=${encodeURIComponent(String(matchedPo.id))}`}
+                      className="text-xs font-medium text-navy-600 hover:text-navy-800 hover:underline inline-flex items-center gap-1"
+                    >
+                      {S.apDirectPo} ({matchedPo.id}) <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+
+                {matchedPo ? (
+                  <div className="rounded-xl border border-steel-200 overflow-hidden bg-white">
+                    <div className="bg-steel-50/80 px-4 py-2.5 border-b border-steel-200 flex flex-wrap gap-4 text-xs text-steel-700">
+                      <div><span className="text-steel-400">Tipe PO:</span> <strong className="font-semibold">{matchedPo.poType ?? "Besar"}</strong></div>
+                      <div><span className="text-steel-400">Kapal/Vessel:</span> <strong className="font-semibold">{matchedPo.vessel || "-"}</strong></div>
+                      <div><span className="text-steel-400">Proyek:</span> <strong className="font-semibold">{matchedPo.project || "-"}</strong></div>
+                      <div><span className="text-steel-400">Tgl Order:</span> <strong className="font-semibold">{fmtTanggal(String(matchedPo.date ?? ""))}</strong></div>
+                      {matchedPo.eta && <div><span className="text-steel-400">ETA:</span> <strong className="font-semibold">{fmtTanggal(String(matchedPo.eta))}</strong></div>}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-steel-50/50 text-steel-600 border-b border-steel-100">
+                          <tr>
+                            <th className="th">{S.colItem}</th>
+                            <th className="th text-right">{S.colQty}</th>
+                            <th className="th">{S.colSatuan}</th>
+                            <th className="th text-right">{S.colHarga}</th>
+                            <th className="th text-right">{S.colTotalNilai}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-steel-100">
+                          {rawLines && rawLines.map((l: any, i: number) => {
+                            const q = Number(l.qty ?? 0);
+                            const p = Number(l.price ?? 0);
+                            const t = Number(l.total ?? q * p);
+                            return (
+                              <tr key={i}>
+                                <td className="td font-medium text-navy-900">{l.name ?? l.item ?? "-"}</td>
+                                <td className="td text-right">{fmtJumlah(q)}</td>
+                                <td className="td text-steel-600">{l.unit ?? "-"}</td>
+                                <td className="td text-right text-steel-600">{fmtRupiah(p)}</td>
+                                <td className="td text-right font-semibold text-navy-900">{fmtRupiah(t)}</td>
+                              </tr>
+                            );
+                          })}
+                          {!rawLines && (
+                            <tr>
+                              <td className="td font-medium text-navy-900">{String(matchedPo.item ?? apDetail.item ?? "-")}</td>
+                              <td className="td text-right">{fmtJumlah(Number(matchedPo.qty ?? 1))}</td>
+                              <td className="td text-steel-600">{matchedPo.unit ?? "item"}</td>
+                              <td className="td text-right text-steel-600">{fmtRupiah(Number(matchedPo.amount ?? totalAmt))}</td>
+                              <td className="td text-right font-semibold text-navy-900">{fmtRupiah(Number(matchedPo.amount ?? totalAmt))}</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-steel-200 bg-surface p-4 text-xs space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div><span className="text-steel-400">Deskripsi Barang/Jasa:</span> <p className="font-medium text-navy-900">{String(apDetail.item ?? "-")}</p></div>
+                      <div><span className="text-steel-400">Peruntukan Kapal:</span> <p className="font-medium text-navy-900">{String(apDetail.vessel ?? "-")}</p></div>
+                      <div><span className="text-steel-400">No Faktur / Tagihan:</span> <p className="font-mono text-navy-900">{String(apDetail.noInvoice ?? apDetail.po ?? "-")}</p></div>
+                    </div>
+                    <p className="text-[11px] text-steel-400 italic pt-1">{S.apNoPoFound}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Histori Termin Pembayaran */}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-steel-500">{S.apHistorySec}</p>
+                <div className="space-y-2.5">
+                  {/* Termin I */}
+                  <div className="rounded-xl border border-steel-200 p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs text-navy-900">Termin I (Tahap I)</span>
+                        <Badge tone={pay1 > 0 ? "green" : "neutral"}>
+                          {pay1 > 0 ? S.apTerminStatusLunas : S.apTerminStatusPending}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-bold text-navy-900 mt-1">
+                        {pay1 > 0 ? fmtRupiah(pay1) : "-"}
+                      </p>
+                      {apDetail.pay1date && (
+                        <p className="text-xs text-steel-500 mt-0.5">
+                          Dibayar pada: {fmtTanggal(String(apDetail.pay1date))}
+                          {apDetail.pay1note ? ` · ${String(apDetail.pay1note)}` : ""}
+                        </p>
+                      )}
+                    </div>
+                    {String(apDetail.pay1ProofUrl ?? "") && (
+                      <button
+                        type="button"
+                        onClick={() => void openProof(String(apDetail.pay1ProofUrl))}
+                        className="flex items-center gap-2 text-xs font-medium text-navy-700 hover:text-navy-900 border border-steel-200 rounded-lg p-1.5 hover:bg-steel-50"
+                      >
+                        <SecureImg src={String(apDetail.pay1ProofUrl)} alt="Bukti I" className="h-8 w-12 object-cover rounded" />
+                        <span>Lihat Bukti Transfer</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Termin II */}
+                  <div className="rounded-xl border border-steel-200 p-3.5 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs text-navy-900">Termin II (Tahap II)</span>
+                        <Badge tone={pay2 > 0 ? "green" : (pay1 > 0 && sisaHutang > 0 ? "amber" : "neutral")}>
+                          {pay2 > 0 ? S.apTerminStatusLunas : (pay1 > 0 && sisaHutang > 0 ? "Belum Dibayar" : "-")}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-bold text-navy-900 mt-1">
+                        {pay2 > 0 ? fmtRupiah(pay2) : (pay1 > 0 ? fmtRupiah(sisaHutang) : "-")}
+                      </p>
+                      {apDetail.pay2date && (
+                        <p className="text-xs text-steel-500 mt-0.5">
+                          Dibayar pada: {fmtTanggal(String(apDetail.pay2date))}
+                          {apDetail.pay2note ? ` · ${String(apDetail.pay2note)}` : ""}
+                        </p>
+                      )}
+                    </div>
+                    {String(apDetail.pay2ProofUrl ?? "") && (
+                      <button
+                        type="button"
+                        onClick={() => void openProof(String(apDetail.pay2ProofUrl))}
+                        className="flex items-center gap-2 text-xs font-medium text-navy-700 hover:text-navy-900 border border-steel-200 rounded-lg p-1.5 hover:bg-steel-50"
+                      >
+                        <SecureImg src={String(apDetail.pay2ProofUrl)} alt="Bukti II" className="h-8 w-12 object-cover rounded" />
+                        <span>Lihat Bukti Transfer</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
 
       <Modal open={showAp} onClose={() => setShowAp(false)} title={S.apNewTitle}

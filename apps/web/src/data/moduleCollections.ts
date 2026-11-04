@@ -45,7 +45,7 @@ const FINANCE_TAB_COLLECTIONS: Record<string, CollectionKey[]> = {
     "services", "termins", "timesheets", "warranties", "workOrders",
   ],
   "Piutang (AR)": ["bast", "clientPos", "clients", "contracts", "invoices", "projects"],
-  "Hutang (AP)": ["payables", "payroll", "projects", "purchaseOrders"],
+  "Hutang (AP)": ["payables", "payroll", "projects", "purchaseOrders", "subcontractors", "workOrders"],
   "Jadwal Bayar": ["bast", "clientPos", "clients", "contracts", "payables", "payroll", "purchaseOrders"],
   "Kas & Bank": ["coa", "invoices", "journals", "payables", "payroll"],
   Jurnal: ["coa", "invoices", "journals", "payables", "payroll"],

@@ -31,7 +31,7 @@ export interface PoInput {
   taxRate?: number;
   taxAmount?: number;
   totalAmount: number;
-  paymentTerms: string;
+  paymentTerms?: string;
   deliveryTerms?: string;
   notes?: string;
   /** Kolom tanda tangan (Q21): PO Besar = Supplier + Direktur,
@@ -202,16 +202,20 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
     }),
   );
 
-  d.add(spacer(2));
-  d.add(
-    keyValue({
-      labelW: 40,
-      pairs: [
-        { label: L(locale, "Syarat Pembayaran", "Payment Terms"), value: input.paymentTerms },
-        { label: L(locale, "Syarat Pengiriman", "Delivery Terms"), value: input.deliveryTerms ?? "-" },
-      ],
-    }),
-  );
+  const hasPayment = Boolean(input.paymentTerms && input.paymentTerms.trim() !== "" && input.paymentTerms.trim() !== "-");
+  const hasDelivery = Boolean(input.deliveryTerms && input.deliveryTerms.trim() !== "" && input.deliveryTerms.trim() !== "-");
+  if (hasPayment || hasDelivery) {
+    const pairs: Array<{ label: string; value: string }> = [];
+    if (hasPayment) pairs.push({ label: L(locale, "Syarat Pembayaran", "Payment Terms"), value: input.paymentTerms ?? "" });
+    if (hasDelivery) pairs.push({ label: L(locale, "Syarat Pengiriman", "Delivery Terms"), value: input.deliveryTerms ?? "" });
+    d.add(spacer(2));
+    d.add(
+      keyValue({
+        labelW: 40,
+        pairs,
+      }),
+    );
+  }
 
   if (input.notes && input.notes.trim() !== "") {
     d.add(spacer(2));
@@ -236,9 +240,10 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
   );
 
   d.add(spacer(4));
-  d.add(
-    signatures(input.signers.map((s) => ({ role: s.role, name: s.name, rows: 5 }))),
-  );
+  const finalSigners = input.signers.length === 1 && input.poType !== "Kecil"
+    ? [{ role: "", name: "" }, { role: input.signers[0].role, name: input.signers[0].name, rows: 5 }]
+    : input.signers.map((s) => ({ role: s.role, name: s.name, rows: 5 }));
+  d.add(signatures(finalSigners));
 
   return d;
 }

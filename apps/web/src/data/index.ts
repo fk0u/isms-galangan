@@ -460,21 +460,22 @@ export interface InventoryItem {
 }
 
 export const inventory: InventoryItem[] = [
-  { id: "INV-001", name: "Pelat Baja AH36 12mm", category: "Baja", sku: "AH36-12", warehouse: "Gudang Baja A", stock: 5200, minStock: 2000, unit: "kg", cost: 14500, location: "A1-01" },
-  { id: "INV-002", name: "Mesin Bantu (Aux Engine)", category: "Mesin", sku: "AUX-MAK", warehouse: "Gudang Mesin", stock: 3, minStock: 2, unit: "unit", cost: 850000000, location: "M-02" },
-  { id: "INV-003", name: "Cat Epoxy Primer", category: "Cat", sku: "EPO-PRIM", warehouse: "Gudang B", stock: 44, minStock: 20, unit: "liter", cost: 95000, location: "B2-11" },
-  { id: "INV-004", name: "Pipa Schedule 40 6 inch", category: "Pipa", sku: "PIP-S40-6", warehouse: "Gudang Pipa", stock: 18, minStock: 30, unit: "batang", cost: 780000, location: "P-04" },
-  { id: "INV-005", name: "Anoda Zink", category: "Perlindungan", sku: "ZN-ANODE", warehouse: "Gudang B", stock: 8, minStock: 12, unit: "pcs", cost: 210000, location: "B3-07" },
-  { id: "INV-006", name: "Kabel Listrik Marine 4x50", category: "Listrik", sku: "KBL-4X50", warehouse: "Gudang Listrik", stock: 1200, minStock: 800, unit: "meter", cost: 185000, location: "L-01" },
-  { id: "INV-007", name: "Baut Marine M20", category: "Fastener", sku: "BLT-M20", warehouse: "Gudang B", stock: 1500, minStock: 2000, unit: "pcs", cost: 4500, location: "B1-05" },
-  { id: "INV-008", name: "Winch Wire Rope", category: "Rigging", sku: "WIRE-ROPE", warehouse: "Gudang Rig", stock: 6, minStock: 4, unit: "roll", cost: 3200000, location: "R-02" },
+  { id: "INV-001", name: "Pelat Baja AH36 12mm", category: "Baja", sku: "AH36-12", warehouse: "Gudang Material", stock: 5200, minStock: 2000, unit: "kg", cost: 14500, location: "A1-01" },
+  { id: "INV-002", name: "Mesin Bantu (Aux Engine)", category: "Mesin", sku: "AUX-MAK", warehouse: "Gudang Material", stock: 3, minStock: 2, unit: "unit", cost: 850000000, location: "M-02" },
+  { id: "INV-003", name: "Cat Epoxy Primer", category: "Cat", sku: "EPO-PRIM", warehouse: "Gudang Material", stock: 44, minStock: 20, unit: "liter", cost: 95000, location: "B2-11" },
+  { id: "INV-004", name: "Pipa Schedule 40 6 inch", category: "Pipa", sku: "PIP-S40-6", warehouse: "Gudang Material", stock: 18, minStock: 30, unit: "batang", cost: 780000, location: "P-04" },
+  { id: "INV-005", name: "Anoda Zink", category: "Perlindungan", sku: "ZN-ANODE", warehouse: "Gudang Material", stock: 8, minStock: 12, unit: "pcs", cost: 210000, location: "B3-07" },
+  { id: "INV-006", name: "Kabel Listrik Marine 4x50", category: "Listrik", sku: "KBL-4X50", warehouse: "Gudang Material", stock: 1200, minStock: 800, unit: "meter", cost: 185000, location: "L-01" },
+  { id: "INV-007", name: "Baut Marine M20", category: "Fastener", sku: "BLT-M20", warehouse: "Gudang Material", stock: 1500, minStock: 2000, unit: "pcs", cost: 4500, location: "B1-05" },
+  { id: "INV-008", name: "Winch Wire Rope", category: "Rigging", sku: "WIRE-ROPE", warehouse: "Gudang Material", stock: 6, minStock: 4, unit: "roll", cost: 3200000, location: "R-02" },
   /* F3-G-03 demo: item berkonversi satuan untuk barang keluar eceran & potongan. */
-  { id: "INV-021", name: "Cat Antifouling (drum 200 L)", category: "Cat", sku: "AF-DRUM", warehouse: "Gudang B", stock: 6, minStock: 2, unit: "drum", cost: 18500000, location: "B2-14", eceran: true, conversion: { baseUnit: "liter", perUnit: 200 } },
-  { id: "INV-022", name: "Plat Baja AH36 12mm (6000×1500)", category: "Plat", sku: "AH36-12-LBR", warehouse: "Gudang Baja A", stock: 12, minStock: 4, unit: "lembar", cost: 12300000, location: "A1-04", conversion: { baseUnit: "kg", perUnit: 848, dims: { lengthMm: 6000, widthMm: 1500, thicknessMm: 12, weightKg: 848 } } },
+  { id: "INV-021", name: "Cat Antifouling (drum 200 L)", category: "Cat", sku: "AF-DRUM", warehouse: "Gudang Material", stock: 6, minStock: 2, unit: "drum", cost: 18500000, location: "B2-14", eceran: true, conversion: { baseUnit: "liter", perUnit: 200 } },
+  { id: "INV-022", name: "Plat Baja AH36 12mm (6000×1500)", category: "Plat", sku: "AH36-12-LBR", warehouse: "Gudang Material", stock: 12, minStock: 4, unit: "lembar", cost: 12300000, location: "A1-04", conversion: { baseUnit: "kg", perUnit: 848, dims: { lengthMm: 6000, widthMm: 1500, thicknessMm: 12, weightKg: 848 } } },
   // RawData REPORT WAREHOUSE 2024 (sheet KODE + STOCK ALL).
   { id: "INV-SB-001", name: "AMRIL", category: "Umum", sku: "A0000A1", warehouse: "Gudang Material", stock: 8, minStock: 5, unit: "pcs", cost: 50000, location: "S-01" },
   { id: "INV-SB-002", name: "HEMPALIN ENAMEL GREEN 40640 @5LTR", category: "Cat", sku: "AL0000CAT40", warehouse: "Gudang Material", stock: 2, minStock: 4, unit: "KLG", cost: 400000, location: "S-02" },
   { id: "INV-SB-003", name: "PLAT 8MM 5x20", category: "Baja", sku: "EO0000LAT15", warehouse: "Gudang Material", stock: 6, minStock: 4, unit: "LBR", cost: 6500000, location: "S-03" },
+  { id: "INV-SB-004", name: "PLAT 12MM X 6' X 20'", category: "Baja", sku: "EO0000LAT20", warehouse: "Gudang Material", stock: 75, minStock: 10, unit: "lbr", cost: 11701250, location: "S-04" },
 ];
 
 /* `fuelPrice` = harga solar per liter.

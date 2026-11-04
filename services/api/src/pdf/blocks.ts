@@ -769,6 +769,7 @@ export function signatures(sigs: SignatureSpec[]): Block {
             height: total,
             draw: (c, rec, x, y) => {
               sigs.forEach((s, i) => {
+                if (!s.role && !s.name) return;
                 const cx = x + colW * (i + 0.5);
                 /* Role dan nama dibungkus: nama panjang (PT BAJA CONTOH ABADI
                    SEJAHTERA) di luar lebar kolom akan menimpa blok tetangga,

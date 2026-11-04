@@ -666,7 +666,6 @@ function poSigners(p: Record<string, unknown>, vendorName: string, approvals: Ar
     ];
   }
   return [
-    { role: "Supplier", name: pick("supplier", vendorName || "-") },
     { role: L(locale, "Direktur", "Director"), name: pick("direktur", kopDirector()) },
   ];
 }
@@ -694,8 +693,8 @@ const poRecipe: Recipe<PoInput> = {
           : [];
     const items = lineSource.map((r) => {
       const qtyValue = Number(r.qty ?? r.quantity ?? 0);
-      const price = Number(r.price ?? r.unitPrice ?? 0);
-      const total = Number.isFinite(Number(r.total)) ? Number(r.total) : qtyValue * price;
+      const price = Number(r.price ?? r.unitPrice ?? r.harga ?? r.cost ?? 0);
+      const total = Number.isFinite(Number(r.total)) && Number(r.total) > 0 ? Number(r.total) : qtyValue * price;
       /* spec dan need disimpan terpisah di baris PO; keduanya bagian dari
          barang yang dipesan dan harus ikut tercetak - tanpa keduanya, tim
          gudang tidak tahu barang apa yang harus datang. */
@@ -721,9 +720,16 @@ const poRecipe: Recipe<PoInput> = {
        diturunkan, bukan ditambah. */
     const subtotal = includePpn ? Math.round((amount / (1 + taxRate / 100)) * 100) / 100 : amount;
     const taxAmount = Math.round((amount - subtotal) * 100) / 100;
+
+    // Perbaikan: bila item unitPrice bernilai 0 tapi subtotal ada dan item hanya 1
+    if (items.length === 1 && items[0].unitPrice === 0 && subtotal > 0) {
+      items[0].unitPrice = items[0].qty > 0 ? Math.round((subtotal / items[0].qty) * 100) / 100 : subtotal;
+      items[0].total = subtotal;
+    }
     const approvals = arr(p, "approvals");
     const eta = str(p, "eta");
-    const notes = [
+    const customNotes = str(p, "notes") !== "-" ? str(p, "notes") : (str(p, "catatan") !== "-" ? str(p, "catatan") : "");
+    const autoNotes = [
       str(p, "req") !== "-" ? `${L(ctx.locale, "Ref PR", "PR ref")}: ${str(p, "req")}` : "",
       eta !== "-" ? `${L(ctx.locale, "ETA", "ETA")}: ${longDate(eta)}` : "",
       str(p, "vessel") !== "-" ? `${L(ctx.locale, "Kapal", "Vessel")}: ${str(p, "vessel")}` : "",
@@ -733,6 +739,7 @@ const poRecipe: Recipe<PoInput> = {
         : "",
       arr(p, "amendments").length > 0 ? `${L(ctx.locale, "Amandemen", "Amendments")}: ${arr(p, "amendments").length}` : "",
     ].filter((s) => s !== "").join("\n");
+    const notes = customNotes || autoNotes;
     return {
       no: str(p, "docNo") !== "-" ? `${id} / ${str(p, "docNo")}` : id,
       tanggal: docDate(p, "date"),
@@ -745,8 +752,8 @@ const poRecipe: Recipe<PoInput> = {
       taxRate,
       taxAmount,
       totalAmount: amount,
-      paymentTerms: str(p, "paymentTerms") !== "-" ? str(p, "paymentTerms") : "NET 30",
-      deliveryTerms: str(p, "deliveryTerms") !== "-" ? str(p, "deliveryTerms") : eta !== "-" ? eta : undefined,
+      paymentTerms: str(p, "paymentTerms") !== "-" ? str(p, "paymentTerms") : undefined,
+      deliveryTerms: str(p, "deliveryTerms") !== "-" ? str(p, "deliveryTerms") : (eta !== "-" ? eta : undefined),
       notes,
       signers: poSigners(p, vendorName, approvals, ctx.locale),
       locale: ctx.locale,
