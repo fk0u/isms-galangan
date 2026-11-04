@@ -1,0 +1,11 @@
+meta {
+  name: GET admin export sql
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/admin/export/sql
+  body: none
+  auth: inherit
+}

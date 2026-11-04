@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check, ExternalLink } from "lucide-react";
+import { Wallet, ArrowDownToLine, FileText, Receipt, TrendingUp, Plus, Trash2, Pencil, Eye, Boxes, Ban, Check, ExternalLink, Download } from "lucide-react";
 import { tahapAkhirOf } from "../../utils/projectStages";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { openFileUrl } from "../../services/files";
@@ -65,6 +65,7 @@ import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets } from "../../utils/export";
+import { buildFinancialFormatSheets } from "../../data/financialWorkbookBuilder";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
@@ -1389,7 +1390,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
    * Setiap sheet membawa baris "As-of" supaya angka bisa ditelusuri
    * kembali - file Excel tanpa tanggal acuan tidak bisa dipertanggungjawabkan
    * saat Someone membukanya enam bulan kemudian. */
-  const exportHist = async (which: "kas" | "bb" | "lr" | "nr"): Promise<void> => {
+  const exportHist = async (which: "kas" | "bb" | "lr" | "nr" | "all"): Promise<void> => {
     try {
       if (which === "kas") {
         await exportExcelSheets([
@@ -1444,73 +1445,55 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           }] : []),
         ], `Buku-Besar-${bbAkun ? `${bbAkun}-` : ""}${bbAsOf}`);
       } else if (which === "lr") {
-        await exportExcelSheets([
-          {
-            name: "Laba Rugi",
-            rows: [
-              ["Komponen", "Kumulatif s.d. as-of", "Periode ini"],
-              ["Pendapatan", lrLive.revenue, lrLive.period.revenue],
-              ["Beban pokok", lrLive.costProj, lrLive.period.costProj],
-              ["Gaji", lrLive.salary, lrLive.period.salary],
-              ["Write-off", lrLive.writeoff, lrLive.period.writeoff],
-              ["Laba bersih", lrLive.laba, lrLive.period.laba],
-              [],
-              ["As-of", lrAsOf],
-            ],
-          },
-        ], `Laba-Rugi-${lrAsOf}`);
+        const rawSheets = buildFinancialFormatSheets({
+          asOf: lrAsOf,
+          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
+          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
+          nrNeraca,
+          lrLive,
+          kasLiveRows,
+          kasRep,
+          hutLive,
+          piuLive,
+          plMonthly,
+        });
+        const lrSheet = rawSheets.find((s) => s.name === "Laba Rugi");
+        const dashSheet = rawSheets.find((s) => s.name === "Dashboard & Grafik");
+        const rest = rawSheets.filter((s) => s.name !== "Laba Rugi" && s.name !== "Dashboard & Grafik");
+        const ordered = [
+          ...(dashSheet ? [dashSheet] : []),
+          ...(lrSheet ? [lrSheet] : []),
+          ...rest,
+        ];
+        await exportExcelSheets(ordered, `Laba-Rugi-${lrAsOf}`);
+      } else if (which === "nr") {
+        const sheets = buildFinancialFormatSheets({
+          asOf: nrAsOf,
+          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
+          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
+          nrNeraca,
+          lrLive,
+          kasLiveRows,
+          kasRep,
+          hutLive,
+          piuLive,
+          plMonthly,
+        });
+        await exportExcelSheets(sheets, `Neraca-${nrAsOf}`);
       } else {
-        const n = nrNeraca;
-        const sect = (title: string, l: Array<{ kode: string; nama: string; nilai: number }>): (string | number)[][] =>
-          [[title, "", ""], ...l.map((x) => [x.kode, x.nama, x.nilai] as (string | number)[]), ["", `Jumlah ${title}`, l.reduce((s, x) => s + x.nilai, 0)]];
-        await exportExcelSheets([
-          {
-            name: "Neraca",
-            rows: [
-              ["NERACA", "", ""],
-              ["Per tanggal", nrAsOf, ""],
-              [],
-              ["AKTIVA", "", ""],
-              ...sect("Aktiva", n.aktiva),
-              ["", "TOTAL AKTIVA", n.totalAktiva],
-              [],
-              ["PASIVA", "", ""],
-              ...sect("Kewajiban", n.kewajiban),
-              ...sect("Ekuitas", n.ekuitas),
-              ["", "Laba (rugi) berjalan", n.laba],
-              ["3-999", "Historical Balancing", n.selisih],
-              ["", "TOTAL PASIVA", n.totalPasiva],
-            ],
-          },
-          {
-            name: "Hutang",
-            rows: [
-              ["Vendor", "Sisa (Rp)", "Dokumen"],
-              ...hutLive.map((h) => [h.v, Math.round(h.total), h.count] as (string | number)[]),
-              [],
-              ["As-of", nrAsOf],
-            ],
-          },
-          {
-            name: "Piutang",
-            rows: [
-              ["Customer", "Sisa (Rp)", "Dokumen"],
-              ...piuLive.map((p) => [p.c, Math.round(p.total), p.count] as (string | number)[]),
-              [],
-              ["As-of", nrAsOf],
-            ],
-          },
-          {
-            name: "Ringkasan",
-            rows: [
-              ["Komponen", "Nilai"],
-              ["Total hutang", hutLiveTotal],
-              ["Total piutang", piuLiveTotal],
-              ["Laba kumulatif s.d. as-of", nrLabaLive],
-              ["As-of", nrAsOf],
-            ],
-          },
-        ], `Neraca-${nrAsOf}`);
+        const sheets = buildFinancialFormatSheets({
+          asOf: nrAsOf || todayISO(),
+          coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
+          manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
+          nrNeraca,
+          lrLive,
+          kasLiveRows,
+          kasRep,
+          hutLive,
+          piuLive,
+          plMonthly,
+        });
+        await exportExcelSheets(sheets, `Laporan-Keuangan-Format-Standar-${nrAsOf || todayISO()}`);
       }
       toast(S.histExported, "info");
     } catch (e) {
@@ -3134,7 +3117,23 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         title={S.pageTitle}
         subtitle={S.pageSubtitle}
         icon={<Wallet className="h-5 w-5" />}
-        actions={canWriteInvoices ? <button className="btn-primary-gradient" onClick={() => setShowInv(true)}><FileText className="h-4 w-4" /> {S.createInvoice}</button> : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary text-xs flex items-center gap-1.5"
+              onClick={() => { void exportHist("all"); }}
+              title={S.exportFullWorkbookTip}
+            >
+              <Download className="h-4 w-4" /> {S.exportFullWorkbook}
+            </button>
+            {canWriteInvoices && (
+              <button className="btn-primary-gradient" onClick={() => setShowInv(true)}>
+                <FileText className="h-4 w-4" /> {S.createInvoice}
+              </button>
+            )}
+          </div>
+        }
       />
 
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}

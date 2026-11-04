@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { closeDb } from "./db.js";
+import { closeDb, getDialect } from "./db.js";
 import { uploadsRoot } from "./routes/files.js";
 
 interface Manifest {
@@ -20,7 +20,7 @@ function argValue(name: string): string | undefined {
   return undefined;
 }
 
-function resolveSqlitePath(): string {
+export function resolveSqlitePath(): string {
   const raw = process.env.SQLITE_PATH ?? "./data/isms.db";
   return path.isAbsolute(raw) ? raw : path.resolve(process.cwd(), raw);
 }
@@ -57,46 +57,103 @@ function runMysqlRestore(mysqlUrl: string, dumpFile: string): Promise<void> {
   });
 }
 
-async function main(): Promise<void> {
-  // Accept `--from <dir>` or a bare positional `<dir>` (npm may strip
-  // unknown flags when invoked as `npm run restore -- --from <dir>`).
-  const positional = process.argv.slice(2).find((a) => !a.startsWith("-") && !a.endsWith(".ts") && !a.endsWith(".js"));
-  const fromRaw = argValue("--from") ?? argValue("--dir") ?? argValue("--in") ?? positional;
-  if (!fromRaw) {
-    throw new Error("Usage: npm run restore -- --from ./backups/<timestamp>");
-  }
+export interface RestoreResult {
+  fromDir: string;
+  dialect: string;
+  dbFile: string;
+  tablesCount: number;
+  uploadsRestored: boolean;
+  restoredAt: string;
+}
+
+/**
+ * Memulihkan database dari folder cadangan (memuat manifest.json dan file database).
+ */
+export async function restoreFromBackup(fromRaw: string): Promise<RestoreResult> {
   const fromDir = path.isAbsolute(fromRaw) ? fromRaw : path.resolve(process.cwd(), fromRaw);
   const manifestPath = path.join(fromDir, "manifest.json");
-  if (!fs.existsSync(manifestPath)) throw new Error(`manifest.json not found in ${fromDir}`);
+  if (!fs.existsSync(manifestPath)) throw new Error(`manifest.json tidak ditemukan di ${fromDir}`);
+
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Manifest;
   const dialect = (manifest.dialect ?? (process.env.DB_DIALECT ?? "sqlite").toLowerCase()) as "sqlite" | "mysql";
   const dbFile = manifest.dbFile ?? (dialect === "mysql" ? "dump.sql" : "isms.db");
   const srcDb = path.join(fromDir, dbFile);
-  if (!fs.existsSync(srcDb)) throw new Error(`DB artifact not found: ${srcDb}`);
+  if (!fs.existsSync(srcDb)) throw new Error(`File basis data tidak ditemukan: ${srcDb}`);
 
+  // Tutup koneksi basis data yang sedang aktif sebelum mengganti file
+  await closeDb();
+
+  let uploadsRestored = false;
   if (dialect === "sqlite") {
     const dest = resolveSqlitePath();
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(srcDb, dest);
+
     const srcUploads = path.join(fromDir, "uploads");
     if (fs.existsSync(srcUploads)) {
       const destUploads = uploadsRoot();
       fs.rmSync(destUploads, { recursive: true, force: true });
       fs.cpSync(srcUploads, destUploads, { recursive: true });
+      uploadsRestored = true;
     }
     console.log(`[restore] sqlite ← ${fromDir} (db → ${dest})`);
   } else {
     const mysqlUrl = process.env.MYSQL_URL;
     if (!mysqlUrl) throw new Error("MYSQL_URL is required when DB_DIALECT=mysql");
     await runMysqlRestore(mysqlUrl, srcDb);
+
     const srcUploads = path.join(fromDir, "uploads");
     if (fs.existsSync(srcUploads)) {
       const destUploads = uploadsRoot();
       fs.rmSync(destUploads, { recursive: true, force: true });
       fs.cpSync(srcUploads, destUploads, { recursive: true });
+      uploadsRestored = true;
     }
     console.log(`[restore] mysql ← ${fromDir} (dump piped via mysql client)`);
   }
+
+  return {
+    fromDir,
+    dialect,
+    dbFile,
+    tablesCount: manifest.tablesCount ?? 0,
+    uploadsRestored,
+    restoredAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Memulihkan database SQLite dari buffer file yang diunggah.
+ */
+export async function restoreFromSqliteBuffer(buffer: Buffer): Promise<{ restoredAt: string; sizeBytes: number }> {
+  if (getDialect() !== "sqlite") {
+    throw new Error("Restore dari file SQLite langsung hanya didukung pada mode DB_DIALECT=sqlite");
+  }
+  // Validasi SQLite header (16 bytes: "SQLite format 3\000")
+  const magic = buffer.subarray(0, 16).toString("utf8");
+  if (!magic.startsWith("SQLite format 3")) {
+    throw new Error("Berkas yang diunggah bukan basis data SQLite yang valid.");
+  }
+
+  await closeDb();
+  const dest = resolveSqlitePath();
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, buffer);
+
+  console.log(`[restore] sqlite overwritten from uploaded buffer (${buffer.length} bytes)`);
+  return {
+    restoredAt: new Date().toISOString(),
+    sizeBytes: buffer.length,
+  };
+}
+
+async function main(): Promise<void> {
+  const positional = process.argv.slice(2).find((a) => !a.startsWith("-") && !a.endsWith(".ts") && !a.endsWith(".js"));
+  const fromRaw = argValue("--from") ?? argValue("--dir") ?? argValue("--in") ?? positional;
+  if (!fromRaw) {
+    throw new Error("Usage: npm run restore -- --from ./backups/<timestamp>");
+  }
+  await restoreFromBackup(fromRaw);
 }
 
 const entry = process.argv[1] ?? "";

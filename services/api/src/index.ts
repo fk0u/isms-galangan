@@ -4,6 +4,7 @@ import { migrate } from "./migrate.js";
 import { exec, q } from "./db.js";
 import { seedUsers } from "./auth.js";
 import { initFonts, fontFilesAvailable } from "./pdf/font.js";
+import { initBackupScheduler } from "./backupScheduler.js";
 
 async function main(): Promise<void> {
   const env = loadEnv();
@@ -21,6 +22,8 @@ async function main(): Promise<void> {
       "Karakter di luar WinAnsi (mis. huruf Mandarin) akan tercetak sebagai kotak.",
     );
   }
+  // Inisialisasi auto-backup terjadwal tiap jam 12 malam (00:00) dengan retensi 2 DB terbaru
+  initBackupScheduler();
   const app = buildApp();
   await app.listen({ port: env.port, host: "0.0.0.0" });
 }

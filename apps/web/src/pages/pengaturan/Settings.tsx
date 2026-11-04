@@ -1,5 +1,6 @@
 import KopCard from "./KopCard";
-import { useEffect, useState } from "react";
+import DatabaseAdminCard from "./DatabaseAdminCard";
+import { useEffect, useState, useMemo } from "react";
 import { Settings as SettingsIcon, Loader2 } from "lucide-react";
 import { Card, PageHeader, Field, Tabs, toast, NumInput, useBusy } from "../../components/ui";
 import { useStore } from "../../data/store";
@@ -79,7 +80,12 @@ export default function Settings() {
     if (k.startsWith("PPN") || k.startsWith("PPH") || k.startsWith("TAX") || k.startsWith("HARGA") || k.startsWith("RATE")) return "Pajak & Angka";
     return "Umum";
   };
-  const TABS = ["Umum", "Gudang & Kapasitas", "Pajak & Angka", "Lanjutan"] as const;
+  const isSuperadmin = canWrite || user?.role === "direktur" || user?.role === "developer";
+  const tabsList = useMemo(() => {
+    return isSuperadmin
+      ? ["Umum", "Gudang & Kapasitas", "Pajak & Angka", "Lanjutan", S.tabDatabase]
+      : ["Umum", "Gudang & Kapasitas", "Pajak & Angka", "Lanjutan"];
+  }, [isSuperadmin, S.tabDatabase]);
   const rowsFor = (t: string) => (data.settings ?? []).filter((s) => tabFor(String(s.key ?? "")) === t);
 
   // Timer jujur: endpoint one-shot tanpa progress event, jadi tampilkan
@@ -230,9 +236,13 @@ export default function Settings() {
         <h2 className="text-base font-bold text-navy-900">{S.bizConsts}</h2>
         <p className="text-xs text-steel-500">{S.bizConstsSub}</p>
       </div>
-      <KopCard canWrite={canWrite} />
-      <Tabs tabs={[...TABS]} active={tab} onChange={setTab} />
-      {(() => {
+      {tab !== S.tabDatabase && <KopCard canWrite={canWrite} />}
+      <Tabs tabs={tabsList} active={tab} onChange={setTab} />
+      {tab === S.tabDatabase ? (
+        <div className="mt-4">
+          <DatabaseAdminCard canWrite={canWrite} />
+        </div>
+      ) : (() => {
         const rows = rowsFor(tab);
         const isLanjutan = tab === "Lanjutan";
         const normal = rows.filter((s) => !String(s.key ?? "").startsWith("WHATIF_"));

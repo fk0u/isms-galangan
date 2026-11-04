@@ -1,0 +1,11 @@
+meta {
+  name: GET admin export csv
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/admin/export/csv
+  body: none
+  auth: inherit
+}

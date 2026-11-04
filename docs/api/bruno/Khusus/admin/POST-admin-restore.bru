@@ -1,0 +1,15 @@
+meta {
+  name: POST admin restore
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/admin/restore
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

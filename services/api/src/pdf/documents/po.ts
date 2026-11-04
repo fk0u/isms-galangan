@@ -138,7 +138,7 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
     keyValue({
       labelW: 35,
       pairs: [
-        { label: L(locale, "Vendor", "Vendor"), value: input.vendorName, bold: true },
+        { label: L(locale, "Supplier", "Supplier"), value: input.vendorName, bold: true },
         { label: "NPWP", value: input.vendorNPWP ?? "-" },
         { label: L(locale, "Alamat", "Address"), value: input.vendorAddress ?? "-" },
       ],
@@ -240,9 +240,10 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
   );
 
   d.add(spacer(4));
-  const finalSigners = input.signers.length === 1 && input.poType !== "Kecil"
-    ? [{ role: "", name: "" }, { role: input.signers[0].role, name: input.signers[0].name, rows: 5 }]
-    : input.signers.map((s) => ({ role: s.role, name: s.name, rows: 5 }));
+  const nonSupplierSigners = input.signers.filter((s) => !/supplier|vendor/i.test(s.role));
+  const finalSigners = nonSupplierSigners.length === 1 && input.poType !== "Kecil"
+    ? [{ role: "", name: "" }, { role: nonSupplierSigners[0].role, name: nonSupplierSigners[0].name, rows: 5 }]
+    : nonSupplierSigners.map((s) => ({ role: s.role, name: s.name, rows: 5 }));
   d.add(signatures(finalSigners));
 
   return d;
