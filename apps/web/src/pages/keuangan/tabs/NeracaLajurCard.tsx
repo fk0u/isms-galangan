@@ -5,7 +5,6 @@
 import { useMemo } from "react";
 import { Card, CardHeader } from "../../../components/ui";
 import type { StoreItem } from "../../../data/store";
-import { exportExcelSheets, styledRow } from "../../../utils/export";
 import { fmtRupiah } from "../../../utils/format";
 import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
@@ -44,7 +43,7 @@ export function buildLajur(journals: StoreItem[], coa: StoreItem[], inPeriod: (d
 
 const COLS = ["awal", "mutasi", "adj", "ns", "lr", "nr"] as const;
 
-export default function NeracaLajurCard({ journals, coa, inPeriod, asOf, onExport }: { journals: StoreItem[]; coa: StoreItem[]; inPeriod: (d: string) => boolean; asOf: string; onExport?: () => void }) {
+export default function NeracaLajurCard({ journals, coa, inPeriod, asOf, periodLabel, onExport }: { journals: StoreItem[]; coa: StoreItem[]; inPeriod: (d: string) => boolean; asOf: string; periodLabel?: string; onExport: () => void }) {
   const { locale } = useT();
   const S = n_fin[locale];
   const rows = useMemo(() => buildLajur(journals, coa, inPeriod, asOf), [journals, coa, inPeriod, asOf]);
@@ -54,30 +53,19 @@ export default function NeracaLajurCard({ journals, coa, inPeriod, asOf, onExpor
   const laba = tot[4][1] - tot[4][0];
   const cell = (v: number) => (v ? fmtRupiah(v) : "-");
 
-  const exportXls = () => exportExcelSheets([{
-    name: "Neraca Lajur",
-    header: { company: "PT Syukur Bersaudara", title: "Neraca Lajur", period: `Per ${asOf}` },
-    rows: [
-      styledRow("head", ["Kode", "Akun", ...head.flatMap((h) => [`${h} Debit`, `${h} Kredit`])]),
-      ...rows.map((r) => [r.kode, r.nama, ...COLS.flatMap((c) => r[c])]),
-      styledRow("total", ["", "Jumlah", ...tot.flat()]),
-      styledRow("total", ["", laba >= 0 ? "Laba bersih" : "Rugi bersih", 0, 0, 0, 0, 0, 0, 0, 0, laba >= 0 ? laba : 0, laba < 0 ? -laba : 0, laba < 0 ? -laba : 0, laba >= 0 ? laba : 0]),
-      styledRow("note", ["As-of", asOf]),
-    ],
-  }], `Neraca-Lajur-${asOf}`);
-
   return (
     <Card className="p-4">
-      <CardHeader title={S.nlTitle} subtitle={S.nlSub.replace("{d}", asOf)} action={<button className="btn-secondary text-xs" onClick={() => { if (onExport) onExport(); else void exportXls(); }}>{S.histExport}</button>} />
+      <CardHeader title={S.nlTitle} subtitle={S.nlSub.replace("{d}", asOf)} action={<button className="btn-secondary text-xs" onClick={onExport}>{S.histExport}</button>} />
+      {periodLabel && <p className="mb-2 text-xs text-steel-500"><span className="font-semibold">{S.histLabel}</span> {periodLabel}</p>}
       <div className="max-h-[28rem] overflow-auto">
-        <table className="w-full text-xs">
+        <table className="w-full min-w-[116rem] table-fixed text-xs">
           <thead className="bg-surface sticky top-0 z-10">
             <tr>
-              <th className="th" rowSpan={2}>{S.colKode}</th>
-              <th className="th" rowSpan={2}>{S.colNamaAkun}</th>
+              <th className="th w-20" rowSpan={2}>{S.colKode}</th>
+              <th className="th w-56" rowSpan={2}>{S.colNamaAkun}</th>
               {head.map((h) => <th key={h} className="th text-center" colSpan={2}>{h}</th>)}
             </tr>
-            <tr>{head.flatMap((h) => [<th key={`${h}d`} className="th">D</th>, <th key={`${h}k`} className="th">K</th>])}</tr>
+            <tr>{head.flatMap((h) => [<th key={`${h}d`} className="th text-right">D</th>, <th key={`${h}k`} className="th text-right">K</th>])}</tr>
           </thead>
           <tbody className="divide-y divide-steel-100">
             {rows.map((r) => (
