@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cursorOf, parseCursor } from "../routes/crudCursor.js";
 import { dockFitIssue } from "../dockFit.js";
 import { negativeStockError } from "../domainGuards.js";
+import { buildRemap } from "../reseedMaterials.js";
 import { hasMagic, scanContent } from "../routes/files.js";
 
 describe("cursor pagination", () => {
@@ -46,5 +47,16 @@ describe("unggah PDF sertifikat (#98)", () => {
   });
   it("berkas bukan PDF berekstensi .pdf → ditolak", () => {
     expect(hasMagic(Buffer.from("MZ bukan pdf"), ".pdf")).toBe(false);
+  });
+});
+
+describe("buildRemap (#320)", () => {
+  it("memetakan id lama ke id baru lewat nama & melaporkan yatim", () => {
+    const { remap, orphans } = buildRemap(
+      [{ id: "WH-1", name: " remes  paking 3/4 " }, { id: "WH-2", name: "TIDAK ADA" }, { id: "STK-1", name: "A" }],
+      [{ id: "STK-1", name: "A" }, { id: "STK-9", name: "REMES PAKING 3/4" }, { id: "STK-10", name: "REMES PAKING 3/4" }],
+    );
+    expect(remap.get("WH-1")).toBe("STK-9");
+    expect(orphans).toEqual(["WH-2"]);
   });
 });
