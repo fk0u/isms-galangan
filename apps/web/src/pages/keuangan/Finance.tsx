@@ -50,6 +50,7 @@ import { useBusy } from "../../components/ui";
 import { n_fin } from "../../i18n/n_fin";
 import PayrollTab from "./tabs/PayrollTab";
 import RabTab from "./tabs/RabTab";
+import ExportScopeModal, { scopeToHist, type ExportScope } from "./tabs/ExportScopeModal";
 import TutupBukuCard from "./tabs/TutupBukuCard";
 import NeracaLajurCard from "./tabs/NeracaLajurCard";
 import { useT } from "../../i18n/LanguageContext";
@@ -91,6 +92,7 @@ import { CoaTab } from "./tabs/CoaTab";
    matchHist() dipakai semua tabel bertanggal; tabel Excel statis diberi badge pembanding.
    SALDO memakai helper as-of (kasAsOfReport / plMonthly s.d. tanggal), bukan
    matchHist - lihat catatan di kasAsOfReport. */
+export type ExportKind = "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl";
 export type HistMode = "Semua" | "Hari" | "Bulan" | "Tahun" | "Rentang";
 export interface HistFilter { mode: HistMode; hari: string; bulan: string; tahun: string; dari: string; sampai: string }
 export const emptyHist = (): HistFilter => ({ mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" });
@@ -1350,6 +1352,45 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manJournals, kasHist, coaRows]);
 
+  /* #315: tombol ekspor membuka modal cakupan; pilihan dipetakan ke filter
+     periode tab terkait, lalu ekspor jalan setelah filter itu benar-benar
+     terpasang (state/URL bisa terlambat satu render). */
+  const exportTarget = (which: ExportKind): { value: HistFilter; set: (f: HistFilter) => void } | null => {
+    switch (which) {
+      case "kas": return { value: kasHist, set: setKasHist };
+      case "bb": return { value: bbHist, set: setBbHist };
+      case "lr": return { value: lrHist, set: setLrHist };
+      case "nr": case "nl": case "all": return { value: nrHist, set: setNrHist };
+      case "hutang": return { value: apHist, set: setApHist };
+      case "piutang": return { value: invHist, set: setInvHist };
+      case "jurnal": return { value: juHist, set: setJuHist };
+      default: return null;
+    }
+  };
+  const [exportAsk, setExportAsk] = useState<ExportKind | null>(null);
+  const [exportPending, setExportPending] = useState<{ which: ExportKind; hist: HistFilter } | null>(null);
+  const requestExport = (which: ExportKind): void => {
+    if (exportTarget(which)) setExportAsk(which); else void exportHist(which);
+  };
+  const confirmExport = (scope: ExportScope): void => {
+    const which = exportAsk;
+    setExportAsk(null);
+    const t = which ? exportTarget(which) : null;
+    if (!which || !t) return;
+    const hist = scopeToHist(scope);
+    t.set(hist);
+    setExportPending({ which, hist });
+  };
+  useEffect(() => {
+    if (!exportPending) return;
+    const t = exportTarget(exportPending.which);
+    if (t && histToParam(t.value) !== histToParam(exportPending.hist)) return;
+    const w = exportPending.which;
+    setExportPending(null);
+    void exportHist(w);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportPending, kasHist, bbHist, lrHist, nrHist, apHist, invHist, juHist]);
+
   /* === EXPORT LAPORAN KEUANGAN (PER TAB MAUPUN WORKBOOK KESELURUHAN) ===
    *
    * Kak Nanda CTO: "ekspor laba rugi jangan langsung seluruh workbook,
@@ -1357,9 +1398,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
    * 'Ekspor seluruh laporan keuangan'".
    * Format Excel mengikuti template standar: kop PT Syukur Bersaudara,
    * border tipis pada semua cell data, dan showGridLines. */
-  const exportHist = async (
-    which: "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl"
-  ): Promise<void> => {
+  const exportHist = async (which: ExportKind): Promise<void> => {
     try {
       const apAsOf = asOfOrToday(apHist);
       const arAsOf = asOfOrToday(invHist);
@@ -3063,7 +3102,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <button
               type="button"
               className="btn-secondary text-xs flex items-center gap-1.5"
-              onClick={() => { void exportHist("all"); }}
+              onClick={() => { requestExport("all"); }}
               title={S.exportFullWorkbookTip}
             >
               <Download className="h-4 w-4" /> {S.exportFullWorkbook}
@@ -3120,7 +3159,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 setShowCoa(true);
               }}
               onDelete={(c) => setDelCoa(c)}
-              onExport={() => { void exportHist("akun"); }}
+              onExport={() => { requestExport("akun"); }}
             />
           )}
 
@@ -3134,7 +3173,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("piutang"); }}
+                      onClick={() => { requestExport("piutang"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -3344,7 +3383,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("hutang"); }}
+                      onClick={() => { requestExport("hutang"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -3510,7 +3549,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.kasTitle}
                 subtitle={S.kasSub}
-                action={<><button className="btn-secondary text-xs" onClick={() => { void exportHist("kas"); }} title={S.histExported}>{S.histExport}</button>{canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button>}</>}
+                action={<><button className="btn-secondary text-xs" onClick={() => { requestExport("kas"); }} title={S.histExported}>{S.histExport}</button>{canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button>}</>}
               />
               <HistFilterBar value={kasHist} onChange={setKasHist} idPrefix="kas" />
               <div className="mb-2 flex justify-end">
@@ -3945,7 +3984,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.bbTitle}
                 subtitle={S.bbSub}
-                action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("bb"); }} title={S.histExported}>{S.histExport}</button>}
+                action={<button className="btn-secondary text-xs" onClick={() => { requestExport("bb"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={bbHist} onChange={setBbHist} idPrefix="bb" />
               {/* Ringkasan buku besar (K17-FIN-06): total debit, total kredit, dan status
@@ -4132,7 +4171,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.lrTitle}
                 subtitle={S.lrSub}
-                action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("lr"); }} title={S.histExported}>{S.histExport}</button>}
+                action={<button className="btn-secondary text-xs" onClick={() => { requestExport("lr"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={lrHist} onChange={setLrHist} idPrefix="lr" />
               {/* Grafik detail laba rugi (K17-FIN-07): tren bulanan + komposisi periode
@@ -4505,10 +4544,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           {tab === "Neraca" ? (() => {
             return (
             <div className="space-y-4">
-              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", Math.round(nrNeraca.totalAktiva).toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
+              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", Math.round(nrNeraca.totalAktiva).toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { requestExport("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
-              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} onExport={() => { void exportHist("nl"); }} />
+              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} onExport={() => { requestExport("nl"); }} />
               <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
                 {nrNeraca.selisih === 0 && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                 <span>{nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}</span>
@@ -4887,7 +4926,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("jurnal"); }}
+                      onClick={() => { requestExport("jurnal"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -5244,6 +5283,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       {/* Hapus invoice: hanya Draft / Ditolak. Invoice yang sudah terbit harus
           di-void atau dilunasi - menghapusnya menghapus piutang yang sudah
           diakui. Backend juga memblokir bila payables.invoice merujuk. */}
+      <ExportScopeModal
+        open={exportAsk !== null}
+        current={(exportAsk ? exportTarget(exportAsk)?.value : undefined) ?? nrHist}
+        onClose={() => setExportAsk(null)}
+        onConfirm={confirmExport}
+      />
       <ConfirmModal
         open={confirmLapor}
         title={locale === "en"
