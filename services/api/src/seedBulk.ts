@@ -159,7 +159,10 @@ async function main(): Promise<void> {
   let priced = 0;
   let fallbackPriced = 0;
   const usedInvIds = new Set<string>();
-  for (const b of kode.barang) {
+  /* #320: inventori resmi = 562 item Excel gudang (npm run seed:materials).
+     Katalog lama 4.784 "Warehouse 2024" hanya diisi bila SEED_LEGACY_WAREHOUSE=1. */
+  const legacyWarehouse = process.env.SEED_LEGACY_WAREHOUSE === "1" ? kode.barang : [];
+  for (const b of legacyWarehouse) {
     const st = stockMap.get(b.kode);
     let invId = `WH-${b.kode}`;
     if (usedInvIds.has(invId)) {

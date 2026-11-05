@@ -1,0 +1,15 @@
+meta {
+  name: POST closing backfill
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/closing/backfill
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {}
+}

@@ -26,10 +26,14 @@ const RP_FORMAT = '"Rp" #,##0;[Red]-"Rp" #,##0';
 const MONEY_HEAD = /rp|nilai|harga|total|gaji|pokok|tunjangan|lembur|pph|ppn|bpjs|potongan|kasbon|net|nominal|saldo|debit|kredit|bruto|dpp|biaya|hutang|piutang|amount|beban|bayar|upah|sisa|pendapatan|laba|jasa|material|retensi|denda|diskon|anggaran|rab|aset|susut|thr|bonus|pesangon|price|cost|value|salary/i;
 const NOT_MONEY_HEAD = /qty|kuantitas|hari|jam|%|persen|kode|\bno\b|baris|jumlah item|count|dokumen|masa|tahun|bulan|umur|stok/i;
 
+const STRONG_MONEY_HEAD = /saldo|mutasi|^akhir/i;
+
 export function moneyColumns(header: unknown[] | undefined): Array<boolean | null> {
   return (header ?? []).map((h) => {
     const t = typeof h === "string" ? h : "";
     if (!t) return null;
+    /* #317: "SALDO AWAL BULAN"/"AKHIR BULAN" memuat kata "bulan" tapi tetap nominal. */
+    if (STRONG_MONEY_HEAD.test(t)) return true;
     if (NOT_MONEY_HEAD.test(t)) return false;
     return MONEY_HEAD.test(t) ? true : null;
   });
@@ -129,17 +133,12 @@ function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | nu
   }
 }
 
-const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 /** Baris kop laporan; dibentang selebar tabel supaya judul tepat di tengah. */
-function headerRows(h: NonNullable<ExcelSheet["header"]>, span: number, now = new Date()): SheetData {
-  const jam = `${String(now.getHours()).padStart(2, "0")}.${String(now.getMinutes()).padStart(2, "0")}`;
-  const tgl = `${now.getDate()} ${BULAN[now.getMonth()]}, ${now.getFullYear()}`;
+function headerRows(h: NonNullable<ExcelSheet["header"]>, span: number): SheetData {
   const mid = (value: string, style: { fontSize: number; textColor: string }) =>
     [{ value: sanitizeCell(value), fontWeight: "bold" as const, align: "center" as const, columnSpan: span, ...style }, ...Array<null>(span - 1).fill(null)];
   return [
-    [{ value: jam, textColor: TEMA.muted, fontSize: 9 }, { value: tgl, textColor: TEMA.muted, fontSize: 9 }],
-    [null],
     mid(h.company, { fontSize: 14, textColor: TEMA.ink }),
     mid(h.title, { fontSize: 24, textColor: TEMA.brand }),
     mid(h.period, { fontSize: 12, textColor: TEMA.brandDark }),

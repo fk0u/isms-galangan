@@ -50,6 +50,7 @@ import { useBusy } from "../../components/ui";
 import { n_fin } from "../../i18n/n_fin";
 import PayrollTab from "./tabs/PayrollTab";
 import RabTab from "./tabs/RabTab";
+import ExportScopeModal, { scopeToHist, type ExportScope } from "./tabs/ExportScopeModal";
 import TutupBukuCard from "./tabs/TutupBukuCard";
 import NeracaLajurCard from "./tabs/NeracaLajurCard";
 import { useT } from "../../i18n/LanguageContext";
@@ -65,7 +66,7 @@ import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets, styledRow } from "../../utils/export";
-import { buildFinancialFormatSheets, fmtPeriodeLaporan } from "../../data/financialWorkbookBuilder";
+import { buildFinancialFormatSheets, fmtPeriodeLaporan, periodStartOf } from "../../data/financialWorkbookBuilder";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
@@ -91,6 +92,7 @@ import { CoaTab } from "./tabs/CoaTab";
    matchHist() dipakai semua tabel bertanggal; tabel Excel statis diberi badge pembanding.
    SALDO memakai helper as-of (kasAsOfReport / plMonthly s.d. tanggal), bukan
    matchHist - lihat catatan di kasAsOfReport. */
+export type ExportKind = "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl";
 export type HistMode = "Semua" | "Hari" | "Bulan" | "Tahun" | "Rentang";
 export interface HistFilter { mode: HistMode; hari: string; bulan: string; tahun: string; dari: string; sampai: string }
 export const emptyHist = (): HistFilter => ({ mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" });
@@ -456,21 +458,18 @@ function akhirBulan(ym: string): string {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return `${ym}-${String(last).padStart(2, "0")}`;
 }
-export function liveAsOf(f: HistFilter, lastDate = ""): string {
+/* Mode "Semua" = sampai HARI INI (permintaan klien 5 Nov). Versi lama memakai
+   tanggal transaksi/jatuh tempo terbesar, sehingga jurnal tutup tahun
+   (31 Des) atau tagihan jatuh tempo ke depan menggeser as-of ke masa depan. */
+export function liveAsOf(f: HistFilter): string {
   if (f.mode === "Hari" && /^\d{4}-\d{2}-\d{2}$/.test(f.hari)) return f.hari;
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return akhirBulan(f.bulan);
   if (f.mode === "Tahun" && /^\d{4}$/.test(f.tahun)) return `${f.tahun}-12-31`;
   if (f.mode === "Rentang" && rentangValid(f)) return f.sampai;
-  /* Mode "Semua": memakai transaksi terakhir yang benar-benar ada. Damanya
-     konstanta "2026-08-31" yang tadinya ditulis di sini: data yang masuk
-     setelah Agustus 2026 tidak pernah ikut terhitung dan tidak ada yang
-     memberi tahu - angkanya terlihat masuk akal, hanya bukan yang sebenarnya. */
-  const s = String(lastDate ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  return todayISO();
 }
-/* As-of kosong (data belum ada) berarti "sampai hari ini". */
-export function asOfOrToday(f: HistFilter, lastDate = ""): string {
-  return liveAsOf(f, lastDate) || todayISO();
+export function asOfOrToday(f: HistFilter): string {
+  return liveAsOf(f);
 }
 /* Saldo Kas/Bank AS-OF tanggal D plus mutasi periode filter, dalam satu
    lintasan.
@@ -1306,39 +1305,11 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [astEdit, setAstEdit] = useState<StoreItem | null>(null);
 
   const KAS_REKENING = coaRows.filter((c) => /^(1-11|1-12)/.test(String(c.kode)) && String(c.dk) !== "-");
-  /* Tanggal transaksi terakhir di SELURUH dokumen pembukuan. Dipakai sebagai
-     as-of mode "Semua": kalau tidak, "Semua" berarti "Agustus 2026" karena
-     konstanta, dan setiap transaksi setelahnya tidak pernah masuk hitungan
-     tanpa ada yang memberi tahu. */
-  const lastTxDate = useMemo(() => {
-    let max = "";
-    for (const j of data.journals ?? []) {
-      const d = String(j.date ?? "").slice(0, 10);
-      if (d > max) max = d;
-    }
-    for (const i of data.invoices ?? []) {
-      for (const k of ["date", "due", "paidAt"]) {
-        const d = String(i[k] ?? "").slice(0, 10);
-        if (d > max) max = d;
-      }
-    }
-    for (const a of data.payables ?? []) {
-      for (const k of ["date", "due", "paidAt"]) {
-        const d = String(a[k] ?? "").slice(0, 10);
-        if (d > max) max = d;
-      }
-    }
-    for (const p of data.payroll ?? []) {
-      const d = String(p.paidAt ?? p.period ?? "").slice(0, 10);
-      if (d > max) max = d;
-    }
-    return max;
-  }, [data.journals, data.invoices, data.payables, data.payroll]);
   /* Kas & Bank LIVE: SALDO kumulatif s.d. tanggal filter, mutasi per rekening
      hanya untuk periode filter. Versi lama menjumlahkan jurnal yang ada DI
      DALAM window, jadi saldo awal hilang dan angka per bulan sebelum
      Agu-2026 bukan saldo - saldo awal Excel hanya diisi saat isSnapMonth. */
-  const kasAsOf = asOfOrToday(kasHist, lastTxDate);
+  const kasAsOf = asOfOrToday(kasHist);
   const kasSnap = kasAsOf.slice(0, 7) === LATEST_SNAPSHOT;
   const kasRows = useMemo(
     () => KASBANK_EXCEL.filter((r) => (r.periode ?? LATEST_SNAPSHOT) === LATEST_SNAPSHOT),
@@ -1381,6 +1352,45 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manJournals, kasHist, coaRows]);
 
+  /* #315: tombol ekspor membuka modal cakupan; pilihan dipetakan ke filter
+     periode tab terkait, lalu ekspor jalan setelah filter itu benar-benar
+     terpasang (state/URL bisa terlambat satu render). */
+  const exportTarget = (which: ExportKind): { value: HistFilter; set: (f: HistFilter) => void } | null => {
+    switch (which) {
+      case "kas": return { value: kasHist, set: setKasHist };
+      case "bb": return { value: bbHist, set: setBbHist };
+      case "lr": return { value: lrHist, set: setLrHist };
+      case "nr": case "nl": case "all": return { value: nrHist, set: setNrHist };
+      case "hutang": return { value: apHist, set: setApHist };
+      case "piutang": return { value: invHist, set: setInvHist };
+      case "jurnal": return { value: juHist, set: setJuHist };
+      default: return null;
+    }
+  };
+  const [exportAsk, setExportAsk] = useState<ExportKind | null>(null);
+  const [exportPending, setExportPending] = useState<{ which: ExportKind; hist: HistFilter } | null>(null);
+  const requestExport = (which: ExportKind): void => {
+    if (exportTarget(which)) setExportAsk(which); else void exportHist(which);
+  };
+  const confirmExport = (scope: ExportScope): void => {
+    const which = exportAsk;
+    setExportAsk(null);
+    const t = which ? exportTarget(which) : null;
+    if (!which || !t) return;
+    const hist = scopeToHist(scope);
+    t.set(hist);
+    setExportPending({ which, hist });
+  };
+  useEffect(() => {
+    if (!exportPending) return;
+    const t = exportTarget(exportPending.which);
+    if (t && histToParam(t.value) !== histToParam(exportPending.hist)) return;
+    const w = exportPending.which;
+    setExportPending(null);
+    void exportHist(w);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exportPending, kasHist, bbHist, lrHist, nrHist, apHist, invHist, juHist]);
+
   /* === EXPORT LAPORAN KEUANGAN (PER TAB MAUPUN WORKBOOK KESELURUHAN) ===
    *
    * Kak Nanda CTO: "ekspor laba rugi jangan langsung seluruh workbook,
@@ -1388,17 +1398,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
    * 'Ekspor seluruh laporan keuangan'".
    * Format Excel mengikuti template standar: kop PT Syukur Bersaudara,
    * border tipis pada semua cell data, dan showGridLines. */
-  const exportHist = async (
-    which: "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl"
-  ): Promise<void> => {
+  const exportHist = async (which: ExportKind): Promise<void> => {
     try {
-      const apAsOf = asOfOrToday(apHist, lastTxDate);
-      const arAsOf = asOfOrToday(invHist, lastTxDate);
-      const juAsOf = asOfOrToday(juHist, lastTxDate);
+      const apAsOf = asOfOrToday(apHist);
+      const arAsOf = asOfOrToday(invHist);
+      const juAsOf = asOfOrToday(juHist);
 
-      const makeSheets = (asOfDate: string, periodStr: string) =>
+      const makeSheets = (asOfDate: string, periodStr: string, periodStart = "") =>
         buildFinancialFormatSheets({
           asOf: asOfDate,
+          periodStart,
           periodLabel: periodStr,
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
@@ -1412,7 +1421,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         });
 
       if (which === "kas") {
-        const sheets = makeSheets(kasAsOf, fmtPeriodeLaporan(kasHist, kasAsOf));
+        const sheets = makeSheets(kasAsOf, fmtPeriodeLaporan(kasHist, kasAsOf), periodStartOf(kasHist));
         const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
         await exportExcelSheets(target, `Kas-Bank-${kasAsOf}`);
       } else if (which === "bb") {
@@ -1455,7 +1464,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         const target = sheets.filter((s) => s.name === "Piutang");
         await exportExcelSheets(target, `Piutang-${arAsOf}`);
       } else if (which === "jurnal") {
-        const sheets = makeSheets(juAsOf, fmtPeriodeLaporan(juHist, juAsOf));
+        const sheets = makeSheets(juAsOf, fmtPeriodeLaporan(juHist, juAsOf), periodStartOf(juHist));
         const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
         await exportExcelSheets(target, `Jurnal-JU-Kas-Bank-${juAsOf}`);
       } else if (which === "akun") {
@@ -1463,7 +1472,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         const target = sheets.filter((s) => s.name === "Akun");
         await exportExcelSheets(target, `Daftar-Akun-COA-${todayISO()}`);
       } else {
-        const sheets = makeSheets(nrAsOf || todayISO(), fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()));
+        const sheets = makeSheets(nrAsOf || todayISO(), fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()), periodStartOf(nrHist));
         await exportExcelSheets(sheets, `Laporan-Keuangan-Format-Standar-${nrAsOf || todayISO()}`);
       }
       toast(S.histExported, "info");
@@ -2466,7 +2475,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
      dibukukan sampai tanggal itu. Neraca memakai angka yang sama, jadi
      kedua laporan saling bertentangan. */
   const lrLive = useMemo(() => {
-    const asOf = asOfOrToday(lrHist, lastTxDate);
+    const asOf = asOfOrToday(lrHist);
     const upto = asOf.slice(0, 7);
     const inPeriod = plMonthly.filter((p) => matchHistPeriod(p.period, lrHist));
     const uptoRows = plMonthly.filter((p) => p.period <= upto);
@@ -2484,10 +2493,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
    * ANGKA YANG SAMA. Kalau masing-masing menghitung sendiri, keduanya bisa
    * menyimpang tanpa ketahuan - dan angka yang diekspor seharusnya identik
    * dengan yang di layar. */
-  const lrAsOf = asOfOrToday(lrHist, lastTxDate);
+  const lrAsOf = asOfOrToday(lrHist);
   const lrSnap = isSnapMonth(lrAsOf.slice(0, 7));
 
-  const bbAsOf = asOfOrToday(bbHist, lastTxDate);
+  const bbAsOf = asOfOrToday(bbHist);
   const bbSnap = isSnapMonth(bbAsOf.slice(0, 7));
   /* Debit/kredit kumulatif s.d. bbAsOf - saldo buku besar harus mengandung
      transaksi SEJAK AWAL, bukan hanya periode yang difilter. Yang
@@ -2536,7 +2545,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const bbDAll = bbLive.reduce((s, r) => s + r.dAll, 0);
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
-  const nrAsOf = asOfOrToday(nrHist, lastTxDate);
+  const nrAsOf = asOfOrToday(nrHist);
   const nrSnap = isSnapMonth(nrAsOf.slice(0, 7));
   const hutLive = apOutAsOf(payables, nrAsOf);
   const piuLive = arOutAsOf(invoices, nrAsOf);
@@ -3093,7 +3102,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <button
               type="button"
               className="btn-secondary text-xs flex items-center gap-1.5"
-              onClick={() => { void exportHist("all"); }}
+              onClick={() => { requestExport("all"); }}
               title={S.exportFullWorkbookTip}
             >
               <Download className="h-4 w-4" /> {S.exportFullWorkbook}
@@ -3150,7 +3159,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 setShowCoa(true);
               }}
               onDelete={(c) => setDelCoa(c)}
-              onExport={() => { void exportHist("akun"); }}
+              onExport={() => { requestExport("akun"); }}
             />
           )}
 
@@ -3164,7 +3173,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("piutang"); }}
+                      onClick={() => { requestExport("piutang"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -3374,7 +3383,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("hutang"); }}
+                      onClick={() => { requestExport("hutang"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -3540,7 +3549,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.kasTitle}
                 subtitle={S.kasSub}
-                action={<><button className="btn-secondary text-xs" onClick={() => { void exportHist("kas"); }} title={S.histExported}>{S.histExport}</button>{canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button>}</>}
+                action={<><button className="btn-secondary text-xs" onClick={() => { requestExport("kas"); }} title={S.histExported}>{S.histExport}</button>{canWriteJournals && <button className="btn-primary text-xs" onClick={() => setShowMut(true)}>{S.addMutasi}</button>}</>}
               />
               <HistFilterBar value={kasHist} onChange={setKasHist} idPrefix="kas" />
               <div className="mb-2 flex justify-end">
@@ -3975,7 +3984,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.bbTitle}
                 subtitle={S.bbSub}
-                action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("bb"); }} title={S.histExported}>{S.histExport}</button>}
+                action={<button className="btn-secondary text-xs" onClick={() => { requestExport("bb"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={bbHist} onChange={setBbHist} idPrefix="bb" />
               {/* Ringkasan buku besar (K17-FIN-06): total debit, total kredit, dan status
@@ -4162,7 +4171,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               <CardHeader
                 title={S.lrTitle}
                 subtitle={S.lrSub}
-                action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("lr"); }} title={S.histExported}>{S.histExport}</button>}
+                action={<button className="btn-secondary text-xs" onClick={() => { requestExport("lr"); }} title={S.histExported}>{S.histExport}</button>}
               />
               <HistFilterBar value={lrHist} onChange={setLrHist} idPrefix="lr" />
               {/* Grafik detail laba rugi (K17-FIN-07): tren bulanan + komposisi periode
@@ -4535,10 +4544,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           {tab === "Neraca" ? (() => {
             return (
             <div className="space-y-4">
-              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
+              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", Math.round(nrNeraca.totalAktiva).toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { requestExport("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
-              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} onExport={() => { void exportHist("nl"); }} />
+              <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} periodLabel={fmtPeriodeLaporan(nrHist, nrAsOf)} onExport={() => { requestExport("nl"); }} />
               <div className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold ${nrNeraca.selisih === 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`} role="status">
                 {nrNeraca.selisih === 0 && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                 <span>{nrNeraca.selisih === 0 ? S.nrBalanced : S.nrHbNote.replace("{a}", fmtRupiah(Math.abs(nrNeraca.selisih)))}</span>
@@ -4917,7 +4926,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                     <button
                       type="button"
                       className="btn-secondary text-xs"
-                      onClick={() => { void exportHist("jurnal"); }}
+                      onClick={() => { requestExport("jurnal"); }}
                       title={S.histExported}
                     >
                       {S.histExport}
@@ -5274,6 +5283,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       {/* Hapus invoice: hanya Draft / Ditolak. Invoice yang sudah terbit harus
           di-void atau dilunasi - menghapusnya menghapus piutang yang sudah
           diakui. Backend juga memblokir bila payables.invoice merujuk. */}
+      <ExportScopeModal
+        open={exportAsk !== null}
+        current={(exportAsk ? exportTarget(exportAsk)?.value : undefined) ?? nrHist}
+        onClose={() => setExportAsk(null)}
+        onConfirm={confirmExport}
+      />
       <ConfirmModal
         open={confirmLapor}
         title={locale === "en"

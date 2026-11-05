@@ -29,6 +29,10 @@ try {
   const fin = await tok("finance");
   ok("HR tidak bisa tutup buku → 403", (await app.inject({ method: "POST", url: "/api/closing", headers: await tok("hr"), payload: { period: "2031-01" } })).statusCode === 403);
   ok("finance tutup bulan 2031-01 → 200", (await app.inject({ method: "POST", url: "/api/closing", headers: fin, payload: { period: "2031-01" } })).statusCode === 200);
+  const arc = await app.inject({ method: "GET", url: "/api/closing/archives/ARC-2031-01-v1", headers: fin });
+  ok("tutup bulan membuat arsip v1 yang bisa dibaca", arc.statusCode === 200 && arc.json().data.snapshot?.neraca !== undefined, arc.body.slice(0, 120));
+  ok("HR tidak bisa membaca arsip → 403", (await app.inject({ method: "GET", url: "/api/closing/archives", headers: await tok("hr") })).statusCode === 403);
+  ok("arsip tidak bisa diubah lewat CRUD (tabel bukan koleksi) → 404", (await app.inject({ method: "PATCH", url: "/api/closingArchives/ARC-2031-01-v1", headers: fin, payload: { data: { x: 1 } } })).statusCode === 404);
   const blocked = await app.inject({ method: "POST", url: "/api/journals", headers: fin, payload: journal("2031-01-15") });
   ok("jurnal di bulan tertutup → 409", blocked.statusCode === 409, blocked.body);
   const open = await app.inject({ method: "POST", url: "/api/journals", headers: fin, payload: journal("2031-02-01") });
@@ -39,10 +43,12 @@ try {
   ok("jurnal lama di tahun tertutup tidak bisa diubah → 409", (await app.inject({ method: "PATCH", url: `/api/journals/${openId}`, headers: fin, payload: { data: { uraian: "x" } } })).statusCode === 409);
   ok("tutup tahun dua kali → 409", (await app.inject({ method: "POST", url: "/api/closing", headers: fin, payload: { period: "2031" } })).statusCode === 409);
   ok("finance tidak bisa membuka kembali → 403", (await app.inject({ method: "DELETE", url: "/api/closing/2031", headers: fin })).statusCode === 403);
+  ok("tutup tahun membuat arsip tahunan", (await app.inject({ method: "GET", url: "/api/closing/archives/ARC-2031-v1", headers: fin })).statusCode === 200);
   ok("direktur membuka kembali → 200", (await app.inject({ method: "DELETE", url: "/api/closing/2031", headers: await tok("direktur") })).statusCode === 200);
   ok("setelah dibuka jurnal bisa diubah", (await app.inject({ method: "PATCH", url: `/api/journals/${openId}`, headers: fin, payload: { data: { uraian: "x" } } })).statusCode === 200);
 } finally {
   await exec("DELETE FROM journals WHERE data LIKE '%2031-%'");
+  await exec("DELETE FROM closingArchives WHERE id LIKE 'ARC-2031%'");
   await exec("DELETE FROM settings WHERE id = 'SET-TUTUP-BUKU'");
   if (before.length) await exec("INSERT INTO settings (id, branch, data, updated_at) VALUES ('SET-TUTUP-BUKU', 'Samarinda', ?, ?)", [before[0].data, new Date().toISOString()]);
   for (const id of made) await exec("DELETE FROM users WHERE id = ?", [id]);

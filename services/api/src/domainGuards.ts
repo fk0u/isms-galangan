@@ -130,6 +130,16 @@ export function catalogStockGuardError(table: string, data: Data): string | null
   return null;
 }
 
+/** #321: stok material tidak boleh negatif. Baris lama yang sudah minus tetap
+ *  bisa diedit selama stok tidak diturunkan lagi (tidak memblokir koreksi). */
+export function negativeStockError(table: string, before: Data | null, after: Data): string | null {
+  if (table !== "inventory" || after.stock === undefined) return null;
+  const next = Number(after.stock);
+  if (!Number.isFinite(next) || next >= 0) return null;
+  if (before && next >= Number(before.stock)) return null;
+  return "Stok tidak boleh minus; kuantitas keluar melebihi stok yang tersedia";
+}
+
 /** BOM per proyek (ADR-0020): kebutuhan > 0 dan satu material hanya sekali per
  *  proyek - tambah kebutuhan dengan mengubah baris yang ada, bukan menduplikasi. */
 /** Alokasi material per tahapan WBS (catatan klien 17 Okt, K17-PM-03):
