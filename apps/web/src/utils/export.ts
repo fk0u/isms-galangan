@@ -6,6 +6,9 @@ import writeXlsxFile, { type SheetData } from "write-excel-file/browser";
 const FORMULA_LEAD = ["=", "+", "-", "@", "\t", "|"];
 
 export function sanitizeCell(v: string): string {
+  /* "-" saja (penanda kosong di laporan) bukan formula; tanpa pengecualian ini
+     Excel menampilkan "'-" di setiap sel kosong (catatan klien 5 Nov). */
+  if (/^-+$/.test(v)) return v;
   if (FORMULA_LEAD.some((p) => v.startsWith(p))) return `'${v}`;
   return v;
 }

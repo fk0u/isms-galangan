@@ -8,6 +8,7 @@ describe("cakupan ekspor (#315)", () => {
     expect(liveAsOf(scopeToHist({ kind: "all" }))).toBe(todayISO());
     expect(liveAsOf(scopeToHist({ kind: "year", year: "2026" }))).toBe("2026-12-31");
     expect(liveAsOf(scopeToHist({ kind: "month", month: "2026-10" }))).toBe("2026-10-31");
+    expect(liveAsOf(scopeToHist({ kind: "range", from: "2026-01-01", to: "2026-10-15" }))).toBe("2026-10-15");
   });
   it("cakupan awal mengikuti filter aktif", () => {
     expect(scopeFromHist(scopeToHist({ kind: "month", month: "2026-02" }))).toEqual({ kind: "month", month: "2026-02" });
