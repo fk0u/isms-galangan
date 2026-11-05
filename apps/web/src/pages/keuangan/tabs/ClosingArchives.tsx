@@ -50,19 +50,28 @@ export default function ClosingArchives({ canClose, locked, refreshKey }: { canC
   const [tab, setTab] = useState<"neraca" | "lr" | "lajur" | "kas">("neraca");
   const [pick, setPick] = useState<string[]>([]);
   const [cmp, setCmp] = useState<[Arc, Arc] | null>(null);
+  const [err, setErr] = useState("");
 
-  const load = useCallback(() => apiFetch<ArcMeta[]>("/api/closing/archives").then(setList).catch(() => setList(null)), []);
+  /* Gagal muat ditampilkan, bukan kartu hilang diam-diam: tanpa pesan, peran
+     yang ditolak server atau error API terlihat seperti fitur tidak ada. */
+  const load = useCallback(() => apiFetch<ArcMeta[]>("/api/closing/archives")
+    .then((l) => { setList(l); setErr(""); })
+    .catch((e: unknown) => { setList(null); setErr(e instanceof Error ? e.message : String(e)); }), []);
   useEffect(() => { void load(); }, [load, refreshKey]);
 
   const open = (id: string) => apiFetch<Arc>(`/api/closing/archives/${id}`).then((a) => { setTab("neraca"); setView(a); }).catch((e: unknown) => toast(e instanceof Error ? e.message : String(e), "info"));
   const compare = async () => {
-    const [a, b] = await Promise.all(pick.map((id) => apiFetch<Arc>(`/api/closing/archives/${id}`)));
-    setCmp(a.asOf <= b.asOf ? [a, b] : [b, a]);
+    try {
+      const [a, b] = await Promise.all(pick.map((id) => apiFetch<Arc>(`/api/closing/archives/${id}`)));
+      setCmp(a.asOf <= b.asOf ? [a, b] : [b, a]);
+    } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
   };
   const backfill = async () => {
-    const r = await apiFetch<{ created: string[] }>("/api/closing/backfill", { method: "POST", body: JSON.stringify({}) });
-    toast(S.arcBackfillDone.replace("{n}", String(r.created.length)));
-    await load();
+    try {
+      const r = await apiFetch<{ created: string[] }>("/api/closing/backfill", { method: "POST", body: JSON.stringify({}) });
+      toast(S.arcBackfillDone.replace("{n}", String(r.created.length)));
+      await load();
+    } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
   };
   const exportArc = (a: Arc) => {
     const s = a.snapshot;
@@ -90,7 +99,9 @@ export default function ClosingArchives({ canClose, locked, refreshKey }: { canC
     ], `Arsip-Tutup-Buku-${a.period}-v${a.version}`);
   };
 
-  if (list === null) return null;
+  if (list === null) {
+    return err ? <Card className="p-4"><CardHeader title={S.arcTitle} subtitle={S.arcLoadErr.replace("{e}", err)} /></Card> : null;
+  }
   const missing = locked.filter((p) => !list.some((a) => a.period === p));
   const label = (a: ArcMeta): string => `${a.period}${a.version > 1 ? ` v${a.version}` : ""}`;
   const metricName = (k: string): string => (S as unknown as Record<string, string>)[`arcM_${k}`] ?? k;

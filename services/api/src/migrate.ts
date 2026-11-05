@@ -148,6 +148,8 @@ const WIDE_JSON_COLUMNS: [string, string][] = [
   ["pdfDocs", "model"],
   ["audit_log", "diff"],
   ["documents", "data"],
+  // #314: snapshot arsip tutup buku tumbuh dengan jumlah akun; TEXT MySQL hanya 64 KB.
+  ["closingArchives", "data"],
 ];
 
 async function ensureWideJsonColumns(): Promise<void> {

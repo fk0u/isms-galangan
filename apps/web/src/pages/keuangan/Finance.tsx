@@ -181,6 +181,18 @@ export function matchHistPeriod(periodYM: unknown, f: HistFilter): boolean {
    liveAsOf tapi tidak pernah ditampilkan - sekarang tampil, karena
    pemanggil sudah mengimplementasikannya dan tombolnya dibuat-buat
    menyimpan kode mati. */
+/* Filter hidup di URL: mode tanpa tanggal tidak bisa dikodekan (histToParam → "")
+   sehingga langsung kembali ke "Semua" - tombol Per bulan/tanggal/tahun terlihat
+   mati. Setiap mode diberi nilai awal yang sah: bulan/tanggal/tahun ini. */
+export function withModeDefault(value: HistFilter, mode: HistMode): HistFilter {
+  const today = todayISO();
+  if (mode === "Bulan" && !bulanValid(value.bulan)) return { ...value, mode, bulan: today.slice(0, 7) };
+  if (mode === "Hari" && !hariValid(value.hari)) return { ...value, mode, hari: today };
+  if (mode === "Tahun" && !/^\d{4}$/.test(value.tahun)) return { ...value, mode, tahun: today.slice(0, 4) };
+  if (mode === "Rentang" && !rentangValid(value)) return { ...value, mode, dari: `${today.slice(0, 7)}-01`, sampai: today };
+  return { ...value, mode };
+}
+
 export function HistFilterBar({ value, onChange, idPrefix }: { value: HistFilter; onChange: (v: HistFilter) => void; idPrefix: string }) {
   const { locale } = useT();
   const T = n_fin[locale];
@@ -195,13 +207,7 @@ export function HistFilterBar({ value, onChange, idPrefix }: { value: HistFilter
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-steel-200 bg-surface px-3 py-2">
       <span className="text-xs font-semibold text-steel-500">{T.histLabel}</span>
       {modes.map((m) => (
-        <button key={m.id} type="button" onClick={() => onChange(
-          /* Filter hidup di URL; rentang kosong tidak bisa dikodekan dan akan
-             kembali ke "Semua". Beri nilai awal: awal bulan ini s.d. hari ini. */
-          m.id === "Rentang" && !rentangValid(value)
-            ? { ...value, mode: m.id, dari: `${todayISO().slice(0, 7)}-01`, sampai: todayISO() }
-            : { ...value, mode: m.id },
-        )}
+        <button key={m.id} type="button" onClick={() => onChange(withModeDefault(value, m.id))}
           aria-pressed={value.mode === m.id}
           className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${value.mode === m.id ? "bg-navy-700 text-white" : "bg-white text-steel-600 hover:bg-steel-100"}`}>
           {m.label}

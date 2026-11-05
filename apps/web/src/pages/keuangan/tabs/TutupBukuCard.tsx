@@ -16,13 +16,13 @@ export default function TutupBukuCard() {
   const { locale } = useT();
   const S = n_fin[locale];
   const { user } = useAuth();
-  const canReopen = ["direktur", "developer"].includes(String(user?.role ?? ""));
+  const canReopen = ["direktur", "developer"].includes(String(user?.role ?? "").toLowerCase());
   const [st, setSt] = useState<Closed | null>(null);
   const [month, setMonth] = useState(todayISO().slice(0, 7));
   const [confirmClose, setConfirmClose] = useState<{ period: string; isYear: boolean } | null>(null);
   const [confirmReopen, setConfirmReopen] = useState<string | null>(null);
   const [arcKey, setArcKey] = useState(0);
-  const canClose = ["finance", "pajak", "direktur", "developer"].includes(String(user?.role ?? ""));
+  const canClose = ["finance", "pajak", "direktur", "developer"].includes(String(user?.role ?? "").toLowerCase());
 
   const load = () => apiFetch<Closed>("/api/closing").then(setSt).catch(() => setSt(null));
   useEffect(() => { void load(); }, []);
