@@ -27,7 +27,13 @@ export function registerClosingRoutes(app: FastifyInstance): void {
     if (!roles.includes(normalizeRole(req.user?.role))) await reply.status(403).send(fail(msg, "FORBIDDEN"));
   };
 
-  app.get("/api/closing", { preHandler: [requireAuth] }, async () => ok({ ...(await loadClosed()), stockValue: await stockValue() }));
+  /* Izin dihitung server dengan normalizeRole: frontend tidak boleh menebak dari
+     string peran mentah, karena alias (admin, direksi, "Direktur Utama") lolos di
+     server tapi tombolnya tersembunyi di layar. */
+  app.get("/api/closing", { preHandler: [requireAuth] }, async (req) => {
+    const role = normalizeRole(req.user?.role);
+    return ok({ ...(await loadClosed()), stockValue: await stockValue(), can: { close: CLOSERS.includes(role), reopen: REOPENERS.includes(role) } });
+  });
 
   app.post("/api/closing", { preHandler: [requireAuth, roleIn(CLOSERS, "Tutup buku hanya oleh Keuangan atau pimpinan")] }, async (req, reply) => {
     const period = String((req.body as { period?: unknown } | null)?.period ?? "").trim();
