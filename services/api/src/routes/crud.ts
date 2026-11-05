@@ -16,7 +16,7 @@ import { normalizeNewService, serviceGuardError } from "../serviceApproval.js";
 import { spkLockError } from "../workOrderGuard.js";
 import { payrollRoleError } from "../payrollGuard.js";
 import { closingGuardError } from "../closing.js";
-import { bomItemError, catalogStockGuardError, projectManagerError, stampRole, transferError, projectFeeError, payableApprovalError } from "../domainGuards.js";
+import { bomItemError, catalogStockGuardError, negativeStockError, projectManagerError, stampRole, transferError, projectFeeError, payableApprovalError } from "../domainGuards.js";
 import { loanOverlapError } from "../bookingGuard.js";
 import { dockFitError, dockLimitError } from "../dockFit.js";
 import { scopedProjectIds } from "../teamScope.js";
@@ -718,6 +718,8 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (payLock) return reply.status(403).send(fail(payLock, "FORBIDDEN"));
     const closedLock = await closingGuardError(table, oldData, merged as Record<string, unknown>);
     if (closedLock) return reply.status(409).send(fail(closedLock, "LOCKED"));
+    const minusStock = negativeStockError(table, oldData, merged as Record<string, unknown>);
+    if (minusStock) return reply.status(422).send(fail(minusStock, "UNPROCESSABLE"));
     // Baris Transfer lama (tanpa fromWh/toWh) tetap bisa diedit selama gudangnya tidak disentuh.
     const whChanged = (["type", "fromWh", "toWh"] as const).some((k) => oldData[k] !== (merged as Record<string, unknown>)[k]);
     if (table === "workOrders" && Array.isArray((merged as Record<string, unknown>).progressLog)) {

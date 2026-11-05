@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { cursorOf, parseCursor } from "../routes/crudCursor.js";
 import { dockFitIssue } from "../dockFit.js";
+import { negativeStockError } from "../domainGuards.js";
 import { hasMagic, scanContent } from "../routes/files.js";
 
 describe("cursor pagination", () => {
@@ -12,6 +13,15 @@ describe("cursor pagination", () => {
     expect(parseCursor("2026-10-10|")).toBeNull();
     expect(parseCursor("tanpa-pemisah")).toBeNull();
     expect(parseCursor(42)).toBeNull();
+  });
+});
+
+describe("negativeStockError (#321)", () => {
+  it("menolak stok turun ke minus", () => expect(negativeStockError("inventory", { stock: 2 }, { stock: -1 })).toMatch(/minus/));
+  it("baris lama minus boleh tidak turun lagi", () => expect(negativeStockError("inventory", { stock: -3 }, { stock: -3 })).toBeNull());
+  it("tabel lain & stok normal lolos", () => {
+    expect(negativeStockError("inventory", { stock: 5 }, { stock: 0 })).toBeNull();
+    expect(negativeStockError("movements", null, { stock: -1 })).toBeNull();
   });
 });
 

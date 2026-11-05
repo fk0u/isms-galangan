@@ -456,21 +456,18 @@ function akhirBulan(ym: string): string {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return `${ym}-${String(last).padStart(2, "0")}`;
 }
-export function liveAsOf(f: HistFilter, lastDate = ""): string {
+/* Mode "Semua" = sampai HARI INI (permintaan klien 5 Nov). Versi lama memakai
+   tanggal transaksi/jatuh tempo terbesar, sehingga jurnal tutup tahun
+   (31 Des) atau tagihan jatuh tempo ke depan menggeser as-of ke masa depan. */
+export function liveAsOf(f: HistFilter): string {
   if (f.mode === "Hari" && /^\d{4}-\d{2}-\d{2}$/.test(f.hari)) return f.hari;
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return akhirBulan(f.bulan);
   if (f.mode === "Tahun" && /^\d{4}$/.test(f.tahun)) return `${f.tahun}-12-31`;
   if (f.mode === "Rentang" && rentangValid(f)) return f.sampai;
-  /* Mode "Semua": memakai transaksi terakhir yang benar-benar ada. Damanya
-     konstanta "2026-08-31" yang tadinya ditulis di sini: data yang masuk
-     setelah Agustus 2026 tidak pernah ikut terhitung dan tidak ada yang
-     memberi tahu - angkanya terlihat masuk akal, hanya bukan yang sebenarnya. */
-  const s = String(lastDate ?? "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  return todayISO();
 }
-/* As-of kosong (data belum ada) berarti "sampai hari ini". */
-export function asOfOrToday(f: HistFilter, lastDate = ""): string {
-  return liveAsOf(f, lastDate) || todayISO();
+export function asOfOrToday(f: HistFilter): string {
+  return liveAsOf(f);
 }
 /* Saldo Kas/Bank AS-OF tanggal D plus mutasi periode filter, dalam satu
    lintasan.
@@ -1306,39 +1303,11 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const [astEdit, setAstEdit] = useState<StoreItem | null>(null);
 
   const KAS_REKENING = coaRows.filter((c) => /^(1-11|1-12)/.test(String(c.kode)) && String(c.dk) !== "-");
-  /* Tanggal transaksi terakhir di SELURUH dokumen pembukuan. Dipakai sebagai
-     as-of mode "Semua": kalau tidak, "Semua" berarti "Agustus 2026" karena
-     konstanta, dan setiap transaksi setelahnya tidak pernah masuk hitungan
-     tanpa ada yang memberi tahu. */
-  const lastTxDate = useMemo(() => {
-    let max = "";
-    for (const j of data.journals ?? []) {
-      const d = String(j.date ?? "").slice(0, 10);
-      if (d > max) max = d;
-    }
-    for (const i of data.invoices ?? []) {
-      for (const k of ["date", "due", "paidAt"]) {
-        const d = String(i[k] ?? "").slice(0, 10);
-        if (d > max) max = d;
-      }
-    }
-    for (const a of data.payables ?? []) {
-      for (const k of ["date", "due", "paidAt"]) {
-        const d = String(a[k] ?? "").slice(0, 10);
-        if (d > max) max = d;
-      }
-    }
-    for (const p of data.payroll ?? []) {
-      const d = String(p.paidAt ?? p.period ?? "").slice(0, 10);
-      if (d > max) max = d;
-    }
-    return max;
-  }, [data.journals, data.invoices, data.payables, data.payroll]);
   /* Kas & Bank LIVE: SALDO kumulatif s.d. tanggal filter, mutasi per rekening
      hanya untuk periode filter. Versi lama menjumlahkan jurnal yang ada DI
      DALAM window, jadi saldo awal hilang dan angka per bulan sebelum
      Agu-2026 bukan saldo - saldo awal Excel hanya diisi saat isSnapMonth. */
-  const kasAsOf = asOfOrToday(kasHist, lastTxDate);
+  const kasAsOf = asOfOrToday(kasHist);
   const kasSnap = kasAsOf.slice(0, 7) === LATEST_SNAPSHOT;
   const kasRows = useMemo(
     () => KASBANK_EXCEL.filter((r) => (r.periode ?? LATEST_SNAPSHOT) === LATEST_SNAPSHOT),
@@ -1392,9 +1361,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     which: "kas" | "bb" | "lr" | "nr" | "all" | "hutang" | "piutang" | "jurnal" | "akun" | "nl"
   ): Promise<void> => {
     try {
-      const apAsOf = asOfOrToday(apHist, lastTxDate);
-      const arAsOf = asOfOrToday(invHist, lastTxDate);
-      const juAsOf = asOfOrToday(juHist, lastTxDate);
+      const apAsOf = asOfOrToday(apHist);
+      const arAsOf = asOfOrToday(invHist);
+      const juAsOf = asOfOrToday(juHist);
 
       const makeSheets = (asOfDate: string, periodStr: string) =>
         buildFinancialFormatSheets({
@@ -2466,7 +2435,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
      dibukukan sampai tanggal itu. Neraca memakai angka yang sama, jadi
      kedua laporan saling bertentangan. */
   const lrLive = useMemo(() => {
-    const asOf = asOfOrToday(lrHist, lastTxDate);
+    const asOf = asOfOrToday(lrHist);
     const upto = asOf.slice(0, 7);
     const inPeriod = plMonthly.filter((p) => matchHistPeriod(p.period, lrHist));
     const uptoRows = plMonthly.filter((p) => p.period <= upto);
@@ -2484,10 +2453,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
    * ANGKA YANG SAMA. Kalau masing-masing menghitung sendiri, keduanya bisa
    * menyimpang tanpa ketahuan - dan angka yang diekspor seharusnya identik
    * dengan yang di layar. */
-  const lrAsOf = asOfOrToday(lrHist, lastTxDate);
+  const lrAsOf = asOfOrToday(lrHist);
   const lrSnap = isSnapMonth(lrAsOf.slice(0, 7));
 
-  const bbAsOf = asOfOrToday(bbHist, lastTxDate);
+  const bbAsOf = asOfOrToday(bbHist);
   const bbSnap = isSnapMonth(bbAsOf.slice(0, 7));
   /* Debit/kredit kumulatif s.d. bbAsOf - saldo buku besar harus mengandung
      transaksi SEJAK AWAL, bukan hanya periode yang difilter. Yang
@@ -2536,7 +2505,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   const bbDAll = bbLive.reduce((s, r) => s + r.dAll, 0);
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
-  const nrAsOf = asOfOrToday(nrHist, lastTxDate);
+  const nrAsOf = asOfOrToday(nrHist);
   const nrSnap = isSnapMonth(nrAsOf.slice(0, 7));
   const hutLive = apOutAsOf(payables, nrAsOf);
   const piuLive = arOutAsOf(invoices, nrAsOf);
@@ -4535,7 +4504,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           {tab === "Neraca" ? (() => {
             return (
             <div className="space-y-4">
-              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", LAPORAN_EXCEL.neracaTotal.toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
+              <CardHeader title={S.nrTitle} subtitle={S.nrSub.replace("{a}", Math.round(nrNeraca.totalAktiva).toLocaleString("id-ID"))} action={<button className="btn-secondary text-xs" onClick={() => { void exportHist("nr"); }} title={S.histExported}>{S.histExport}</button>} />
               <HistFilterBar value={nrHist} onChange={setNrHist} idPrefix="nr" />
               <TutupBukuCard />
               <NeracaLajurCard journals={manJournals} coa={coaRows} inPeriod={nrInPeriod} asOf={nrAsOf} onExport={() => { void exportHist("nl"); }} />
