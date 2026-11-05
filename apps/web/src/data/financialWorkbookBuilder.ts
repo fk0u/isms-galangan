@@ -76,55 +76,144 @@ export function periodStartOf(hist: { mode: string; hari: string; bulan: string;
   return "";
 }
 
-/** #319: Jurnal Kas & Bank format acuan klien - satu blok per rekening (1-11x/1-12x)
- *  dengan baris Saldo Awal, saldo berjalan per rekening, dan jumlah. Jurnal
- *  penyesuaian (tutup buku) bukan transaksi kas sehingga tidak ikut. */
+/** Kolom uang sheet JU, Kas, Bank: KAS DEBIT/KREDIT/SALDO (kiri) dan JUMLAH debit/kredit JU (kanan). */
+export const KAS_BANK_MONEY_COLS = [6, 7, 8, 15, 17];
+
+/** #319/#329: sheet "JU, Kas, Bank" mengikuti format acuan klien (Financial Format):
+ *  - BANK (kolom A-I): blok per rekening 1-12x, baris Saldo Awal, saldo berjalan, jumlah;
+ *  - JURNAL UMUM (kolom K-R, di kanan BANK): jurnal periode yang tidak menyentuh kas/bank,
+ *    satu baris debit dan satu baris kredit per jurnal, plus total;
+ *  - KAS KANTOR (di bawah BANK): blok per akun kas 1-11x dengan kolom BKM/BKK.
+ *  Transaksi kas/bank dipilih menurut akun (jurnal impor bersumber "JU"); penyesuaian
+ *  (tutup buku) bukan arus kas sehingga masuk Jurnal Umum. */
 export function buildKasBankRows(
   journals: FinancialWorkbookParams["manJournals"],
   nameOf: (kode: string) => string,
   asOf: string,
   periodStart: string,
 ): unknown[][] {
-  const isKas = (k: string): boolean => /^1-1[12]/.test(k);
-  const byAcc = new Map<string, Array<{ j: FinancialWorkbookParams["manJournals"][number]; d: number; k: number; tgl: string }>>();
+  type J = FinancialWorkbookParams["manJournals"][number];
+  type Part = { kind?: RowKind; cells: unknown[] };
+  const isBank = (k: string): boolean => /^1-12/.test(k);
+  const isKas = (k: string): boolean => /^1-11/.test(k);
+  const inScope = (tgl: string): boolean => !asOf || tgl <= asOf;
+  const inPeriod = (tgl: string): boolean => inScope(tgl) && (!periodStart || tgl >= periodStart);
+  const byAcc = new Map<string, Array<{ j: J; d: number; k: number; tgl: string }>>();
+  const umum: Array<{ j: J; tgl: string }> = [];
   for (const j of journals) {
-    /* Transaksi kas/bank = jurnal yang menyentuh akun 1-11x/1-12x, apa pun sumbernya:
-       jurnal impor di produksi bersumber "JU". Penyesuaian (tutup buku) bukan arus kas. */
-    if (j.status === "Void" || j.sumber === "Penyesuaian") continue;
+    if (j.status === "Void") continue;
     const tgl = String(j.date ?? "").slice(0, 10);
-    if (asOf && tgl > asOf) continue;
+    if (!inScope(tgl)) continue;
     const amt = Number(j.amount ?? 0);
     const db = String(j.db ?? "").trim();
     const kr = String(j.kr ?? "").trim();
+    const kasBank = j.sumber !== "Penyesuaian" && (isBank(db) || isKas(db) || isBank(kr) || isKas(kr));
+    if (!kasBank) { if (inPeriod(tgl)) umum.push({ j, tgl }); continue; }
     for (const [kode, d, k] of [[db, amt, 0], [kr, 0, amt]] as const) {
-      if (!isKas(kode)) continue;
+      if (!isBank(kode) && !isKas(kode)) continue;
       const list = byAcc.get(kode) ?? [];
       list.push({ j, d, k, tgl });
       byAcc.set(kode, list);
     }
   }
-  const rows: unknown[][] = [
-    styledRow("head", ["TANGGAL", "KODE PEMBANTU", "NO BKK/BKM", "URAIAN", "AKUN DB", "AKUN KR", "KAS DEBIT", "KAS KREDIT", "SALDO"]),
-  ];
-  for (const kode of [...byAcc.keys()].sort()) {
-    const list = (byAcc.get(kode) ?? []).sort((a, b) => a.tgl.localeCompare(b.tgl));
-    const awal = list.filter((e) => periodStart && e.tgl < periodStart).reduce((s, e) => s + e.d - e.k, 0);
-    const inP = list.filter((e) => !periodStart || e.tgl >= periodStart);
-    rows.push(styledRow("section", [`Saldo Awal ${nameOf(kode)} - ${kode}`, "", "", "", "", "", "", "", awal]));
-    let saldo = awal;
-    let td = 0;
-    let tk = 0;
-    for (const e of inP) {
-      saldo += e.d - e.k;
-      td += e.d;
-      tk += e.k;
-      rows.push([
-        tglSingkat(e.tgl), String(e.j.kodePembantu ?? "") || "-", String(e.j.voucherNo ?? e.j.dokumen ?? "") || "-",
-        String(e.j.uraian ?? ""), String(e.j.db ?? "-"), String(e.j.kr ?? "-"), e.d, e.k, saldo,
-      ]);
+  const blank = (n: number): unknown[] => Array<unknown>(n).fill("");
+  const section = (filter: (k: string) => boolean, title: string, docHead: string, awalLabel: (nama: string) => string): Part[] => {
+    const out: Part[] = [
+      { kind: "section", cells: [title, ...blank(8)] },
+      { kind: "head", cells: ["TANGGAL", "KODE PEMBANTU", docHead, "URAIAN", "AKUN DB", "AKUN KR", "KAS DEBIT", "KAS KREDIT", "SALDO"] },
+    ];
+    for (const kode of [...byAcc.keys()].filter(filter).sort()) {
+      const list = (byAcc.get(kode) ?? []).sort((a, b) => a.tgl.localeCompare(b.tgl));
+      const awal = list.filter((e) => periodStart && e.tgl < periodStart).reduce((s, e) => s + e.d - e.k, 0);
+      out.push({ kind: "section", cells: ["", "", "", awalLabel(`${nameOf(kode)} (${kode})`), "", "", awal, "", awal] });
+      let saldo = awal;
+      let td = 0;
+      let tk = 0;
+      for (const e of list.filter((x) => !periodStart || x.tgl >= periodStart)) {
+        saldo += e.d - e.k;
+        td += e.d;
+        tk += e.k;
+        out.push({ cells: [
+          tglSingkat(e.tgl), String(e.j.kodePembantu ?? "") || "-", String(e.j.voucherNo ?? e.j.dokumen ?? "") || "-",
+          String(e.j.uraian ?? ""), String(e.j.db ?? "") || "-", String(e.j.kr ?? "") || "-", e.d, e.k, saldo,
+        ] });
+      }
+      out.push({ kind: "total", cells: ["", "", "", `Jumlah ${nameOf(kode)}`, "", "", td, tk, saldo] });
+      out.push({ cells: [] });
     }
-    rows.push(styledRow("total", ["", "", "", `Jumlah ${nameOf(kode)}`, "", "", td, tk, saldo]));
-    rows.push([]);
+    return out;
+  };
+  const left: Part[] = [
+    ...section(isBank, "BANK", "DOKUMEN", (n) => `Saldo Awal ${n}`),
+    { cells: [] },
+    ...section(isKas, "KAS KANTOR", "BKM / BKK", (n) => `Saldo Awal ${n}`),
+  ];
+  const right: Part[] = [
+    { kind: "section", cells: ["JURNAL UMUM", ...blank(7)] },
+    { kind: "head", cells: ["TANGGAL", "KODE PEMBANTU", "BM", "URAIAN", "AKUN DB", "JUMLAH DEBIT", "AKUN KR", "JUMLAH KREDIT"] },
+  ];
+  let totalJu = 0;
+  for (const { j, tgl } of umum.sort((a, b) => a.tgl.localeCompare(b.tgl))) {
+    const amt = Number(j.amount ?? 0);
+    totalJu += amt;
+    const head = [tglSingkat(tgl), String(j.kodePembantu ?? "") || "-", String(j.voucherNo ?? j.dokumen ?? "") || "-", String(j.uraian ?? "")];
+    right.push({ cells: [...head, String(j.db ?? ""), amt, "", ""] });
+    right.push({ cells: [...head, "", "", String(j.kr ?? ""), amt] });
+  }
+  right.push({ kind: "total", cells: ["", "", "", "Jumlah Jurnal Umum", "", totalJu, "", totalJu] });
+
+  /* Dua tabel berdampingan: BANK/KAS di A-I, kolom J kosong, JURNAL UMUM di K-R.
+     Sel tanpa tabel diberi jenis "blank" supaya tidak bergaris/berwarna. */
+  const rows: unknown[][] = [];
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const l = left[i];
+    const r = right[i];
+    const lc = l && l.cells.length ? l.cells : [];
+    const rc = r && r.cells.length ? r.cells : [];
+    if (!lc.length && !rc.length) { rows.push([]); continue; }
+    const cells = [...(lc.length ? lc : blank(9)), "", ...(rc.length ? rc : blank(8))];
+    const kinds: Array<RowKind | undefined> = [
+      ...Array<RowKind | undefined>(9).fill(lc.length ? l?.kind : "blank"),
+      "blank",
+      ...Array<RowKind | undefined>(8).fill(rc.length ? r?.kind : "blank"),
+    ];
+    rows.push(styledRow(kinds, cells));
+  }
+  return rows;
+}
+
+/** Sheet Buku Besar: per akun saldo awal (sebelum periodStart), mutasi debit/kredit
+ *  dalam periode, dan saldo akhir; tanda saldo mengikuti D/K akun. */
+export function buildBukuBesarRows(
+  journals: FinancialWorkbookParams["manJournals"],
+  coa: Array<{ kode: string; nama: string; dk: string }>,
+  asOf: string,
+  periodStart: string,
+): unknown[][] {
+  const acc = new Map<string, { awal: number; d: number; k: number }>();
+  for (const j of journals) {
+    if (j.status === "Void") continue;
+    const tgl = String(j.date ?? "").slice(0, 10);
+    if (asOf && tgl > asOf) continue;
+    const amt = Number(j.amount ?? 0);
+    if (!amt) continue;
+    const before = !!periodStart && tgl < periodStart;
+    for (const [kode, sign] of [[String(j.db ?? "").trim(), 1], [String(j.kr ?? "").trim(), -1]] as const) {
+      if (!kode) continue;
+      const r = acc.get(kode) ?? { awal: 0, d: 0, k: 0 };
+      if (before) r.awal += sign * amt;
+      else if (sign > 0) r.d += amt;
+      else r.k += amt;
+      acc.set(kode, r);
+    }
+  }
+  const rows: unknown[][] = [styledRow("head", ["KODE AKUN", "NAMA AKUN", "D/K", "SALDO AWAL", "DEBIT", "KREDIT", "SALDO AKHIR"])];
+  for (const c of coa) {
+    if (c.dk === "-") { rows.push(styledRow("section", [c.kode, c.nama, "", "", "", "", ""])); continue; }
+    const r = acc.get(c.kode) ?? { awal: 0, d: 0, k: 0 };
+    const sign = c.dk === "K" ? -1 : 1;
+    const awal = sign * r.awal;
+    rows.push([c.kode, c.nama, c.dk, awal, r.d, r.k, awal + sign * (r.d - r.k)]);
   }
   return rows;
 }
@@ -608,15 +697,9 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   /* =======================================================================
    * 8. SHEET: BUKU BESAR
    * ======================================================================= */
-  const bbRows: unknown[][] = [
-    styledRow("head", ["KODE AKUN", "NAMA AKUN", "D/K", "TOTAL DEBIT", "TOTAL KREDIT", "SALDO AKHIR"]),
-  ];
-  for (const c of Array.from(coaMap.values())) {
-    const d = debitMap.get(c.kode) ?? 0;
-    const k = kreditMap.get(c.kode) ?? 0;
-    const saldo = getSaldo(c.kode);
-    bbRows.push(isJudul(c) ? styledRow("section", [c.kode, c.nama, "", "", "", ""]) : [c.kode, c.nama, c.dk, d, k, saldo]);
-  }
+  /* #328: format acuan klien per akun = Saldo Awal, Debit, Kredit, Saldo Akhir.
+     Saldo awal = jurnal sebelum awal periode; debit/kredit = mutasi dalam periode. */
+  const bbRows = buildBukuBesarRows(manJournals, Array.from(coaMap.values()), asOf, periodStart);
 
   /* =======================================================================
    * 9. SHEET: AKUN (COA)
@@ -633,7 +716,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     { name: "Neraca", rows: neracaRows, header: kop("Neraca") },
     { name: "Laba Rugi", rows: lrExcelRows, header: kop("Laba Rugi") },
     { name: "Neraca Lajur", rows: neracaLajurRows, header: kop("Neraca Lajur") },
-    { name: "JU, Kas, Bank", rows: kasBankRows, header: kop("Jurnal Kas & Bank") },
+    { name: "JU, Kas, Bank", rows: kasBankRows, header: kop("Jurnal Kas & Bank"), moneyCols: KAS_BANK_MONEY_COLS },
     { name: "Hutang", rows: hutangRows, header: kop("Hutang Dagang") },
     { name: "Piutang", rows: piutangRows, header: kop("Piutang Usaha") },
     { name: "Buku Besar", rows: bbRows, header: kop("Buku Besar") },
