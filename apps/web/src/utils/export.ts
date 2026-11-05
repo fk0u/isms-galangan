@@ -92,13 +92,16 @@ export interface ExcelSheet {
   /** Kop laporan resmi (format klien): jam & tanggal ekspor di kiri atas,
    *  nama perusahaan, judul laporan, dan periode di tengah. */
   header?: { company: string; title: string; period: string };
+  /** Kolom uang eksplisit (indeks 0-based). Wajib untuk sheet tanpa header di
+   *  baris 0 (mis. JU, Kas, Bank yang berisi beberapa tabel berdampingan). */
+  moneyCols?: number[];
 }
 
 /* Tema laporan keuangan mengikuti DESIGN.md: putih netral + merah merek. */
 const TEMA = { brand: "#B91C1C", brandDark: "#7F1D1D", tint: "#FEF2F2", ink: "#09090B", line: "#E4E4E7", zebra: "#FAFAFA", muted: "#71717A", total: "#F4F4F5", white: "#FFFFFF" };
 
 /** Jenis baris untuk pewarnaan tema; dipasang builder lewat styledRow(). */
-export type RowKind = "head" | "section" | "total" | "grand" | "note";
+export type RowKind = "head" | "section" | "total" | "grand" | "note" | "blank";
 type RowKinds = RowKind | Array<RowKind | undefined>;
 const ROW_KIND = new WeakMap<unknown[], RowKinds>();
 
@@ -130,8 +133,12 @@ function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | nu
     case "head": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 22, ...border, topBorderColor: TEMA.brandDark, bottomBorderColor: TEMA.brandDark, leftBorderColor: TEMA.brandDark, rightBorderColor: TEMA.brandDark };
     case "section": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
     case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
-    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, textColor: TEMA.white, backgroundColor: TEMA.ink, height: 22, alignVertical: "center" as const, ...border, topBorderColor: TEMA.ink, bottomBorderColor: TEMA.ink, leftBorderColor: TEMA.ink, rightBorderColor: TEMA.ink };
+    /* #327: total akhir abu-abu seperti baris total lain (klien 6 Nov: latar hitam
+       Neraca/Neraca Lajur/Laba Rugi tidak seragam dengan Kas & Bank, Hutang, Piutang). */
+    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, backgroundColor: TEMA.total, height: 22, alignVertical: "center" as const, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
     case "note": return { ...cell, fontStyle: "italic" as const, textColor: TEMA.muted, ...border };
+    // Area di luar tabel pada sheet berdampingan: tanpa garis dan latar.
+    case "blank": return { value: "" };
     default: return { ...cell, ...(zebra ? { backgroundColor: TEMA.zebra } : {}), ...border, ...bar };
   }
 }
@@ -197,7 +204,9 @@ export async function exportExcelSheets(sheets: ExcelSheet[], filename: string):
     while (usedNames.has(name)) name = cleanSheetName(`${s.name} ${n++}`);
     usedNames.add(name);
     const widths: number[] = [];
-    const moneyCol = moneyColumns(s.rows?.[0]);
+    const moneyCol = s.moneyCols
+      ? Array.from({ length: Math.max(0, ...s.rows.map((r) => r?.length ?? 0)) }, (_, i) => s.moneyCols!.includes(i))
+      : moneyColumns(s.rows?.[0]);
     if (s.header) return themedSheet(s, s.header, name, moneyCol);
     const data: SheetData = (s.rows ?? []).map((row, r) =>
       (row ?? []).map((c, cIdx) => {
