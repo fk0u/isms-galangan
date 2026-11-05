@@ -336,16 +336,12 @@ try {
   /* Mode Rentang (FIN dari-sampai): saldo as-of = tanggal "sampai". */
   if (liveAsOf({ mode: "Rentang", hari: "", bulan: "", tahun: "", dari: "2026-06-10", sampai: "2026-07-05" }) !== "2026-07-05") asof.push("as-of rentang bukan tanggal sampai");
 
-  /* Mode "Semua" TIDAK boleh memakai konstanta. Versi lama return
-     "2026-08-31" apa pun datanya, jadi transaksi setelah Agustus 2026 tidak
-     pernah ikut terhitung dan tidak ada yang memberi tahu. Sekarang
-     mengikuti transaksi terakhir yang benar-benar ada. */
+  /* Mode "Semua" = hari ini (#313): bukan konstanta, bukan tanggal transaksi/jatuh tempo terbesar
+     (jurnal tutup tahun 31 Des atau tagihan jatuh tempo ke depan menggeser as-of ke masa depan). */
   const semua = { mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" } as const;
-  if (liveAsOf(semua) !== "") asof.push("mode Semua tanpa data seharusnya kosong, bukan konstanta");
-  if (liveAsOf(semua, "2026-11-14") !== "2026-11-14") asof.push(`mode Semua memakai data terakhir: dapat ${liveAsOf(semua, "2026-11-14")}`);
-  if (liveAsOf(semua, "bukan tanggal") !== "") asof.push("tanggal rusak tidak boleh jadi as-of");
+  if (liveAsOf(semua) !== todayISO()) asof.push(`mode Semua harus hari ini, dapat ${liveAsOf(semua)}`);
   /* Guard terakhir: transaksi setelah as-of tidak boleh masuk hitungan. */
-  const lewat = kasAsOfReport([...journals, j("2026-12-31", "1-1101", "5-101", 5000)] as never, liveAsOf(semua, "2026-06-30"), semua, empty, KAS_BANK);
+  const lewat = kasAsOfReport([...journals, j("2026-12-31", "1-1101", "5-101", 5000)] as never, "2026-06-30", semua, empty, KAS_BANK);
   if (Math.abs((lewat.saldo["1-1101"] ?? 0) - 600) > 0.5) asof.push("mode Semua mengabaikan batas transaksi terakhir");
 
   /* Filter historikal harus survive reload -> harus bisa lewat URL.
