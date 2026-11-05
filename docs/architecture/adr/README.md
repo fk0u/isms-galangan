@@ -22,5 +22,6 @@ Format: konteks → opsi → keputusan → konsekuensi. ADR tidak diedit setelah
 | [0016](0016-demo-lihat-sebagai-peran.md) | "Lihat sebagai peran" untuk demo RBAC | Accepted |
 | [0021](0021-ruas-code-intelligence.md) | RUAS sebagai alat bantu penelusuran kode (npx dipin, MCP) | Accepted |
 | [0022](0022-voucher-jurnal.md) | Nomor voucher jurnal diberikan server per transaksi | Accepted |
+| [0023](0023-arsip-tutup-buku.md) | Arsip tutup buku sebagai snapshot immutable di tabel khusus | Accepted |
 
 Template ADR baru: salin [`template.md`](template.md).

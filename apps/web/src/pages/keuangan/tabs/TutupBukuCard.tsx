@@ -6,6 +6,7 @@ import { Card, CardHeader, ConfirmModal, toast } from "../../../components/ui";
 import { apiFetch } from "../../../services/http";
 import { useAuth } from "../../../auth/auth";
 import { fmtRupiah, todayISO } from "../../../utils/format";
+import ClosingArchives from "./ClosingArchives";
 import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
 
@@ -20,6 +21,8 @@ export default function TutupBukuCard() {
   const [month, setMonth] = useState(todayISO().slice(0, 7));
   const [confirmClose, setConfirmClose] = useState<{ period: string; isYear: boolean } | null>(null);
   const [confirmReopen, setConfirmReopen] = useState<string | null>(null);
+  const [arcKey, setArcKey] = useState(0);
+  const canClose = ["finance", "pajak", "direktur", "developer"].includes(String(user?.role ?? ""));
 
   const load = () => apiFetch<Closed>("/api/closing").then(setSt).catch(() => setSt(null));
   useEffect(() => { void load(); }, []);
@@ -29,6 +32,7 @@ export default function TutupBukuCard() {
       const r = await apiFetch<{ journal: { amount?: number } | null }>("/api/closing", { method: "POST", body: JSON.stringify({ period }) });
       toast(r.journal ? S.tbYearDone.replace("{a}", period).replace("{b}", fmtRupiah(Number(r.journal.amount ?? 0))) : S.tbDone.replace("{a}", period));
       await load();
+      setArcKey((k) => k + 1);
     } catch (e) { toast(e instanceof Error ? e.message : String(e), "info"); }
   };
   const reopen = async (period: string) => {
@@ -41,6 +45,7 @@ export default function TutupBukuCard() {
   const allClosed = [...st.years, ...st.months];
 
   return (
+    <>
     <Card className="p-4">
       <CardHeader title={S.tbTitle} subtitle={S.tbSub.replace("{a}", fmtRupiah(st.stockValue))} />
       <div className="flex flex-wrap items-center gap-2">
@@ -123,5 +128,7 @@ export default function TutupBukuCard() {
         }}
       />
     </Card>
+    <ClosingArchives canClose={canClose} locked={allClosed} refreshKey={arcKey} />
+    </>
   );
 }

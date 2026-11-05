@@ -7,6 +7,7 @@ import { ok, fail } from "../envelope.js";
 import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { normalizeRole } from "../policy.js";
 import { CLOSING_ID, loadClosed, stockValue, type ClosedPeriods } from "../closing.js";
+import { createArchive, getArchive, listArchives } from "../closingArchive.js";
 import { withVoucherNo } from "../voucher.js";
 import { jsonEq } from "../refs.js";
 
@@ -35,9 +36,11 @@ export function registerClosingRoutes(app: FastifyInstance): void {
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
       if (c.months.includes(period) || c.years.includes(period.slice(0, 4))) return reply.status(409).send(fail(`Periode ${period} sudah tutup buku`, "CONFLICT"));
       c.months = [...c.months, period].sort();
+      /* Snapshot dibekukan SEBELUM periode terkunci: gagal arsip = periode tidak jadi tutup. */
+      const archive = await createArchive(period, requestActor(req));
       await saveClosed(c);
       await writeAudit({ actor: requestActor(req), action: "closing.month", table: "settings", rowId: CLOSING_ID, diff: { period }, ip: requestIp(req) });
-      return ok({ ...c, journal: null });
+      return ok({ ...c, journal: null, archiveId: archive.id });
     }
     if (/^\d{4}$/.test(period)) {
       if (c.years.includes(period)) return reply.status(409).send(fail(`Tahun ${period} sudah tutup buku`, "CONFLICT"));
@@ -59,11 +62,33 @@ export function registerClosingRoutes(app: FastifyInstance): void {
       }
       c.years = [...c.years, period].sort();
       c.months = c.months.filter((m) => !m.startsWith(`${period}-`));
+      /* Setelah jurnal persediaan dicatat, supaya arsip memuat Persediaan. */
+      const archive = await createArchive(period, requestActor(req));
       await saveClosed(c);
       await writeAudit({ actor: requestActor(req), action: "closing.year", table: "settings", rowId: CLOSING_ID, diff: { period, stockValue: value }, ip: requestIp(req) });
-      return ok({ ...c, journal });
+      return ok({ ...c, journal, archiveId: archive.id });
     }
     return reply.status(400).send(fail("period wajib YYYY-MM (bulanan) atau YYYY (tahunan)", "VALIDATION_ERROR"));
+  });
+
+  /* Arsip tutup buku (#314): hanya baca; ditulis server saat tutup/backfill. */
+  app.get("/api/closing/archives", { preHandler: [requireAuth, roleIn(CLOSERS, "Arsip tutup buku hanya untuk Keuangan atau pimpinan")] }, async () => ok(await listArchives()));
+  app.get("/api/closing/archives/:id", { preHandler: [requireAuth, roleIn(CLOSERS, "Arsip tutup buku hanya untuk Keuangan atau pimpinan")] }, async (req, reply) => {
+    const a = await getArchive(String((req.params as { id: string }).id));
+    return a ? ok(a) : reply.status(404).send(fail("Arsip tidak ditemukan", "NOT_FOUND"));
+  });
+  /* Periode yang sudah terkunci sebelum fitur arsip: buat arsip dari jurnal saat ini (ditandai backfilled). */
+  app.post("/api/closing/backfill", { preHandler: [requireAuth, roleIn(CLOSERS, "Tutup buku hanya oleh Keuangan atau pimpinan")] }, async (req) => {
+    const c = await loadClosed();
+    const have = new Set((await listArchives()).map((a) => String(a.period)));
+    const created: string[] = [];
+    for (const p of [...c.years, ...c.months]) {
+      if (have.has(p)) continue;
+      await createArchive(p, requestActor(req), { backfilled: true });
+      created.push(p);
+    }
+    if (created.length) await writeAudit({ actor: requestActor(req), action: "closing.backfill", table: "closingArchives", rowId: "-", diff: { created }, ip: requestIp(req) });
+    return ok({ created });
   });
 
   app.delete("/api/closing/:period", { preHandler: [requireAuth, roleIn(REOPENERS, "Membuka kembali periode hanya oleh direktur/developer")] }, async (req, reply) => {

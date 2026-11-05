@@ -4,6 +4,7 @@ import { cursorOf, parseCursor } from "../routes/crudCursor.js";
 import { dockFitIssue } from "../dockFit.js";
 import { negativeStockError } from "../domainGuards.js";
 import { buildRemap } from "../reseedMaterials.js";
+import { buildSnapshot, periodRange } from "../closingArchive.js";
 import { hasMagic, scanContent } from "../routes/files.js";
 
 describe("cursor pagination", () => {
@@ -58,5 +59,30 @@ describe("buildRemap (#320)", () => {
     );
     expect(remap.get("WH-1")).toBe("STK-9");
     expect(orphans).toEqual(["WH-2"]);
+  });
+});
+
+describe("buildSnapshot arsip tutup buku (#314)", () => {
+  const coa = [{ kode: "1-111", nama: "Kas" }, { kode: "4-100", nama: "Pendapatan" }, { kode: "5-101", nama: "Beban" }, { kode: "3-100", nama: "Modal" }];
+  const j = (date: string, db: string, kr: string, amount: number, sumber = "") => ({ date, db, kr, amount, sumber });
+  const base = [j("2026-09-10", "1-111", "3-100", 500), j("2026-10-05", "1-111", "4-100", 100), j("2026-10-20", "5-101", "1-111", 30)];
+  it("saldo awal, mutasi, neraca seimbang", () => {
+    const s = buildSnapshot(base, coa, "2026-10-01", "2026-10-31");
+    const kas = s.lajur.find((r) => r.kode === "1-111")!;
+    expect(kas.awal).toEqual([500, 0]);
+    expect(kas.mutasi).toEqual([100, 30]);
+    expect(s.neraca.totalAktiva).toBe(570);
+    expect(s.neraca.selisih).toBe(0);
+    expect(s.labaRugi.labaPeriode).toBe(70);
+    expect(s.totalDebit).toBe(s.totalKredit);
+  });
+  it("snapshot tidak berubah oleh jurnal bulan berikutnya", () => {
+    const a = buildSnapshot(base, coa, "2026-10-01", "2026-10-31");
+    const b = buildSnapshot([...base, j("2026-11-03", "1-111", "4-100", 9999)], coa, "2026-10-01", "2026-10-31");
+    expect(b).toEqual(a);
+  });
+  it("rentang periode bulan & tahun", () => {
+    expect(periodRange("2026-02")).toEqual({ kind: "month", start: "2026-02-01", end: "2026-02-28" });
+    expect(periodRange("2026")).toEqual({ kind: "year", start: "2026-01-01", end: "2026-12-31" });
   });
 });
