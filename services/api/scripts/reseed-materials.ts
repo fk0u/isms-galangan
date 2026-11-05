@@ -32,6 +32,9 @@ async function main(): Promise<void> {
   const orphanSet = new Set(orphans);
   const refFields: Array<[string, string]> = [];
   for (const [table, fields] of Object.entries(REFS)) for (const [f, def] of Object.entries(fields)) if (def.target === "inventory") refFields.push([table, f]);
+  /* Baris demo beridentik sama (BOM-NB12-*, MR-2026-*, PR-2026-*) sudah dimutakhirkan di seed baru
+     dengan itemId STK-MAT-*; ganti seluruh isinya agar item, satuan, dan jumlahnya konsisten. */
+  const mirror = new Map(FE_MIRROR_ROWS.map((r) => [`${r.table}:${r.id}`, r.data]));
   const refUpdates: Array<{ table: string; id: string; data: Record<string, unknown> }> = [];
   const refOrphans: string[] = [];
   const orphanRows: Array<{ table: string; id: string; data: Record<string, unknown> }> = [];
@@ -41,7 +44,9 @@ async function main(): Promise<void> {
     for (const r of rows) {
       const d = JSON.parse(r.data) as Record<string, unknown>;
       const v = String(d[field] ?? "");
-      if (remap.has(v)) refUpdates.push({ table, id: r.id, data: { ...d, [field]: remap.get(v) } });
+      const fresh = mirror.get(`${table}:${r.id}`);
+      if (orphanSet.has(v) && fresh) refUpdates.push({ table, id: r.id, data: fresh });
+      else if (remap.has(v)) refUpdates.push({ table, id: r.id, data: { ...d, [field]: remap.get(v) } });
       else if (orphanSet.has(v)) {
         refOrphans.push(`${table}.${field}:${r.id}→${v}`);
         orphanRows.push({ table, id: r.id, data: d });
