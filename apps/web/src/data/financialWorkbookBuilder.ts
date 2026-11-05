@@ -15,7 +15,11 @@ export interface FinancialWorkbookParams {
     amount?: number | string;
     sumber?: string;
     status?: string;
+    kodePembantu?: string;
+    voucherNo?: string;
   }>;
+  /** Awal periode filter (YYYY-MM-DD); jurnal sebelumnya jadi Saldo Awal. Kosong = dari awal data. */
+  periodStart?: string;
   nrNeraca: {
     aktiva: Array<{ kode: string; nama: string; nilai: number }>;
     kewajiban: Array<{ kode: string; nama: string; nilai: number }>;
@@ -51,6 +55,73 @@ export interface FinancialWorkbookParams {
   hutLive?: Array<{ v: string; total: number; count: number }>;
   piuLive?: Array<{ c: string; total: number; count: number }>;
   plMonthly?: Array<{ period: string; revenue: number; costProj: number; salary: number; laba: number }>;
+}
+
+const BLN_SINGKAT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+/** "2026-08-05" → "5-Agu-26" (format buku kas acuan klien). */
+export function tglSingkat(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${Number(m[3])}-${BLN_SINGKAT[Number(m[2]) - 1] ?? m[2]}-${m[1].slice(2)}` : iso;
+}
+
+/** Awal periode dari filter historis (Semua = kosong → seluruh data). */
+export function periodStartOf(hist: { mode: string; hari: string; bulan: string; tahun: string; dari: string }): string {
+  if (hist.mode === "Hari") return hist.hari;
+  if (hist.mode === "Bulan" && hist.bulan) return `${hist.bulan}-01`;
+  if (hist.mode === "Tahun" && hist.tahun) return `${hist.tahun}-01-01`;
+  if (hist.mode === "Rentang") return hist.dari;
+  return "";
+}
+
+/** #319: Jurnal Kas & Bank format acuan klien - satu blok per rekening (1-11x/1-12x)
+ *  dengan baris Saldo Awal, saldo berjalan per rekening, dan jumlah. Jurnal
+ *  penyesuaian (tutup buku) bukan transaksi kas sehingga tidak ikut. */
+export function buildKasBankRows(
+  journals: FinancialWorkbookParams["manJournals"],
+  nameOf: (kode: string) => string,
+  asOf: string,
+  periodStart: string,
+): unknown[][] {
+  const isKas = (k: string): boolean => /^1-1[12]/.test(k);
+  const byAcc = new Map<string, Array<{ j: FinancialWorkbookParams["manJournals"][number]; d: number; k: number; tgl: string }>>();
+  for (const j of journals) {
+    if (j.status === "Void" || (j.sumber !== "Kas" && j.sumber !== "Bank")) continue;
+    const tgl = String(j.date ?? "").slice(0, 10);
+    if (asOf && tgl > asOf) continue;
+    const amt = Number(j.amount ?? 0);
+    const db = String(j.db ?? "").trim();
+    const kr = String(j.kr ?? "").trim();
+    for (const [kode, d, k] of [[db, amt, 0], [kr, 0, amt]] as const) {
+      if (!isKas(kode)) continue;
+      const list = byAcc.get(kode) ?? [];
+      list.push({ j, d, k, tgl });
+      byAcc.set(kode, list);
+    }
+  }
+  const rows: unknown[][] = [
+    styledRow("head", ["TANGGAL", "KODE PEMBANTU", "NO BKK/BKM", "URAIAN", "AKUN DB", "AKUN KR", "KAS DEBIT", "KAS KREDIT", "SALDO"]),
+  ];
+  for (const kode of [...byAcc.keys()].sort()) {
+    const list = (byAcc.get(kode) ?? []).sort((a, b) => a.tgl.localeCompare(b.tgl));
+    const awal = list.filter((e) => periodStart && e.tgl < periodStart).reduce((s, e) => s + e.d - e.k, 0);
+    const inP = list.filter((e) => !periodStart || e.tgl >= periodStart);
+    rows.push(styledRow("section", [`Saldo Awal ${nameOf(kode)} - ${kode}`, "", "", "", "", "", "", "", awal]));
+    let saldo = awal;
+    let td = 0;
+    let tk = 0;
+    for (const e of inP) {
+      saldo += e.d - e.k;
+      td += e.d;
+      tk += e.k;
+      rows.push([
+        tglSingkat(e.tgl), String(e.j.kodePembantu ?? "") || "-", String(e.j.voucherNo ?? e.j.dokumen ?? "") || "-",
+        String(e.j.uraian ?? ""), String(e.j.db ?? "-"), String(e.j.kr ?? "-"), e.d, e.k, saldo,
+      ]);
+    }
+    rows.push(styledRow("total", ["", "", "", `Jumlah ${nameOf(kode)}`, "", "", td, tk, saldo]));
+    rows.push([]);
+  }
+  return rows;
 }
 
 /** Nama perusahaan di kop Excel mengikuti nama aplikasi. */
@@ -126,6 +197,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const {
     asOf,
     periodLabel,
+    periodStart = "",
     coaRows,
     manJournals,
     nrNeraca,
@@ -494,54 +566,9 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   /* =======================================================================
    * 5. SHEET: JU, KAS, BANK
    * ======================================================================= */
-  const kasBankRows: unknown[][] = [
-  ];
-
-  if (kasLiveRows.length > 0) {
-    kasBankRows.push(
-      styledRow("section", ["REKAPITULASI REKENING KAS & BANK", "", "", "", "", "", "", "", ""]),
-      styledRow("head", ["KODE", "NAMA REKENING", "SALDO AWAL", "MUTASI MASUK", "MUTASI KELUAR", "SALDO AKHIR", "", "", ""]),
-    );
-    for (const r of kasLiveRows) {
-      kasBankRows.push([
-        r.kode,
-        r.nama,
-        kasRep.saldo[r.kode] ?? 0,
-        kasRep.masuk[r.kode] ?? 0,
-        kasRep.keluar[r.kode] ?? 0,
-        kasRep.saldo[r.kode] ?? 0,
-      ]);
-    }
-    kasBankRows.push([]);
-  }
-
-  kasBankRows.push(
-    styledRow("section", ["RINCIAN TRANSAKSI KAS & BANK (BUKU KAS / BANK)", "", "", "", "", "", "", "", ""]),
-    styledRow("head", ["TANGGAL", "KODE PEMBANTU", "DOKUMEN", "URAIAN", "AKUN DB", "AKUN KR", "KAS DEBIT", "KAS KREDIT", "SALDO"]),
+  const kasBankRows = buildKasBankRows(
+    manJournals, (k) => String(coaMap.get(k)?.nama ?? k), asOf, periodStart,
   );
-
-  let rollingSaldo = 0;
-  for (const j of manJournals) {
-    if (j.status === "Void") continue;
-    if (asOf && String(j.date ?? "").slice(0, 10) > asOf) continue;
-    const isKasOrBank = j.sumber === "Kas" || j.sumber === "Bank";
-    const amount = Number(j.amount ?? 0);
-    const dbAmt = isKasOrBank && String(j.db ?? "").startsWith("1-1") ? amount : 0;
-    const krAmt = isKasOrBank && String(j.kr ?? "").startsWith("1-1") ? amount : 0;
-    rollingSaldo += (dbAmt - krAmt);
-
-    kasBankRows.push([
-      String(j.date ?? ""),
-      "-",
-      String(j.dokumen ?? "-"),
-      String(j.uraian ?? ""),
-      String(j.db ?? "-"),
-      String(j.kr ?? "-"),
-      dbAmt,
-      krAmt,
-      rollingSaldo,
-    ]);
-  }
 
   /* =======================================================================
    * 6. SHEET: HUTANG

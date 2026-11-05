@@ -65,7 +65,7 @@ import { useDraftState } from "../../utils/draft";
 import { sameName } from "../../utils/names";
 import { sbInvoiceMath, maxSeq, PPN_INVOICE_DEFAULT, PPH_JASA_DEFAULT, DPP_FACTOR } from "../../utils/sb";
 import { exportExcel, exportExcelSheets, styledRow } from "../../utils/export";
-import { buildFinancialFormatSheets, fmtPeriodeLaporan } from "../../data/financialWorkbookBuilder";
+import { buildFinancialFormatSheets, fmtPeriodeLaporan, periodStartOf } from "../../data/financialWorkbookBuilder";
 import { durasiJam, parseJam } from "../../utils/time24";
 import { useUrlParam, type UrlParamCodec } from "../../utils/urlParam";
 import { kasKodeOf, postCashJournal } from "../../services/autoJournal";
@@ -1365,9 +1365,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       const arAsOf = asOfOrToday(invHist);
       const juAsOf = asOfOrToday(juHist);
 
-      const makeSheets = (asOfDate: string, periodStr: string) =>
+      const makeSheets = (asOfDate: string, periodStr: string, periodStart = "") =>
         buildFinancialFormatSheets({
           asOf: asOfDate,
+          periodStart,
           periodLabel: periodStr,
           coaRows: coaRows as unknown as Array<{ kode: string; nama: string; dk: string; nrlr?: string; saldo?: number }>,
           manJournals: manJournals as unknown as Array<{ date?: string; dokumen?: string; uraian?: string; db?: string; kr?: string; amount?: number | string; sumber?: string; status?: string }>,
@@ -1381,7 +1382,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         });
 
       if (which === "kas") {
-        const sheets = makeSheets(kasAsOf, fmtPeriodeLaporan(kasHist, kasAsOf));
+        const sheets = makeSheets(kasAsOf, fmtPeriodeLaporan(kasHist, kasAsOf), periodStartOf(kasHist));
         const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
         await exportExcelSheets(target, `Kas-Bank-${kasAsOf}`);
       } else if (which === "bb") {
@@ -1424,7 +1425,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         const target = sheets.filter((s) => s.name === "Piutang");
         await exportExcelSheets(target, `Piutang-${arAsOf}`);
       } else if (which === "jurnal") {
-        const sheets = makeSheets(juAsOf, fmtPeriodeLaporan(juHist, juAsOf));
+        const sheets = makeSheets(juAsOf, fmtPeriodeLaporan(juHist, juAsOf), periodStartOf(juHist));
         const target = sheets.filter((s) => s.name === "JU, Kas, Bank");
         await exportExcelSheets(target, `Jurnal-JU-Kas-Bank-${juAsOf}`);
       } else if (which === "akun") {
@@ -1432,7 +1433,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         const target = sheets.filter((s) => s.name === "Akun");
         await exportExcelSheets(target, `Daftar-Akun-COA-${todayISO()}`);
       } else {
-        const sheets = makeSheets(nrAsOf || todayISO(), fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()));
+        const sheets = makeSheets(nrAsOf || todayISO(), fmtPeriodeLaporan(nrHist, nrAsOf || todayISO()), periodStartOf(nrHist));
         await exportExcelSheets(sheets, `Laporan-Keuangan-Format-Standar-${nrAsOf || todayISO()}`);
       }
       toast(S.histExported, "info");
