@@ -54,6 +54,9 @@ export interface FinancialWorkbookParams {
   };
   hutLive?: Array<{ v: string; total: number; count: number }>;
   piuLive?: Array<{ c: string; total: number; count: number }>;
+  /** Sisa hutang/piutang per pihak di akhir bulan sebelum as-of (kolom SALDO AWAL BULAN). */
+  hutAwal?: Array<{ v: string; total: number }>;
+  piuAwal?: Array<{ c: string; total: number }>;
   plMonthly?: Array<{ period: string; revenue: number; costProj: number; salary: number; laba: number }>;
 }
 
@@ -85,7 +88,9 @@ export function buildKasBankRows(
   const isKas = (k: string): boolean => /^1-1[12]/.test(k);
   const byAcc = new Map<string, Array<{ j: FinancialWorkbookParams["manJournals"][number]; d: number; k: number; tgl: string }>>();
   for (const j of journals) {
-    if (j.status === "Void" || (j.sumber !== "Kas" && j.sumber !== "Bank")) continue;
+    /* Transaksi kas/bank = jurnal yang menyentuh akun 1-11x/1-12x, apa pun sumbernya:
+       jurnal impor di produksi bersumber "JU". Penyesuaian (tutup buku) bukan arus kas. */
+    if (j.status === "Void" || j.sumber === "Penyesuaian") continue;
     const tgl = String(j.date ?? "").slice(0, 10);
     if (asOf && tgl > asOf) continue;
     const amt = Number(j.amount ?? 0);
@@ -121,6 +126,18 @@ export function buildKasBankRows(
     rows.push(styledRow("total", ["", "", "", `Jumlah ${nameOf(kode)}`, "", "", td, tk, saldo]));
     rows.push([]);
   }
+  return rows;
+}
+
+/** Baris Hutang/Piutang per pihak: saldo awal bulan vs akhir (sebelumnya kolom awal
+ *  hanya menyalin saldo akhir), diurut dari saldo akhir terbesar, plus baris jumlah. */
+export function saldoPihakRows(awal: Array<{ nama: string; total: number }>, akhir: Array<{ nama: string; total: number }>): unknown[][] {
+  const m = new Map<string, { awal: number; akhir: number }>();
+  for (const a of awal) m.set(a.nama, { awal: (m.get(a.nama)?.awal ?? 0) + a.total, akhir: m.get(a.nama)?.akhir ?? 0 });
+  for (const a of akhir) m.set(a.nama, { awal: m.get(a.nama)?.awal ?? 0, akhir: (m.get(a.nama)?.akhir ?? 0) + a.total });
+  const list = [...m.entries()].filter(([, v]) => Math.round(v.awal) !== 0 || Math.round(v.akhir) !== 0).sort((a, b) => b[1].akhir - a[1].akhir);
+  const rows: unknown[][] = list.map(([nama, v], i) => [i + 1, nama, Math.round(v.awal), Math.round(v.akhir)]);
+  rows.push(styledRow("total", ["", "JUMLAH", Math.round(list.reduce((s, [, v]) => s + v.awal, 0)), Math.round(list.reduce((s, [, v]) => s + v.akhir, 0))]));
   return rows;
 }
 
@@ -205,6 +222,8 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
     kasRep = { saldo: {}, masuk: {}, keluar: {} },
     hutLive = [],
     piuLive = [],
+    hutAwal = [],
+    piuAwal = [],
     plMonthly = [],
   } = params;
 
@@ -576,9 +595,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const hutangRows: unknown[][] = [
     styledRow("head", ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR SALDO"]),
   ];
-  hutLive.forEach((h, idx) => {
-    hutangRows.push([idx + 1, h.v, Math.round(h.total), Math.round(h.total)]);
-  });
+  hutangRows.push(...saldoPihakRows(hutAwal.map((h) => ({ nama: h.v, total: h.total })), hutLive.map((h) => ({ nama: h.v, total: h.total }))));
 
   /* =======================================================================
    * 7. SHEET: PIUTANG
@@ -586,9 +603,7 @@ export function buildFinancialFormatSheets(params: FinancialWorkbookParams): Exc
   const piutangRows: unknown[][] = [
     styledRow("head", ["NO", "KODE PEMBANTU", "SALDO AWAL BULAN", "AKHIR BULAN"]),
   ];
-  piuLive.forEach((p, idx) => {
-    piutangRows.push([idx + 1, p.c, Math.round(p.total), Math.round(p.total)]);
-  });
+  piutangRows.push(...saldoPihakRows(piuAwal.map((p) => ({ nama: p.c, total: p.total })), piuLive.map((p) => ({ nama: p.c, total: p.total }))));
 
   /* =======================================================================
    * 8. SHEET: BUKU BESAR

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildKasBankRows, tglSingkat } from "../financialWorkbookBuilder";
+import { buildKasBankRows, saldoPihakRows, tglSingkat } from "../financialWorkbookBuilder";
 
 const j = (date: string, db: string, kr: string, amount: number, extra: Record<string, unknown> = {}) =>
   ({ date, db, kr, amount, sumber: "Bank", status: "Posted", uraian: "x", ...extra });
@@ -29,4 +29,19 @@ describe("buildKasBankRows (#319)", () => {
     expect(rows[1][8]).toBe(0);
   });
   it("format tanggal singkat", () => expect(tglSingkat("2026-08-05")).toBe("5-Agu-26"));
+});
+
+describe("jurnal impor bersumber JU tetap masuk buku kas (#319)", () => {
+  it("dipilih menurut akun kas/bank, bukan sumber", () => {
+    const rows = buildKasBankRows([{ date: "2026-08-01", db: "5-600", kr: "1-111", amount: 70, sumber: "JU", status: "Posted" }], (k) => k, "2026-08-31", "2026-08-01");
+    expect(rows.some((r) => r[5] === "1-111" && r[7] === 70)).toBe(true);
+  });
+});
+
+describe("saldo awal bulan Hutang/Piutang", () => {
+  it("awal & akhir berbeda, pihak lunas tetap tampil, ada jumlah", () => {
+    const rows = saldoPihakRows([{ nama: "A", total: 100 }, { nama: "B", total: 50 }], [{ nama: "A", total: 60 }, { nama: "C", total: 10 }]);
+    expect(rows.slice(0, 3)).toEqual([[1, "A", 100, 60], [2, "C", 0, 10], [3, "B", 50, 0]]);
+    expect(rows[3].slice(1)).toEqual(["JUMLAH", 150, 70]);
+  });
 });

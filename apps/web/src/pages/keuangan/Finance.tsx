@@ -467,6 +467,11 @@ function akhirBulan(ym: string): string {
 /* Mode "Semua" = sampai HARI INI (permintaan klien 5 Nov). Versi lama memakai
    tanggal transaksi/jatuh tempo terbesar, sehingga jurnal tutup tahun
    (31 Des) atau tagihan jatuh tempo ke depan menggeser as-of ke masa depan. */
+/** "2026-11-05" → "2026-10-31": batas saldo awal bulan. */
+export function akhirBulanSebelum(iso: string): string {
+  const [y, m] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, (m || 1) - 1, 0)).toISOString().slice(0, 10);
+}
 export function liveAsOf(f: HistFilter): string {
   if (f.mode === "Hari" && /^\d{4}-\d{2}-\d{2}$/.test(f.hari)) return f.hari;
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return akhirBulan(f.bulan);
@@ -1421,8 +1426,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           lrLive,
           kasLiveRows,
           kasRep,
-          hutLive,
-          piuLive,
+          /* Hutang/Piutang dihitung per tanggal ekspor, bukan per filter Neraca:
+             ekspor Hutang "Per Juni" sebelumnya berisi sisa hutang per tanggal Neraca. */
+          hutLive: apOutAsOf(payables, asOfDate),
+          piuLive: arOutAsOf(invoices, asOfDate),
+          hutAwal: apOutAsOf(payables, akhirBulanSebelum(asOfDate)),
+          piuAwal: arOutAsOf(invoices, akhirBulanSebelum(asOfDate)),
           plMonthly,
         });
 

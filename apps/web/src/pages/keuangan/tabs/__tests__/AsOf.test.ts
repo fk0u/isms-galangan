@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyHist, histFromParam, histToParam, liveAsOf, withModeDefault } from "../../Finance";
+import { akhirBulanSebelum, emptyHist, histFromParam, histToParam, liveAsOf, withModeDefault } from "../../Finance";
 import { todayISO } from "../../../../utils/format";
 
 /* #313: as-of tiap mode filter; "Semua" = hari ini, bukan tanggal jurnal/jatuh tempo terbesar. */
@@ -20,5 +20,13 @@ describe("withModeDefault", () => {
   }
   it("nilai yang sudah ada tidak ditimpa", () => {
     expect(withModeDefault({ ...emptyHist(), bulan: "2026-03" }, "Bulan").bulan).toBe("2026-03");
+  });
+});
+
+describe("akhirBulanSebelum", () => {
+  it("batas saldo awal bulan", () => {
+    expect(akhirBulanSebelum("2026-11-05")).toBe("2026-10-31");
+    expect(akhirBulanSebelum("2026-03-31")).toBe("2026-02-28");
+    expect(akhirBulanSebelum("2026-01-15")).toBe("2025-12-31");
   });
 });

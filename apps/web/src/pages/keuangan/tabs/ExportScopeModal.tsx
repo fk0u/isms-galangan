@@ -8,13 +8,14 @@ import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
 import type { HistFilter } from "../Finance";
 
-export type ExportScope = { kind: "all" } | { kind: "year"; year: string } | { kind: "month"; month: string };
+export type ExportScope = { kind: "all" } | { kind: "year"; year: string } | { kind: "month"; month: string } | { kind: "range"; from: string; to: string };
 
 /** Cakupan → filter periode halaman. Seluruh = mode Semua (as-of hari ini). */
 export function scopeToHist(s: ExportScope): HistFilter {
   const base: HistFilter = { mode: "Semua", hari: "", bulan: "", tahun: "", dari: "", sampai: "" };
   if (s.kind === "year") return { ...base, mode: "Tahun", tahun: s.year };
   if (s.kind === "month") return { ...base, mode: "Bulan", bulan: s.month };
+  if (s.kind === "range") return { ...base, mode: "Rentang", dari: s.from, sampai: s.to };
   return base;
 }
 
@@ -22,6 +23,7 @@ export function scopeToHist(s: ExportScope): HistFilter {
 export function scopeFromHist(f: HistFilter): ExportScope {
   if (f.mode === "Tahun" && /^\d{4}$/.test(f.tahun)) return { kind: "year", year: f.tahun };
   if (f.mode === "Bulan" && /^\d{4}-\d{2}$/.test(f.bulan)) return { kind: "month", month: f.bulan };
+  if (f.mode === "Rentang" && f.dari && f.sampai) return { kind: "range", from: f.dari, to: f.sampai };
   return { kind: "all" };
 }
 
@@ -34,20 +36,29 @@ export default function ExportScopeModal({ open, current, onClose, onConfirm }: 
   const [kind, setKind] = useState<ExportScope["kind"]>("all");
   const [year, setYear] = useState(today.slice(0, 4));
   const [month, setMonth] = useState(today.slice(0, 7));
+  const [from, setFrom] = useState(`${today.slice(0, 7)}-01`);
+  const [to, setTo] = useState(today);
   useEffect(() => {
     if (!open) return;
     const s = scopeFromHist(current);
     setKind(s.kind);
     if (s.kind === "year") setYear(s.year);
     if (s.kind === "month") setMonth(s.month);
+    if (s.kind === "range") { setFrom(s.from); setTo(s.to); }
   }, [open, current]);
 
-  const valid = kind === "all" || (kind === "year" ? /^\d{4}$/.test(year) : /^\d{4}-(0[1-9]|1[0-2])$/.test(month));
-  const confirm = () => onConfirm(kind === "year" ? { kind, year } : kind === "month" ? { kind, month } : { kind });
+  const valid = kind === "all"
+    || (kind === "year" && /^\d{4}$/.test(year))
+    || (kind === "month" && /^\d{4}-(0[1-9]|1[0-2])$/.test(month))
+    || (kind === "range" && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to) && from <= to);
+  const confirm = () => onConfirm(
+    kind === "year" ? { kind, year } : kind === "month" ? { kind, month } : kind === "range" ? { kind, from, to } : { kind },
+  );
   const opts: Array<{ id: ExportScope["kind"]; label: string; hint: string }> = [
     { id: "all", label: S.expAll, hint: S.expAllHint.replace("{d}", today) },
     { id: "year", label: S.expYear, hint: S.expYearHint },
     { id: "month", label: S.expMonth, hint: S.expMonthHint },
+    { id: "range", label: S.expRange, hint: S.expRangeHint },
   ];
   return (
     <Modal
@@ -66,6 +77,13 @@ export default function ExportScopeModal({ open, current, onClose, onConfirm }: 
               <span className="block text-xs text-steel-500">{o.hint}</span>
               {o.id === "year" && kind === "year" && <input type="number" className="input mt-2 w-32" min={2000} max={2100} value={year} onChange={(e) => setYear(e.target.value)} aria-label={S.histYearAria} />}
               {o.id === "month" && kind === "month" && <input type="month" className="input mt-2 w-auto" value={month} onChange={(e) => setMonth(e.target.value)} aria-label={S.histMonthAria} />}
+              {o.id === "range" && kind === "range" && (
+                <span className="mt-2 flex flex-wrap items-center gap-2">
+                  <input type="date" className="input w-auto" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} aria-label={S.histFrom} />
+                  <span aria-hidden className="text-xs text-steel-400">–</span>
+                  <input type="date" className="input w-auto" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-label={S.histTo} />
+                </span>
+              )}
             </span>
           </label>
         ))}
