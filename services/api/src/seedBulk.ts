@@ -1,3 +1,4 @@
+import { assertDemoSeedAllowed } from "./seedData.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -336,6 +337,7 @@ async function main(): Promise<void> {
 
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("seedBulk.ts") || entry.endsWith("seedBulk.js")) {
+  assertDemoSeedAllowed("seedBulk");
   main()
     .then(() => closeDb().then(() => process.exit(0)))
     .catch((err) => {

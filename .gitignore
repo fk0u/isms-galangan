@@ -54,3 +54,4 @@ RUAS_CONTEXT.md
 
 # Symlink node_modules (mis. dari git worktree) tidak boleh ikut ter-commit.
 node_modules
+backup-purge-demo-*.json
