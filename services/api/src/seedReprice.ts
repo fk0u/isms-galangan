@@ -1,3 +1,4 @@
+import { assertDemoSeedAllowed } from "./seedData.js";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { exec, q, closeDb } from "./db.js";
@@ -359,6 +360,7 @@ async function main(): Promise<void> {
 
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("seedReprice.ts") || entry.endsWith("seedReprice.js")) {
+  assertDemoSeedAllowed("seedReprice");
   main()
     .then(() => closeDb().then(() => process.exit(process.exitCode ?? 0)))
     .catch((err) => {

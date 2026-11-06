@@ -1,3 +1,4 @@
+import { assertDemoSeedAllowed } from "./seedData.js";
 import { exec, q, closeDb } from "./db.js";
 import { seedUsers } from "./auth.js";
 
@@ -505,6 +506,7 @@ async function main(): Promise<void> {
 
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("seedWhatIf.ts") || entry.endsWith("seedWhatIf.js")) {
+  assertDemoSeedAllowed("seedWhatIf");
   main()
     .then(() => closeDb().then(() => process.exit(0)))
     .catch((err) => {

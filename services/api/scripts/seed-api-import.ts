@@ -9,7 +9,7 @@
  * Penggunaan:
  *   npx tsx --env-file-if-exists=.env scripts/seed-api-import.ts
  *   npx tsx --env-file-if-exists=.env scripts/seed-api-import.ts --fresh   (kosongkan tabel operasional dulu)
- *   npx tsx --env-file-if-exists=.env scripts/seed-api-import.ts --remote http://157.10.161.42:3000
+ *   npx tsx --env-file-if-exists=.env scripts/seed-api-import.ts --remote http://localhost:3000   (hanya server dev/staging)
  */
 
 import fs from "node:fs";
@@ -17,7 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildApp } from "../src/app.js";
 import { signToken, seedUsers, invalidateUserCache } from "../src/auth.js";
-import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, type SeedRow } from "../src/seedData.js";
+import { assertDemoSeedAllowed, buildSeedRows, buildTeamSeeds, buildWbsSeeds, type SeedRow } from "../src/seedData.js";
 import { q, exec, closeDb } from "../src/db.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -64,6 +64,12 @@ async function main(): Promise<void> {
   const isFresh = args.includes("--fresh") || args.includes("--clean");
   const remoteArgIdx = args.findIndex((a) => a === "--remote");
   const remoteUrl = remoteArgIdx !== -1 && args[remoteArgIdx + 1] ? args[remoteArgIdx + 1] : process.env.API_REMOTE_URL;
+  assertDemoSeedAllowed("seed-api-import");
+  // #335: server produksi tidak boleh jadi target seed demo, dari mesin mana pun.
+  if (remoteUrl && /galangan\.alk-tech\.my\.id|157\.10\.161\.42/.test(remoteUrl) && process.env.ALLOW_DEMO_SEED !== "true") {
+    console.error("[seed-api-import] ditolak: target adalah server produksi.");
+    process.exit(1);
+  }
 
   console.log("===================================================================");
   console.log("       ISMS GALANGAN — STEP-BY-STEP API SEED & IMPORT TESTER       ");
