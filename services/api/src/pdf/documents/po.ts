@@ -122,7 +122,7 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
     docTitle({
       title: L(locale, "PURCHASE ORDER", "PURCHASE ORDER"),
       // #332: tanggal tidak di baris nomor surat, tapi di blok pemesanan di bawah NPWP.
-      ref: `${L(locale, "No", "No")}. ${input.no}`,
+      ref: `${L(locale, "Nomor", "Number")} : ${input.no}`,
     }),
   );
 
@@ -147,7 +147,8 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
     }),
   );
 
-  if (input.projectName) {
+  // "-" = proyek kosong; jangan cetak "Proyek: -".
+  if (input.projectName && input.projectName.trim() !== "-") {
     d.add(spacer(1));
     d.add(
       paragraph({
