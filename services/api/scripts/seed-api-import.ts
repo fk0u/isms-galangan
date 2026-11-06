@@ -66,7 +66,9 @@ async function main(): Promise<void> {
   const remoteUrl = remoteArgIdx !== -1 && args[remoteArgIdx + 1] ? args[remoteArgIdx + 1] : process.env.API_REMOTE_URL;
   assertDemoSeedAllowed("seed-api-import");
   // #335: server produksi tidak boleh jadi target seed demo, dari mesin mana pun.
-  if (remoteUrl && /galangan\.alk-tech\.my\.id|157\.10\.161\.42/.test(remoteUrl) && process.env.ALLOW_DEMO_SEED !== "true") {
+  // Bandingkan hostname yang sudah dinormalisasi (bukan string mentah); tidak bisa ditimpa ALLOW_DEMO_SEED.
+  const remoteHost = remoteUrl ? (() => { try { return new URL(remoteUrl).hostname.toLowerCase(); } catch { return remoteUrl.toLowerCase(); } })() : "";
+  if (["galangan.alk-tech.my.id", "157.10.161.42"].includes(remoteHost)) {
     console.error("[seed-api-import] ditolak: target adalah server produksi.");
     process.exit(1);
   }
