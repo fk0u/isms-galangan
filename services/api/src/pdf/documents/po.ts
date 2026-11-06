@@ -121,7 +121,8 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
   d.add(
     docTitle({
       title: L(locale, "PURCHASE ORDER", "PURCHASE ORDER"),
-      ref: `${L(locale, "No", "No")}. ${input.no}   ${L(locale, "Tanggal", "Date")} ${longDate(input.tanggal)}`,
+      // #332: tanggal tidak di baris nomor surat, tapi di blok pemesanan di bawah NPWP.
+      ref: `${L(locale, "Nomor", "Number")} : ${input.no}`,
     }),
   );
 
@@ -140,12 +141,14 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
       pairs: [
         { label: L(locale, "Supplier", "Supplier"), value: input.vendorName, bold: true },
         { label: "NPWP", value: input.vendorNPWP ?? "-" },
+        { label: L(locale, "Tanggal", "Date"), value: longDate(input.tanggal) },
         { label: L(locale, "Alamat", "Address"), value: input.vendorAddress ?? "-" },
       ],
     }),
   );
 
-  if (input.projectName) {
+  // "-" = proyek kosong; jangan cetak "Proyek: -".
+  if (input.projectName && input.projectName.trim() !== "-") {
     d.add(spacer(1));
     d.add(
       paragraph({
@@ -156,12 +159,6 @@ export function po(input: PoInput, opts: DocOptions = {}): Document {
   }
 
   d.add(spacer(2));
-  d.add(
-    paragraph({
-      text: L(locale, "Dengan ini kami memesan:", "We hereby order:"),
-      size: 10,
-    }),
-  );
 
   const rows = input.items.map((item) => [
     item.description,

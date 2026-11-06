@@ -741,7 +741,8 @@ const poRecipe: Recipe<PoInput> = {
     ].filter((s) => s !== "").join("\n");
     const notes = customNotes || autoNotes;
     return {
-      no: str(p, "docNo") !== "-" ? `${id} / ${str(p, "docNo")}` : id,
+      /* #332: nomor surat resmi saja (nn/PO-SB/SMD/m/yyyy); ID sistem hanya bila nomor surat kosong. */
+      no: str(p, "docNo") !== "-" ? str(p, "docNo") : id,
       tanggal: docDate(p, "date"),
       vendorName,
       vendorAddress: vendor && str(vendor, "address") !== "-" ? str(vendor, "address") : undefined,
