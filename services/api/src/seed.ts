@@ -1,6 +1,6 @@
 import { exec, q, closeDb } from "./db.js";
 import { seedUsers } from "./auth.js";
-import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, topUpDemoWbsHistory } from "./seedData.js";
+import { buildSeedRows, buildTeamSeeds, buildWbsSeeds, topUpDemoWbsHistory, assertDemoSeedAllowed } from "./seedData.js";
 
 // Full DB seed (idempotent, skip-if-exists): users + all seedData rows +
 // wbs/team. Same content as POST /api/admin/seed (without force).
@@ -83,6 +83,7 @@ export async function runSeed(): Promise<void> {
 
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("seed.ts") || entry.endsWith("seed.js")) {
+  assertDemoSeedAllowed("seed");
   runSeed()
     .then(() => closeDb().then(() => process.exit(0)))
     .catch((err) => {

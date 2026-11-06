@@ -276,3 +276,13 @@ export function buildWbsSeeds(): WbsSeed[] {
 export function buildTeamSeeds(): TeamSeed[] {
   return TEAM_SEED.map(([projectId, memberIds]) => ({ projectId, memberIds: [...memberIds] }));
 }
+
+/* #335: data demo sintetis tidak boleh masuk server produksi (CTO 6 Nov:
+   data "Contoh" tersangkut di produksi dari seed). Skrip seed CLI berhenti
+   bila NODE_ENV=production kecuali ALLOW_DEMO_SEED=true disetel sengaja. */
+export function assertDemoSeedAllowed(script: string): void {
+  if (String(process.env.NODE_ENV ?? "").trim().toLowerCase() === "production" && process.env.ALLOW_DEMO_SEED !== "true") {
+    console.error(`[${script}] ditolak: NODE_ENV=production. Data demo sintetis tidak boleh masuk produksi (set ALLOW_DEMO_SEED=true bila memang disengaja).`);
+    process.exit(1);
+  }
+}
