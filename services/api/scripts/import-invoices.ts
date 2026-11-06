@@ -5,7 +5,9 @@
  *   npm run import:invoices -- /home/user/invoice-rows.json            (dry-run)
  *   npm run import:invoices -- /home/user/invoice-rows.json --apply    (tulis)
  *
- * Format: [{ id, branch, data: { noInv, client, grandTotal, status, ... } }].
+ * Format (sudah dipetakan penuh oleh konverter): [{ id, branch, data: { noInv,
+ * client, due, grandTotal, status, payments: [{date, amount, ...}], paidTotal, ... } }].
+ * Skrip ini TIDAK memetakan kolom Excel; ia menolak baris yang belum lengkap.
  * Upsert per id (idempoten); --apply membackup baris lama ber-id sama ke JSON
  * (mode 600, home/BACKUP_DIR) lalu menulis semuanya dalam satu transaksi dan
  * mencatat audit_log. */
@@ -31,7 +33,12 @@ for (const r of rows) {
   const d = r.data ?? {};
   if (!String(d.noInv ?? "").trim() || !String(d.client ?? "").trim()) problems.push(`${r.id}: noInv/client kosong`);
   if (!(Number(d.grandTotal) > 0)) problems.push(`${r.id}: grandTotal tidak valid`);
-  if (!["Lunas", "Belum Dibayar", "Terlambat", "Draft", "Diajukan", "Disetujui"].includes(String(d.status))) problems.push(`${r.id}: status ${String(d.status)}`);
+  if (!["Lunas", "Belum Dibayar", "Terlambat", "Draft", "Diajukan", "Disetujui", "Ditolak", "Dihapusbukukan"].includes(String(d.status))) problems.push(`${r.id}: status ${String(d.status)}`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.due ?? ""))) problems.push(`${r.id}: due wajib YYYY-MM-DD`);
+  const pays = Array.isArray(d.payments) ? (d.payments as Array<Record<string, unknown>>) : null;
+  if (!pays || pays.some((p) => !(Number(p.amount) > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(String(p.date ?? "")))) problems.push(`${r.id}: payments wajib array {date, amount>0}`);
+  else if (Math.abs(pays.reduce((s, p) => s + Number(p.amount), 0) - Number(d.paidTotal)) > 1) problems.push(`${r.id}: paidTotal ≠ jumlah payments`);
+  if (d.status === "Lunas" && !String(d.paidAt ?? "")) problems.push(`${r.id}: Lunas wajib paidAt`);
 }
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 
@@ -54,11 +61,16 @@ async function run(): Promise<void> {
   }
   const now = new Date().toISOString();
   for (const r of rows) {
-    const data = JSON.stringify({ ...r.data, createdAt: r.data.createdAt ?? now, updatedAt: now });
+    // Gabung dengan data lama: field yang tidak dibawa file (proyek, catatan, dll.) tetap; createdAt asli dipertahankan.
+    const old = existing.has(r.id) ? (JSON.parse(existing.get(r.id)!.data) as Record<string, unknown>) : {};
+    const next: Record<string, unknown> = { ...old, ...r.data, createdAt: old.createdAt ?? r.data.createdAt ?? now, updatedAt: now };
+    const changed = Object.keys(next).filter((k) => k !== "updatedAt" && JSON.stringify(old[k] ?? null) !== JSON.stringify(next[k] ?? null));
+    const diff = { source: String(r.data.source ?? file), before: Object.fromEntries(changed.map((k) => [k, old[k] ?? null])), after: Object.fromEntries(changed.map((k) => [k, next[k]])) };
+    const data = JSON.stringify(next);
     if (existing.has(r.id)) await exec("UPDATE invoices SET data = ?, branch = ?, updated_at = ? WHERE id = ?", [data, r.branch ?? "Samarinda", now, r.id]);
     else await exec("INSERT INTO invoices (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [r.id, r.branch ?? "Samarinda", data, now]);
     await exec("INSERT INTO audit_log (id, actor, action, table_name, row_id, diff, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      [randomUUID(), "import:invoices", existing.has(r.id) ? "update" : "create", "invoices", r.id, JSON.stringify({ source: String(r.data.source ?? file) }), "-", now]);
+      [randomUUID(), "import:invoices", existing.has(r.id) ? "update" : "create", "invoices", r.id, JSON.stringify(diff), "-", now]);
   }
   console.log(`Selesai: ${rows.length} invoice ditulis.`);
 }
