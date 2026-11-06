@@ -5,7 +5,7 @@
  * diambil dari berkas klien. Isinya dari mutasi & stok aplikasi. */
 import writeXlsxFile, { type SheetData } from "write-excel-file/browser";
 import type { StoreItem } from "../data/store";
-import { sanitizeCell } from "./export";
+import { HEAD_FONT, sanitizeCell } from "./export";
 
 const DATE_FMT = "[$-421]dd mmmm yyyy;@";
 const NUM_FMT = '_(* #,##0_);_(* \\(#,##0\\);_(* "-"_);_(@_)';
@@ -30,7 +30,7 @@ const date = (iso: string) => {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(d.getTime()) ? txt(iso) : { value: d, type: Date, format: DATE_FMT };
 };
-const bold = (v: string, align?: "center", columnSpan?: number) => ({ value: v, type: String, fontWeight: "bold" as const, align, columnSpan });
+const bold = (v: string, align?: "center", columnSpan?: number) => ({ value: v, type: String, fontWeight: "bold" as const, fontSize: HEAD_FONT, align, columnSpan });
 const widths = (w: number[]) => w.map((width) => ({ width }));
 const unitOf = (u: unknown): string => String(u ?? "").toUpperCase();
 
