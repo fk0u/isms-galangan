@@ -24,6 +24,8 @@ const APPLY = process.argv.includes("--apply");
 if (!file) { console.error("Pakai: import-invoices.ts <file.json> [--apply]"); process.exit(1); }
 
 const rows = JSON.parse(readFileSync(file, "utf8")) as InRow[];
+/** Tanggal kalender YYYY-MM-DD yang benar-benar ada (tolak 2026-02-31). */
+const isDate = (v: unknown): boolean => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
 const problems: string[] = [];
 const seen = new Set<string>();
 for (const r of rows) {
@@ -34,11 +36,11 @@ for (const r of rows) {
   if (!String(d.noInv ?? "").trim() || !String(d.client ?? "").trim()) problems.push(`${r.id}: noInv/client kosong`);
   if (!(Number(d.grandTotal) > 0)) problems.push(`${r.id}: grandTotal tidak valid`);
   if (!["Lunas", "Belum Dibayar", "Terlambat", "Draft", "Diajukan", "Disetujui", "Ditolak", "Dihapusbukukan"].includes(String(d.status))) problems.push(`${r.id}: status ${String(d.status)}`);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.due ?? ""))) problems.push(`${r.id}: due wajib YYYY-MM-DD`);
+  if (!isDate(d.due)) problems.push(`${r.id}: due wajib tanggal YYYY-MM-DD`);
   const pays = Array.isArray(d.payments) ? (d.payments as Array<Record<string, unknown>>) : null;
-  if (!pays || pays.some((p) => !(Number(p.amount) > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(String(p.date ?? "")))) problems.push(`${r.id}: payments wajib array {date, amount>0}`);
+  if (!pays || pays.some((p) => !p || typeof p !== "object" || !(Number(p.amount) > 0) || !isDate(p.date))) problems.push(`${r.id}: payments wajib array {date, amount>0}`);
   else if (Math.abs(pays.reduce((s, p) => s + Number(p.amount), 0) - Number(d.paidTotal)) > 1) problems.push(`${r.id}: paidTotal ≠ jumlah payments`);
-  if (d.status === "Lunas" && !String(d.paidAt ?? "")) problems.push(`${r.id}: Lunas wajib paidAt`);
+  if (d.status === "Lunas" && !isDate(d.paidAt)) problems.push(`${r.id}: Lunas wajib paidAt tanggal YYYY-MM-DD`);
 }
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 
