@@ -72,7 +72,7 @@ export async function exportExcel(data: unknown[][], filename: string, sheetName
       widths[cIdx] = Math.max(widths[cIdx] ?? 10, Math.min(String(raw ?? "").length + 2, 45));
       // Baris 0 = judul (besar, navy), baris 1 = header (tebal + fill).
       if (r === 0) return { value: raw, fontWeight: "bold" as const, fontSize: 14, color: "#0A0A0A" };
-      if (r === 1) return { value: raw, fontWeight: "bold" as const, backgroundColor: "#EBEBEB" };
+      if (r === 1) return { value: raw, fontWeight: "bold" as const, fontSize: HEAD_FONT, backgroundColor: "#EBEBEB" };
       return asMoney(raw, moneyCol[cIdx] ?? null) ?? null;
     })
   );
@@ -113,6 +113,9 @@ export function styledRow(kind: RowKinds, cells: unknown[]): unknown[] {
 }
 
 const THIN = "thin" as const;
+/** Ukuran font header tabel dan judul bagian (isi tabel tetap 11). */
+export const HEAD_FONT = 13;
+const SECTION_FONT = 13;
 function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | null, zebra: boolean) {
   // Nol tampil "-" seperti laporan akuntansi; sel tetap angka.
   const base = raw === 0 ? { value: 0, format: '#,##0;-#,##0;"-"' } : asMoney(raw, money);
@@ -130,12 +133,13 @@ function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | nu
   // Bar teks dasbor (█░) diwarnai merek agar terbaca sebagai grafik.
   const bar = typeof raw === "string" && /^[█░]/.test(raw) ? { textColor: TEMA.brand } : {};
   switch (kind) {
-    case "head": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 22, ...border, topBorderColor: TEMA.brandDark, bottomBorderColor: TEMA.brandDark, leftBorderColor: TEMA.brandDark, rightBorderColor: TEMA.brandDark };
-    case "section": return { ...cell, fontWeight: "bold" as const, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
+    /* Header tabel & judul bagian diperbesar (klien 6 Nov: header kecil sulit dibaca). */
+    case "head": return { ...cell, fontWeight: "bold" as const, fontSize: HEAD_FONT, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 30, ...border, topBorderColor: TEMA.brandDark, bottomBorderColor: TEMA.brandDark, leftBorderColor: TEMA.brandDark, rightBorderColor: TEMA.brandDark };
+    case "section": return { ...cell, fontWeight: "bold" as const, fontSize: SECTION_FONT, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
     case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
     /* #327: total akhir abu-abu seperti baris total lain (klien 6 Nov: latar hitam
        Neraca/Neraca Lajur/Laba Rugi tidak seragam dengan Kas & Bank, Hutang, Piutang). */
-    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: 12, backgroundColor: TEMA.total, height: 22, alignVertical: "center" as const, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
+    case "grand": return { ...cell, fontWeight: "bold" as const, fontSize: SECTION_FONT, backgroundColor: TEMA.total, height: 22, alignVertical: "center" as const, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
     case "note": return { ...cell, fontStyle: "italic" as const, textColor: TEMA.muted, ...border };
     // Area di luar tabel pada sheet berdampingan: tanpa garis dan latar.
     case "blank": return { value: "" };
@@ -149,9 +153,9 @@ function headerRows(h: NonNullable<ExcelSheet["header"]>, span: number): SheetDa
   const mid = (value: string, style: { fontSize: number; textColor: string }) =>
     [{ value: sanitizeCell(value), fontWeight: "bold" as const, align: "center" as const, columnSpan: span, ...style }, ...Array<null>(span - 1).fill(null)];
   return [
-    mid(h.company, { fontSize: 14, textColor: TEMA.ink }),
+    mid(h.company, { fontSize: 16, textColor: TEMA.ink }),
     mid(h.title, { fontSize: 24, textColor: TEMA.brand }),
-    mid(h.period, { fontSize: 12, textColor: TEMA.brandDark }),
+    mid(h.period, { fontSize: 14, textColor: TEMA.brandDark }),
     // Garis aksen merek di bawah kop.
     Array.from({ length: span }, () => ({ value: "", backgroundColor: TEMA.brand, height: 4 })),
     [null],
@@ -182,7 +186,9 @@ function themedSheet(s: ExcelSheet, header: NonNullable<ExcelSheet["header"]>, n
       if (typeof raw === "string") raw = sanitizeCell(raw);
       // Angka tampil "Rp 1.234.567": lebar ikut teks terformat supaya tidak jadi ###.
       const shown = typeof raw === "number" ? `Rp -${Math.round(raw).toLocaleString("id-ID")}` : String(raw ?? "");
-      widths[cIdx] = Math.max(widths[cIdx], Math.min(shown.length + 3, 48));
+      // Header berfont lebih besar butuh kolom lebih lebar agar judul kolom tidak terpotong.
+      const len = kindAt(cIdx) === "head" ? Math.ceil(shown.length * 1.25) : shown.length;
+      widths[cIdx] = Math.max(widths[cIdx], Math.min(len + 3, 48));
       return themedCell(raw ?? "", kindAt(cIdx), moneyCol[cIdx] ?? null, zebra);
     });
   });
@@ -213,7 +219,7 @@ export async function exportExcelSheets(sheets: ExcelSheet[], filename: string):
         let raw = normalizeCell(c);
         if (typeof raw === "string") raw = sanitizeCell(raw);
         widths[cIdx] = Math.max(widths[cIdx] ?? 10, Math.min(String(raw ?? "").length + 2, 45));
-        if (r === 0) return { value: raw ?? "", fontWeight: "bold" as const, backgroundColor: "#EBEBEB" };
+        if (r === 0) return { value: raw ?? "", fontWeight: "bold" as const, fontSize: HEAD_FONT, backgroundColor: "#EBEBEB" };
         return asMoney(raw, moneyCol[cIdx] ?? null) ?? "";
       })
     );
