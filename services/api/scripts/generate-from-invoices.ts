@@ -9,6 +9,8 @@
  * - projects: satu proyek per invoice (id PRJ-<id invoice>), nilai = jasa+material,
  *             biaya aktual = total "modal", pimpinan = pimpro, status Selesai
  *             (invoice terbit = pekerjaan sudah ditagih).
+ * - subcontractors: label `modal[]` yang berupa nama orang (bukan pos biaya umum
+ *             seperti Material/Karyawan); nilai kontrak = total modal ke orang itu.
  * - invoices: field `project` diisi id proyek bila masih kosong.
  * Idempoten: baris yang sudah ada (nama sama / id sama) dilewati. */
 import { randomUUID } from "node:crypto";
@@ -22,6 +24,25 @@ const key = (v: unknown): string => String(v ?? "").trim().replace(/\s+/g, " ").
 export function vesselType(name: string): string {
   const p = key(name).split(" ")[0];
   return ({ TB: "Tugboat", BG: "Barge", SPOB: "SPOB", LCT: "LCT", KM: "Kapal Motor", MT: "Tanker", AWB: "Accommodation Work Barge" } as Record<string, string>)[p] ?? "";
+}
+
+/** Label modal yang merupakan pos biaya, bukan subkon. */
+const BUKAN_SUBKON = new Set(["MATERIAL", "KARYAWAN & LISTRIK", "KARYAWAN", "LISTRIK", "VENDOR LUAR", "FEE", ""]);
+
+/** Subkon dari label modal[]: satu baris per nama, kontrak = total, active = jumlah invoice. */
+export function planSubkon(invoices: Array<{ data: Data }>, existing: Set<string>): Data[] {
+  const agg = new Map<string, Data & { contract: number; active: number }>();
+  for (const { data: d } of invoices) {
+    for (const m of Array.isArray(d.modal) ? (d.modal as Data[]) : []) {
+      const name = String(m.label ?? "").trim().replace(/\s+/g, " ");
+      if (BUKAN_SUBKON.has(key(name)) || existing.has(key(name))) continue;
+      const row = agg.get(key(name)) ?? { name, services: "Borongan (dari modal invoice)", rating: 0, active: 0, contract: 0, status: "Aktif", k3: "" };
+      row.contract += Math.round(Number(m.amount) || 0);
+      row.active += 1;
+      agg.set(key(name), row);
+    }
+  }
+  return [...agg.values()];
 }
 
 export interface Plan { clients: Data[]; vessels: Data[]; projects: Array<{ id: string; data: Data }>; links: Array<{ id: string; project: string }> }
@@ -75,7 +96,8 @@ async function run(): Promise<void> {
   const vessels = new Set((await q<{ data: string }>("SELECT data FROM vessels")).map((r) => key(P(r.data).name)));
   const projects = new Set((await q<{ id: string }>("SELECT id FROM projects")).map((r) => r.id));
   const p = plan(invoices, clients, vessels, projects);
-  console.log(`${APPLY ? "APPLY" : "DRY-RUN"} — klien baru ${p.clients.length}, kapal baru ${p.vessels.length}, proyek baru ${p.projects.length}, invoice ditautkan ${p.links.length}`);
+  const subkon = planSubkon(invoices, new Set((await q<{ data: string }>("SELECT data FROM subcontractors")).map((r) => key(P(r.data).name))));
+  console.log(`${APPLY ? "APPLY" : "DRY-RUN"} — klien baru ${p.clients.length}, kapal baru ${p.vessels.length}, proyek baru ${p.projects.length}, subkon baru ${subkon.length}, invoice ditautkan ${p.links.length}`);
   if (!APPLY) return;
   const now = new Date().toISOString();
   const branch = "Samarinda";
@@ -90,6 +112,7 @@ async function run(): Promise<void> {
   const nid = (prefix: string) => `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
   for (const c of p.clients) await insert("clients", nid("C"), c);
   for (const v of p.vessels) await insert("vessels", nid("V"), v);
+  for (const s of subkon) await insert("subcontractors", nid("SUB"), s);
   for (const pr of p.projects) await insert("projects", pr.id, pr.data);
   for (const l of p.links) {
     const [r] = await q<{ data: string }>("SELECT data FROM invoices WHERE id = ?", [l.id]);
