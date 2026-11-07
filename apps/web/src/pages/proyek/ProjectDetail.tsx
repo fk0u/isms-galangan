@@ -56,6 +56,7 @@ import { generateRisksFromWbs, generateRisksFromWo, claimAutoRisk, releaseAutoRi
 import { EntityPicker, SearchBox, rowMatches } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
 import WbsTree from "./WbsTree";
+import SCurveCard from "../../components/SCurveCard";
 import { FlowTree, type FlowNode } from "../../components/FlowTree";
 import { n_tree } from "../../i18n/n_tree";
 import { PhotoUploader } from "../../components/PhotoUploader";
@@ -2208,6 +2209,7 @@ const createWarranty = async (wbsTask?: string) => {
                   </div>
                 </Card>
               )}
+            <SCurveCard wbs={wbs} budget={project.budget} progress={project.progress} ac={hppWithEquip} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Card className="p-5">
                 <div className="mb-2 flex items-center justify-between">
