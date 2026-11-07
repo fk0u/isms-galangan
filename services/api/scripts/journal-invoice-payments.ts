@@ -30,7 +30,8 @@ export interface JLine { dokumen: string; date: string; uraian: string; db: stri
 /** Baris jurnal yang seharusnya ada untuk satu invoice. */
 export function linesFor(id: string, d: Data): JLine[] {
   const pays = Array.isArray(d.payments) ? (d.payments as Data[]) : [];
-  let sisa = Math.round(Number(d.grandTotal) || 0);
+  // Neto sama dengan invNeto di Finance.tsx: grandTotal, atau amount - retensi.
+  let sisa = Math.round(Number(d.grandTotal) > 0 ? Number(d.grandTotal) : Math.max(0, (Number(d.amount) || 0) - (Number(d.retentionAmt) || 0)));
   const out: JLine[] = [];
   pays.forEach((p, i) => {
     const amt = Math.round(Number(p.amount) || 0);
@@ -75,6 +76,7 @@ async function run(): Promise<void> {
   if (skippedClosed.length) console.log(`Dilewati (periode tutup buku): ${skippedClosed.join(", ")}`);
   if (!APPLY) return;
   const now = new Date().toISOString();
+  // Voucher max+1 tanpa kunci: aman karena seluruh backfill dalam satu transaksi; jalankan saat sepi.
   for (const l of todo) {
     const id = `JU-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
     const data = await withVoucherNo({ date: l.date, kodePembantu: "", dokumen: l.dokumen, uraian: l.uraian, db: l.db, kr: l.kr, amount: l.amount, sumber: l.db.startsWith("1-11") ? "Kas" : "Bank", status: "Posted", branch: l.branch, createdAt: now, updatedAt: now });

@@ -10,4 +10,5 @@ assert.deepEqual(l.map((x) => [x.dokumen, x.db, x.kr, x.amount]), [
 ]);
 assert.match(l[1].uraian, /^Pelunasan/);
 assert.deepEqual(linesFor("INV-Y", { grandTotal: 5 }), []);
+assert.equal(linesFor("INV-Z", { amount: 100, retentionAmt: 10, payments: [{ date: "2026-01-01", amount: 90 }] })[0].kr, "1-130");
 console.log("journal-invoice-payments: ok");
