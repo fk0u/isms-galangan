@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SuratTab from "./tabs/SuratTab";
 import { Link } from "react-router-dom";
 import { leaveUsedByEmployee, reducesLeaveBalance } from "../../utils/leaveBalance";
 import { QRCodeSVG } from "qrcode.react";
@@ -253,7 +254,6 @@ export default function HR() {
   const canDeleteHR = hasPermission(user?.permissions, "employees", "d");
   const canWriteLeave = hasPermission(user?.permissions, "leaveRequests", "w");
   const canDeleteLeave = hasPermission(user?.permissions, "leaveRequests", "d");
-  const canWriteMutasi = hasPermission(user?.permissions, "mutations", "w");
   const modAlert = useModuleAlert("sdm");
   const flash = useNotifFlash();
   const deepParams = useDeepLinkParams();
@@ -284,11 +284,6 @@ export default function HR() {
   const [leaveForm, setLeaveForm] = useState({ employeeId: "", type: "Tahunan", from: todayISO(), to: todayISO(), note: "", fileUrl: "" });
   const [rejectTarget, setRejectTarget] = useState<StoreItem | null>(null);
   const [delLeave, setDelLeave] = useState<StoreItem | null>(null);
-
-  /* ---------- mutasi ---------- */
-  const [showMutasi, setShowMutasi] = useState(false);
-  const [mutasiForm, setMutasiForm] = useState({ employeeId: "", dept: "Produksi", branch: "Samarinda", role: "", date: todayISO(), reason: "" });
-  const [mutQ, setMutQ] = useState("");
 
   /* ---------- training ---------- */
   const [showTraining, setShowTraining] = useState(false);
@@ -534,22 +529,6 @@ export default function HR() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
   }, [data.employees]);
-
-  const mutasiLog = useMemo(
-    () =>
-      data.activities
-        .filter((a) => `${a.action} ${a.target}`.toLowerCase().includes("mutasi")),
-    [data.activities],
-  );
-
-  const orgGroups = useMemo(() => {
-    const m = new Map<string, StoreItem[]>();
-    scopedEmployees.forEach((e) => {
-      const k = String(e.dept || "Lainnya");
-      m.set(k, [...(m.get(k) ?? []), e]);
-    });
-    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [scopedEmployees]);
 
   /* ---------- simpan karyawan ---------- */
   const openAdd = () => {
@@ -922,40 +901,6 @@ export default function HR() {
   };
 
   const empNameOf = (id: string) => data.employees.find((e) => e.id === id)?.name ?? id;
-
-  /* ---------- mutasi ---------- */
-  const saveMutasi = async () => {
-    const emp = data.employees.find((e) => e.id === mutasiForm.employeeId);
-    if (!emp) {
-      toast(S.tPilihKaryawan, "info");
-      return;
-    }
-    if (!mutasiForm.role.trim()) {
-      toast(S.tJabatanBaru, "info");
-      return;
-    }
-    if (!mutasiForm.date) {
-      toast(S.tTglMutasi, "info");
-      return;
-    }
-    if (!mutasiForm.reason.trim()) {
-      toast(S.tAlasanMutasi, "info");
-      return;
-    }
-    if (!DEPT_OPTIONS.includes(mutasiForm.dept)) {
-      toast(S.tDeptTujuan, "info");
-      return;
-    }
-    const from = `${emp.dept}/${emp.branch}/${emp.role}`;
-    const to = `${mutasiForm.dept}/${mutasiForm.branch}/${mutasiForm.role.trim()}`;
-    try {
-    await update("employees", emp.id, { dept: mutasiForm.dept, branch: mutasiForm.branch, role: mutasiForm.role.trim() });
-    log(`mutasi ${from} → ${to} per ${mutasiForm.date}${mutasiForm.reason.trim() ? ` · ${mutasiForm.reason.trim()}` : ""}`, emp.id, "SDM");
-    toast(S.tMutasiOk.replace("{n}", emp.id));
-    setShowMutasi(false);
-    setMutasiForm({ employeeId: "", dept: "Produksi", branch: "Samarinda", role: "", date: todayISO(), reason: "" });
-    } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
-  };
 
   /* ---------- training ---------- */
   const toggleParticipant = (id: string) => {
@@ -1687,12 +1632,6 @@ const finishTraining = async (t: StoreItem) => {
                 </button>
               )}
             </div>
-          ) : tab === "Mutasi" ? (
-            canWriteMutasi ? (
-              <button className="btn-primary-gradient" onClick={() => setShowMutasi(true)}>
-                <Plus className="h-4 w-4" /> {S.btnCatatMutasi}
-              </button>
-            ) : undefined
           ) : tab === "Training" ? (
             canWriteHR ? (
               <button className="btn-primary-gradient" onClick={() => setShowTraining(true)}>
@@ -2024,78 +1963,6 @@ const finishTraining = async (t: StoreItem) => {
             </div>
           )}
 
-          {tab === "Mutasi" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Card className="p-5">
-                <h3 className="text-sm font-semibold text-navy-900">{S.mutasiTerakhir}</h3>
-                <SearchBox
-                  value={mutQ}
-                  onChange={setMutQ}
-                  placeholder={S.cardSearchPh}
-                  ariaLabel={S.cardSearchPh}
-                  className="mt-3 w-full"
-                />
-                <div className="mt-3 max-h-96 space-y-2.5 overflow-y-auto pr-1">
-                  {mutasiLog.filter((a) => rowMatches(a, mutQ, ["action", "target", "time"])).map((a) => (
-                    <div key={a.id} className="rounded-lg bg-surface p-2.5 text-sm">
-                      <p className="font-medium text-navy-900">{a.action}</p>
-                      <p className="text-xs text-steel-500">{a.target} · {a.time}</p>
-                    </div>
-                  ))}
-                  {mutasiLog.length === 0 && <p className="text-xs text-steel-400">{S.emptyMutasi}</p>}
-                </div>
-              </Card>
-              <Card className="p-5">
-                <h3 className="text-sm font-semibold text-navy-900">{S.perCabang}</h3>
-                <div className="mt-3 space-y-2">
-                  {branchCities.map((c) => (
-                    <div key={c} className="flex items-center justify-between text-sm">
-                      <span className="text-steel-600">{c}</span>
-                      <span className="font-semibold text-navy-900">{S.orangN.replace("{n}", String(data.employees.filter((e) => e.branch === c).length))}</span>
-                    </div>
-                  ))}
-                </div>
-                {canWriteMutasi && (
-                  <button className="btn-secondary mt-4 text-xs" onClick={() => setShowMutasi(true)}>{S.btnMutasiBaru}</button>
-                )}
-              </Card>
-            </div>
-          )}
-
-          {tab === "Org Chart" && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {orgGroups.map(([deptName, members]) => {
-                const head = members.find((m) => /manager/i.test(String(m.role))) ?? members[0];
-                const rest = members.filter((m) => m.id !== head?.id);
-                return (
-                  <Card key={deptName} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-navy-900">{deptName}</h3>
-                      <Badge tone="navy">{S.orangN.replace("{n}", String(members.length))}</Badge>
-                    </div>
-                    {head && (
-                      <div className="mt-3 rounded-xl border border-navy-200 bg-navy-50 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-navy-600">{S.orgKepala}</p>
-                        <p className="mt-0.5 font-semibold text-navy-900">{head.name}</p>
-                        <p className="text-xs text-steel-500">{head.role} · {head.branch}</p>
-                      </div>
-                    )}
-                    <div className="mt-2 space-y-1.5">
-                      {rest.map((m) => (
-                        <div key={m.id} className="flex items-center justify-between rounded-lg bg-surface px-2.5 py-1.5 text-sm">
-                          <span className="truncate text-steel-700" title={`${m.name} · ${m.role}`}>{m.name}</span>
-                          <span className="ml-2 shrink-0 text-xs text-steel-400">{m.role}</span>
-                        </div>
-                      ))}
-                      {rest.length === 0 && <p className="text-xs text-steel-400">{S.orgHanya}</p>}
-                    </div>
-                  </Card>
-                );
-              })}
-              {orgGroups.length === 0 && <EmptyState title={S.emptyOrgT} subtitle={S.emptyOrgS} />}
-            </div>
-          )}
-
           {tab === "Training" && (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -2164,87 +2031,18 @@ const finishTraining = async (t: StoreItem) => {
           )}
 
           {tab === "Surat & Impor" && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Card className="p-5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-navy-900">{S.arsipT}</h3>
-                  <div className="flex items-center gap-2">
-                    <button className="btn-secondary text-xs" onClick={exportArsipSurat}>{S.btnExport}</button>
-                    <button className="btn-primary text-xs" onClick={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}>{S.btnBuatSurat}</button>
-                  </div>
-                </div>
-                <p className="mt-1 text-xs text-steel-500">
-                  {locale === "en"
-                    ? `${arsipSurat.length} letter(s) in the shared archive. Each row can be previewed, edited and deleted.`
-                    : `${arsipSurat.length} surat di arsip bersama. Setiap baris bisa dipratinjau, diubah, dan dihapus.`}
-                </p>
-                <div className="mt-3 space-y-2.5">
-                  {arsipSurat.map((s) => (
-                    <div key={s.id} className="flex items-start justify-between gap-2 rounded-lg bg-surface p-2.5 text-sm">
-                      <div className="min-w-0">
-                        <p className="font-medium text-navy-900">{s.jenis} · {s.nama}</p>
-                        <p className="font-mono text-xs text-steel-500">{s.docNo ? `${String(s.docNo)} (${s.id})` : s.id} · {fmtTanggal(String(s.tanggal))}</p>
-                        <p className="text-[11px] text-steel-400">
-                          {s.fileUrl
-                            ? (locale === "en" ? "scan attached" : "pindai terlampir")
-                            : (locale === "en" ? "no scan - text only" : "tanpa pindai - teks saja")}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button className="text-xs font-semibold text-ocean-600 underline" onClick={() => setSuratPreviewFor(s)}>
-                          {locale === "en" ? "Preview" : "Pratinjau"}
-                        </button>
-                        <button
-                          className="text-xs font-semibold text-navy-700 underline"
-                          onClick={() => openSuratEdit(s)}
-                          title={locale === "en" ? "Edit this letter" : "Ubah surat ini"}
-                        >
-                          {S.btnEdit}
-                        </button>
-                        <button className="text-xs font-semibold text-rose-600 underline" onClick={() => setDelSurat(s)}>
-                          {S.btnHapus}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {arsipSurat.length === 0 && <p className="text-xs text-steel-400">{S.emptyArsip}</p>}
-                </div>
-              </Card>
-              <Card className="p-5">
-                <h3 className="text-sm font-semibold text-navy-900">{S.imporT}</h3>
-                <p className="mt-1 text-xs text-steel-500">
-                  {S.imporDesc}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button className="btn-secondary text-xs" onClick={downloadTemplate}>{S.btnTemplate}</button>
-                  <label className="btn-primary cursor-pointer text-xs">
-                    {S.btnImpor}
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) void busy.run("importCSV", () => importCSV(f));
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                </div>
-                {importReport && (
-                  <div className="mt-3 rounded-xl bg-surface p-3 text-sm">
-                    <p className="font-semibold text-navy-900">{S.imporHasil.replace("{a}", String(importReport.ok)).replace("{b}", String(importReport.gagal.length))}</p>
-                    {importReport.gagal.length > 0 && (
-                      <ul className="mt-1.5 max-h-40 space-y-1 overflow-y-auto text-xs text-rose-600">
-                        {importReport.gagal.map((g) => <li key={g}>{g}</li>)}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </Card>
-            </div>
-          )}
-        </div>
+            <SuratTab
+              arsipSurat={arsipSurat}
+              importReport={importReport}
+              onExport={exportArsipSurat}
+              onNew={() => { setSuratEditId(null); setSuratForm({ ...SURAT_KOSONG, tanggal: todayISO() }); pickJenis("SP 1"); setShowSurat(true); }}
+              onPreview={setSuratPreviewFor}
+              onEdit={openSuratEdit}
+              onDelete={setDelSurat}
+              onTemplate={downloadTemplate}
+              onImport={(f) => { void busy.run("importCSV", () => importCSV(f)); }}
+            />
+          )}        </div>
       </div>
 
       {/* ---------- modal karyawan ---------- */}
@@ -2537,45 +2335,6 @@ const finishTraining = async (t: StoreItem) => {
         }}
       />
 
-      {/* ---------- modal mutasi ---------- */}
-      <Modal
-        open={showMutasi}
-        onClose={() => setShowMutasi(false)}
-        title={S.mMutT}
-        subtitle={S.mMutS}
-        footer={
-          <>
-            <button className="btn-secondary" onClick={() => setShowMutasi(false)}>{S.btnBatal}</button>
-            <button className="btn-primary" onClick={saveMutasi}>{S.btnSimpanMutasi}</button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <Field label={S.fKaryawan}>
-            <select className="input" value={mutasiForm.employeeId} onChange={(e) => setMutasiForm({ ...mutasiForm, employeeId: e.target.value })}>
-              <option value="">{S.optPilih}</option>
-              {data.employees.map((e) => (
-                <option key={e.id} value={e.id}>{S.optMutasi.replace("{a}", String(e.name)).replace("{b}", String(e.dept)).replace("{c}", String(e.branch)).replace("{d}", String(e.role))}</option>
-              ))}
-            </select>
-          </Field>
-          <FormGrid>
-            <Field label={S.fDeptBaru}>
-              <select className="input" value={mutasiForm.dept} onChange={(e) => setMutasiForm({ ...mutasiForm, dept: e.target.value })}>
-                {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fCabangBaru}>
-              <select className="input" value={mutasiForm.branch} onChange={(e) => setMutasiForm({ ...mutasiForm, branch: e.target.value })}>
-                {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label={S.fJabatanBaru}><input className="input" value={mutasiForm.role} onChange={(e) => setMutasiForm({ ...mutasiForm, role: e.target.value })} placeholder={S.phForeman} /></Field>
-            <Field label={S.fTglMutasi}><input type="date" className="input" value={mutasiForm.date} onChange={(e) => setMutasiForm({ ...mutasiForm, date: e.target.value })} /></Field>
-          </FormGrid>
-          <Field label={S.fAlasan}><input className="input" value={mutasiForm.reason} onChange={(e) => setMutasiForm({ ...mutasiForm, reason: e.target.value })} placeholder={S.phAlasanMut} /></Field>
-        </div>
-      </Modal>
 
       {/* ---------- modal training ---------- */}
       <Modal
