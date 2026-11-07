@@ -1638,27 +1638,37 @@ if (k === "mattype") return matTypeOf(i);
   };
 
   /* #308: PR cepat dari baris stok kritis/menipis. Jumlah = 2× minimum - stok
-     (kembali ke level aman), vendor = vendor PO terakhir untuk item ini. */
+     (kembali ke level aman), vendor = vendor PO terakhir yang memuat item ini. */
+  const canPr = hasPermission(user?.permissions, "requisitions", "w");
+  const [prBusy, setPrBusy] = useState<string | null>(null);
+  const prQtyOf = (it: StoreItem): number => Math.ceil(effectiveMinStock(it) * 2 - Number(it.stock || 0));
   const buatPRKritis = async (it: StoreItem) => {
-    const min = effectiveMinStock(it);
-    const qty = Math.max(1, Math.ceil(min * 2 - Number(it.stock || 0)));
-    const name = String(it.name ?? "").toLowerCase();
-    const lastPo = [...(data.purchaseOrders ?? [])]
-      .filter((po) => JSON.stringify(po.items ?? po.item ?? "").toLowerCase().includes(name))
-      .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))[0];
-    const open = requisitions.some((r) => String(r.item).toLowerCase() === name
-      && ["Draft", "Draf", "Menunggu Approval", "RFQ", "Diajukan"].includes(String(r.status)));
+    if (prBusy) return; // cegah klik ganda sebelum data requisitions segar
+    const qty = prQtyOf(it);
+    if (qty <= 0) return;
+    const name = String(it.name ?? "").trim().toLowerCase();
+    // Identitas item: itemId; nama hanya untuk PR lama tanpa itemId.
+    const sameItem = (x: StoreItem): boolean => x.itemId ? String(x.itemId) === it.id : String(x.item ?? "").trim().toLowerCase() === name;
+    const open = requisitions.some((r) => sameItem(r)
+      && ["Draft", "Draf", "Menunggu Approval", "RFQ", "Diajukan", "Disetujui"].includes(String(r.status)));
     if (open) { toast(S.prOpenExists.replace("{n}", String(it.name)), "info"); return; }
+    const poHas = (po: StoreItem): boolean => sameItem(po)
+      || (Array.isArray(po.lines) && (po.lines as StoreItem[]).some((l) => l.itemId ? String(l.itemId) === it.id : String(l.name ?? "").trim().toLowerCase() === name));
+    const lastPo = [...(data.purchaseOrders ?? [])].filter(poHas)
+      .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")))[0];
+    setPrBusy(it.id);
     try {
       const created = await add("requisitions", {
         item: String(it.name), itemId: it.id, qty, unit: String(it.unit ?? ""), by: user?.name ?? "Gudang",
         amount: Math.round(qty * effCost(it)), status: "Diajukan",
         ...(lastPo?.vendor ? { vendorHint: String(lastPo.vendor) } : {}),
-        note: S.prCriticalNote.replace("{a}", fmtJumlah(Number(it.stock || 0))).replace("{b}", fmtJumlah(min)),
+        note: S.prCriticalNote.replace("{a}", fmtJumlah(Number(it.stock || 0))).replace("{b}", fmtJumlah(effectiveMinStock(it))),
       }, { action: "membuat PR dari stok kritis", target: `${String(it.name)} × ${fmtJumlah(qty)}`, module: "Inventori" });
       toast(S.prDraftMade.replace("{a}", created.id).replace("{b}", String(it.name)).replace("{n}", fmtJumlah(qty)));
     } catch (e) {
       toast(e instanceof Error ? e.message : S.saveFail, "info");
+    } finally {
+      setPrBusy(null);
     }
   };
 
@@ -2645,7 +2655,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                               <RowAction icon={Pencil} tone="neutral" label={S.actEdit} ariaLabel={S.actEditAria.replace("{n}", i.name)} onClick={() => openEdit(i)} />
                               <RowAction icon={ArrowDownToLine} tone="success" label={S.actGrgi} ariaLabel={S.actGrgiAria.replace("{n}", i.name)} onClick={() => openMove(i, moveKind)} />
                               <RowAction icon={Barcode} tone="neutral" label={S.actLabel} ariaLabel={S.actLabelAria.replace("{n}", i.name)} onClick={() => setLabelItem(i)} />
-                              {["critical", "low"].includes(warnLevelOf(i).level) && <RowAction icon={ShoppingCart} tone="primary" label={S.prCriticalBtn} ariaLabel={S.prCriticalAria.replace("{n}", String(i.name))} onClick={() => { void buatPRKritis(i); }} />}
+                              {canPr && ["critical", "low"].includes(warnLevelOf(i).level) && prQtyOf(i) > 0 && <RowAction icon={ShoppingCart} tone="primary" label={S.prCriticalBtn} ariaLabel={S.prCriticalAria.replace("{n}", String(i.name))} disabled={prBusy !== null} onClick={() => { void buatPRKritis(i); }} />}
                               <RowAction icon={BookmarkPlus} tone="primary" label={S.reservBtn} ariaLabel={S.actReservAria.replace("{n}", i.name)} onClick={() => { setReservTarget(i); setReservProject(""); setReservQtyInput(""); }} />
                               <Link to={`/inventori/bom/${i.id}`} className="relative inline-flex shrink-0 items-center justify-center rounded-lg p-1.5 text-ocean-600 transition-colors hover:bg-steel-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ocean-400 focus-visible:ring-offset-1 after:absolute after:-inset-1.5 after:content-['']" title="BOM" aria-label={S.actBomAria.replace("{n}", i.name)}><Package className="h-4 w-4" aria-hidden="true" /></Link>
                               <RowAction icon={Trash2} tone="danger" label={locale === "en" ? "Delete" : "Hapus"} ariaLabel={`${locale === "en" ? "Delete" : "Hapus"} ${i.name}`} onClick={() => setDelInv(i)} />
