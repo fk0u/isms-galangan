@@ -21,7 +21,7 @@ export default function SCurveCard({ wbs, budget, progress, ac }: { wbs: readonl
         <h3 className="text-sm font-semibold text-navy-900">{S.sCurveTitle}</h3>
         {points.length > 0 && (
           <>
-            <Badge tone={sv >= 0 ? "green" : "red"}>{(sv >= 0 ? S.sCurveAhead : S.sCurveBehind).replace("{n}", String(Math.abs(sv)))}</Badge>
+            {sv !== null && <Badge tone={sv >= 0 ? "green" : "red"}>{(sv >= 0 ? S.sCurveAhead : S.sCurveBehind).replace("{n}", String(Math.abs(sv)))}</Badge>}
             {ac > 0 && <Badge tone={cv >= 0 ? "green" : "red"}>{(cv >= 0 ? S.sCurveUnder : S.sCurveOver).replace("{n}", fmtMiliar(Math.abs(cv)))}</Badge>}
           </>
         )}
@@ -37,7 +37,8 @@ export default function SCurveCard({ wbs, budget, progress, ac }: { wbs: readonl
               <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11, fill: "#64748B" }} axisLine={false} tickLine={false} />
               <Tooltip labelFormatter={(d) => fmtTanggal(String(d))} formatter={(v) => `${String(v)}%`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <ReferenceLine x={points.find((p) => p.date >= today)?.date} stroke="#94A3B8" strokeDasharray="4 4" />
+              {/* Garis hari ini hanya bila hari ini ada di rentang kurva. */}
+              {today >= points[0].date && today <= points[points.length - 1].date && <ReferenceLine x={points.find((p) => p.date >= today)?.date} stroke="#94A3B8" strokeDasharray="4 4" />}
               <Line type="linear" dataKey="plan" name={S.sCurvePlan} stroke="#94A3B8" strokeWidth={2} dot={false} isAnimationActive={false} />
               <Line type="linear" dataKey="actual" name={S.sCurveActual} stroke="#0284C7" strokeWidth={3} dot={false} connectNulls={false} isAnimationActive={false} />
             </LineChart>

@@ -6,11 +6,20 @@ import type { WbsItem } from "../data/store";
 
 export interface SCurvePoint { date: string; plan: number; actual: number | null }
 
-const day = (s: string): number => Date.parse(`${s.slice(0, 10)}T00:00:00Z`);
+/** Tanggal → ms. WBS lama bisa berformat bulan saja (YYYY-MM): awal bulan
+ *  untuk start, akhir bulan untuk end. */
+const day = (s: string, isEnd = false): number => {
+  const v = String(s ?? "");
+  if (/^\d{4}-\d{2}$/.test(v)) {
+    const [y, m] = v.split("-").map(Number);
+    return isEnd ? Date.UTC(y, m, 0) : Date.UTC(y, m - 1, 1);
+  }
+  return Date.parse(`${v.slice(0, 10)}T00:00:00Z`);
+};
 const iso = (t: number): string => new Date(t).toISOString().slice(0, 10);
 
 function planPct(w: WbsItem, t: number): number {
-  const a = day(w.start), b = day(w.end);
+  const a = day(w.start), b = day(w.end, true);
   if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
   if (t >= b) return 100;
   if (t < a) return 0;
@@ -34,12 +43,12 @@ function actualPct(w: WbsItem, t: number, now: number): number {
 
 /** Titik mingguan dari start paling awal s.d. max(end terakhir, hari ini). */
 export function buildSCurve(wbs: readonly WbsItem[], today: string): SCurvePoint[] {
-  const rows = wbs.filter((w) => Number.isFinite(day(w.start)) && Number.isFinite(day(w.end)));
+  const rows = wbs.filter((w) => Number.isFinite(day(w.start)) && Number.isFinite(day(w.end, true)));
   if (!rows.length) return [];
   const weights = rows.map((w) => (Number(w.weight) > 0 ? Number(w.weight) : 1));
   const total = weights.reduce((s, x) => s + x, 0);
   const t0 = Math.min(...rows.map((w) => day(w.start)));
-  const tEnd = Math.max(...rows.map((w) => day(w.end)));
+  const tEnd = Math.max(...rows.map((w) => day(w.end, true)));
   const now = day(today);
   const last = Math.max(tEnd, now);
   const W = 7 * 86400000;
@@ -53,8 +62,9 @@ export function buildSCurve(wbs: readonly WbsItem[], today: string): SCurvePoint
   return ticks.map((t) => ({ date: iso(t), plan: sum(planPct, t), actual: t <= now ? sum(actualPct, t) : null }));
 }
 
-/** Deviasi jadwal (poin %) pada hari ini: + = lebih cepat dari rencana. */
-export function scheduleDeviation(points: SCurvePoint[], today: string): number {
+/** Deviasi jadwal (poin %) pada hari ini: + = lebih cepat dari rencana;
+ *  null bila proyek belum mulai (belum ada titik realisasi). */
+export function scheduleDeviation(points: SCurvePoint[], today: string): number | null {
   const p = [...points].reverse().find((x) => x.date <= today && x.actual !== null);
-  return p ? Math.round(((p.actual ?? 0) - p.plan) * 10) / 10 : 0;
+  return p ? Math.round(((p.actual ?? 0) - p.plan) * 10) / 10 : null;
 }

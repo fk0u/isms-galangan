@@ -23,6 +23,11 @@ describe("buildSCurve", () => {
     expect(pts.find((p) => p.date === "2026-01-08")!.actual).toBe(20);
     expect(pts.find((p) => p.date === "2026-01-15")!.actual).toBe(40);
   });
+  it("format bulan saja: end = akhir bulan; belum mulai → deviasi null", () => {
+    const pts = buildSCurve([w({ start: "2026-03", end: "2026-03" })], "2026-01-01");
+    expect(pts.at(-1)!.date).toBe("2026-03-31");
+    expect(scheduleDeviation(pts, "2026-01-01")).toBeNull();
+  });
   it("kosong bila WBS tanpa tanggal", () => {
     expect(buildSCurve([w({ start: "", end: "" })], "2026-01-01")).toEqual([]);
   });
