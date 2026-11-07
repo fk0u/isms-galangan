@@ -45,18 +45,20 @@ export function plan(invoices: Array<{ id: string; data: Data }>, clientNames: S
       });
     }
     const pid = `PRJ-${id}`;
-    if (!vessel || !client) continue;
+    // Invoice yang sudah punya proyek tidak dibuatkan proyek baru.
+    if (!vessel || !client || (String(d.project ?? "").trim() && d.project !== "-")) continue;
     if (!projectIds.has(pid)) {
       projectIds.add(pid);
       const modal = Array.isArray(d.modal) ? (d.modal as Data[]) : [];
       out.projects.push({ id: pid, data: {
         vessel, client, type: "Repair", status: "Selesai", start: String(d.date ?? ""), end: String(d.date ?? ""), progress: 100,
         budget: Math.round(Number(d.amount) || Number(d.grandTotal) || 0),
-        actual: Math.round(modal.reduce((s, m) => s + (Number(m.amount) || 0), 0)),
+        // Impor Excel menyimpan rincian `modal[]`; invoice dari UI memakai `modalTotal`.
+        actual: Math.round(Number(d.modalTotal) || modal.reduce((s, m) => s + (Number(m.amount) || 0), 0)),
         manager: String(d.pimpro ?? ""), scope: [], source: `invoice ${String(d.noInv ?? id)}`,
       } });
     }
-    if (!String(d.project ?? "").trim() || d.project === "-") out.links.push({ id, project: pid });
+    out.links.push({ id, project: pid });
   }
   return out;
 }
