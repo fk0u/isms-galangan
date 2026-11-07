@@ -474,7 +474,7 @@ export default function HR() {
     flashPick(flash, ids, -1, () => {}, 100);
   };
   const pickNotif = (rowId: string) => pickNotifIds([rowId]);
-  useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds);
+  useDeepLinkTarget(deepParams.tab, deepParams.highlight, setTab, pickNotifIds, [], ["Karyawan", "Cuti & Izin", "Training", "Surat & Impor"]);
 
   const deptCounts = useMemo(() => {
     const m = new Map<string, number>();

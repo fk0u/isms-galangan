@@ -1,6 +1,8 @@
 import type { InputHTMLAttributes, KeyboardEvent as ReactKeyboardEvent } from "react";
 
 
+/** Buang nol di depan agar tidak nyangkut: "0" → "" (user ketik ulang bersih),
+ *  "007" → "7". Desimal ("0.5") tetap utuh. */
 function stripLeadingZero(v: string): string {
   if (!v) return v;
   // "0" sendiri adalah nilai sah (retensi/denda/diskon 0%) - hanya nol di depan angka lain yang dibuang.

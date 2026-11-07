@@ -1,5 +1,5 @@
 import { fmtRupiahShort } from "../utils/format";
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useId, useRef, useState, Component, type ErrorInfo } from "react";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
@@ -776,6 +776,7 @@ export { Tooltip };
 /* #311: modal & input dipisah ke modul fokus; diekspor ulang di sini supaya
    impor lama `from "./ui"` tetap jalan (tanpa breaking change). */
 export { Modal, ConfirmModal, VALIDATE_EVENT } from "./modals/Modal";
+export { useAsyncAction, AsyncButton } from "./AsyncButton";
 export { Field, FormGrid } from "./inputs/Field";
 export { EntityPicker, type PickerOption } from "./inputs/EntityPicker";
 export { NumInput } from "./inputs/NumInput";
@@ -1034,79 +1035,6 @@ export function useBusy(): {
 
 /* ============ A S Y N C   A C T I O N ============ */
 
-/** Guard satu aksi async: status pending otomatis (loading/disabled) dan
- *  spam click diabaikan. Untuk banyak aksi ber-key dalam satu halaman tetap
- *  pakai useBusy; untuk satu tombol/aksi pakai ini (atau AsyncButton). */
-export function useAsyncAction(): {
-  pending: boolean;
-  run: <T>(fn: () => Promise<T> | T) => Promise<T | undefined>;
-} {
-  const [pending, setPending] = useState(false);
-  const pendingRef = useRef(false);
-  const run = useCallback(async <T,>(fn: () => Promise<T> | T): Promise<T | undefined> => {
-    if (pendingRef.current) return undefined;
-    pendingRef.current = true;
-    setPending(true);
-    try {
-      return await fn();
-    } finally {
-      pendingRef.current = false;
-      setPending(false);
-    }
-  }, []);
-  return { pending, run };
-}
-
-/** Tombol yang otomatis disabled + spinner selama aksi async berjalan.
- *  Pakai: `<AsyncButton className="btn-primary" onAction={save}>Simpan</AsyncButton>` */
-export function AsyncButton({
-  onAction,
-  className = "btn-secondary",
-  disabled = false,
-  onError,
-  children,
-  ...rest
-}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "disabled"> & {
-  onAction: () => Promise<unknown> | unknown;
-  disabled?: boolean;
-  /** Handler error opsional. Tanpa ini, penolakan onAction akan muncul
-   *  sebagai unhandled rejection karena pemanggil memakai `void run(...)`. */
-  onError?: (err: unknown) => void;
-}) {
-  const { pending, run } = useAsyncAction();
-  const { locale } = useT();
-  return (
-    <button
-      type="button"
-      className={className}
-      disabled={disabled || pending}
-      aria-busy={pending || undefined}
-      onClick={() => {
-        void run(onAction).catch((err: unknown) => {
-          if (onError) {
-            onError(err);
-            return;
-          }
-          /* Default: laporkan ke pengguna. Menelan error di sini berarti
-             tombol terlihat berhasil padahal aksinya gagal. */
-          const msg =
-            err instanceof Error && err.message
-              ? err.message
-              : locale === "en"
-                ? "Action failed"
-                : "Aksi gagal";
-          toast(msg, "info");
-          if (!(err instanceof Error)) console.error("[async-button]", err);
-        });
-      }}
-      {...rest}
-    >
-      {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
-      {children}
-    </button>
-  );
-}
-
 /* ============ P A G E R ============ */
 
 /** Bilah pagination bersama (ETC-07): info "1-25 dari 312", ukuran halaman,
@@ -1254,9 +1182,6 @@ export function useServerPager<T>(
   return { page: safe, size, pages, total, rows, loading, go, bar };
 }
 
-
-/** Buang nol di depan agar tidak nyangkut: "0" → "" (user ketik ulang bersih),
- *  "007" → "7". Desimal ("0.5") tetap utuh. */
 
 /** Warna tombol ikon. Satu sumber, dipakai seluruh kolom Aksi. */
 const ROW_ACTION_TONE: Record<"neutral" | "danger" | "primary" | "success", string> = {

@@ -1,4 +1,4 @@
-import { AsyncButton } from "../ui";
+import { AsyncButton } from "../AsyncButton";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n/LanguageContext";
