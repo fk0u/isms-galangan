@@ -1,6 +1,6 @@
 // Cek kecil plan(): dedupe nama klien/kapal, satu proyek per invoice, idempoten.
 import assert from "node:assert/strict";
-import { plan, vesselType } from "./generate-from-invoices.js";
+import { plan, planSubkon, vesselType } from "./generate-from-invoices.js";
 
 const inv = [
   { id: "INV-A", data: { client: "PT Satu", vessel: "TB  Alfa 1", date: "2026-01-02", amount: 100, modal: [{ amount: 30 }, { amount: 20 }], pimpro: "X", project: "" } },
@@ -19,4 +19,10 @@ const linked = inv.map((x) => ({ ...x, data: { ...x.data, project: x.data.projec
 const again = plan(linked, new Set(["PT SATU", "PT DUA"]), new Set(["TB ALFA 1", "BG BETA"]), new Set(["PRJ-INV-A", "PRJ-INV-D"]));
 assert.equal(again.clients.length + again.vessels.length + again.projects.length + again.links.length, 0);
 assert.equal(vesselType("BG Santoso"), "Barge");
+// Subkon: pos biaya umum dilewati, nama sama digabung, yang sudah ada dilewati.
+const sub = planSubkon([
+  { data: { modal: [{ label: "Material", amount: 9 }, { label: "Budi", amount: 10 }, { label: "Karyawan & Listrik", amount: 5 }] } },
+  { data: { modal: [{ label: " budi ", amount: 15 }, { label: "Joko", amount: 1 }, { label: "Fee", amount: 2 }] } },
+], new Set(["JOKO"]));
+assert.deepEqual(sub.map((x) => [x.name, x.contract, x.active]), [["Budi", 25, 2]]);
 console.log("generate-from-invoices: ok");
