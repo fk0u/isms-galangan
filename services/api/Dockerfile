@@ -1,9 +1,10 @@
 # API ISMS (Fastify). devDependencies sengaja ikut: skrip seed/migrate/backup
 # memakai tsx, dan dibutuhkan saat operasional pilot (npm run seed:demo dll).
-# Dikunci 22.22: better-sqlite3 belum punya prebuilt untuk 22.23 (image slim tanpa python untuk kompilasi).
-FROM node:22.22-bookworm-slim
+FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# Alat kompilasi: cadangan bila prebuilt better-sqlite3 gagal diunduh / belum ada untuk versi Node image.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --include=dev --no-audit --no-fund
 COPY tsconfig.json ./
