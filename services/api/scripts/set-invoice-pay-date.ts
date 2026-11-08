@@ -33,6 +33,8 @@ export const dokumenOf = (id: string, n: number): string => (n === 1 ? `CASH-${i
 
 if (process.argv[1]?.endsWith("set-invoice-pay-date.ts")) {
   const changes = process.argv.slice(2).filter((a) => a !== "--apply").map(parseArg);
+  const dup = changes.map((c) => `${c.key}#${c.n}`).find((k, i, a) => a.indexOf(k) !== i);
+  if (dup) throw new Error(`Pembayaran yang sama disebut dua kali: ${dup}`);
   if (!changes.length) throw new Error("Tidak ada perubahan. Contoh: npm run invoice:pay-date -- \"007/INV-SB/SMD/I/2026=2026-02-10\"");
   await (APPLY ? withTx(() => run(changes)) : run(changes));
   await closeDb();
