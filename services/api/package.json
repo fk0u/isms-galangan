@@ -67,7 +67,7 @@
     "probe:drydock": "tsx --env-file-if-exists=.env scripts/drydock-booking-probe.ts",
     "probe:boq-migration": "tsx --env-file-if-exists=.env scripts/boq-migration-probe.ts",
     "lint": "eslint . --max-warnings=29",
-    "check": "tsc --noEmit && npm run lint && npm test && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:voucher && npm run probe:hr-letter && npm run probe:project-stages && npm run probe:rbac-modules && npm run probe:payroll-pay && npm run probe:closing && npm run probe:relations && npm run probe:bruno && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope && npm run probe:domain-guards && npm run probe:read-models && npm run probe:cache && npm run probe:pdf-audit && npm run probe:invoice-journal && npm run probe:generate-invoices",
+    "check": "tsc --noEmit && npm run lint && npm test && npm run probe:pdf && npm run probe:page && npm run probe:tx && npm run probe:env && npm run probe:users && npm run probe:token && npm run probe:branch && npm run probe:inventory-conversion && npm run probe:security-isolation && npm run probe:security && npm run probe:boq && npm run probe:voucher && npm run probe:hr-letter && npm run probe:project-stages && npm run probe:rbac-modules && npm run probe:payroll-pay && npm run probe:closing && npm run probe:relations && npm run probe:bruno && npm run probe:boq-migration && npm run probe:drydock && npm run probe:material && npm run probe:service && npm run probe:po-partial && npm run probe:demo-roles && npm run probe:wo-spk && npm run probe:inventory-issue && npm run probe:equipment-loan && npm run probe:checklist && npm run probe:change-order && npm run probe:concurrency && npm run probe:backup && npm run probe:dock-fit && npm run probe:events && npm run probe:public-leave && npm run probe:attendance-ingest && npm run probe:files-privacy && npm run probe:team-scope && npm run probe:domain-guards && npm run probe:read-models && npm run probe:cache && npm run probe:pdf-audit && npm run probe:invoice-journal && npm run probe:generate-invoices && npm run probe:pay-date",
     "test": "vitest run",
     "probe:domain-guards": "tsx --env-file-if-exists=.env scripts/domain-guards-probe.ts",
     "probe:read-models": "tsx --env-file-if-exists=.env scripts/read-models-probe.ts",
@@ -81,7 +81,9 @@
     "journal:invoice-payments": "tsx --env-file-if-exists=.env scripts/journal-invoice-payments.ts",
     "probe:invoice-journal": "tsx scripts/journal-invoice-payments.check.ts",
     "generate:from-invoices": "tsx --env-file-if-exists=.env scripts/generate-from-invoices.ts",
-    "probe:generate-invoices": "tsx scripts/generate-from-invoices.check.ts"
+    "probe:generate-invoices": "tsx scripts/generate-from-invoices.check.ts",
+    "invoice:pay-date": "tsx --env-file-if-exists=.env scripts/set-invoice-pay-date.ts",
+    "probe:pay-date": "tsx scripts/set-invoice-pay-date.check.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
