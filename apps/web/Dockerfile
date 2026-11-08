@@ -1,7 +1,8 @@
 # Frontend ISMS: build statis Vite lalu disajikan nginx.
 # VITE_API_URL di-bake saat build (Vite). Default "same-origin": frontend
 # memanggil API di origin yang sedang dibuka; nginx meneruskan /api, /files, /health.
-FROM node:22-bookworm-slim AS build
+# Dikunci 22.22: better-sqlite3 belum punya prebuilt untuk 22.23 (image slim tanpa python untuk kompilasi).
+FROM node:22.22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund

@@ -1,6 +1,7 @@
 # API ISMS (Fastify). devDependencies sengaja ikut: skrip seed/migrate/backup
 # memakai tsx, dan dibutuhkan saat operasional pilot (npm run seed:demo dll).
-FROM node:22-bookworm-slim
+# Dikunci 22.22: better-sqlite3 belum punya prebuilt untuk 22.23 (image slim tanpa python untuk kompilasi).
+FROM node:22.22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
