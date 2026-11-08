@@ -23,6 +23,8 @@ export interface Change { key: string; n: number; date: string }
 export function parseArg(a: string): Change {
   const m = /^(.+?)(?:#(\d+))?=(\d{4}-\d{2}-\d{2})$/.exec(a.trim());
   if (!m) throw new Error(`Format salah: ${a} (harus "no-invoice[#n]=YYYY-MM-DD")`);
+  // Tolak tanggal mustahil (mis. 2026-02-31): harus kembali sama setelah lewat Date.
+  if (new Date(`${m[3]}T00:00:00Z`).toISOString().slice(0, 10) !== m[3]) throw new Error(`Tanggal tidak valid: ${m[3]}`);
   return { key: m[1].trim(), n: m[2] ? Number(m[2]) : 1, date: m[3] };
 }
 
@@ -60,10 +62,12 @@ async function run(changes: Change[]): Promise<void> {
     console.log(`${c.key} #${c.n}: ${old} → ${c.date}, ${js.length} jurnal`);
     if (!APPLY || old === c.date) continue;
     const newPays = pays.map((p, i) => (i === c.n - 1 ? { ...p, date: c.date } : p));
-    await exec("UPDATE invoices SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify({ ...inv.data, payments: newPays, updatedAt: now }), now, inv.id]);
+    // Segarkan snapshot: perubahan berikutnya pada invoice yang sama tidak menimpa yang ini.
+    inv.data = { ...inv.data, payments: newPays, updatedAt: now };
+    await exec("UPDATE invoices SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(inv.data), now, inv.id]);
     await audit("invoices", inv.id, { before: { [`payments[${c.n - 1}].date`]: old }, after: { [`payments[${c.n - 1}].date`]: c.date } });
     // Bulan berubah → satu voucher baru untuk semua baris dokumen ini.
-    const voucher = old.slice(0, 7) === c.date.slice(0, 7) ? null : await nextVoucherNo(c.date, taken);
+    const voucher = !js.length || old.slice(0, 7) === c.date.slice(0, 7) ? null : await nextVoucherNo(c.date, taken);
     if (voucher) taken.push(voucher);
     for (const j of js) {
       const after = { ...j.data, date: c.date, ...(voucher ? { voucherNo: voucher } : {}), updatedAt: now };

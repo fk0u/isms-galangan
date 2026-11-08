@@ -3,10 +3,12 @@
 FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
-# Alat kompilasi: cadangan bila prebuilt better-sqlite3 gagal diunduh / belum ada untuk versi Node image.
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev --no-audit --no-fund
+# Alat kompilasi hanya selama npm ci (cadangan bila prebuilt better-sqlite3 gagal
+# diunduh / belum ada untuk versi Node image), lalu dibuang agar image tetap ramping.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && npm ci --include=dev --no-audit --no-fund \
+  && apt-get purge -y python3 make g++ && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 COPY tsconfig.json ./
 COPY src ./src
 COPY migrations ./migrations
