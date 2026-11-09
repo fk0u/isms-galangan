@@ -63,7 +63,7 @@ import { useStore } from "../data/store";
 import type { CollectionKey } from "../data/store";
 import { useModuleSync } from "../data/useModuleSync";
 import { scopeAlertStoreData } from "../data/scopeAlertData";
-import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../utils/monthAxis";
+import { bucketByMonth, monthAxis, monthKeyOf } from "../utils/monthAxis";
 import { numOf, pctChange } from "../utils/series";
 import { warnLevelOf } from "../utils/inventoryWarn";
 import { projectProgressOf } from "../utils/projectProgress";
@@ -184,7 +184,6 @@ import { usePdfDoc } from "../components/usePdfDoc";
 import { todayISO } from "../utils/format";
 import { scopeNames } from "../utils/scope";
 import {
-  revenueSeries,
   fmtMiliar,
 } from "../data";
 import { useT } from "../i18n/LanguageContext";
@@ -502,16 +501,6 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       (i) => Number(i.amount ?? 0),
       (vals) => Math.round((vals.reduce((s, x) => s + x, 0) / 1e9) * 100) / 100,
     );
-    const anyReal = Object.values(bucket).some((v) => v > 0);
-    if (!anyReal) {
-      const base = monthCount >= revenueSeries.length ? revenueSeries : revenueSeries.slice(-monthCount);
-      return rebindLegacyMonthSeries(base, { locale }).map((r) => ({
-        bln: r.bln,
-        revenue: Number(r.revenue || 0),
-        cost: Number(r.cost || 0),
-        projects: Number(r.projects || 0),
-      }));
-    }
     return revAxis.map((pt) => {
       const month = invoices.filter(
         (i) => monthKeyOf(i.paidAt ?? i.date ?? i.due) === pt.key,
@@ -524,7 +513,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         projects,
       };
     });
-  }, [data.invoices, inBranch, revAxis, monthCount, locale]);
+  }, [data.invoices, inBranch, revAxis]);
   const utilDrydock = drydocks.length
     ? Math.round((drydocks.filter((d) => d.status === "Terpakai").length / drydocks.length) * 100)
     : 0;
@@ -554,13 +543,26 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      marginSeries, sehingga produksi menampilkan "Rp 79 M, +7,7%" fiktif).
      Pendapatan = chartData (invoice per bulan). Margin bulan = (nilai - biaya
      aktual) / nilai proyek yang selesai (`end`) di bulan itu. */
-  const sparkRevenue = chartData.map((d) => ({ name: d.bln, v: d.revenue }));
-  const sparkProjects = chartData.map((d) => ({ name: d.bln, v: d.projects }));
+  // KPI selalu 12 bulan, tidak ikut tombol 6B/12B grafik.
+  const axis12 = useMemo(() => monthAxis({ months: 12, locale }), [locale]);
+  const kpi12 = useMemo(() => {
+    const invoices = inBranch(data.invoices);
+    return axis12.map((pt) => {
+      const month = invoices.filter((i) => monthKeyOf(i.paidAt ?? i.date ?? i.due) === pt.key);
+      return {
+        bln: pt.label,
+        revenue: Math.round((month.reduce((s, i) => s + Number(i.amount ?? 0), 0) / 1e9) * 100) / 100,
+        projects: new Set(month.map((i) => String(i.project ?? i.vessel ?? ""))).size,
+      };
+    });
+  }, [data.invoices, inBranch, axis12]);
+  const sparkRevenue = kpi12.map((d) => ({ name: d.bln, v: d.revenue }));
+  const sparkProjects = kpi12.map((d) => ({ name: d.bln, v: d.projects }));
   // Bulan berjalan belum ada invoice → delta disembunyikan (bukan "-100%").
-  const revHasCurrent = numOf(chartData[chartData.length - 1]?.revenue) > 0;
-  const revGrowth = pctChange(numOf(chartData[chartData.length - 1]?.revenue), numOf(chartData[chartData.length - 2]?.revenue));
-  const marginByMonth = revAxis.map((pt) => {
-    const done = branchProjects.filter((p) => monthKeyOf(p.end) === pt.key && numOf(p.budget) > 0);
+  const revHasCurrent = numOf(kpi12[kpi12.length - 1]?.revenue) > 0;
+  const revGrowth = pctChange(numOf(kpi12[kpi12.length - 1]?.revenue), numOf(kpi12[kpi12.length - 2]?.revenue));
+  const marginByMonth = axis12.map((pt) => {
+    const done = branchProjects.filter((p) => p.status === "Selesai" && monthKeyOf(p.end) === pt.key && numOf(p.budget) > 0);
     const val = done.reduce((s, p) => s + numOf(p.budget), 0);
     const cost = done.reduce((s, p) => s + numOf(p.actual), 0);
     return { name: pt.label, v: val > 0 ? Math.round(((val - cost) / val) * 1000) / 10 : null };
@@ -569,7 +571,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   const marginPts = marginByMonth.filter((m) => m.v !== null);
   // Margin 12 bulan tertimbang nilai; delta = dua bulan terakhir yang punya proyek selesai.
   const marginVal = (() => {
-    const done = branchProjects.filter((p) => revAxis.some((pt) => pt.key === monthKeyOf(p.end)) && numOf(p.budget) > 0);
+    const done = branchProjects.filter((p) => p.status === "Selesai" && axis12.some((pt) => pt.key === monthKeyOf(p.end)) && numOf(p.budget) > 0);
     const val = done.reduce((s, p) => s + numOf(p.budget), 0);
     return val > 0 ? Math.round(((val - done.reduce((s, p) => s + numOf(p.actual), 0)) / val) * 1000) / 10 : 0;
   })();
@@ -640,12 +642,12 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
 
   /* Insight dari data nyata (dulu teks contoh: "Utilisasi Drydock 92%", "37 Saldo Awal", dst.). */
   const insights = [
-    lowStock.length > 0 && { id: "stok", tone: "violet" as const, title: `${lowStock.length} item stok menipis/kritis`, desc: "Periksa Inventori dan buat PR untuk item di bawah stok minimum." },
-    openNcr > 0 && { id: "ncr", tone: "rose" as const, title: `${openNcr} NCR terbuka`, desc: criticalOpenNcr > 0 ? `${criticalOpenNcr} di antaranya Critical - prioritaskan penanganan.` : "Pantau penyelesaian temuan mutu." },
-    arOutstanding > 0 && { id: "ar", tone: "navy" as const, title: `Piutang belum lunas ${fmtMiliar(arOutstanding)}`, desc: "Lihat Keuangan → Piutang untuk umur dan penagihan." },
-    marginVal !== 0 && { id: "margin", tone: "teal" as const, title: `Margin 12 bulan ${marginVal.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`, desc: "Dihitung dari nilai dan biaya aktual proyek selesai 12 bulan terakhir." },
+    lowStock.length > 0 && { id: "stok", tone: "violet" as const, title: S.insStockT.replace("{n}", String(lowStock.length)), desc: S.insStockD },
+    openNcr > 0 && { id: "ncr", tone: "rose" as const, title: S.insNcrT.replace("{n}", String(openNcr)), desc: criticalOpenNcr > 0 ? S.insNcrCritD.replace("{n}", String(criticalOpenNcr)) : S.insNcrD },
+    arOutstanding > 0 && { id: "ar", tone: "navy" as const, title: S.insArT.replace("{n}", fmtMiliar(arOutstanding)), desc: S.insArD },
+    marginVal !== 0 && { id: "margin", tone: "teal" as const, title: S.insMarginT.replace("{n}", marginVal.toLocaleString(locale === "en" ? "en-US" : "id-ID", { maximumFractionDigits: 1 })), desc: S.insMarginD },
   ].filter((x): x is { id: string; tone: "violet" | "rose" | "navy" | "teal"; title: string; desc: string } => Boolean(x));
-  const totalRevenue = chartData.reduce((s, d) => s + d.revenue, 0);
+  const totalRevenue = kpi12.reduce((s, d) => s + d.revenue, 0);
   const totalRevenueLabel = `Rp ${totalRevenue.toLocaleString("id-ID", { maximumFractionDigits: 1 })} M`;
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
