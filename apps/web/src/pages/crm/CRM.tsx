@@ -233,7 +233,7 @@ export default function CRM() {
   const wonValue = wonQuotes.reduce((s, q) => s + num(q.value), 0);
   const totalQuotes = quotations.length;
   const winRate = totalQuotes > 0 ? Math.round((wonQuotes.length / totalQuotes) * 100) : 0;
-  const totalFleet = clients.reduce((s, c) => s + num(c.fleet), 0);
+  const totalFleet = inBranch(clients).reduce((s, c) => s + num(c.fleet), 0);
   const stageDist = STAGES.map((s) => ({
     name: s,
     value: quotations.filter((q) => q.stage === s).length,
