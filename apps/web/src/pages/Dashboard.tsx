@@ -505,7 +505,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       const month = invoices.filter(
         (i) => monthKeyOf(i.paidAt ?? i.date ?? i.due) === pt.key,
       );
-      const projects = new Set(month.map((i) => String(i.project ?? i.vessel ?? ""))).size;
+      const projects = new Set(month.map((i) => String(i.project ?? i.vessel ?? "")).filter(Boolean)).size;
       return {
         bln: pt.label,
         revenue: bucket[pt.key] ?? 0,
@@ -552,7 +552,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       return {
         bln: pt.label,
         revenue: Math.round((month.reduce((s, i) => s + Number(i.amount ?? 0), 0) / 1e9) * 100) / 100,
-        projects: new Set(month.map((i) => String(i.project ?? i.vessel ?? ""))).size,
+        projects: new Set(month.map((i) => String(i.project ?? i.vessel ?? "")).filter(Boolean)).size,
       };
     });
   }, [data.invoices, inBranch, axis12]);
