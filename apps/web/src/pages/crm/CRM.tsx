@@ -735,7 +735,7 @@ export default function CRM() {
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.kpiActiveClients} value={String(clients.filter((c) => jenisOf(c) === "Klien").length)} icon={<Users2 className="h-5 w-5" />} chip="navy" spark={clientTrend} hint={S.kpiFleetHint.replace("{n}", String(totalFleet))} />
+        <KpiCard label={S.kpiActiveClients} value={String(inBranch(clients).filter((c) => jenisOf(c) === "Klien").length)} icon={<Users2 className="h-5 w-5" />} chip="navy" spark={clientTrend} hint={S.kpiFleetHint.replace("{n}", String(totalFleet))} />
         <KpiCard label={S.kpiPipeline} value={fmtMiliar(pipelineTotal)} delta={S.kpiActiveQuotes.replace("{n}", String(activeQuotes.length))} deltaDirection="up" chip="teal" hint={S.kpiPipelineHint} spark={pipelineTrend} />
         <KpiCard label={S.kpiWinRate} value={`${String(winRate)}%`} delta={S.kpiWinDetail.replace("{a}", String(wonQuotes.length)).replace("{b}", String(totalQuotes))} deltaDirection={wonQuotes.length > 0 ? "up" : "flat"} icon={<Star className="h-5 w-5" />} chip="violet" spark={winRateTrend} />
         <KpiCard label={S.kpiWonValue} value={fmtMiliar(wonValue)} delta={S.kpiWonDelta} deltaDirection="up" chip="amber" hint={S.kpiWonHint} spark={wonTrend} />
@@ -967,7 +967,7 @@ export default function CRM() {
                           <Badge tone={String(c.klasifikasi ?? "Regular") === "VIP" ? "violet" : "gray"}>{String(c.klasifikasi ?? "Regular")}</Badge>
                           <Badge tone="navy">{String(c.currency ?? "IDR")}</Badge>
                           {c.branch ? <Badge tone="teal">{String(c.branch)}</Badge> : null}
-                          {jenisOf(c) === "Karyawan" && <Badge tone="amber">{S.jenisKaryawan}</Badge>}
+                          {jenisOf(c) === "Karyawan" && <Badge tone="amber">{S.jenisKaryawanBadge}</Badge>}
                           {canWriteClients && (
                             <button
                               type="button"
