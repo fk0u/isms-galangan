@@ -20,6 +20,7 @@ import type { StoreItem, CollectionKey } from "../../data/store";
 import { fmtMiliar, fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { sameName } from "../../utils/names";
+import { clientJenis, type ClientJenis } from "../../utils/clientJenis";
 import { AlertBannerView, notifRowId, useModuleAlert, useNotifFlash } from "../../components/AlertBanner";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
@@ -102,6 +103,8 @@ export default function CRM() {
   const [tab, setTab] = useState("Pipeline");
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
   const [klasFilter, setKlasFilter] = useState("Semua");
+  // Bawaan hanya Klien: daftar lama tercampur nama karyawan (masukan klien 9 Nov 2026).
+  const [jenisFilter, setJenisFilter] = useState<ClientJenis | "Semua">("Klien");
   const [crmQ, setCrmQ] = useState("");
   const [stageFilter, setStageFilter] = useState("Semua");
   const [oldOnly, setOldOnly] = useState(false);
@@ -168,13 +171,24 @@ export default function CRM() {
     return m;
   }, [data.clients]);
 
+  // Nama yang punya transaksi (proyek/penawaran/kontrak) dianggap klien bila jenis belum diisi.
+  const activeNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of [...(data.projects ?? []), ...(data.quotations ?? []), ...(data.contracts ?? [])]) {
+      const n = String(r.client ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+      if (n) set.add(n);
+    }
+    return set;
+  }, [data.projects, data.quotations, data.contracts]);
+  const jenisOf = (c: StoreItem): ClientJenis => clientJenis(c, activeNames);
+
   const visibleClients = useMemo(() => {
-    const base = inBranch(data.clients ?? []);
+    const base = inBranch(data.clients ?? []).filter((c) => jenisFilter === "Semua" || clientJenis(c, activeNames) === jenisFilter);
     const searched = base.filter((c) => rowMatches(c, crmQ, ["id", "name", "klasifikasi", "branch", "currency", "paymentTerms", "since"]));
     if (klasFilter === "Semua") return searched;
     return searched.filter((c) => String(c.klasifikasi ?? "Regular") === klasFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.clients, klasFilter, crmQ, branch]);
+  }, [data.clients, klasFilter, crmQ, branch, jenisFilter, activeNames]);
 
   const quotations = useMemo(() => {
     const all = data.quotations ?? [];
@@ -219,7 +233,7 @@ export default function CRM() {
   const wonValue = wonQuotes.reduce((s, q) => s + num(q.value), 0);
   const totalQuotes = quotations.length;
   const winRate = totalQuotes > 0 ? Math.round((wonQuotes.length / totalQuotes) * 100) : 0;
-  const totalFleet = clients.reduce((s, c) => s + num(c.fleet), 0);
+  const totalFleet = inBranch(clients).reduce((s, c) => s + num(c.fleet), 0);
   const stageDist = STAGES.map((s) => ({
     name: s,
     value: quotations.filter((q) => q.stage === s).length,
@@ -721,7 +735,7 @@ export default function CRM() {
       {modAlert.active && <AlertBannerView items={modAlert.items} onPick={pickNotif} dismiss={modAlert.dismiss} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label={S.kpiActiveClients} value={String(clients.length)} icon={<Users2 className="h-5 w-5" />} chip="navy" spark={clientTrend} hint={S.kpiFleetHint.replace("{n}", String(totalFleet))} />
+        <KpiCard label={S.kpiActiveClients} value={String(inBranch(clients).filter((c) => jenisOf(c) === "Klien").length)} icon={<Users2 className="h-5 w-5" />} chip="navy" spark={clientTrend} hint={S.kpiFleetHint.replace("{n}", String(totalFleet))} />
         <KpiCard label={S.kpiPipeline} value={fmtMiliar(pipelineTotal)} delta={S.kpiActiveQuotes.replace("{n}", String(activeQuotes.length))} deltaDirection="up" chip="teal" hint={S.kpiPipelineHint} spark={pipelineTrend} />
         <KpiCard label={S.kpiWinRate} value={`${String(winRate)}%`} delta={S.kpiWinDetail.replace("{a}", String(wonQuotes.length)).replace("{b}", String(totalQuotes))} deltaDirection={wonQuotes.length > 0 ? "up" : "flat"} icon={<Star className="h-5 w-5" />} chip="violet" spark={winRateTrend} />
         <KpiCard label={S.kpiWonValue} value={fmtMiliar(wonValue)} delta={S.kpiWonDelta} deltaDirection="up" chip="amber" hint={S.kpiWonHint} spark={wonTrend} />
@@ -890,6 +904,19 @@ export default function CRM() {
                   ariaLabel={S.clientSearchAria}
                   className="min-w-52 flex-1 sm:max-w-xs"
                 />
+                <div className="inline-flex rounded-lg border border-steel-200 p-0.5" role="group" aria-label={S.jenisAria}>
+                  {(["Klien", "Karyawan", "Semua"] as const).map((j) => (
+                    <button
+                      key={j}
+                      type="button"
+                      aria-pressed={jenisFilter === j}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold ${jenisFilter === j ? "bg-navy-700 text-white" : "text-steel-600 hover:bg-surface"}`}
+                      onClick={() => setJenisFilter(j)}
+                    >
+                      {j === "Klien" ? S.jenisKlien : j === "Karyawan" ? S.jenisKaryawan : S.jenisSemua}
+                    </button>
+                  ))}
+                </div>
                 <FilterPopover
                   activeCount={[klasFilter !== "Semua"].filter(Boolean).length}
                   initial={{ klasifikasi: klasFilter }}
@@ -940,6 +967,16 @@ export default function CRM() {
                           <Badge tone={String(c.klasifikasi ?? "Regular") === "VIP" ? "violet" : "gray"}>{String(c.klasifikasi ?? "Regular")}</Badge>
                           <Badge tone="navy">{String(c.currency ?? "IDR")}</Badge>
                           {c.branch ? <Badge tone="teal">{String(c.branch)}</Badge> : null}
+                          {jenisOf(c) === "Karyawan" && <Badge tone="amber">{S.jenisKaryawanBadge}</Badge>}
+                          {canWriteClients && (
+                            <button
+                              type="button"
+                              className="ml-auto text-xs font-semibold text-ocean-600 underline"
+                              onClick={() => void update("clients", c.id, { jenis: jenisOf(c) === "Klien" ? "Karyawan" : "Klien" })}
+                            >
+                              {jenisOf(c) === "Klien" ? S.markAsKaryawan : S.markAsKlien}
+                            </button>
+                          )}
                         </div>
                         <div className="mt-3 border-t border-steel-100 pt-3 text-sm">
                           <div className="flex justify-between"><span className="text-steel-500">{S.fleetLabel}</span><span className="font-semibold">{S.unitSuffix.replace("{n}", String(num(c.fleet)))}</span></div>
