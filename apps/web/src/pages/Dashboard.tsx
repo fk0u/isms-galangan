@@ -30,7 +30,6 @@ import {
   UserCheck,
 } from "lucide-react";
 import {
-  AreaChart,
   Area,
   Bar,
   XAxis,
@@ -65,7 +64,7 @@ import type { CollectionKey } from "../data/store";
 import { useModuleSync } from "../data/useModuleSync";
 import { scopeAlertStoreData } from "../data/scopeAlertData";
 import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../utils/monthAxis";
-import { lastPoint, numOf, pctChange, prevPoint } from "../utils/series";
+import { numOf, pctChange } from "../utils/series";
 import { warnLevelOf } from "../utils/inventoryWarn";
 import { projectProgressOf } from "../utils/projectProgress";
 import {
@@ -186,14 +185,6 @@ import { todayISO } from "../utils/format";
 import { scopeNames } from "../utils/scope";
 import {
   revenueSeries,
-  sparkRevenue,
-  sparkMargin,
-  sparkProjects,
-  sparkUtil,
-  utilSeries,
-  marginSeries,
-  drydockLoad,
-  insights,
   fmtMiliar,
 } from "../data";
 import { useT } from "../i18n/LanguageContext";
@@ -242,6 +233,7 @@ const DB_COLS: CollectionKey[] = [
   "activities",
   "drydocks",
   "employees",
+  "equipment",
   "incidents",
   "inventory",
   "invoices",
@@ -540,8 +532,12 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      kalau deret seed kosong, dan karena render gagal seluruh pohon React
      ikut tumbang - bukan hanya kartu KPI ini. Helper lastPoint/prevPoint
      mengembalikan null; lihat utils/series.ts. */
-  const utilLastPoint = lastPoint(utilSeries);
-  const utilEquipment = Math.round(numOf(utilLastPoint?.equipment));
+  /* Utilisasi equipment = rata-rata `util` alat di cabang (dulu dari seri demo
+     utilSeries). Belum ada riwayat per bulan, jadi tanpa delta. */
+  const branchEquipment = inBranch(data.equipment);
+  const utilEquipment = branchEquipment.length
+    ? Math.round(branchEquipment.reduce((s, e) => s + numOf(e.util), 0) / branchEquipment.length)
+    : 0;
 
   /* Sumbu + angka revenue dari invoice yang SUNGGUHNYA bertanggal.
      withMonthLabels() lama memutar seed revenueSeries supaya bulan berjalan
@@ -554,15 +550,31 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
      `revenue` dalam miliar, `cost` = nilai_before_tax invoice, `projects`
      = jumlah proyek berbeda di invoice bulan itu. */
 
-  const lastRev = lastPoint(revenueSeries);
-  const prevRev = prevPoint(revenueSeries);
-  const revGrowth = pctChange(numOf(lastRev?.revenue), numOf(prevRev?.revenue));
-  const lastMargin = lastPoint(marginSeries);
-  const prevMargin = prevPoint(marginSeries);
-  const marginDiff = numOf(lastMargin?.margin) - numOf(prevMargin?.margin);
-  const lastUtil = lastPoint(utilSeries);
-  const prevUtil = prevPoint(utilSeries);
-  const utilDiff = numOf(lastUtil?.equipment) - numOf(prevUtil?.equipment);
+  /* KPI pendapatan & margin dari data nyata (dulu seri demo revenueSeries/
+     marginSeries, sehingga produksi menampilkan "Rp 79 M, +7,7%" fiktif).
+     Pendapatan = chartData (invoice per bulan). Margin bulan = (nilai - biaya
+     aktual) / nilai proyek yang selesai (`end`) di bulan itu. */
+  const sparkRevenue = chartData.map((d) => ({ name: d.bln, v: d.revenue }));
+  const sparkProjects = chartData.map((d) => ({ name: d.bln, v: d.projects }));
+  // Bulan berjalan belum ada invoice → delta disembunyikan (bukan "-100%").
+  const revHasCurrent = numOf(chartData[chartData.length - 1]?.revenue) > 0;
+  const revGrowth = pctChange(numOf(chartData[chartData.length - 1]?.revenue), numOf(chartData[chartData.length - 2]?.revenue));
+  const marginByMonth = revAxis.map((pt) => {
+    const done = branchProjects.filter((p) => monthKeyOf(p.end) === pt.key && numOf(p.budget) > 0);
+    const val = done.reduce((s, p) => s + numOf(p.budget), 0);
+    const cost = done.reduce((s, p) => s + numOf(p.actual), 0);
+    return { name: pt.label, v: val > 0 ? Math.round(((val - cost) / val) * 1000) / 10 : null };
+  });
+  const sparkMargin = marginByMonth.map((m) => ({ name: m.name, v: m.v ?? 0 }));
+  const marginPts = marginByMonth.filter((m) => m.v !== null);
+  // Margin 12 bulan tertimbang nilai; delta = dua bulan terakhir yang punya proyek selesai.
+  const marginVal = (() => {
+    const done = branchProjects.filter((p) => revAxis.some((pt) => pt.key === monthKeyOf(p.end)) && numOf(p.budget) > 0);
+    const val = done.reduce((s, p) => s + numOf(p.budget), 0);
+    return val > 0 ? Math.round(((val - done.reduce((s, p) => s + numOf(p.actual), 0)) / val) * 1000) / 10 : 0;
+  })();
+  const lastMargin = { margin: marginVal };
+  const marginDiff = marginPts.length >= 2 ? numOf(marginPts[marginPts.length - 1].v) - numOf(marginPts[marginPts.length - 2].v) : 0;
   const activeEmployees = inBranch(data.employees).filter((e) => e.status === "Aktif").length;
   const seaTrialVessel =
     projects.find((p) => p.status !== "Selesai" && scopeNames(p.scope).includes("Sea Trial"))?.vessel ?? "-";
@@ -626,7 +638,14 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
     } catch { toast(S.tFullscreenUnsupported, "info"); }
   };
 
-  const totalRevenue = revenueSeries.reduce((s, d) => s + d.revenue, 0);
+  /* Insight dari data nyata (dulu teks contoh: "Utilisasi Drydock 92%", "37 Saldo Awal", dst.). */
+  const insights = [
+    lowStock.length > 0 && { id: "stok", tone: "violet" as const, title: `${lowStock.length} item stok menipis/kritis`, desc: "Periksa Inventori dan buat PR untuk item di bawah stok minimum." },
+    openNcr > 0 && { id: "ncr", tone: "rose" as const, title: `${openNcr} NCR terbuka`, desc: criticalOpenNcr > 0 ? `${criticalOpenNcr} di antaranya Critical - prioritaskan penanganan.` : "Pantau penyelesaian temuan mutu." },
+    arOutstanding > 0 && { id: "ar", tone: "navy" as const, title: `Piutang belum lunas ${fmtMiliar(arOutstanding)}`, desc: "Lihat Keuangan → Piutang untuk umur dan penagihan." },
+    marginVal !== 0 && { id: "margin", tone: "teal" as const, title: `Margin 12 bulan ${marginVal.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`, desc: "Dihitung dari nilai dan biaya aktual proyek selesai 12 bulan terakhir." },
+  ].filter((x): x is { id: string; tone: "violet" | "rose" | "navy" | "teal"; title: string; desc: string } => Boolean(x));
+  const totalRevenue = chartData.reduce((s, d) => s + d.revenue, 0);
   const totalRevenueLabel = `Rp ${totalRevenue.toLocaleString("id-ID", { maximumFractionDigits: 1 })} M`;
   const typeDist = (["New Build", "Repair", "Retrofit"] as const).map((t, i) => ({
     name: t,
@@ -790,49 +809,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
       return allowed.some((prefix) => mod.includes(prefix));
     });
 
-    if (filtered.length > 0) return filtered;
-
-    if (scope === "sdm") {
-      return [
-        { id: "act-sdm-1", actor: "Suci Rahmawati", action: "memverifikasi permohonan cuti", target: "EMP-005 (1 hari)", module: "SDM", time: "10 menit lalu", tone: "teal" as const },
-        { id: "act-sdm-2", actor: "Ahmad Fauzi", action: "mencatat presensi harian", target: "20 Personel Hadir", module: "Absensi", time: "35 menit lalu", tone: "navy" as const },
-        { id: "act-sdm-3", actor: "Budi Santoso", action: "memperbarui sertifikasi K3", target: "EMP-012 (Welder 6G)", module: "SDM", time: "2 jam lalu", tone: "violet" as const },
-        { id: "act-sdm-4", actor: "Suci Rahmawati", action: "menerbitkan slip gaji", target: "Periode Berjalan", module: "Payroll", time: "5 jam lalu", tone: "amber" as const },
-      ];
-    }
-    if (scope === "inventori") {
-      return [
-        { id: "act-inv-1", actor: "Joko Susilo", action: "mengeluarkan material pelat", target: "Pelat AH36 12mm", module: "Inventori", time: "15 menit lalu", tone: "amber" as const },
-        { id: "act-inv-2", actor: "Gudang Material", action: "menerima barang PO", target: "PO-2026-117", module: "Inventori", time: "1 jam lalu", tone: "teal" as const },
-        { id: "act-inv-3", actor: "Staff Logistik", action: "verifikasi stok minimum", target: "Cat Epoxy Primer", module: "Inventori", time: "3 jam lalu", tone: "violet" as const },
-      ];
-    }
-    if (scope === "keuangan") {
-      return [
-        { id: "act-fin-1", actor: "Dewi Lestari", action: "menerbitkan invoice klien", target: "INV-2026-088", module: "Keuangan", time: "20 menit lalu", tone: "teal" as const },
-        { id: "act-fin-2", actor: "Dewi Lestari", action: "mencatat pembayaran AR", target: "Pelunasan Termin 1", module: "Keuangan", time: "2 jam lalu", tone: "navy" as const },
-        { id: "act-fin-3", actor: "Finance", action: "menerbitkan voucher kas", target: "VOU-2026-042", module: "Keuangan", time: "4 jam lalu", tone: "amber" as const },
-      ];
-    }
-    if (scope === "qc") {
-      return [
-        { id: "act-qc-1", actor: "Sari Wulandari", action: "menutup temuan NCR", target: "NCR-2026-033", module: "QC", time: "2 menit lalu", tone: "teal" as const },
-        { id: "act-qc-2", actor: "Agus Setiawan", action: "mencatat inspeksi harian K3", target: "Area Slipway & Dok 1", module: "Safety", time: "1 jam lalu", tone: "rose" as const },
-        { id: "act-qc-3", actor: "Sari Wulandari", action: "verifikasi pengelasan BKI", target: "Joint Lambung Tugboat", module: "QC", time: "3 jam lalu", tone: "violet" as const },
-      ];
-    }
-    if (scope === "procurement") {
-      return [
-        { id: "act-proc-1", actor: "Fajar Nugroho", action: "menerbitkan PO vendor", target: "PO-2026-117", module: "Procurement", time: "18 menit lalu", tone: "navy" as const },
-        { id: "act-proc-2", actor: "Fajar Nugroho", action: "memverifikasi PR lapangan", target: "PR-2026-045", module: "Procurement", time: "2 jam lalu", tone: "amber" as const },
-      ];
-    }
-    if (scope === "commercial") {
-      return [
-        { id: "act-crm-1", actor: "Hendra Wijaya", action: "membuat quotation baru", target: "QT-2026-052", module: "CRM", time: "5 jam lalu", tone: "navy" as const },
-        { id: "act-crm-2", actor: "Hendra Wijaya", action: "memperbarui status tender", target: "Kontrak Menang (Deal)", module: "CRM", time: "1 hari lalu", tone: "teal" as const },
-      ];
-    }
+    // Tanpa aktivitas nyata → kosong. Dulu diisi aktivitas contoh (nama fiktif) yang tampil di produksi.
     return filtered;
   }, [activities, isExecutive, scope]);
 
@@ -1020,7 +997,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                   {fmtMiliar(activeContracts)}
                 </p>
                 <p className="mt-1.5 text-xs font-medium text-slate-500">
-                  {branchProjects.length} proyek terdaftar di portofolio aktif cabang <span className="font-semibold text-slate-800">{branch}</span>
+                  {branchProjects.length} proyek terdaftar di portofolio aktif {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
                 </p>
               </div>
 
@@ -1159,7 +1136,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(stockValue)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total valuasi stok material tersimpan di gudang cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Total valuasi stok material tersimpan di gudang {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1218,7 +1195,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {totalEmployees} <span className="text-2xl font-bold text-slate-600">Personel</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total tenaga kerja galangan terdaftar di cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Total tenaga kerja galangan terdaftar di {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1277,7 +1254,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(arOutstanding)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total piutang usaha (AR) belum tertagih dari klien cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Total piutang usaha (AR) belum tertagih dari klien {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1336,7 +1313,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {totalActive} <span className="text-2xl font-bold text-slate-600">Kapal</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Proyek konstruksi &amp; reparasi berjalan aktif di galangan cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Proyek konstruksi &amp; reparasi berjalan aktif di galangan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1395,7 +1372,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(totalPoValue)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total komitmen nilai Purchase Order aktif berjalan cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Total komitmen nilai Purchase Order aktif berjalan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1454,7 +1431,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {openNcr} <span className="text-2xl font-bold text-slate-600">Kasus NCR</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Temuan inspeksi mutu yang sedang dalam proses penanganan di cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Temuan inspeksi mutu yang sedang dalam proses penanganan di {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1513,7 +1490,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(pipelineActive)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Nilai aktif prospek &amp; penawaran (quotation) yang sedang berjalan cabang <span className="font-semibold text-slate-800">{branch}</span>
+                Nilai aktif prospek &amp; penawaran (quotation) yang sedang berjalan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
               </p>
             </div>
 
@@ -1661,7 +1638,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               <KpiCard
                 label="Pendapatan Kuartal"
                 value={totalRevenueLabel}
-                delta={S.deltaPctVsMonth.replace("{n}", `${revGrowth >= 0 ? "+" : ""}${revGrowth.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`)}
+                delta={revHasCurrent ? S.deltaPctVsMonth.replace("{n}", `${revGrowth >= 0 ? "+" : ""}${revGrowth.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`) : undefined}
                 deltaDirection={revGrowth > 0 ? "up" : revGrowth < 0 ? "down" : "flat"}
                 icon={<Wallet className="h-5 w-5" />}
                 chip="teal"
@@ -1827,7 +1804,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               <KpiCard
                 label={S.kpiRevenue12}
                 value={totalRevenueLabel}
-                delta={S.deltaPctVsMonth.replace("{n}", `${revGrowth >= 0 ? "+" : ""}${revGrowth.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`)}
+                delta={revHasCurrent ? S.deltaPctVsMonth.replace("{n}", `${revGrowth >= 0 ? "+" : ""}${revGrowth.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`) : undefined}
                 deltaDirection={revGrowth > 0 ? "up" : revGrowth < 0 ? "down" : "flat"}
                 icon={<Wallet className="h-5 w-5" />}
                 chip="teal"
@@ -1849,11 +1826,8 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               <KpiCard
                 label={S.kpiEquipUtil}
                 value={`${utilEquipment}%`}
-                delta={S.deltaPoinVsMonth.replace("{n}", `${utilDiff >= 0 ? "+" : ""}${utilDiff.toLocaleString("id-ID", { maximumFractionDigits: 1 })}`)}
-                deltaDirection={utilDiff > 0 ? "up" : utilDiff < 0 ? "down" : "flat"}
                 icon={<Cpu className="h-5 w-5" />}
                 chip="amber"
-                spark={sparkUtil}
               />
             </StaggerItem>
           </>
@@ -3267,17 +3241,6 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      {drydockLoad.slice(0, 2).map((d) => (
-                        <div key={d.dock}>
-                          <div className="mb-0.5 flex justify-between text-[11px]">
-                            <span className="font-medium text-slate-600 truncate">{d.dock}</span>
-                            <span className="font-semibold text-slate-800">{d.kapasitas}%</span>
-                          </div>
-                          <ProgressBar value={d.kapasitas} tone={d.kapasitas > 85 ? "red" : d.kapasitas > 70 ? "amber" : "navy"} />
-                        </div>
-                      ))}
-                    </div>
                   </div>
 
                   <div className="sm:col-span-7 relative">
@@ -3333,19 +3296,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 <RadialGauge value={utilDrydock} label="Drydock" color="#2563EB" />
                 <RadialGauge value={utilEquipment} label="Equipment" color="#F59E0B" />
               </div>
-              <div className="mt-2 -mb-1 h-16 px-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={utilSeries} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="utilGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.45} />
-                        <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="equipment" stroke="#F59E0B" strokeWidth={2.5} fill="url(#utilGrad)" isAnimationActive />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {/* Grafik tren utilitas dihapus: dulu seri demo, belum ada riwayat nyata per bulan. */}
             </Card>
           </StaggerItem>
 
