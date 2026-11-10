@@ -98,9 +98,6 @@ export default function ClientModal({
             ))}
           </select>
         </Field>
-        <Field label="Cabang (opsional)">
-          <input className="input" value={form.branch} onChange={(e) => setF("branch", e.target.value)} placeholder="Samarinda" />
-        </Field>
         <Field label={`${S.creditLimitLabel} (Rp)`}>
           <MoneyInput className="input" value={form.creditLimit} onChange={(v) => setF("creditLimit", v)} />
         </Field>

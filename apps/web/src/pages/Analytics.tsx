@@ -185,6 +185,10 @@ const MONTH_RANGES = [6, 12, 18, 24] as const;
    dieksekusi, sehingga numOf masih berada di TDZ dan melempar
    "Cannot access 'numOf' before initialization". */
 
+/* Sistem kini terpusat satu galangan (keputusan founder 9 Nov 2026): widget
+   per-cabang disembunyikan dari UI, logika cabang di data tetap ada. */
+const SHOW_BRANCH_WIDGETS = false;
+
 export default function Analytics() {
 
   const { locale } = useT();
@@ -288,14 +292,14 @@ export default function Analytics() {
       axis,
       (j) => j.date,
       (j) => (EXPENSE_ACCOUNTS.includes(String(j.db ?? "")) ? numOf(j.amount) : 0),
-      (vals) => vals.reduce((s, x) => s + x, 0) / 1e6,
+      (vals) => vals.reduce((s, x) => s + x, 0) / 1e9, // miliar: label grafik/KPI "M" = miliar
     );
     const revenue = bucketByMonth(
       inBranch(data.invoices),
       axis,
       (i) => i.due ?? i.date ?? "",
       (i) => numOf(i.grandTotal) || numOf(i.amount),
-      (vals) => vals.reduce((s, x) => s + x, 0) / 1e6,
+      (vals) => vals.reduce((s, x) => s + x, 0) / 1e9, // miliar: label grafik/KPI "M" = miliar
     );
     const real = monthSeries<{
       bln: string; key: string; isCurrent: boolean; revenue: number; cost: number; projects: number;
@@ -405,7 +409,7 @@ export default function Analytics() {
       const k = String(p.type ?? "-").trim() || "-";
       m.set(k, (m.get(k) ?? 0) + 1);
     }
-    const C = ["#0A0A0A", "#E61919", "#262626", "#F04848", "#474747"];
+    const C = ["#2563EB", "#E61919", "#0D9488", "#F04848", "#474747"];
     return [...m.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([name, value], i) => ({ name, value, color: C[i % C.length] }));
@@ -424,7 +428,7 @@ export default function Analytics() {
       const b = branchOfProject.get(String(i.project ?? "")) ?? "-";
       m.set(b, (m.get(b) ?? 0) + numOf(i.amount));
     }
-    const C = ["#0A0A0A", "#E61919", "#262626", "#F04848", "#474747", "#FF3B3B"];
+    const C = ["#2563EB", "#E61919", "#0D9488", "#F04848", "#474747", "#FF3B3B"];
     return [...m.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([name, value], i) => ({ name, value, color: C[i % C.length] }));
@@ -867,7 +871,7 @@ const exportPdfReport = async () => {
                       <YAxis tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="revenue" name={S.legendRevenue} fill="#0A0A0A" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Bar dataKey="revenue" name={S.legendRevenue} fill="#2563EB" radius={[4, 4, 0, 0]} isAnimationActive />
                       <Bar dataKey="cost" name={S.legendCost} fill="#FF8A8A" radius={[4, 4, 0, 0]} isAnimationActive />
                     </BarChart>
                   </ResponsiveContainer>
@@ -907,7 +911,7 @@ const exportPdfReport = async () => {
                       <XAxis dataKey="bln" stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <YAxis domain={[15, 35]} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `${v}%`} />} />
-                      <Line type="monotone" dataKey="margin" name={S.legendMargin} stroke="#262626" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
+                      <Line type="monotone" dataKey="margin" name={S.legendMargin} stroke="#0D9488" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -920,7 +924,7 @@ const exportPdfReport = async () => {
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                       <Area type="monotone" dataKey="inspeksi" name={S.legendInspection} stroke="#E61919" fill="#FF8A8A" fillOpacity={0.4} isAnimationActive />
-                      <Line type="monotone" dataKey="lulus" name={S.legendPassed} stroke="#262626" strokeWidth={2} dot={false} isAnimationActive />
+                      <Line type="monotone" dataKey="lulus" name={S.legendPassed} stroke="#0D9488" strokeWidth={2} dot={false} isAnimationActive />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -928,7 +932,7 @@ const exportPdfReport = async () => {
             </Card>
 
             {/* ===== Portfolio: semua dihitung dari data store nyata ===== */}
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-5 ${SHOW_BRANCH_WIDGETS ? "lg:grid-cols-2" : ""}`}>
               <Card>
                 <CardHeader
                   title={locale === "en" ? "Project mix by type" : "Komposisi Proyek per Tipe"}
@@ -960,7 +964,7 @@ const exportPdfReport = async () => {
                 </div>
               </Card>
 
-              <Card>
+              {SHOW_BRANCH_WIDGETS && <Card>
                 <CardHeader
                   title={locale === "en" ? "Revenue by branch" : "Pendapatan per Cabang"}
                   subtitle={locale === "en"
@@ -989,7 +993,7 @@ const exportPdfReport = async () => {
                     ))}
                   </div>
                 </div>
-              </Card>
+              </Card>}
             </div>
 
             {monthlyHasData && (
@@ -1009,9 +1013,9 @@ const exportPdfReport = async () => {
                       <YAxis tick={{ fontSize: 11 }} stroke="#8F8F8F" axisLine={false} tickLine={false} unit=" M" />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="revenue" name={locale === "en" ? "Revenue" : "Pendapatan"} fill="#0A0A0A" radius={[4, 4, 0, 0]} isAnimationActive />
+                      <Bar dataKey="revenue" name={locale === "en" ? "Revenue" : "Pendapatan"} fill="#2563EB" radius={[4, 4, 0, 0]} isAnimationActive />
                       <Bar dataKey="ap" name="AP" fill="#FF8A8A" radius={[4, 4, 0, 0]} isAnimationActive />
-                      <Line type="monotone" dataKey="cash" name={locale === "en" ? "Cash in" : "Kas masuk"} stroke="#262626" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
+                      <Line type="monotone" dataKey="cash" name={locale === "en" ? "Cash in" : "Kas masuk"} stroke="#0D9488" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1097,7 +1101,7 @@ const exportPdfReport = async () => {
                       <YAxis yAxisId="kanan" orientation="right" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v, n) => (n === "kum" ? `${v}%` : `${v} kejadian`)} />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar yAxisId="kiri" dataKey="count" name={S.legendIncidents} fill="#0A0A0A" radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="kiri" dataKey="count" name={S.legendIncidents} fill="#2563EB" radius={[4, 4, 0, 0]} />
                       <Line yAxisId="kanan" type="monotone" dataKey="kum" name={S.legendCumulative} stroke="#E61919" strokeWidth={2} dot={{ r: 3 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -1206,7 +1210,7 @@ const exportPdfReport = async () => {
               <KpiCard label={S.utilVsTarget} value={`${lastUtil}% / ${utilTarget}%`} delta={lastUtil >= utilTarget ? S.targetReached : S.belowTarget} deltaDirection={lastUtil >= utilTarget ? "up" : "down"} icon={<Clock className="h-5 w-5" />} chip="teal" spark={sparkProjects} />
               <KpiCard label={S.mostProfitableType} value={profitByType.length ? [...profitByType].sort((a, b) => b.profit - a.profit)[0].name : "-"} delta={profitByType.length ? fmtMiliar([...profitByType].sort((a, b) => b.profit - a.profit)[0].profit * 1000000000) : "-"} deltaDirection="flat" icon={<Eye className="h-5 w-5" />} chip="violet" spark={sparkMargin} />
             </div>
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-5 ${SHOW_BRANCH_WIDGETS ? "lg:grid-cols-2" : ""}`}>
               <Card>
                 <CardHeader title={S.profitPerType} subtitle={S.budgetActualPer.replace("{n}", fmtTanggal(todayISO()))} action={<button className="btn-secondary px-2 py-1 text-xs" onClick={() => exportChartPNG("chart-profittype", "profit-tipe")}>{S.exportPngBtn}</button>} />
                 <div id="chart-profittype" className="h-60 p-4 pt-0">
@@ -1216,12 +1220,12 @@ const exportPdfReport = async () => {
                       <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 12 }} stroke="#8F8F8F" axisLine={false} tickLine={false} />
                       <Tooltip content={<ChartTooltip formatter={(v) => `Rp ${v} M`} />} />
-                      <Bar dataKey="profit" name={S.profitLabel} fill="#0A0A0A" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="profit" name={S.profitLabel} fill="#2563EB" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </Card>
-              <Card>
+              {SHOW_BRANCH_WIDGETS && <Card>
                 <CardHeader title={S.profitPerBranch} subtitle={S.budgetActualPer.replace("{n}", fmtTanggal(todayISO()))} action={<button className="btn-secondary px-2 py-1 text-xs" onClick={() => exportChartPNG("chart-profitbranch", "profit-cabang")}>{S.exportPngBtn}</button>} />
                 <div id="chart-profitbranch" className="h-60 p-4 pt-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1234,7 +1238,7 @@ const exportPdfReport = async () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </Card>
+              </Card>}
             </div>
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <Card>
