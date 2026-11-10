@@ -61,7 +61,7 @@ import {
   AsyncButton,
 } from "../components/ui";
 import { useStore } from "../data/store";
-import type { CollectionKey } from "../data/store";
+import type { CollectionKey, StoreItem } from "../data/store";
 import { useModuleSync } from "../data/useModuleSync";
 import { scopeAlertStoreData } from "../data/scopeAlertData";
 import { bucketByMonth, monthAxis, monthKeyOf } from "../utils/monthAxis";
@@ -570,19 +570,19 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   const plRevenue = inBranch(data.invoices)
     .filter((i) => i.status !== "Draft")
     .reduce((s, i) => s + Number(i.amount || 0), 0);
-  const plCost = inBranch(data.payables ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
+  const plCost = inBranch(data.payables ?? []).reduce((s, p) => s + Number(p.amt || 0), 0);
   const profitLoss = plRevenue - plCost;
   /* Tren utang vs piutang 12 bulan: nilai yang terbit per bulan (tanggal dokumen,
      jatuh tempo bila tanggal kosong), dalam miliar. */
   const arApTrend = useMemo(() => {
     const inv = inBranch(data.invoices).filter((i) => i.status !== "Draft");
     const pay = inBranch(data.payables ?? []);
-    const sumM = (rows: typeof inv) =>
-      Math.round((rows.reduce((s, r) => s + Number(r.amount || 0), 0) / 1e9) * 100) / 100;
+    const sumM = (rows: typeof inv, field: "amount" | "amt") =>
+      Math.round((rows.reduce((s, r) => s + Number(r[field] || 0), 0) / 1e9) * 100) / 100;
     return axis12.map((pt) => ({
       bln: pt.label,
-      piutang: sumM(inv.filter((i) => monthKeyOf(i.date ?? i.due) === pt.key)),
-      utang: sumM(pay.filter((p) => monthKeyOf(p.date ?? p.due) === pt.key)),
+      piutang: sumM(inv.filter((i) => monthKeyOf(i.date ?? i.due) === pt.key), "amount"),
+      utang: sumM(pay.filter((p) => monthKeyOf(p.date ?? p.due) === pt.key), "amt"),
     }));
   }, [data.invoices, data.payables, inBranch, axis12]);
   // Bulan berjalan belum ada invoice → delta disembunyikan (bukan "-100%").
@@ -736,8 +736,11 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   ).length;
 
   /* Metrik Keuangan */
-  const apRows = inBranch(data.payables ?? []).filter((p) => p.status !== "Lunas");
-  const apOutstanding = apRows.reduce((s, p) => s + Number(p.amount || 0), 0);
+  /* Skema payables (lihat Finance.tsx): nominal `amt`, status `st`, cicilan
+     pay1/pay2. Versi lama membaca `amount`/`status` yang tidak ada -> AP selalu 0. */
+  const apSisa = (p: StoreItem) => Math.max(0, Number(p.amt || 0) - Number(p.pay1 || 0) - Number(p.pay2 || 0));
+  const apRows = inBranch(data.payables ?? []).filter((p) => p.st !== "Lunas" && apSisa(p) > 0);
+  const apOutstanding = apRows.reduce((s, p) => s + apSisa(p), 0);
 
   /* Metrik Procurement */
   const poList = inBranch(data.purchaseOrders ?? []);
@@ -1079,7 +1082,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                     <div className="flex items-start gap-2.5">
                       <AlertTriangle className="h-4 w-4 shrink-0 text-amber-700 mt-0.5" />
                       <div className="min-w-0 flex-1 text-xs">
-                        <p className="font-bold text-amber-950">Target cabang {branch} belum diatur</p>
+                        <p className="font-bold text-amber-950">Target belum diatur</p>
                         <p className="mt-0.5 text-amber-800 leading-relaxed text-[11px]">
                           Aktual saat ini {fmtMiliar(aktualRev)} ({aktualProj} proyek). Atur target untuk memantau performa.
                         </p>
@@ -1173,7 +1176,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(stockValue)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total valuasi stok material tersimpan di gudang {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Total valuasi stok material tersimpan di gudang
               </p>
             </div>
 
@@ -1232,7 +1235,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {totalEmployees} <span className="text-2xl font-bold text-slate-600">Personel</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total tenaga kerja galangan terdaftar di {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Total tenaga kerja galangan terdaftar di galangan
               </p>
             </div>
 
@@ -1291,7 +1294,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(arOutstanding)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total piutang usaha (AR) belum tertagih dari klien {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Total piutang usaha (AR) belum tertagih dari klien
               </p>
             </div>
 
@@ -1350,7 +1353,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {totalActive} <span className="text-2xl font-bold text-slate-600">Kapal</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Proyek konstruksi &amp; reparasi berjalan aktif di galangan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Proyek konstruksi &amp; reparasi berjalan aktif di galangan
               </p>
             </div>
 
@@ -1409,7 +1412,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(totalPoValue)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Total komitmen nilai Purchase Order aktif berjalan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Total komitmen nilai Purchase Order aktif berjalan
               </p>
             </div>
 
@@ -1468,7 +1471,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {openNcr} <span className="text-2xl font-bold text-slate-600">Kasus NCR</span>
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Temuan inspeksi mutu yang sedang dalam proses penanganan di {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Temuan inspeksi mutu yang sedang dalam proses penanganan di galangan
               </p>
             </div>
 
@@ -1527,7 +1530,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                 {fmtMiliar(pipelineActive)}
               </p>
               <p className="mt-1.5 text-xs font-medium text-slate-500">
-                Nilai aktif prospek &amp; penawaran (quotation) yang sedang berjalan {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                Nilai aktif prospek &amp; penawaran (quotation) yang sedang berjalan
               </p>
             </div>
 
@@ -1612,7 +1615,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               <KpiCard
                 label="Tenaga Kerja Terdaftar"
                 value={String(totalEmployees)}
-                delta="Karyawan aktif cabang"
+                delta="Karyawan aktif galangan"
                 deltaDirection="flat"
                 icon={<Users className="h-5 w-5" />}
                 chip="navy"
@@ -2854,12 +2857,12 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                   apRows.slice(0, 6).map((ap) => (
                     <div key={ap.id} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface transition-colors">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-navy-900 truncate">{ap.vendor || ap.supplier || "Vendor"}</p>
-                        <p className="text-xs text-steel-500">{ap.number || ap.id} · Jatuh tempo: {ap.due || "-"}</p>
+                        <p className="text-sm font-semibold text-navy-900 truncate">{String(ap.v || ap.vendor || ap.supplier || "Vendor")}</p>
+                        <p className="text-xs text-steel-500">{String(ap.po || ap.number || ap.id)} · Jatuh tempo: {ap.due || "-"}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-bold text-rose-700 tabular-nums">{fmtMiliar(Number(ap.amount || 0))}</span>
-                        <div><Badge tone="amber">{ap.status || "Belum Bayar"}</Badge></div>
+                        <span className="text-sm font-bold text-rose-700 tabular-nums">{fmtMiliar(apSisa(ap))}</span>
+                        <div><Badge tone="amber">{String(ap.st || "Belum Dibayar")}</Badge></div>
                       </div>
                     </div>
                   ))

@@ -520,7 +520,6 @@ export default function KaryawanDetail() {
           <dl className="dl-div mt-3 text-sm">
             <div className="flex justify-between"><dt className="text-steel-500">{S.thJabatan}</dt><dd className="font-medium text-navy-900">{String(emp.role)}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.fDept}</dt><dd className="font-medium">{String(emp.dept)}</dd></div>
-            <div className="flex justify-between"><dt className="text-steel-500">{S.fCabang}</dt><dd className="font-medium">{String(emp.branch ?? "-")}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlTipe}</dt><dd><Badge tone="gray">{String(emp.tipe ?? "-")}</Badge></dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlJoin}</dt><dd className="font-medium">{fmtTanggal(String(emp.join))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.fContractEnd}</dt><dd className="font-medium">{emp.contractEnd ? fmtTanggal(String(emp.contractEnd)) : "-"}</dd></div>

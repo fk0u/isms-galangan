@@ -206,7 +206,7 @@ export default function Monitoring() {
           ariaLabel={S.searchProjectAria}
           className="w-full sm:w-64"
         />
-        <select className="input w-auto py-1.5 text-sm" aria-label={S.prjFilterCabangAria} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
+        <select className="hidden" aria-label={S.prjFilterCabangAria} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
           <option value="Semua">{S.prjAllCabang}</option>
           {branchCities.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
