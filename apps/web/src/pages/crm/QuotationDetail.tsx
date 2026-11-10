@@ -249,10 +249,9 @@ export default function QuotationDetail() {
 
   const cetakKop = () => {
     const client = (data.clients ?? []).find((c) => sameName(c.name, quotation.client));
-    const cabang = String(client?.branch ?? quotation.branch ?? "Samarinda");
     const terms = String(client?.paymentTerms ?? quotation.paymentTerms ?? "NET 30");
     const rows: unknown[][] = [
-      [`Cabang ${cabang} · ${fmtTanggal(todayISO())}`],
+      [fmtTanggal(todayISO())],
       [`Penawaran ${quotation.id} v${version} · ${String(quotation.client)} · ${String(quotation.vessel)}`],
       [],
       ["No", "Deskripsi", "Qty", "Harga (Rp)", "Jumlah (Rp)"],

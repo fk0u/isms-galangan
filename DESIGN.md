@@ -116,7 +116,7 @@ Token: `--ease-out: cubic-bezier(0.23, 1, 0.32, 1)`, `--ease-in-out: cubic-bezie
 - **Login**: panel kiri kanvas abu (logo, judul "Seluruh galangan, dalam satu sistem.", statistik grid halus), form dalam kartu `rounded-2xl` di kanan.
 
 ## Grafik
-Seri utama `#27272A`, pembanding merah `#E61919`, lainnya abu `#A1A1AA`/`#D4D4D8` dan merah muda `#FF8A8A`. Grid `#E4E4E7`. Tanpa gradien tebal.
+Seri utama biru `#2563EB` (sekunder teal `#0D9488`), pembanding merah `#E61919`, lainnya abu `#A1A1AA`/`#D4D4D8` dan merah muda `#FF8A8A`. Grid `#E4E4E7`. Tanpa gradien tebal.
 
 ## Pola halaman
 Tabel: kolom No pertama, default 25 baris, aksi di kolom terakhir, header `steel-50`. Filter = chip. Tombol Kembali ke halaman asal. Menu aktif tersorot.

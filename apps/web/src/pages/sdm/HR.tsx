@@ -1689,14 +1689,15 @@ const finishTraining = async (t: StoreItem) => {
                           ))}
                         </select>
                       </Field>
-                      <Field label={S.fCabang}>
+                      {/* Cabang disembunyikan: sistem terpusat satu galangan. */}
+                      <div className="hidden"><Field label={S.fCabang}>
                         <select className="input w-full" value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })} aria-label={S.ariaFilterCabang}>
                           <option value="SEMUA">Semua Cabang</option>
                           {branchCities.map((c) => (
                             <option key={c} value={c}>{c}</option>
                           ))}
                         </select>
-                      </Field>
+                      </Field></div>
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-steel-600">
                         <input type="checkbox" checked={draft.kontrak === "1"} onChange={(e) => setDraft({ ...draft, kontrak: e.target.checked ? "1" : "0" })} />
                         {S.chkKontrak}
@@ -1715,7 +1716,6 @@ const finishTraining = async (t: StoreItem) => {
                           <SortTh label={S.thKaryawan} sortKey="name" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.thNik} sortKey="nik" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.thJabatan} sortKey="role" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
-                          <SortTh label={S.fCabang} sortKey="branch" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.thKontrak} sortKey="contract" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.thSaldo} sortKey="saldo" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
                           <SortTh label={S.dlStatus} sortKey="status" sort={sort} onSort={(k) => setSort((s) => toggleSort(s, k))} />
@@ -1737,7 +1737,6 @@ const finishTraining = async (t: StoreItem) => {
                             </td>
                             <td className="td font-mono text-steel-600" title="NIK = username login karyawan">{empNik(e)}</td>
                             <td className="td text-steel-600 max-w-[160px] truncate" title={String(e.role)}>{e.role}</td>
-                            <td className="td"><Badge tone="gray">{e.branch ?? "-"}</Badge></td>
                             <td className="td">
                               {e.contractEnd ? (
                                 <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -2115,9 +2114,6 @@ const finishTraining = async (t: StoreItem) => {
                 </select>
               </Field>
               {/* #97: prototype satu cabang - cabang terkunci ke Samarinda, tanpa pilihan. */}
-              <Field label={S.fCabang}>
-                <input className="input bg-surface" value={form.branch} readOnly aria-readonly="true" />
-              </Field>
               {/* Karyawan baru selalu Aktif; perubahan status hanya saat mengubah data yang sudah ada. */}
               {editingId !== null && (
                 <Field label={S.dlStatus}>
