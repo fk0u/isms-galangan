@@ -39,6 +39,7 @@ import {
   ComposedChart,
   Line,
   Tooltip,
+  Legend,
 } from "recharts";
 import {
   Card,
@@ -558,6 +559,32 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
   }, [data.invoices, inBranch, axis12]);
   const sparkRevenue = kpi12.map((d) => ({ name: d.bln, v: d.revenue }));
   const sparkProjects = kpi12.map((d) => ({ name: d.bln, v: d.projects }));
+
+  /* Spotlight keuangan direktur (permintaan CTO 9 Nov 2026): angka utama
+     memakai akumulasi SELURUH proyek, bukan hanya yang aktif - setelah seed
+     ulang tidak ada proyek aktif sehingga kartu tampil "0 M" dan menyesatkan. */
+  const totalProjectValue = branchProjects.reduce((s, p) => s + Number(p.budget || 0), 0);
+  /* P/L sederhana berbasis kas-tagih: pendapatan = invoice yang sudah ditagih
+     (bukan Draft), biaya = seluruh kewajiban vendor (payables). Belum memasukkan
+     gaji/overhead karena koleksinya belum terhubung ke jurnal. */
+  const plRevenue = inBranch(data.invoices)
+    .filter((i) => i.status !== "Draft")
+    .reduce((s, i) => s + Number(i.amount || 0), 0);
+  const plCost = inBranch(data.payables ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
+  const profitLoss = plRevenue - plCost;
+  /* Tren utang vs piutang 12 bulan: nilai yang terbit per bulan (tanggal dokumen,
+     jatuh tempo bila tanggal kosong), dalam miliar. */
+  const arApTrend = useMemo(() => {
+    const inv = inBranch(data.invoices).filter((i) => i.status !== "Draft");
+    const pay = inBranch(data.payables ?? []);
+    const sumM = (rows: typeof inv) =>
+      Math.round((rows.reduce((s, r) => s + Number(r.amount || 0), 0) / 1e9) * 100) / 100;
+    return axis12.map((pt) => ({
+      bln: pt.label,
+      piutang: sumM(inv.filter((i) => monthKeyOf(i.date ?? i.due) === pt.key)),
+      utang: sumM(pay.filter((p) => monthKeyOf(p.date ?? p.due) === pt.key)),
+    }));
+  }, [data.invoices, data.payables, inBranch, axis12]);
   // Bulan berjalan belum ada invoice → delta disembunyikan (bukan "-100%").
   const revHasCurrent = numOf(kpi12[kpi12.length - 1]?.revenue) > 0;
   const revGrowth = pctChange(numOf(kpi12[kpi12.length - 1]?.revenue), numOf(kpi12[kpi12.length - 2]?.revenue));
@@ -978,7 +1005,7 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
                   </span>
                   <div>
                     <span className="text-xs font-bold tracking-wider uppercase text-slate-600">
-                      {S.totalPortfolio}
+                      {S.totalProjectValue}
                     </span>
                     <span className="block text-[11px] text-slate-400">Pusat kendali operasional galangan aktif</span>
                   </div>
@@ -996,11 +1023,19 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
 
               <div className="relative z-10 my-5">
                 <p className="text-3xl sm:text-4xl 2xl:text-5xl font-extrabold tracking-tight text-slate-900 tabular-nums">
-                  {fmtMiliar(activeContracts)}
+                  {fmtMiliar(totalProjectValue)}
                 </p>
                 <p className="mt-1.5 text-xs font-medium text-slate-500">
-                  {branchProjects.length} proyek terdaftar di portofolio aktif {branch === "SEMUA" ? <span className="font-semibold text-slate-800">semua cabang</span> : <>cabang <span className="font-semibold text-slate-800">{branch}</span></>}
+                  {S.totalProjectValueSub.replace("{n}", String(branchProjects.length))}
                 </p>
+                {/* P/L di ruang kosong bawah angka utama (panah biru 2 di screenshot CTO). */}
+                <div className="mt-4 inline-flex flex-col rounded-xl border border-slate-200/80 bg-white/70 px-4 py-2.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{S.kpiProfitLoss}</span>
+                  <span className={`text-2xl font-extrabold tabular-nums ${profitLoss < 0 ? "text-rose-600" : "text-emerald-700"}`}>
+                    {profitLoss < 0 ? "-" : ""}{fmtMiliar(Math.abs(profitLoss))}
+                  </span>
+                  <span className="text-[11px] text-slate-500">{profitLoss >= 0 ? S.plProfit : S.plLoss}</span>
+                </div>
               </div>
 
               <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-slate-200/80 pt-3.5">
@@ -1526,8 +1561,8 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
         </div>
       </Modal>
 
-      {/* KPI ROW */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* KPI ROW - [&>*>*]:h-full agar keempat kartu sejajar (tinggi sama). */}
+      <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full [&>*>*]:h-full">
         {scope === "inventori" ? (
           <>
             <StaggerItem>
@@ -1825,16 +1860,53 @@ Id tidak diteruskan di sini. Kartu ini memakai engine utils/moduleAlerts
               />
             </StaggerItem>
             <StaggerItem>
-              <KpiCard
-                label={S.kpiEquipUtil}
-                value={`${utilEquipment}%`}
-                icon={<Cpu className="h-5 w-5" />}
-                chip="amber"
-              />
+              {/* Direktur: utilitas equipment diganti akumulasi nilai proyek aktif. */}
+              {scope === "overview" ? (
+                <KpiCard
+                  label={S.kpiActiveProjectValue}
+                  value={fmtMiliar(activeContracts)}
+                  delta={S.activeProjectCount.replace("{n}", String(totalActive))}
+                  deltaDirection="flat"
+                  icon={<Anchor className="h-5 w-5" />}
+                  chip="amber"
+                />
+              ) : (
+                <KpiCard
+                  label={S.kpiEquipUtil}
+                  value={`${utilEquipment}%`}
+                  icon={<Cpu className="h-5 w-5" />}
+                  chip="amber"
+                />
+              )}
             </StaggerItem>
           </>
         )}
       </div>
+
+      {/* Grafik utang vs piutang di bawah empat kartu KPI (khusus direktur). */}
+      {scope === "overview" && (
+        <StaggerItem>
+          <Card className="p-5">
+            <div className="mb-3 border-b border-steel-100 pb-3">
+              <h3 className="text-sm font-semibold text-navy-900">{S.arApChartTitle}</h3>
+              <p className="text-xs text-steel-500">{S.arApChartSub}</p>
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={arApTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <XAxis dataKey="bln" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} unit=" M" width={56} />
+                  <Tooltip formatter={(v) => `Rp ${Number(v).toLocaleString("id-ID")} M`} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Line type="monotone" dataKey="piutang" name={S.arLegend} stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="utang" name={S.apLegend} stroke="#d97706" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </StaggerItem>
+      )}
 
       {/* RADAR OPERASIONAL & TINDAKAN CEPAT (Apple HIG / Linear Matrix) */}
       <StaggerItem>
