@@ -14,7 +14,7 @@
  * dengan token pemanggil: izin per koleksi, lingkup cabang/tim, validasi, audit,
  * dan cache berlaku persis seperti panggilan langsung. */
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { REFS } from "../refs.js";
+import { REFS, SOFT_REFS } from "../refs.js";
 import { COLLECTIONS } from "./crud.js";
 import { fail, ok } from "../envelope.js";
 
@@ -22,25 +22,9 @@ type Json = Record<string, unknown>;
 interface Link { child: string; field: string; target: string; soft: boolean; nameField?: string }
 const RELATED_LIMIT = 500;
 
-export const SOFT_REFS: ReadonlyArray<Omit<Link, "soft">> = [
-  { child: "projects", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "dockSlots", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "surveys", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "warranties", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "invoices", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "quotations", field: "vessel", target: "vessels", nameField: "name" },
-  { child: "projects", field: "client", target: "clients", nameField: "name" },
-  { child: "invoices", field: "client", target: "clients", nameField: "name" },
-  { child: "quotations", field: "client", target: "clients", nameField: "name" },
-  { child: "contracts", field: "client", target: "clients", nameField: "name" },
-  { child: "vessels", field: "owner", target: "clients", nameField: "name" },
-  { child: "workOrders", field: "sub", target: "subcontractors", nameField: "name" },
-  { child: "termins", field: "sub", target: "subcontractors", nameField: "name" },
-  { child: "purchaseOrders", field: "vendor", target: "vendors", nameField: "name" },
-  { child: "payables", field: "v", target: "vendors", nameField: "name" },
-  { child: "bookings", field: "equip", target: "equipment", nameField: "name" },
-  { child: "projects", field: "manager", target: "employees", nameField: "name" },
-];
+/* Daftar relasi lunak kini tinggal di refs.ts supaya delete-guard dan kaskade
+   ganti nama (crud.ts) memakai sumber yang sama dengan rute relasi ini. */
+export { SOFT_REFS };
 
 /** Semua relasi (keras + lunak), tanpa join nama generik `__name__`. */
 export function allLinks(): Link[] {

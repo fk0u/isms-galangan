@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { bucketByMonth, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../../utils/monthAxis";
+import { monthAxis, monthKeyOf } from "../../utils/monthAxis";
 import { Plus, ShieldCheck, AlertTriangle, Siren, Award, Eye, Pencil, Trash2 } from "lucide-react";
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut, ChartTooltip, Modal, Field, FormGrid, ConfirmModal, SortTh, toggleSort, sortRows, usePager, toast,
@@ -11,7 +11,7 @@ import type { SortState } from "../../components/ui";
 import { employeeOptions, isKnownEmployee } from "../../utils/employeeOptions";
 import { useStore, type StoreItem, type CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
-import { inspectionTrend, ncrTrend, incidentTrend, hseTrend } from "../../data";
+import { inspectionTrend, ncrTrend, incidentTrend } from "../../data";
 import { fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -127,6 +127,12 @@ export default function QCSafety() {
   const S = n_qc[locale];
   const ncrList = inBranch(data.ncr);
   const incidents = inBranch(data.incidents);
+  /* KPI "Hari tanpa insiden" menggantikan nilai HSE "A" yang ditulis mati:
+     dihitung dari tanggal insiden terakhir yang benar-benar tercatat. */
+  const lastIncidentDate = incidents.reduce((m, i) => (String(i.date ?? "") > m ? String(i.date ?? "") : m), "");
+  const daysSafe = lastIncidentDate
+    ? Math.max(0, Math.floor((Date.parse(todayISO()) - Date.parse(lastIncidentDate.slice(0, 10))) / 86_400_000))
+    : null;
   const inspections = inBranch(data.inspections);
   const vessels = data.vessels;
   const toolboxTalks = inBranch(data.toolbox);
@@ -269,15 +275,7 @@ export default function QCSafety() {
   const itpAxis = useMemo(() => monthAxis({ months: 12, locale: locale as "id" | "en" }), [locale]);
   const itpChart = useMemo(() => {
     const rows = data.inspections ?? [];
-    const bucket = bucketByMonth(rows, itpAxis, (i) => i.date, () => 1, (vals) => vals.length);
-    const anyReal = Object.values(bucket).some((v) => v > 0);
-    if (!anyReal) {
-      return rebindLegacyMonthSeries(inspectionTrend, { locale: locale as "id" | "en" }).map((r) => ({
-        label: r.bln,
-        inspeksi: Number(r.inspeksi || 0),
-        lulus: Number(r.lulus || 0),
-      }));
-    }
+    // Tanpa inspeksi bertanggal = grafik nol (audit 11 Nov: tidak jatuh ke seed).
     return itpAxis.map((pt) => {
       const month = rows.filter((i) => monthKeyOf(i.date) === pt.key);
       return {
@@ -286,7 +284,7 @@ export default function QCSafety() {
         lulus: month.filter((i) => String(i.status ?? "") === "Lulus").length,
       };
     });
-  }, [data.inspections, itpAxis, locale]);
+  }, [data.inspections, itpAxis]);
 
   /* Statistik NCR dari baris NCR nyata: jumlah per jenis pekerjaan + per
      severity.mock ncrStatsReal (Pengelasan/Pengecatan/...) dibuat dari
@@ -1019,7 +1017,7 @@ export default function QCSafety() {
         <KpiCard label={S.kpiNcrTerbuka} value={String(openNcr)} delta={criticalOpen > 0 ? S.kpiCriticalN.replace("{n}", String(criticalOpen)) : S.kpiNihilCritical} deltaDirection={criticalOpen > 0 ? "down" : "up"} icon={<AlertTriangle className="h-5 w-5" />} chip="rose" spark={ncrTrend} />
         <KpiCard label={S.kpiInspTercatat} value={String(inspections.length)} delta={S.kpiNcrTerkait.replace("{n}", String(ncrList.length))} deltaDirection="flat" icon={<ShieldCheck className="h-5 w-5" />} chip="navy" spark={inspectionTrend.map((d) => ({ name: d.month, v: d.inspeksi }))} />
         <KpiCard label={S.kpiInsiden} value={String(incidents.length)} delta={S.kpiNearMiss} deltaDirection="down" icon={<Siren className="h-5 w-5" />} chip="amber" spark={incidentTrend} />
-        <KpiCard label={S.kpiHse} value="A" delta={S.kpiKinerjaBaik} deltaDirection="up" icon={<Award className="h-5 w-5" />} chip="teal" spark={hseTrend} />
+        <KpiCard label={S.kpiHariAman} value={daysSafe === null ? "-" : String(daysSafe)} delta={daysSafe === null ? S.kpiHariAmanNone : S.kpiHariAmanSince.replace("{d}", fmtTanggal(lastIncidentDate))} deltaDirection={daysSafe === null || daysSafe >= 30 ? "up" : "down"} icon={<Award className="h-5 w-5" />} chip="teal" />
       </div>
 
       <div className="mt-4 card">

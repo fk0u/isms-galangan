@@ -3,13 +3,17 @@
 // mendeklarasikan field mana yang merujuk id tabel mana, dipakai untuk:
 // - validasi tulis (422 bila target tidak ada),
 // - delete-guard (409 + daftar pemakai bila baris masih dirujuk).
-import { getDialect, q } from "./db.js";
+import { exec, getDialect, q } from "./db.js";
+import { writeAudit } from "./audit.js";
 
 export interface RefDef {
   /** tabel yang dirujuk (harus ada di COLLECTIONS atau tabel khusus). */
   target: string;
   /** nilai yang dikecualikan (sentinel sah: saldo awal, arsip umum, tanpa PR). */
   allow?: string[];
+  /** wajib terisi saat CREATE (bukan impor seed). PATCH tidak dipaksa supaya
+   *  baris impor lama yang kosong tetap bisa disunting. */
+  required?: boolean;
 }
 
 // field data → definisi referensi, per tabel sumber.
@@ -18,7 +22,9 @@ export interface RefDef {
 // Sentinel sah (saldo awal "", arsip "-", tanpa PR) didaftarkan per field.
 export const REFS: Record<string, Record<string, RefDef>> = {
   invoices: { project: { target: "projects", allow: ["", "-", "U/STOCK"] } },
-  movements: { itemId: { target: "inventory" } },
+  /* Mutasi tanpa itemId tidak menggerakkan stok mana pun (stok & kartu
+     barang tidak sinkron) - wajib terisi untuk mutasi baru. */
+  movements: { itemId: { target: "inventory", required: true } },
   termins: { woId: { target: "workOrders" } },
   purchaseOrders: { req: { target: "requisitions", allow: ["-"] } },
   services: { projectId: { target: "projects" }, vesselId: { target: "vessels" }, boqRef: { target: "boq", allow: ["", "-"] } },
@@ -92,6 +98,143 @@ export const REFS: Record<string, Record<string, RefDef>> = {
   assets: {},
 };
 
+/* Relasi LUNAK: anak menyimpan NAMA induk (bukan id) sejak modul awal
+   (kapal, klien, subkon, vendor, equipment, manajer proyek). Tidak divalidasi
+   saat tulis (data lama berisi nama), tetapi dijaga di dua titik:
+   - delete-guard: induk yang namanya masih dipakai tidak boleh dihapus;
+   - ganti nama induk: semua anak ikut diganti di server dalam satu transaksi,
+     supaya tautan antar-modul tidak putus diam-diam. */
+export interface SoftRef { child: string; field: string; target: string; nameField: string }
+export const SOFT_REFS: ReadonlyArray<SoftRef> = [
+  { child: "projects", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "dockSlots", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "surveys", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "warranties", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "invoices", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "quotations", field: "vessel", target: "vessels", nameField: "name" },
+  { child: "projects", field: "client", target: "clients", nameField: "name" },
+  { child: "invoices", field: "client", target: "clients", nameField: "name" },
+  { child: "quotations", field: "client", target: "clients", nameField: "name" },
+  { child: "contracts", field: "client", target: "clients", nameField: "name" },
+  { child: "vessels", field: "owner", target: "clients", nameField: "name" },
+  { child: "workOrders", field: "sub", target: "subcontractors", nameField: "name" },
+  { child: "termins", field: "sub", target: "subcontractors", nameField: "name" },
+  { child: "purchaseOrders", field: "vendor", target: "vendors", nameField: "name" },
+  { child: "payables", field: "v", target: "vendors", nameField: "name" },
+  { child: "bookings", field: "equip", target: "equipment", nameField: "name" },
+  { child: "projects", field: "manager", target: "employees", nameField: "name" },
+];
+
+/** Kunci pembanding nama (sama dengan helper sameName di FE: trim + abaikan huruf besar). */
+export const nameKey = (v: unknown): string => String(v ?? "").trim().toLowerCase();
+
+function parseData(raw: string): Record<string, unknown> {
+  try {
+    const d = JSON.parse(raw) as unknown;
+    return typeof d === "object" && d !== null && !Array.isArray(d) ? d as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Baris lain di tabel induk yang memakai nama yang sama (nama kembar). */
+async function nameTwin(table: string, nameField: string, key: string, selfId: string): Promise<string | null> {
+  const rows = await q<{ id: string; data: string }>(`SELECT id, data FROM ${table}`);
+  for (const r of rows) if (r.id !== selfId && nameKey(parseData(r.data)[nameField]) === key) return r.id;
+  return null;
+}
+
+/** Pemakai lunak sebuah induk (lewat nama ATAU id). Nama kembar di induk lain
+ *  membuat tautan tetap hidup, jadi tidak dihitung sebagai pemakai. */
+async function softUsages(table: string, id: string, limit: number): Promise<string[]> {
+  const links = SOFT_REFS.filter((l) => l.target === table);
+  if (links.length === 0 || limit <= 0) return [];
+  const parent = (await q<{ data: string }>(`SELECT data FROM ${table} WHERE id = ?`, [id]))[0];
+  if (!parent) return [];
+  const pd = parseData(parent.data);
+  const out: string[] = [];
+  const byField = new Map<string, string>();
+  for (const l of links) byField.set(l.nameField, nameKey(pd[l.nameField]));
+  for (const l of links) {
+    const key = byField.get(l.nameField) ?? "";
+    if (key !== "" && await nameTwin(table, l.nameField, key, id)) continue;
+    let rows: { id: string; data: string }[];
+    try {
+      rows = await q<{ id: string; data: string }>(`SELECT id, data FROM ${l.child}`);
+    } catch {
+      continue; // tabel anak belum ada
+    }
+    for (const r of rows) {
+      const v = parseData(r.data)[l.field];
+      if ((key !== "" && nameKey(v) === key) || String(v ?? "") === id) {
+        out.push(`${l.child} ${r.id}`);
+        if (out.length >= limit) return out;
+      }
+    }
+  }
+  return out;
+}
+
+export interface SoftRename { nameField: string; from: string; to: string }
+
+/** Perubahan nama induk relasi lunak pada PATCH, atau null. */
+export function softRenameOf(table: string, before: Record<string, unknown>, after: Record<string, unknown>): SoftRename | null {
+  const link = SOFT_REFS.find((l) => l.target === table);
+  if (!link) return null;
+  const from = String(before[link.nameField] ?? "").trim();
+  const to = String(after[link.nameField] ?? "").trim();
+  if (from === "" || to === "" || from === to) return null;
+  return { nameField: link.nameField, from, to };
+}
+
+/** Ganti nama ke nama yang sudah dipakai induk lain akan MENGGABUNG tautan
+ *  kedua induk (anak keduanya tak bisa dibedakan lagi) - tolak. */
+export async function softRenameConflict(table: string, id: string, rename: SoftRename): Promise<string | null> {
+  if (nameKey(rename.from) === nameKey(rename.to)) return null; // hanya beda huruf besar/spasi
+  const twin = await nameTwin(table, rename.nameField, nameKey(rename.to), id);
+  return twin ? `nama "${rename.to}" sudah dipakai ${table} ${twin}; tautan data akan tercampur` : null;
+}
+
+/** Terapkan nama baru ke semua anak relasi lunak. WAJIB dipanggil di dalam
+ *  transaksi yang sama dengan PATCH induk. Tiap baris anak diaudit. */
+export async function cascadeSoftRename(
+  table: string,
+  rename: SoftRename,
+  audit: { actor: string; ip: string; parentId: string },
+): Promise<number> {
+  const key = nameKey(rename.from);
+  /* Kalau masih ada induk lain bernama lama (nama kembar), anak tidak bisa
+     dipastikan milik induk yang diganti - biarkan, tautan ke kembarannya tetap hidup. */
+  if (await nameTwin(table, rename.nameField, key, audit.parentId)) return 0;
+  const now = new Date().toISOString();
+  let n = 0;
+  for (const l of SOFT_REFS.filter((x) => x.target === table && x.nameField === rename.nameField)) {
+    let rows: { id: string; data: string; updated_at: string }[];
+    try {
+      rows = await q<{ id: string; data: string; updated_at: string }>(`SELECT id, data, updated_at FROM ${l.child}`);
+    } catch {
+      continue;
+    }
+    for (const r of rows) {
+      const d = parseData(r.data);
+      if (nameKey(d[l.field]) !== key) continue;
+      const before = d[l.field];
+      d[l.field] = rename.to;
+      await exec(`UPDATE ${l.child} SET data = ?, updated_at = ? WHERE id = ?`, [JSON.stringify(d), now, r.id]);
+      await writeAudit({
+        actor: audit.actor,
+        action: "update",
+        table: l.child,
+        rowId: r.id,
+        diff: { [l.field]: { before, after: rename.to }, _cascade: `${table} ${audit.parentId}` },
+        ip: audit.ip,
+      }, { required: true });
+      n++;
+    }
+  }
+  return n;
+}
+
 // Tabel yang dikecualikan dari delete-guard (tabel konfigurasi/admin).
 const NO_DELETE_GUARD = new Set(["settings", "coa", "branches", "activities", "users"]);
 
@@ -109,16 +252,25 @@ export function jsonEq(field: string): string {
   return `json_extract(data, '$.${field}') = ?`;
 }
 
-/** Validasi referensi data baris. Return pesan error atau null bila OK. */
-export async function checkRefs(table: string, data: Record<string, unknown>): Promise<string | null> {
+/** Validasi referensi data baris. Return pesan error atau null bila OK.
+ *  `requireFilled` (CREATE non-seed): field `required` tidak boleh kosong. */
+export async function checkRefs(
+  table: string,
+  data: Record<string, unknown>,
+  opts: { requireFilled?: boolean } = {},
+): Promise<string | null> {
   const defs = REFS[table];
   if (!defs) return null;
   for (const [field, def] of Object.entries(defs)) {
     if (def.target === "__name__") continue; // join nama — tidak ditegakkan
     const raw = data[field];
-    if (raw === undefined || raw === null) continue;
+    const empty = raw === undefined || raw === null || String(raw).trim() === "";
+    if (empty) {
+      if (def.required && opts.requireFilled) return `${field} wajib diisi (relasi ke ${def.target})`;
+      continue;
+    }
     const value = String(raw);
-    if (value === "" || (def.allow ?? []).includes(value)) continue;
+    if ((def.allow ?? []).includes(value)) continue;
     let rows: unknown[];
     try {
       rows = await q(`SELECT ${idColumn(def.target)} FROM ${def.target} WHERE ${idColumn(def.target)} = ?`, [value]);
@@ -181,5 +333,6 @@ export async function findUsages(table: string, id: string): Promise<string[]> {
       }
     }
   }
+  if (out.length < 5) out.push(...await softUsages(table, id, 5 - out.length));
   return out;
 }

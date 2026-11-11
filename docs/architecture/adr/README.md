@@ -23,5 +23,6 @@ Format: konteks → opsi → keputusan → konsekuensi. ADR tidak diedit setelah
 | [0021](0021-ruas-code-intelligence.md) | RUAS sebagai alat bantu penelusuran kode (npx dipin, MCP) | Accepted |
 | [0022](0022-voucher-jurnal.md) | Nomor voucher jurnal diberikan server per transaksi | Accepted |
 | [0023](0023-arsip-tutup-buku.md) | Arsip tutup buku sebagai snapshot immutable di tabel khusus | Accepted |
+| [0024](0024-relasi-lunak-dijaga-server.md) | Relasi lunak (berbasis nama) dijaga di server: delete-guard & kaskade ganti nama | Accepted |
 
 Template ADR baru: salin [`template.md`](template.md).
