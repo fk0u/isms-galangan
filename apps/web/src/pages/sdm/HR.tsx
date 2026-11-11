@@ -227,6 +227,7 @@ const emptyEmpForm = () => ({
   dependents: "0",
   // F3-L-02: data karyawan lengkap.
   gender: "L",
+  birthDate: "",
   marital: "TK",
   education: "SMA/SMK",
   partnerContractNo: "",
@@ -554,6 +555,7 @@ export default function HR() {
       ptkpStatus: String(e.ptkpStatus ?? "TK/0"),
       dependents: String(e.dependents ?? parsePtkp(e.ptkpStatus).dependents),
       gender: String(e.gender ?? "L"),
+      birthDate: String(e.birthDate ?? ""),
       marital: String(e.marital ?? parsePtkp(e.ptkpStatus).marital),
       education: String(e.education ?? "SMA/SMK"),
       partnerContractNo: String(e.partnerContractNo ?? ""),
@@ -589,6 +591,10 @@ export default function HR() {
     }
     if (form.join > todayISO()) {
       toast(S.tJoinFuture, "info");
+      return;
+    }
+    if (form.birthDate && form.birthDate >= todayISO()) {
+      toast(E.tBirthFuture, "info");
       return;
     }
     if (!DEPT_OPTIONS.includes(form.dept)) {
@@ -635,7 +641,7 @@ export default function HR() {
       return;
     }
     const extraEmp = {
-      gender: form.gender, marital: form.marital, education: form.education,
+      gender: form.gender, birthDate: form.birthDate, marital: form.marital, education: form.education,
       partnerContractNo: form.partnerContractNo.trim(), partnerName: form.partnerName.trim(),
       lastContractNo: form.lastContractNo.trim(), lastContractStart: form.lastContractStart,
       photoUrl: form.photoUrl, ktpUrl: form.ktpUrl, ijazahUrl: form.ijazahUrl,
@@ -2071,6 +2077,10 @@ const finishTraining = async (t: StoreItem) => {
               </Field>
               <Field label={S.fNama}>
                 <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.phNamaHr} />
+              </Field>
+              {/* Tanggal lahir opsional: karyawan lama banyak yang belum punya data ini. */}
+              <Field label={E.birthDate}>
+                <input type="date" className="input" max={todayISO()} value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
               </Field>
               <Field label={E.gender}>
                 <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
