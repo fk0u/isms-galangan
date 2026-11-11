@@ -951,22 +951,23 @@ export default function CRM() {
                     const cqVal = cq.reduce((s, x) => s + num(x.value), 0);
                     return (
                       <Card key={c.id} className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-700 text-sm font-bold text-white">
+                        {/* min-w-0 + shrink-0: nama panjang dipotong (truncate) alih-alih
+                            mendorong badge rating keluar kartu (catatan CTO 11 Nov). */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy-700 text-sm font-bold text-white">
                               {String(c.name).replace("PT ", "").split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-navy-900" title={String(c.name)}>{String(c.name)}</p>
-                              <p className="text-xs text-steel-500">{S.clientSince.replace("{a}", String(c.id)).replace("{b}", String(c.since ?? "-"))}</p>
+                              <p className="truncate text-xs text-steel-500">{S.clientSince.replace("{a}", String(c.id)).replace("{b}", String(c.since ?? "-"))}</p>
                             </div>
                           </div>
-                          <Badge tone="green"><Star className="h-3 w-3 mr-0.5" /> {String(c.rating ?? 0)}%</Badge>
+                          <span className="shrink-0"><Badge tone="green"><Star className="h-3 w-3 mr-0.5" /> {String(c.rating ?? 0)}%</Badge></span>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-1.5">
                           <Badge tone={String(c.klasifikasi ?? "Regular") === "VIP" ? "violet" : "gray"}>{String(c.klasifikasi ?? "Regular")}</Badge>
                           <Badge tone="navy">{String(c.currency ?? "IDR")}</Badge>
-                          {c.branch ? <Badge tone="teal">{String(c.branch)}</Badge> : null}
                           {jenisOf(c) === "Karyawan" && <Badge tone="amber">{S.jenisKaryawanBadge}</Badge>}
                           {canWriteClients && (
                             <button

@@ -1167,7 +1167,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
   }, [filteredPlProjects, plSort]);
   const plPager = usePager(filteredPlProjects.length, 10);
 
-  const filteredAset = useMemo(() => assetRows.filter((a) => rowMatches(a as unknown as Record<string, unknown>, asetQ, ["nama", "kelompok", "bulan", "tahun", "metode"])), [assetRows, asetQ]);
+  const filteredAset = useMemo(() => assetRows.filter((a) => rowMatches(a as unknown as Record<string, unknown>, asetQ, ["nama", "golongan", "kelompok", "bulan", "tahun", "metode"])), [assetRows, asetQ]);
   const sortedAset = useMemo(() => sortRows(filteredAset.map((a, i) => ({ a, i })), asetSort, ({ a }, k) =>
     k === "nama" ? String(a.nama ?? "") : k === "kel" ? String(a.kelompok ?? "") : k === "bulan" ? String(a.bulan ?? "") :
     k === "tahun" ? String(a.tahun ?? "") : k === "nilai" ? num(a.nilai) : k === "metode" ? String(a.metode ?? "") :
@@ -4895,14 +4895,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                       </tr>
                     ) : (
                       asetPager.slice(sortedAset).map(({ a, i }) => {
-                        const gol = String(a.nama ?? "");
+                        /* Akun beban/akumulasi ditentukan GOLONGAN harta (sheet Aset), bukan
+                           nama harta. Dulu dibandingkan dengan a.nama sehingga "Excavator
+                           Hitachi" jatuh ke 6-022. Baris lama tanpa golongan tetap memakai nama. */
+                        const gol = String(a.golongan ?? a.nama ?? "");
+                        const namaHarta = String(a.nama ?? "");
                         const beban = gol === "Bangunan" ? "6-021 C" : gol === "Alat Berat" ? "6-021 A" : gol === "Kendaraan" ? "6-021" : gol.includes("Mesin") ? "6-021 B" : "6-022";
                         const akum = gol === "Bangunan" ? "1-270" : gol === "Alat Berat" ? "1-281" : gol === "Kendaraan" ? "1-280" : gol.includes("Mesin") ? "1-282" : "1-290";
                         const seed = String(a.id ?? "").startsWith("AST-EX-");
                         return (
                           <tr key={String(a.id ?? i)} className="hover:bg-surface">
                             <td className="td font-mono text-xs text-steel-500">{i + 1}</td>
-                            <td className="td text-xs font-medium text-navy-900">{gol}</td>
+                            <td className="td text-xs font-medium text-navy-900">{namaHarta}</td>
                             <td className="td font-mono text-xs text-steel-600">{String(a.kelompok ?? "-")}</td>
                             <td className="td text-xs text-steel-600">{String(a.bulan ?? "-")}</td>
                             <td className="td text-xs text-steel-600">{String(a.tahun ?? "-")}</td>
