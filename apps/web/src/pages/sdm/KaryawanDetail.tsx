@@ -167,6 +167,10 @@ export default function KaryawanDetail() {
   const [delRow, setDelRow] = useState<{ kind: "documents" | "attendance" | "leaves"; row: StoreItem } | null>(null);
 
   const emp = useMemo(() => data.employees.find((e) => e.id === id), [data.employees, id]);
+  const bpjs = useMemo(() => {
+    const b = emp?.bpjsTk;
+    return b && typeof b === "object" && !Array.isArray(b) ? (b as Record<string, unknown>) : null;
+  }, [emp]);
 
   const attendanceAll = useMemo(() => {
     if (!emp) return [];
@@ -521,6 +525,7 @@ export default function KaryawanDetail() {
             <div className="flex justify-between"><dt className="text-steel-500">{S.thJabatan}</dt><dd className="font-medium text-navy-900">{String(emp.role)}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.fDept}</dt><dd className="font-medium">{String(emp.dept)}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlTipe}</dt><dd><Badge tone="gray">{String(emp.tipe ?? "-")}</Badge></dd></div>
+            {emp.birthDate ? <div className="flex justify-between"><dt className="text-steel-500">{E.birthDate}</dt><dd className="font-medium">{fmtTanggal(String(emp.birthDate))}</dd></div> : null}
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlJoin}</dt><dd className="font-medium">{fmtTanggal(String(emp.join))}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.fContractEnd}</dt><dd className="font-medium">{emp.contractEnd ? fmtTanggal(String(emp.contractEnd)) : "-"}</dd></div>
             <div className="flex justify-between"><dt className="text-steel-500">{S.dlPtkp}</dt><dd className="font-medium">{String(emp.ptkpStatus ?? "-")} · {S.tanggunganN.replace("{n}", String(Number(emp.dependents ?? 0)))}</dd></div>
@@ -531,6 +536,26 @@ export default function KaryawanDetail() {
               <div className="flex justify-end pt-2"><button type="button" className="btn-secondary text-xs" onClick={() => void setLeavePin()}>{E.pinBtn}</button></div>
             )}
           </dl>
+          {/* Rincian iuran BPJS TK per karyawan, diimpor dari laporan rincian iuran
+              BPJS (Formulir 2 PU). Disimpan sebagai snapshot periode di data karyawan
+              karena modul Payroll belum punya slip untuk periode tersebut. */}
+          <h3 className="mt-4 text-sm font-semibold text-navy-900">{E.bpjsTitle}</h3>
+          {bpjs ? (
+            <dl className="dl-div mt-2 text-sm">
+              <p className="pb-1 text-xs text-steel-500">{E.bpjsPeriod.replace("{p}", fmtBulan(String(bpjs.periode ?? "")))}</p>
+              {bpjs.kepesertaan ? <div className="flex justify-between"><dt className="text-steel-500">{E.bpjsSince}</dt><dd className="font-medium">{fmtTanggal(String(bpjs.kepesertaan))}</dd></div> : null}
+              {([
+                [E.bpjsWage, bpjs.upah], [E.bpjsJkk, bpjs.jkk], [E.bpjsJkm, bpjs.jkm],
+                [E.bpjsJhtCo, bpjs.jhtPerusahaan], [E.bpjsJhtEmp, bpjs.jhtKaryawan],
+                [E.bpjsJpCo, bpjs.jpPerusahaan], [E.bpjsJpEmp, bpjs.jpKaryawan],
+              ] as const).map(([label, v]) => (
+                <div key={label} className="flex justify-between"><dt className="text-steel-500">{label}</dt><dd className="font-medium">{fmtRupiah(Number(v || 0))}</dd></div>
+              ))}
+              <div className="flex justify-between"><dt className="font-semibold text-navy-900">{E.bpjsTotal}</dt><dd className="font-semibold text-navy-900">{fmtRupiah(Number(bpjs.total || 0))}</dd></div>
+            </dl>
+          ) : (
+            <p className="mt-2 text-xs text-steel-500">{E.bpjsNone}</p>
+          )}
           {/* Riwayat kontrak dari arsip surat (F3-L-05): terbaru di atas. */}
           <h3 className="mt-4 text-sm font-semibold text-navy-900">{E.contractHistory}</h3>
           {kontrakHistory.length === 0 ? (
