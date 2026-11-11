@@ -7,7 +7,7 @@ import { requirePermission, normalizeRole } from "../policy.js";
 import { cursorOf, parseCursor } from "./crudCursor.js";
 import { exactBranchPredicate, exactJsonNamePredicate, searchContainsPredicate } from "./crudSearch.js";
 import { exec, getDialect, q, withTx } from "../db.js";
-import { checkRefs, findUsages, jsonEq, SAFE_FIELD } from "../refs.js";
+import { cascadeSoftRename, checkRefs, findUsages, jsonEq, SAFE_FIELD, softRenameConflict, softRenameOf } from "../refs.js";
 import { fail, ok } from "../envelope.js";
 import { ensurePayableOnApproval, syncPayableFromNota } from "../poPayable.js";
 import { withVoucherNo } from "../voucher.js";
@@ -25,6 +25,7 @@ import { cacheGeneration, cacheGet, cachePut } from "../listCache.js";
 import { checklistHook } from "../scoring.js";
 import { changeOrderDeleteError, changeOrderGuardError, normalizeNewChangeOrder } from "../changeOrders.js";
 import { inventoryConversionError } from "../inventoryConversion.js";
+import { isSeedImportRequest } from "../rateLimit.js";
 
 // Cabang default sistem ISMS (ADR-0003 Jalur A: Satu cabang aktif Samarinda)
 export const DEFAULT_BRANCH = "Samarinda";
@@ -572,7 +573,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     // ADR-0006: surat BoQ terkunci & unik (projectId, number, revision).
     const createLock = await boqLockError(table, null, rowData);
     if (createLock) return reply.status(409).send(fail(createLock, "LOCKED"));
-    const isSeedImport = process.env.SEED_IMPORT === "1" || req.headers["x-seed-import"] === "1";
+    const isSeedImport = process.env.SEED_IMPORT === "1" || isSeedImportRequest(req);
     // F3-D-02: service wajib WBS & persetujuan; materialRequests hanya lewat endpoint.
     if (!isSeedImport) {
       const createGuard = await serviceGuardError(table, null, rowData);
@@ -619,7 +620,7 @@ export function registerCrud(app: FastifyInstance, table: string): void {
       );
       if (fieldError) return reply.status(409).send(fail(fieldError, "CONFLICT"));
     }
-    const refError = await checkRefs(table, rowData as Record<string, unknown>);
+    const refError = await checkRefs(table, rowData as Record<string, unknown>, { requireFilled: !isSeedImport });
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
     const persist = () => persistWithAudit(table, () => exec(`INSERT INTO ${table} (id, branch, data, updated_at) VALUES (?, ?, ?, ?)`, [
       id, branch, JSON.stringify(rowData), now,
@@ -754,6 +755,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     if (table === "boq") merged = withBoqLineTotal(merged, (parsed.data.data ?? {}) as Record<string, unknown>) as typeof merged;
     const refError = await checkRefs(table, merged);
     if (refError) return reply.status(422).send(fail(refError, "UNPROCESSABLE"));
+    /* Induk relasi lunak (kapal/klien/vendor/subkon/equipment/karyawan) ganti
+       nama: anak-anaknya ikut diganti dalam transaksi yang sama (lihat refs.ts). */
+    const rename = softRenameOf(table, oldData, merged as Record<string, unknown>);
+    if (rename) {
+      const renameConflict = await softRenameConflict(table, id, rename);
+      if (renameConflict) return reply.status(409).send(fail(renameConflict, "CONFLICT"));
+    }
     const changedRange = table === "dockSlots" && (
       (parsed.data.data !== undefined && ["dockId", "from", "to", "startDate", "endDate"]
         .some((field) => Object.hasOwn(parsed.data.data as Record<string, unknown>, field))) ||
@@ -787,6 +795,13 @@ export function registerCrud(app: FastifyInstance, table: string): void {
     });
     const performWrite = async (): Promise<string | null> => {
       if (changedRange) return persistDrydockWithOverlap(merged, branch, id, persist);
+      if (rename) {
+        await withTx(async () => {
+          await persist();
+          await cascadeSoftRename(table, rename, { actor: requestActor(req), ip: requestIp(req), parentId: id });
+        });
+        return null;
+      }
       await persist();
       return null;
     };

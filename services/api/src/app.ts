@@ -8,7 +8,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { loadEnv } from "./env.js";
 import { fail, ok, registerErrorHandler } from "./envelope.js";
-import { createRateLimiter, getClientIp, getWriteRateKey } from "./rateLimit.js";
+import { createRateLimiter, getClientIp, getWriteRateKey, isSeedImportRequest } from "./rateLimit.js";
 import { branchOfUser, bumpTokenVersion, comparePassword, hashPassword, requireAuth, SEED_ACCOUNTS, signToken } from "./auth.js";
 import { getAuditErrorCount, requestIp, writeAudit } from "./audit.js";
 import { exec, q } from "./db.js";
@@ -218,10 +218,7 @@ export function buildApp(): FastifyInstance {
   app.addHook("onRequest", async (req, reply) => {
     if (!WRITE_METHODS.has(req.method)) return undefined;
     if (process.env.SEED_IMPORT === "1") return undefined;
-    if (req.headers["x-seed-import"] === "1") {
-      const key = getWriteRateKey(req);
-      if (key.startsWith("u:")) return undefined;
-    }
+    if (isSeedImportRequest(req)) return undefined;
     const check = writeLimiter(getWriteRateKey(req));
     if (!check.allowed) {
       return denyRateLimited(reply, check.retryAfterSec, "Too many requests, try again later");

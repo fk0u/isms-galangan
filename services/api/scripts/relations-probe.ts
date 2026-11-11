@@ -80,6 +80,42 @@ async function main(): Promise<void> {
   assert("related tanpa login → 401", (await app.inject({ method: "GET", url: `/api/projects/${encodeURIComponent(proj)}/related` })).statusCode === 401);
   assert("related induk tidak ada → 404", (await call("GET", "/api/projects/TIDAK-ADA/related")).statusCode === 404);
 
+  /* 5b. Integritas relasi (audit 11 Nov): relasi lunak lewat nama dijaga saat
+         hapus & ganti nama, ref wajib saat create, header seed-import dibatasi. */
+  const tag = Date.now().toString(36).toUpperCase();
+  const mk = async (table: string, data: Record<string, unknown>): Promise<string> => {
+    const r = await call("POST", `/api/${table}`, { data });
+    if (r.statusCode !== 201) throw new Error(`POST ${table} gagal: ${r.statusCode} ${r.body.slice(0, 160)}`);
+    return (r.json() as { data: { id: string } }).data.id;
+  };
+  const patch = (url: string, data: Record<string, unknown>) => app.inject({ method: "PATCH", url, headers, payload: { data } });
+  const nameA = `Probe Klien ${tag} A`;
+  const nameB = `Probe Klien ${tag} B`;
+  const cliA = await mk("clients", { name: nameA });
+  const cliC = await mk("clients", { name: `Probe Klien ${tag} C` });
+  const ves = await mk("vessels", { name: `Probe Kapal ${tag}`, owner: nameA.toUpperCase() });
+  const delRef = await call("DELETE", `/api/clients/${cliA}`);
+  assert("hapus klien yang namanya masih dipakai kapal → 409 REFERENCED", delRef.statusCode === 409 && delRef.body.includes(ves), delRef.body.slice(0, 200));
+  const ren = await patch(`/api/clients/${cliA}`, { name: nameB });
+  const vesAfter = (await call("GET", `/api/vessels/${ves}`)).json() as { data: { data: { owner: string } } };
+  assert("ganti nama klien → owner kapal ikut berganti", ren.statusCode === 200 && vesAfter.data.data.owner === nameB, `${ren.statusCode} owner=${vesAfter.data?.data?.owner}`);
+  const cascAudit = await q<{ diff: string }>("SELECT diff FROM audit_log WHERE table_name = 'vessels' AND row_id = ? ORDER BY created_at DESC LIMIT 1", [ves]);
+  assert("kaskade nama tercatat di audit_log", String(cascAudit[0]?.diff ?? "").includes("_cascade"), String(cascAudit[0]?.diff ?? "").slice(0, 160));
+  const clash = await patch(`/api/clients/${cliA}`, { name: `probe klien ${tag} c` });
+  assert("ganti nama ke nama klien lain → 409 (tautan tidak tercampur)", clash.statusCode === 409, `${clash.statusCode} ${clash.body.slice(0, 160)}`);
+  await call("DELETE", `/api/vessels/${ves}`);
+  assert("klien tanpa pemakai bisa dihapus", (await call("DELETE", `/api/clients/${cliA}`)).statusCode === 200);
+  await call("DELETE", `/api/clients/${cliC}`);
+
+  const noItem = await call("POST", "/api/movements", { data: { item: "Probe tanpa katalog", itemId: "", type: "Penerimaan", qty: 1, date: "2026-11-11" } });
+  assert("mutasi baru tanpa itemId → 422", noItem.statusCode === 422, `${noItem.statusCode} ${noItem.body.slice(0, 160)}`);
+  const gudang = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = 'gudang' LIMIT 1"))[0];
+  if (gudang) {
+    const gh = { authorization: `Bearer ${signToken({ id: gudang.id, username: gudang.username, role: gudang.role, branch: "Samarinda", v: gudang.token_version ?? 0 })}`, "x-seed-import": "1" };
+    const forged = await app.inject({ method: "POST", url: "/api/movements", headers: gh, payload: { data: { item: "Probe", itemId: "", type: "Penerimaan", qty: 1 } } });
+    assert("header x-seed-import dari peran gudang tidak melewati validasi → 422", forged.statusCode === 422, `${forged.statusCode} ${forged.body.slice(0, 160)}`);
+  }
+
   /* 6. Dokumentasi Swagger UI (/api/docs): publik, CSP longgar hanya di halaman,
         dan setiap rute (kecuali preflight OPTIONS & docs) ada di OpenAPI. */
   const page = await app.inject({ method: "GET", url: "/api/docs" });

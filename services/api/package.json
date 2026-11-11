@@ -60,6 +60,7 @@
     "probe:voucher": "tsx --env-file-if-exists=.env scripts/voucher-probe.ts",
     "probe:hr-letter": "tsx --env-file-if-exists=.env scripts/hr-letter-probe.ts",
     "probe:relations": "tsx --env-file-if-exists=.env scripts/relations-probe.ts",
+    "report:integrity": "tsx --env-file-if-exists=.env scripts/integrity-report.ts",
     "gen:bruno": "tsx --env-file-if-exists=.env scripts/gen-bruno.ts",
     "probe:bruno": "tsx --env-file-if-exists=.env scripts/gen-bruno.ts --check",
     "sync:boq-documents": "tsx --env-file-if-exists=.env scripts/sync-boq-documents.ts",

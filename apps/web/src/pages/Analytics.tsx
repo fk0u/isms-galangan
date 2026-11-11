@@ -56,20 +56,16 @@ import {
   monthAxis,
   monthKeyOf,
   monthSeries,
-  rebindLegacyMonthSeries,
 } from "../utils/monthAxis";
 import { lastPoint, numOf, prevPoint, safeText } from "../utils/series";
 import { projectProgressOf } from "../utils/projectProgress";
 import { useT } from "../i18n/LanguageContext";
 import { n_misc } from "../i18n/n_misc";
 import {
-  revenueSeries,
   sparkRevenue,
   sparkMargin,
   sparkProjects,
   ncrTrend,
-  marginSeries,
-  inspectionTrend,
 } from "../data";
 
 const MON_ID = ID_MON;
@@ -305,15 +301,14 @@ export default function Analytics() {
       bln: string; key: string; isCurrent: boolean; revenue: number; cost: number; projects: number;
     }>(axis, revenue, "revenue");
     const withCost = real.map((r) => ({ ...r, cost: round1(expense[r.key] ?? 0) }));
-    return withCost.some((r) => r.revenue > 0) || withCost.some((r) => r.cost > 0)
-      ? withCost
-      : rebindLegacyMonthSeries(revenueSeries, { months: monthCount, locale });
-  }, [axis, monthCount, locale, data.invoices, data.journals, branch, inBranch]);
+    /* Audit 11 Nov: tidak ada lagi jatuh ke seri seed saat data kosong -
+       grafik menampilkan nol yang jujur, bukan angka karangan. */
+    return withCost;
+  }, [axis, data.invoices, data.journals, branch, inBranch]);
 
   const marDisp = useMemo(() => {
     /* Margin dihitung dari jurnal: (kredit akun pendapatan - debit beban) /
-       pendapatan. Sumber tunggal, bukan mock. Bila jurnal kosong, jatuh ke
-       seri seed (ditandai estimated lewat label yang sama). */
+       pendapatan. Sumber tunggal, bukan mock. Jurnal kosong = margin 0. */
     const income = (codes: string[]): Record<string, number> => {
       const out: Record<string, number> = {};
       for (const a of axis) out[a.key] = 0;
@@ -335,8 +330,8 @@ export default function Analytics() {
       const marginPct = rev > 0 ? ((rev - exp) / rev) * 100 : 0;
       return { bln: p.label, key: p.key, isCurrent: p.isCurrent, margin: round1(marginPct) };
     });
-    return rows.some((r) => r.margin !== 0) ? rows : rebindLegacyMonthSeries(marginSeries, { months: monthCount, locale });
-  }, [axis, monthCount, locale, data.journals]);
+    return rows;
+  }, [axis, data.journals]);
 
   const inspDisp = useMemo(() => {
     const count = bucketByMonth(data.inspections, axis, (i) => i.date, () => 1);
@@ -346,15 +341,12 @@ export default function Analytics() {
       (i) => i.date,
       (i) => (String(i.status ?? "") === "Lulus" ? 1 : 0),
     );
-    if (!Object.values(count).some((v) => v > 0)) {
-      return rebindLegacyMonthSeries(inspectionTrend, { months: monthCount, locale });
-    }
     return monthSeries<{ bln: string; key: string; isCurrent: boolean; inspeksi: number; lulus: number }>(
       axis,
       count,
       "inspeksi",
     ).map((r) => ({ ...r, lulus: round1(lulusMap[r.key] ?? 0) }));
-  }, [axis, monthCount, locale, data.inspections]);
+  }, [axis, data.inspections]);
 
   const totalRevenue = revDisp.reduce((s, d) => s + d.revenue, 0);
   const avgRevenue = revDisp.length ? totalRevenue / revDisp.length : 0;

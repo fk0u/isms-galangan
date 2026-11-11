@@ -9,6 +9,7 @@ import type { SortState } from "../../components/ui";
 import { rowMatches, SearchBox } from "../../components/ui";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { useStore } from "../../data/store";
+import { isBackendConfigured } from "../../services/http";
 import { findUsages } from "../../utils/usages";
 import type { StoreItem } from "../../data/store";
 import { fleetTrend, dockingTrend, buildTrend, certTrend } from "../../data";
@@ -137,7 +138,7 @@ function vesselToForm(v: StoreItem): VesselForm {
 }
 
 export default function Vessels() {
-  const { data, add, update, remove, log } = useStore();
+  const { data, add, update, remove, log, resyncCollections } = useStore();
   const { user } = useAuth();
   const canWriteVessels = hasPermission(user?.permissions, "vessels", "w");
   const canDeleteVessels = hasPermission(user?.permissions, "vessels", "d");
@@ -291,8 +292,16 @@ export default function Vessels() {
     const oldName = String(prev?.name ?? "");
     const newName = editForm.name.trim();
     await update("vessels", editingId, formToPayload(editForm));
-    // CASCADE RENAME: nama kapal → projects/surveys/dockSlots/warranties (trim-case-insensitive).
-    if (!sameName(oldName, newName)) {
+    /* Tersambung server: kaskade ganti nama dikerjakan server dalam satu
+       transaksi (proyek, survei, slot dock, garansi, invoice, penawaran) -
+       cukup tarik ulang koleksi anaknya. Mengulang PATCH dari sini justru
+       bentrok (409 STALE) dengan versi yang baru diubah server. */
+    if (oldName.trim() !== newName && isBackendConfigured()) {
+      await resyncCollections(["projects", "surveys", "dockSlots", "warranties", "invoices", "quotations"]).catch(() => []);
+      log("rename kapal", `${oldName} → ${newName}`, "Kapal");
+      toast(S.vsUpdated);
+    } else if (!sameName(oldName, newName)) {
+      // Mode lokal (tanpa server): kaskade di klien, trim-case-insensitive.
       let n = 0;
       for (const p of data.projects.filter((x) => sameName(x.vessel, oldName))) {
         await update("projects", p.id, { vessel: newName });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { bucketByMonth, monthAxis, rebindLegacyMonthSeries } from "../../utils/monthAxis";
+import { bucketByMonth, monthAxis } from "../../utils/monthAxis";
 import { n_prj } from "../../i18n/n_prj";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -20,7 +20,7 @@ import type { StoreItem, CollectionKey } from "../../data/store";
 import { useModuleSync } from "../../data/useModuleSync";
 import { remoteRepository } from "../../services/repositories";
 import { getJwt, isBackendConfigured } from "../../services/http";
-import { equipmentHours, equipTotalTrend } from "../../data";
+import { equipTotalTrend } from "../../data";
 import { fmtTanggal, fmtJumlah, fmtRupiah, parseRupiah, todayISO } from "../../utils/format";
 import { loadedLaborRatePerDay } from "../../utils/rates";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
@@ -434,15 +434,9 @@ const [utilQ, setUtilQ] = useState("");
       (b) => Number(b.hours || 0),
       (vals) => vals.reduce((s, x) => s + x, 0),
     );
-    const anyReal = Object.values(bucket).some((v) => v > 0);
-    if (!anyReal) {
-      return rebindLegacyMonthSeries(equipmentHours, { locale: locale as "id" | "en" }).map((r) => ({
-        label: r.bln,
-        jam: Number(r.jam || 0),
-      }));
-    }
+    // Tanpa booking Selesai = 0 jam (audit 11 Nov: tidak jatuh ke seed equipmentHours).
     return hoursAxis.map((pt) => ({ label: pt.label, jam: bucket[pt.key] ?? 0 }));
-  }, [bookings, hoursAxis, locale]);
+  }, [bookings, hoursAxis]);
 
   /* Nama proyek booking → link detail + nama kapal. */
   const projOf = (id: unknown): StoreItem | undefined =>

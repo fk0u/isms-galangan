@@ -1,5 +1,6 @@
 ﻿import type { FastifyRequest } from "fastify";
 import { verifyToken } from "./auth.js";
+import { normalizeRole } from "./policy.js";
 
 export interface RateLimitCheck {
   allowed: boolean;
@@ -77,4 +78,24 @@ export function getWriteRateKey(req: FastifyRequest): string {
     }
   }
   return `ip:${getClientIp(req)}`;
+}
+
+/** Header impor seed (`x-seed-import: 1`) hanya dihormati untuk akun
+ *  direktur/developer. Sebelumnya user login mana pun bisa memasang header ini
+ *  untuk melewati rate limit tulis dan sebagian aturan bisnis (service wajib
+ *  WBS, manajer proyek, konversi stok). */
+export function isSeedImportRequest(req: FastifyRequest): boolean {
+  if (req.headers["x-seed-import"] !== "1") return false;
+  let role: unknown = req.user?.role;
+  if (role === undefined) {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith("Bearer ")) return false;
+    try {
+      role = (verifyToken(header.slice("Bearer ".length)) as { role?: unknown })?.role;
+    } catch {
+      return false;
+    }
+  }
+  const r = normalizeRole(role);
+  return r === "direktur" || r === "developer";
 }

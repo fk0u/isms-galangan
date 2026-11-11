@@ -32,7 +32,6 @@ import { useStore } from "../../data/store";
 import { findUsages } from "../../utils/usages";
 import type { StoreItem } from "../../data/store";
 import { fmtJumlah, fmtTanggal, todayISO } from "../../utils/format";
-import { attendanceSeries } from "../../data";
 import { useT } from "../../i18n/LanguageContext";
 import { n_misc } from "../../i18n/n_misc";
 import { exportExcel } from "../../utils/export";
@@ -370,13 +369,9 @@ export default function Absensi() {
     });
   }, [data.attendance, locale]);
   const trenValid = attendanceTrend.some((d) => d.tingkat !== null);
-  /* Fallback ke data contoh HANYA saat belum ada satu pun catatan absensi
-     (mis. instalasi baru / demo). Fallback diberi penanda supaya UI bisa
-     menampilkannya sebagai data contoh - bukan menyamar sebagai angka asli. */
-  const trenSample = !trenValid && attendanceSeries.length > 0;
-  const trenShown = trenValid
-    ? attendanceTrend
-    : attendanceSeries.map((d) => ({ month: String(d.month), tingkat: Number(d.tingkat), catatan: 0 }));
+  /* Audit 11 Nov: tanpa catatan absensi grafik disembunyikan, tidak lagi
+     menampilkan angka referensi (data contoh) yang bisa disangka data asli. */
+  const trenShown = attendanceTrend;
 
   const exportRekap = () => {
     const head = ["Karyawan", "Hadir", "Izin", "Sakit", "Cuti", "Alpa", "Lembur (jam)", "Telat", "Kehadiran %"];
@@ -603,17 +598,13 @@ export default function Absensi() {
                 <KpiCard label={S.kpiTotalOvertime} value={`${fmtJumlah(Math.round(kpiLembur * 10) / 10)} jam`} hint={S.approvedOnlyPayroll} chip="amber" />
               </div>
 
-              {(trenValid || trenSample) && (
+              {trenValid && (
                 <Card className="mb-4 p-5" data-export-hide>
                   <CardHeader
                     title={locale === "en" ? "Attendance trend (12 months)" : "Tren Kehadiran (12 bulan)"}
-                    subtitle={trenSample
-                      ? (locale === "en"
-                        ? "SAMPLE DATA - no attendance record yet, showing reference figures"
-                        : "DATA CONTOH - belum ada catatan absensi, menampilkan angka referensi")
-                      : (locale === "en"
-                        ? "Attendance rate per month from real attendance records, not hardcoded"
-                        : "Tingkat kehadiran per bulan dari baris absensi nyata, bukan angka hardcode")}
+                    subtitle={locale === "en"
+                      ? "Attendance rate per month from real attendance records, not hardcoded"
+                      : "Tingkat kehadiran per bulan dari baris absensi nyata, bukan angka hardcode"}
                   />
                   <div className="mt-3 h-64">
                     <ResponsiveContainer width="100%" height="100%">

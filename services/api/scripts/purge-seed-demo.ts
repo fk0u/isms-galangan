@@ -99,6 +99,30 @@ async function run(): Promise<void> {
 
   const del = new Map<string, string[]>();
   for (const [t, ids] of doomed) del.set(t, [...ids].filter((id) => INCLUDE_TOUCHED || !touched.get(t)?.has(id)));
+  /* Baris yang TETAP ada (tersentuh pengguna / tabel master) tidak boleh
+     ditinggal merujuk induk yang dihapus. Versi lama menghapus induk seed
+     tetapi mempertahankan anak tersentuh, sehingga produksi berisi rujukan
+     yatim (mis. dokumen & change order ke proyek yang sudah tidak ada).
+     Induk seperti itu ikut dipertahankan, berulang sampai stabil. */
+  const delSet = new Map<string, Set<string>>([...del].map(([t, ids]) => [t, new Set(ids)]));
+  const spared: string[] = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [t, fields] of Object.entries(REFS)) {
+      for (const r of rows.get(t) ?? []) {
+        if (delSet.get(t)?.has(r.id)) continue; // baris ini ikut dihapus
+        let d: Record<string, unknown>;
+        try { d = JSON.parse(r.data) as Record<string, unknown>; } catch { continue; }
+        for (const [f, def] of Object.entries(fields)) {
+          const v = String(d[f] ?? "");
+          if (v && delSet.get(def.target)?.delete(v)) { spared.push(`${def.target} ${v} (dipakai ${t} ${r.id})`); changed = true; }
+        }
+      }
+    }
+  }
+  for (const [t, s] of delSet) del.set(t, [...s]);
+  if (spared.length > 0) console.log(`Dipertahankan agar tidak ada rujukan yatim: ${spared.length}\n  ${spared.slice(0, 20).join("\n  ")}`);
   // WBS/tim hanya untuk proyek yang BENAR-BENAR dihapus (ikut filter tersentuh).
   const projIds = new Set(del.get("projects") ?? []);
   const backup: Record<string, Record<string, unknown>[]> = {};
