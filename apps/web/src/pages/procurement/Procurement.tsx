@@ -23,9 +23,8 @@ import { AlertBannerView, flashPick, notifRowId, useModuleAlert, useNotifFlash }
 import { useDeepLinkParams, useDeepLinkTarget } from "../../components/useDeepLink";
 import { rowHighlightClass } from "../../components/rowHighlight";
 import { getSetting } from "../../utils/settings";
-import { bucketByMonth, fmtMonthRange, monthAxis, monthKeyOf, rebindLegacyMonthSeries } from "../../utils/monthAxis";
+import { bucketByMonth, fmtMonthRange, monthAxis, monthKeyOf } from "../../utils/monthAxis";
 import { sbPoNumber, sbSplitIncludePpn, maxSeq } from "../../utils/sb";
-import { spendByCategory, procurementTrend } from "../../data";
 import { exportExcel } from "../../utils/export";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
@@ -197,62 +196,87 @@ async function freshPayables(fallback: StoreItem[]): Promise<StoreItem[]> {
 /* Opsi rentang bulan - cerminan MONTH_RANGES di Analytics.tsx:170. */
 const MONTH_RANGES = [6, 12, 18, 24] as const;
 
+/* Warna kategori belanja: biru utama + teal sekunder (DESIGN.md), sisanya netral. */
+const SPEND_COLORS = ["#2563EB", "#0D9488", "#D97706", "#7C3AED", "#64748B"];
+
 /* Grafik ringkasan bersama PO Besar & PO Kecil: visual & tata letak IDENTIK
-   (Donut belanja + Area tren). Satu komponen agar tidak divergen lagi. */
-function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar, chartRpM, pos }: {
+   (Donut belanja + Area tren). Satu komponen agar tidak divergen lagi.
+   Semua angka dihitung dari PO nyata yang diteruskan (sudah difilter per tab).
+   Dulu donut selalu memakai seed spendByCategory dan tren jatuh ke seed bila
+   belum ada PO, sehingga grafik tampak "terisi" padahal datanya kosong (CTO 11 Nov). */
+function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar, chartRpM, emptyText, otherLabel, pos, inventory }: {
   spendTitle: string; spendSub: string; trenTitle: string; trenSub: string; chartKeluar: string; chartRpM: (n: string) => string;
-  pos: StoreItem[];
+  emptyText: string; otherLabel: string;
+  pos: StoreItem[]; inventory: StoreItem[];
 }) {
   const { locale } = useT();
-  /* Rentang bulan, mengikuti Analytics.tsx:767-798. Versi lama tidak punya
-     kontrol apa pun - sumbunya 12 titik dari seed tetap sepanjang apa pun
-     filter yang aktif, dan tabel di bawahnya bisa menampilkan 3 PO. */
   const [monthCount, setMonthCount] = useState(12);
 
   const axis = useMemo(() => monthAxis({ months: monthCount, locale }), [monthCount, locale]);
 
-  /* Sumbu + angka diturunkan dari purchaseOrders yang SUNGGUHNYA bertanggal.
-     Seed procurementTrend adalah jendela Sep..Ags tanpa tahun sama sekali,
-     jadi memakainya berarti setiap label bulan yang tampil adalah tebakan -
-     salah 11 dari 12 bulan dalam setahun. Invoice/journal sudah dibucket
-     begini di Analytics; PO punya kolom `date` yang sama rapinya.
+  /* PO Batal/Draft belum menjadi belanja, jadi tidak ikut dihitung. */
+  const spendPos = useMemo(
+    () => pos.filter((p) => !["Batal", "Ditolak", "Draft"].includes(String(p.status ?? ""))),
+    [pos],
+  );
 
-     Fallback ke seed hanya kalau benar-benar tidak ada PO bertanggal, supaya
-     tab tidak kosong pada install yang belum punya PO. */
   const trend = useMemo(() => {
     const spend = bucketByMonth(
-      pos,
+      spendPos,
       axis,
       (p) => p.date,
       (p) => Number(p.amount || 0),
-      (vals) => Math.round((vals.reduce((s, x) => s + x, 0) / 1e9) * 10) / 10,
+      (vals) => Math.round((vals.reduce((s, x) => s + x, 0) / 1e9) * 100) / 100,
     );
-    const anyReal = Object.values(spend).some((v) => v > 0);
-    const rows = anyReal
-      ? axis.map((pt) => ({ bln: pt.label, pengeluaran: spend[pt.key] ?? 0 }))
-      : rebindLegacyMonthSeries(
-        monthCount >= procurementTrend.length ? procurementTrend : procurementTrend.slice(-monthCount),
-        { locale },
-      );
-    return rows.map((r) => ({ bln: r.bln, pengeluaran: Number(r.pengeluaran || 0) }));
-  }, [axis, pos, monthCount, locale]);
+    return axis.map((pt) => ({ bln: pt.label, pengeluaran: spend[pt.key] ?? 0 }));
+  }, [axis, spendPos]);
+  const hasTrend = trend.some((r) => r.pengeluaran > 0);
+
+  /* Kategori diambil dari master inventori per baris PO (itemId); baris tanpa
+     item master / tanpa kategori masuk "Lainnya". Top 4 + Lainnya. */
+  const spendCat = useMemo(() => {
+    const catOf = new Map(inventory.map((i) => [String(i.id), String(i.category ?? "").trim()]));
+    const sum = new Map<string, number>();
+    for (const po of spendPos) {
+      const lines = poLines(po);
+      const parts = lines.length > 0
+        ? lines.map((l) => ({ itemId: String(l.itemId ?? ""), val: Number(l.qty || 0) * parseRupiah(String(l.price || 0)) }))
+        : [{ itemId: String(po.itemId ?? ""), val: Number(po.amount || 0) }];
+      for (const pt of parts) {
+        if (!(pt.val > 0)) continue;
+        const cat = catOf.get(pt.itemId) || otherLabel;
+        sum.set(cat, (sum.get(cat) ?? 0) + pt.val);
+      }
+    }
+    const total = [...sum.values()].reduce((s, v) => s + v, 0);
+    if (total <= 0) return [];
+    const sorted = [...sum.entries()].sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 4);
+    const rest = sorted.slice(4).reduce((s, [, v]) => s + v, 0);
+    const rows = rest > 0 ? [...top, [otherLabel, rest] as [string, number]] : top;
+    return rows.map(([name, v], i) => ({ name, value: Math.round((v / total) * 100), color: SPEND_COLORS[i % SPEND_COLORS.length] }));
+  }, [spendPos, inventory, otherLabel]);
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Card>
         <CardHeader title={spendTitle} subtitle={spendSub} />
-        <div className="flex items-center gap-4 p-4 pt-0">
-          <Donut data={spendByCategory} colors={spendByCategory.map((d) => d.color)} size={130} thickness={18} centerValue="100" centerLabel="%" />
-          <div className="flex-1 space-y-1.5">
-            {spendByCategory.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-sm">
-                <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
-                <span className="truncate text-steel-600" title={d.name}>{d.name}</span>
-                <span className="ml-auto font-semibold text-navy-900">{d.value}%</span>
-              </div>
-            ))}
+        {spendCat.length === 0 ? (
+          <div className="flex h-36 items-center justify-center p-4 pt-0 text-sm text-steel-500">{emptyText}</div>
+        ) : (
+          <div className="flex items-center gap-4 p-4 pt-0">
+            <Donut data={spendCat} colors={spendCat.map((d) => d.color)} size={130} thickness={18} centerValue="100" centerLabel="%" />
+            <div className="flex-1 space-y-1.5">
+              {spendCat.map((d) => (
+                <div key={d.name} className="flex items-center gap-2 text-sm">
+                  <span className="h-3 w-3 rounded-sm" style={{ background: d.color }} />
+                  <span className="truncate text-steel-600" title={d.name}>{d.name}</span>
+                  <span className="ml-auto font-semibold text-navy-900">{d.value}%</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </Card>
       <Card className="lg:col-span-2">
         <CardHeader
@@ -281,16 +305,20 @@ function PoSummaryCharts({ spendTitle, spendSub, trenTitle, trenSub, chartKeluar
           }
         />
         <div className="h-44 p-4 pt-0">
+          {!hasTrend ? (
+            <div className="flex h-full items-center justify-center text-sm text-steel-500">{emptyText}</div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-              <defs><linearGradient id="procGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#262626" stopOpacity={0.3} /><stop offset="95%" stopColor="#262626" stopOpacity={0} /></linearGradient></defs>
+              <defs><linearGradient id="procGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563EB" stopOpacity={0.25} /><stop offset="95%" stopColor="#2563EB" stopOpacity={0} /></linearGradient></defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#EBEBEB" vertical={false} />
               <XAxis dataKey="bln" stroke="#8F8F8F" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
               <YAxis stroke="#8F8F8F" axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip formatter={(v) => (typeof v === "number" ? chartRpM(String(v)) : v)} />} />
-              <Area type="monotone" dataKey="pengeluaran" name={chartKeluar} stroke="#262626" strokeWidth={2.5} fill="url(#procGrad)" />
+              <Area type="monotone" dataKey="pengeluaran" name={chartKeluar} stroke="#2563EB" strokeWidth={2.5} fill="url(#procGrad)" />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </div>
       </Card>
     </div>
@@ -1946,7 +1974,7 @@ const sparkVendors = useMemo(() => {
                 </table>
                 {bigShown.length === 0 && <EmptyState title={S.emptyBigT} subtitle={S.emptyBigS} />}
                 {bigPager.bar}
-              <PoSummaryCharts spendTitle={S.cardSpendT} spendSub={S.cardSpendS} trenTitle={S.cardTrenT} trenSub={S.cardTrenS} chartKeluar={S.chartKeluar} chartRpM={(n) => S.chartRpM.replace("{n}", n)} pos={purchaseOrders} />
+              <PoSummaryCharts spendTitle={S.cardSpendT} spendSub={S.cardSpendS} trenTitle={S.cardTrenT} trenSub={S.cardTrenS} chartKeluar={S.chartKeluar} chartRpM={(n) => S.chartRpM.replace("{n}", n)} emptyText={S.chartNoData} otherLabel={S.chartOther} pos={bigList} inventory={invList} />
               </div>
             </div>
           )}
@@ -2063,7 +2091,7 @@ const sparkVendors = useMemo(() => {
                 </div>
               </div>
               {/* Samakan dengan PO Besar: grafik Donut + tren yang sama persis di bawah tabel. */}
-              <PoSummaryCharts spendTitle={S.cardSpendT} spendSub={S.cardSpendS} trenTitle={S.cardTrenT} trenSub={S.cardTrenS} chartKeluar={S.chartKeluar} chartRpM={(n) => S.chartRpM.replace("{n}", n)} pos={purchaseOrders} />
+              <PoSummaryCharts spendTitle={S.cardSpendT} spendSub={S.cardSpendS} trenTitle={S.cardTrenT} trenSub={S.cardTrenS} chartKeluar={S.chartKeluar} chartRpM={(n) => S.chartRpM.replace("{n}", n)} emptyText={S.chartNoData} otherLabel={S.chartOther} pos={smallList} inventory={invList} />
             </div>
           )}
 

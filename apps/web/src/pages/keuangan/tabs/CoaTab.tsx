@@ -141,6 +141,17 @@ export function buildCoaTree(rows: StoreItem[]): CoaTreeNode[] {
 
   for (const r of roots) setLevels(r, 0);
 
+  /* Urut naik per kode (1-000, 1-100, ... 7-400) di setiap level. Tanpa ini
+     urutan mengikuti urutan baris dari API (terbaru dulu), jadi 7-000 tampil
+     di atas dan 7-400 sebelum 7-100 (catatan CTO 11 Nov). numeric: true agar
+     6-021 tidak kalah dari 6-3. */
+  const byKode = (a: CoaTreeNode, b: CoaTreeNode) => a.kode.localeCompare(b.kode, undefined, { numeric: true });
+  function sortTree(list: CoaTreeNode[]) {
+    list.sort(byKode);
+    for (const n of list) sortTree(n.children);
+  }
+  sortTree(roots);
+
   return roots;
 }
 
