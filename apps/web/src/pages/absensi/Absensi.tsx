@@ -85,6 +85,7 @@ function otStatusOf(a: StoreItem): string {
 import MonthlyRecap from "./MonthlyRecap";
 import DeviceImport from "./DeviceImport";
 import DeviceManager from "./DeviceManager";
+import DeviceLogs from "./DeviceLogs";
 import { hasPermission, useAuth } from "../../auth/auth";
 import { isBackendConfigured } from "../../services/http";
 import { n_emp } from "../../i18n/n_emp";
@@ -477,7 +478,7 @@ export default function Absensi() {
 
       <div className="card">
         <DeviceImport />
-        <Tabs tabs={canManageDevices ? ["Bulanan", "Catat", "Rekap", "Mesin"] : ["Bulanan", "Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices }} />
+        <Tabs tabs={canManageDevices ? ["Bulanan", "Catat", "Rekap", "Mesin", "LogMesin"] : ["Bulanan", "Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices, LogMesin: n_emp[locale].tabDeviceLogs }} />
         <div className="p-4">
           {tab === "Bulanan" && <MonthlyRecap />}
           {tab === "Catat" && (
@@ -794,6 +795,7 @@ export default function Absensi() {
             </div>
           )}
           {tab === "Mesin" && canManageDevices && <DeviceManager />}
+          {tab === "LogMesin" && canManageDevices && <DeviceLogs />}
         </div>
       </div>
 

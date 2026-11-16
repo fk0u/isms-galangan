@@ -39,6 +39,28 @@ export function witaParts(timestamp: string): { date: string; time: string } | n
 /** Tap dari sumber mana pun. "auto" = mesin tanpa status masuk/pulang (ADMS). */
 export interface PunchInput { employeeNo: string; timestamp: string; type: "in" | "out" | "auto" }
 
+/** Jarak minimum (menit) antara jam masuk dan tap yang dihitung sebagai pulang. */
+export const MIN_OUT_GAP_MIN = 30;
+const minutesOf = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+
+/** Tap dengan jam yang tidak masuk akal (jam mesin salah): lebih dari 1 hari di
+ *  depan atau lebih dari 400 hari lampau. Murni. */
+export function implausibleTime(timestamp: string, nowMs = Date.now()): boolean {
+  const t = Date.parse(timestamp);
+  return Number.isNaN(t) || t - nowMs > 86_400_000 || nowMs - t > 400 * 86_400_000;
+}
+
+/** Catat jam tap ke daftar harian (unik per menit, urut, maks 40) + jumlahnya.
+ *  Kiriman ulang mesin untuk tap yang sama tidak menambah hitungan. Murni. */
+export function addTap(taps: unknown, time: string): { taps: string[]; scanCount: number } {
+  const list = Array.isArray(taps) ? taps.filter((t): t is string => typeof t === "string") : [];
+  const next = [...new Set([...list, time])].sort().slice(0, 40);
+  return { taps: next, scanCount: next.length };
+}
+
+/** Status yang dicatat HR dan tidak boleh ditimpa "Hadir" oleh scan. */
+const KEEP_STATUS = new Set(["Izin", "Sakit", "Cuti"]);
+
 /** Gabungkan tap ke baris harian: masuk = tap "in" paling awal, pulang = tap "out" paling akhir.
  *  "auto": tap paling awal hari itu = masuk, paling akhir = pulang (satu tap saja = belum pulang). Murni. */
 export function mergePunch(row: { checkIn?: string; checkOut?: string }, type: "in" | "out" | "auto", time: string): { checkIn: string; checkOut: string } {
@@ -48,7 +70,10 @@ export function mergePunch(row: { checkIn?: string; checkOut?: string }, type: "
     const all = [checkIn, checkOut, time].filter((t) => t !== "").sort();
     const first = all[0] ?? time;
     const last = all[all.length - 1] ?? time;
-    return { checkIn: first, checkOut: last === first ? "" : last };
+    /* Scan ganda (jari ditempel dua kali, antre lalu scan lagi) bukan jam
+       pulang: tap baru dihitung pulang hanya bila berjarak >= MIN_OUT_GAP_MIN
+       dari jam masuk. Hasilnya tidak bergantung urutan kedatangan tap. */
+    return { checkIn: first, checkOut: minutesOf(last) - minutesOf(first) >= MIN_OUT_GAP_MIN ? last : "" };
   }
   if (type === "in") return { checkIn: checkIn === "" || time < checkIn ? time : checkIn, checkOut };
   return { checkIn, checkOut: checkOut === "" || time > checkOut ? time : checkOut };
@@ -88,16 +113,19 @@ export async function applyPunches(punches: PunchInput[], source: string): Promi
       const emp = byPin.get(p.employeeNo) ?? byNik.get(p.employeeNo);
       if (!emp) { if (!out.unknown.includes(p.employeeNo)) out.unknown.push(p.employeeNo); continue; }
       const at = witaParts(p.timestamp);
-      if (!at) { out.invalid += 1; continue; }
+      if (!at || implausibleTime(p.timestamp)) { out.invalid += 1; continue; }
       const key = `${emp.id}|${at.date}`;
       const existing = byDay.get(key);
       if (existing) {
-        const data = { ...existing.data, ...mergePunch(existing.data, p.type, at.time), status: "Hadir", source };
+        /* Izin/Sakit/Cuti yang dicatat HR dipertahankan; jam scan tetap
+           disimpan sebagai bukti supaya HR bisa meninjau. */
+        const status = KEEP_STATUS.has(String(existing.data.status ?? "")) ? String(existing.data.status) : "Hadir";
+        const data = { ...existing.data, ...mergePunch(existing.data, p.type, at.time), status, source, ...addTap(existing.data.taps, at.time) };
         await exec("UPDATE attendance SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), now, existing.id]);
         existing.data = data;
       } else {
         const id = `ABS-${at.date.replace(/-/g, "")}-D${randomBytes(3).toString("hex").toUpperCase()}`;
-        const data: Record<string, unknown> = { employeeId: emp.id, date: at.date, shift: "Pagi", status: "Hadir", overtime: 0, source, ...mergePunch({}, p.type, at.time) };
+        const data: Record<string, unknown> = { employeeId: emp.id, date: at.date, shift: "Pagi", status: "Hadir", overtime: 0, source, ...mergePunch({}, p.type, at.time), ...addTap(undefined, at.time) };
         await exec("INSERT INTO attendance (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [id, emp.branch, JSON.stringify(data), now]);
         byDay.set(key, { id, data });
       }

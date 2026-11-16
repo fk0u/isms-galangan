@@ -288,6 +288,9 @@ async function afterResult(cmd: DeviceCommand, ok: boolean, json: unknown, tail:
       await exec("UPDATE attendance_device_commands SET status = 'error', result = ? WHERE id = ?", [JSON.stringify({ returnCode: "ID_TAKEN", message: `ID ${meta.userId} sudah dipakai di mesin; pendaftaran dibatalkan agar biometrik user lain tidak tertimpa`, data: stripBiometric(json) }), cmd.id]);
       return;
     }
+    /* Mesin menjawab ERROR_NO_ID untuk ID kosong (terbukti di mesin asli) - itu
+       hasil yang diharapkan, jadi langkah cek dicatat "done", bukan "error". */
+    if (!ok) await exec("UPDATE attendance_device_commands SET status = 'done' WHERE id = ?", [cmd.id]);
     await enqueueCommand(cmd.deviceId, "SET_USER_INFO", { user_id: meta.userId, user_name: meta.userName ?? "", user_privilege: "USER", enroll_data_array: [] }, by, { action: "push", userId: meta.userId, employeeId: meta.employeeId, userName: meta.userName, by });
     return;
   }
