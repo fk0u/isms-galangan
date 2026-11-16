@@ -1,0 +1,15 @@
+meta {
+  name: GET attendance devices id stats
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/attendance/devices/:id/stats
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}

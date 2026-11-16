@@ -6,6 +6,7 @@
  * - antrean perintah server → mesin (diambil saat mesin bertanya receive_cmd). */
 import { randomBytes } from "node:crypto";
 import { exec, q, withTx } from "./db.js";
+import { writeAudit } from "./audit.js";
 import { applyPunches, type IngestResult, type PunchInput } from "./routes/attendanceIngest.js";
 
 const now = (): string => new Date().toISOString();
@@ -43,7 +44,34 @@ export function collectDeviceUsers(v: unknown, out: { userId: string; userName: 
 }
 
 /* ---------- status & user mesin ---------- */
+/* Detak koneksi per mesin (di memori proses, ±1 jam terakhir). Firmware tidak
+   melaporkan kekuatan WiFi, jadi kualitas koneksi diukur dari keteraturan
+   mesin menghubungi server. Hilang saat API restart - itu disengaja (ringan). */
+const BEATS = new Map<string, number[]>();
+const BEAT_WINDOW_MS = 60 * 60_000;
+
+/** Ringkasan koneksi dari daftar waktu detak (ms). Murni. */
+export function connectionStats(beats: readonly number[], nowMs = Date.now()): {
+  samples: number; avgGapSec: number; maxGapSec: number; drops: number; uptimePct: number; perMinute: number[];
+} {
+  const b = beats.filter((t) => nowMs - t <= BEAT_WINDOW_MS).sort((x, y) => x - y);
+  const gaps = b.slice(1).map((t, i) => (t - (b[i] as number)) / 1000);
+  const avg = gaps.length ? gaps.reduce((s2, g) => s2 + g, 0) / gaps.length : 0;
+  // "Putus" = jeda > 60 detik (mesin normal bertanya tiap 5-20 detik).
+  const drops = gaps.filter((g) => g > 60).length;
+  const perMinute = Array.from({ length: 60 }, () => 0);
+  for (const t of b) { const k = 59 - Math.floor((nowMs - t) / 60_000); if (k >= 0 && k < 60) perMinute[k] = (perMinute[k] ?? 0) + 1; }
+  const span = b.length ? Math.min(60, Math.ceil((nowMs - (b[0] as number)) / 60_000)) : 0;
+  const active = perMinute.slice(60 - span).filter((n) => n > 0).length;
+  return { samples: b.length, avgGapSec: Math.round(avg * 10) / 10, maxGapSec: Math.round(Math.max(0, ...gaps)), drops, uptimePct: span ? Math.round((active / span) * 100) : 0, perMinute };
+}
+export const deviceBeats = (deviceId: string): number[] => BEATS.get(deviceId) ?? [];
+
 export async function touchDevice(deviceId: string, info: unknown, ip: string): Promise<void> {
+  const nowMs = Date.now();
+  const list = (BEATS.get(deviceId) ?? []).filter((x) => nowMs - x <= BEAT_WINDOW_MS);
+  list.push(nowMs);
+  BEATS.set(deviceId, list);
   const t = now();
   const infoText = info === undefined || info === null ? null : JSON.stringify(stripBiometric(info)).slice(0, 4000);
   const res = await exec("UPDATE attendance_device_status SET last_seen = ?, info = COALESCE(?, info), ip = ? WHERE device_id = ?", [t, infoText, ip, deviceId]);
@@ -308,9 +336,74 @@ async function afterResult(cmd: DeviceCommand, ok: boolean, json: unknown, tail:
     await linkDevicePin(meta.userId, null);
     return;
   }
+  if (cmd.cmdCode === "GET_LOG_DATA" && ok) {
+    const res = await importDeviceLogs(cmd.deviceId, parseLogBlock(tail));
+    // Ringkasan impor ditempel ke hasil perintah supaya terlihat di riwayat.
+    const row = (await q<{ result: string | null }>("SELECT result FROM attendance_device_commands WHERE id = ?", [cmd.id]))[0];
+    const prev = row?.result ? JSON.parse(row.result) as Record<string, unknown> : {};
+    await exec("UPDATE attendance_device_commands SET result = ? WHERE id = ?", [JSON.stringify({ ...prev, imported: res }), cmd.id]);
+    return;
+  }
   if (cmd.cmdCode === "GET_DEVICE_STATUS" && ok) {
     await exec("UPDATE attendance_device_status SET stats = ? WHERE device_id = ?", [JSON.stringify({ ...data, at: now() }).slice(0, 4000), cmd.deviceId]);
   }
+}
+
+/** Satu entri log memori mesin (GET_LOG_DATA). */
+export interface DeviceLogEntry { userId: string; ioTime: string; verifyCode: number }
+
+/** Urai blok biner log memori mesin. Format (diverifikasi terhadap scan yang
+ *  sudah tercatat, 16 Nov 2026): blok = [uint32 LE panjang][entri 48 byte];
+ *  entri = user_id (32 byte, ASCII s.d. NUL) | 3 byte | detik | 4 byte waktu
+ *  (dibaca little-endian: menit bit 26-31, jam 21-25, tanggal 16-20, bulan
+ *  12-15) | 4 byte | 3 byte + mode verifikasi (byte terakhir). Tahun tidak terbaca
+ *  andal dari bit sisanya, jadi diambil dari tahun berjalan (mundur satu tahun
+ *  bila bulannya di depan bulan ini). Murni. */
+export function parseLogBlock(tail: Buffer, nowMs = Date.now()): DeviceLogEntry[] {
+  const block = parseBinBlocks(tail)[0] ?? Buffer.alloc(0);
+  const wita = new Date(nowMs + 8 * 3600_000);
+  const out: DeviceLogEntry[] = [];
+  for (let o = 0; o + 48 <= block.length; o += 48) {
+    const e = block.subarray(o, o + 48);
+    const userId = e.subarray(0, 32).toString("latin1").split("\0")[0]?.trim() ?? "";
+    const sec = e[35] ?? 0;
+    const w = e.readUInt32LE(36);
+    const min = w >>> 26;
+    const hour = (w >>> 21) & 31;
+    const day = (w >>> 16) & 31;
+    const month = (w >>> 12) & 15;
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(userId) || month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || min > 59 || sec > 59) continue;
+    const year = month > wita.getUTCMonth() + 1 ? wita.getUTCFullYear() - 1 : wita.getUTCFullYear();
+    const p2 = (n: number): string => String(n).padStart(2, "0");
+    out.push({ userId, ioTime: `${year}${p2(month)}${p2(day)}${p2(hour)}${p2(min)}${p2(sec)}`, verifyCode: e[47] ?? 0 });
+  }
+  return out;
+}
+
+/** Masukkan log memori mesin yang belum pernah diterima server: dicatat di
+ *  audit (muncul di Log Mesin) lalu diproses seperti scan biasa. Scan yang
+ *  sudah ada dilewati - aman diulang. */
+export async function importDeviceLogs(deviceId: string, entries: DeviceLogEntry[]): Promise<{ total: number; added: number; accepted: number; unknown: number }> {
+  const seen = new Set<string>();
+  for (const a of await q<{ diff: string }>("SELECT diff FROM audit_log WHERE actor = ? AND action = 'attendance_ingest'", [`device:${deviceId}`])) {
+    try { const d = JSON.parse(a.diff) as { userId?: string; ioTime?: string }; if (d.userId && d.ioTime) seen.add(`${d.userId}|${d.ioTime}`); } catch { /* dilewati */ }
+  }
+  let added = 0; let accepted = 0; let unknown = 0;
+  for (const e of entries) {
+    if (seen.has(`${e.userId}|${e.ioTime}`)) continue;
+    seen.add(`${e.userId}|${e.ioTime}`);
+    const ts = fkIso(e.ioTime);
+    if (!ts) continue;
+    const r = await applyPunches([{ employeeNo: e.userId, timestamp: ts, type: "auto" }], `device:${deviceId}`);
+    await writeAudit({
+      actor: `device:${deviceId}`, action: "attendance_ingest", table: "attendance", rowId: "-",
+      diff: { protocol: "fk", via: "pull_logs", userId: e.userId, ioTime: e.ioTime, verifyMode: e.verifyCode << 24, accepted: r.accepted, unknown: r.unknown, invalid: r.invalid },
+      ip: "server",
+    });
+    await upsertDeviceUser(deviceId, e.userId, "");
+    added += 1; accepted += r.accepted; unknown += r.unknown.length;
+  }
+  return { total: entries.length, added, accepted, unknown };
 }
 
 /** ID berikutnya untuk karyawan baru di mesin: angka terbesar yang dikenal + 1. */
@@ -322,7 +415,8 @@ export async function nextDeviceUserId(deviceId: string): Promise<string> {
 }
 
 export type HrAction =
-  | { action: "status" } | { action: "sync_time" } | { action: "restart" } | { action: "pull_users" }
+  | { action: "status" } | { action: "sync_time" } | { action: "restart" } | { action: "pull_users" } | { action: "settings" }
+  | { action: "pull_logs"; from: string; to: string }
   | { action: "push_employee"; employeeId: string; userId?: string }
   | { action: "remove_user"; userId: string };
 
@@ -333,6 +427,12 @@ export async function enqueueHrAction(deviceId: string, a: HrAction, by: string)
     case "sync_time": return { command: await enqueueCommand(deviceId, "SET_TIME", { time: witaStamp() }, by, { action: "sync_time", by }) };
     case "restart": return { command: await enqueueCommand(deviceId, "RESET_FK", null, by, { action: "restart", by }) };
     case "pull_users": return { command: await enqueueCommand(deviceId, "GET_USER_ID_LIST", null, by, { action: "pull_users", by }) };
+    case "settings": return { command: await enqueueCommand(deviceId, "GET_DEVICE_SETTING", null, by, { action: "settings", by }) };
+    case "pull_logs": {
+      const b = `${a.from.replace(/-/g, "")}000000`;
+      const e2 = `${a.to.replace(/-/g, "")}235959`;
+      return { command: await enqueueCommand(deviceId, "GET_LOG_DATA", { begin_time: b, end_time: e2 }, by, { action: "pull_logs", by }) };
+    }
     case "remove_user": return { command: await enqueueCommand(deviceId, "DELETE_USER", { user_id: a.userId }, by, { action: "remove", userId: a.userId, by }) };
     case "push_employee": {
       const emp = (await loadEmployees()).find((e) => e.id === a.employeeId);
