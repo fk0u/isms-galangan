@@ -15,6 +15,7 @@ import { q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { can, normalizeRole } from "../policy.js";
 import { analyzeDay, type DayAnalysis } from "../attendanceAnalysis.js";
+import { tapsOf } from "./attendanceIngest.js";
 import {
   cancelCommand, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
   type HrAction,
@@ -169,7 +170,7 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
         const x = JSON.parse(a.data) as Record<string, unknown>;
         const date = String(x.date ?? "");
         if (date < addDays(from, -1) || date > addDays(to, 1)) continue;
-        days.set(`${String(x.employeeId)}|${date}`, { checkIn: String(x.checkIn ?? ""), checkOut: String(x.checkOut ?? ""), scans: Number(x.scanCount ?? 0) });
+        days.set(`${String(x.employeeId)}|${date}`, { checkIn: String(x.checkIn ?? ""), checkOut: String(x.checkOut ?? ""), scans: tapsOf(x).length });
       } catch { /* baris rusak dilewati */ }
     }
     const out = rows.map((r) => {
@@ -237,8 +238,8 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
       const emp = emps.get(String(d.employeeId ?? ""));
       const name = emp?.name ?? String(d.employeeId ?? "");
       if (needle && !name.toLowerCase().includes(needle) && !(emp?.devicePin ?? "").toLowerCase().includes(needle)) continue;
-      // Baris sebelum hitungan scan ada: pakai jam masuk/pulang yang tersimpan.
-      const taps = Array.isArray(d.taps) && d.taps.length > 0 ? d.taps.map(String) : [String(d.checkIn ?? ""), String(d.checkOut ?? "")];
+      // Jam masuk/pulang tersimpan selalu ikut (baris lama tanpa daftar tap).
+      const taps = tapsOf(d);
       rows.push({
         id: a.id, date, employee: { id: String(d.employeeId ?? ""), name, devicePin: emp?.devicePin ?? "" },
         status: String(d.status ?? ""), ...analyzeDay(taps, { isToday: date === today }),

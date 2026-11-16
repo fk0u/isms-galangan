@@ -58,6 +58,14 @@ export function addTap(taps: unknown, time: string): { taps: string[]; scanCount
   return { taps: next, scanCount: next.length };
 }
 
+/** Daftar tap sebuah baris absensi. Jam masuk/pulang yang tersimpan selalu
+ *  ikut dihitung: baris lama (sebelum hitungan scan ada) atau yang diisi HR
+ *  tidak punya `taps`, dan tanpa ini scan baru menghapus jam masuk dari analisis. Murni. */
+export function tapsOf(row: { taps?: unknown; checkIn?: unknown; checkOut?: unknown }): string[] {
+  const list = Array.isArray(row.taps) ? row.taps.map(String) : [];
+  return [...new Set([...list, String(row.checkIn ?? ""), String(row.checkOut ?? "")])].filter((t) => /^\d{2}:\d{2}$/.test(t)).sort();
+}
+
 /** Status yang dicatat HR dan tidak boleh ditimpa "Hadir" oleh scan. */
 const KEEP_STATUS = new Set(["Izin", "Sakit", "Cuti"]);
 
@@ -120,7 +128,7 @@ export async function applyPunches(punches: PunchInput[], source: string): Promi
         /* Izin/Sakit/Cuti yang dicatat HR dipertahankan; jam scan tetap
            disimpan sebagai bukti supaya HR bisa meninjau. */
         const status = KEEP_STATUS.has(String(existing.data.status ?? "")) ? String(existing.data.status) : "Hadir";
-        const data = { ...existing.data, ...mergePunch(existing.data, p.type, at.time), status, source, ...addTap(existing.data.taps, at.time) };
+        const data = { ...existing.data, ...mergePunch(existing.data, p.type, at.time), status, source, ...addTap(tapsOf(existing.data), at.time) };
         await exec("UPDATE attendance SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), now, existing.id]);
         existing.data = data;
       } else {
