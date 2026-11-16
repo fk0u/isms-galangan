@@ -3,6 +3,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
+import { addTap, implausibleTime, mergePunch } from "../src/routes/attendanceIngest.js";
 import { collectDeviceUsers, nameScore, parseBinBlocks, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
 
@@ -31,6 +32,10 @@ async function main(): Promise<void> {
   assert("parseUserIdList: blok biner [len][entri 36 byte] → ID", parseUserIdList(parseBinBlocks(listBlock(["1", "27"]))[0]!, 36, 2).join() === "1,27");
   assert("stripBiometric tidak menyensor supported_enroll_data", JSON.stringify(stripBiometric({ supported_enroll_data: ["FP", "FACE"] })).includes("FACE"));
   assert("witaStamp 14 digit WITA", witaStamp(new Date("2026-11-16T05:00:00Z")) === "20261116130000");
+  assert("scan ganda (07:58 lalu 07:59) bukan jam pulang", JSON.stringify(mergePunch(mergePunch({}, "auto", "07:58"), "auto", "07:59")) === JSON.stringify({ checkIn: "07:58", checkOut: "" }));
+  assert("urutan tap tidak berpengaruh (17:05, 07:59, 07:58)", JSON.stringify(mergePunch(mergePunch(mergePunch({}, "auto", "17:05"), "auto", "07:59"), "auto", "07:58")) === JSON.stringify({ checkIn: "07:58", checkOut: "17:05" }));
+  assert("jam mesin ngawur ditolak (masa depan / >400 hari lampau)", implausibleTime("2030-01-01T08:00:00+08:00") && implausibleTime("2020-01-01T08:00:00+08:00") && !implausibleTime(new Date().toISOString()));
+  assert("addTap: unik per menit, urut, terhitung", JSON.stringify(addTap(addTap(addTap(undefined, "17:05").taps, "07:58").taps, "07:58")) === JSON.stringify({ taps: ["07:58", "17:05"], scanCount: 2 }));
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -78,7 +83,7 @@ async function main(): Promise<void> {
 
     /* --- ID mesin tetap (tidak bisa diubah di mesin) → pencocokan HR --- */
     const devPin = `9${Date.now() % 100000}`;
-    const early = await send(glogFrame(devPin, "20261117073000"));
+    const early = await send(glogFrame(devPin, "20261115073000"));
     assert("scan dari ID mesin yang belum terhubung → OK, tertunda", early.rc === "OK");
     await send({ ...enrollFrame(devPin), json: { ...enrollFrame(devPin).json, user_name: "Probe F" } });
     const list1 = await app.inject({ method: "GET", url: "/api/attendance/device-users", headers: hr });
@@ -88,10 +93,10 @@ async function main(): Promise<void> {
     assert("device-users: status mesin terakhir online tercatat", Boolean(u1.devices.find((d) => d.deviceId === dev)?.lastSeen));
     const link = await app.inject({ method: "POST", url: "/api/attendance/device-users/link", headers: hr, payload: { userId: devPin, employeeId: empId } });
     assert("hubungkan ID mesin → 1 scan tertunda diproses ulang", link.statusCode === 200 && (link.json() as { data: { reprocessed: number } }).data.reprocessed === 1, link.body);
-    const day17 = (await myRows()).find((d) => d.date === "2026-11-17");
+    const day17 = (await myRows()).find((d) => d.date === "2026-11-15");
     assert("scan tertunda kini jadi absensi 07:30", day17?.checkIn === "07:30", JSON.stringify(day17));
-    await send(glogFrame(devPin, "20261117170000"));
-    assert("scan berikutnya lewat ID mesin langsung masuk (pulang 17:00)", (await myRows()).find((d) => d.date === "2026-11-17")?.checkOut === "17:00");
+    await send(glogFrame(devPin, "20261115170000"));
+    assert("scan berikutnya lewat ID mesin langsung masuk (pulang 17:00)", (await myRows()).find((d) => d.date === "2026-11-15")?.checkOut === "17:00");
     const raw = await q<{ n: number }>("SELECT COUNT(*) AS n FROM attendance_device_users WHERE user_name LIKE ? OR user_name LIKE ?", ["%BIN_%", "%enroll%"]);
     assert("tabel user mesin tidak berisi data biometrik", Number(raw[0]?.n ?? 0) === 0);
 
@@ -99,9 +104,9 @@ async function main(): Promise<void> {
     const q1 = await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "GET_USER_ID_LIST", param: null } });
     const cmdId = (q1.json() as { data: { id: string } }).data.id;
     assert("direktur mengantrekan perintah → 201", q1.statusCode === 201 && /^CMD/.test(cmdId), q1.body);
-    const poll = await (async () => { const b = fkBody(cmdFrame("20261117080000").json); return app.inject({ method: "POST", url: "/fkweb", payload: b, headers: fkHeaders(dev, cmdFrame("x"), b.length) }); })();
+    const poll = await (async () => { const b = fkBody(cmdFrame("20261115080000").json); return app.inject({ method: "POST", url: "/fkweb", payload: b, headers: fkHeaders(dev, cmdFrame("x"), b.length) }); })();
     assert("receive_cmd → perintah dikirim (trans_id = id, cmd_code)", poll.headers.response_code === "OK" && poll.headers.trans_id === cmdId && poll.headers.cmd_code === "GET_USER_ID_LIST", JSON.stringify(poll.headers));
-    const again2 = await send(cmdFrame("20261117080020"));
+    const again2 = await send(cmdFrame("20261115080020"));
     assert("perintah tidak dikirim dua kali", again2.rc === "ERROR_NO_CMD");
     const resBody = fkBody({ user_id_array: [{ user_id: "12", user_name: "Siti" }], enroll_data: "BIN_9" });
     const resp = await app.inject({ method: "POST", url: "/fkweb", payload: resBody, headers: { ...fkHeaders(dev, { code: "send_cmd_result", trans: cmdId, json: {} }, resBody.length), cmd_return_code: "OK" } });
@@ -114,7 +119,7 @@ async function main(): Promise<void> {
     const q2 = await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "RESET_FK" } });
     const c2 = (q2.json() as { data: { id: string } }).data.id;
     const cancel = await app.inject({ method: "DELETE", url: `/api/attendance/devices/${dev}/commands/${c2}`, headers: hr });
-    assert("perintah yang belum terkirim bisa dibatalkan", cancel.statusCode === 200 && (await send(cmdFrame("20261117080040"))).rc === "ERROR_NO_CMD");
+    assert("perintah yang belum terkirim bisa dibatalkan", cancel.statusCode === 200 && (await send(cmdFrame("20261115080040"))).rc === "ERROR_NO_CMD");
     assert("kode perintah tidak sah → 400", (await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "rm -rf" } })).statusCode === 400);
     assert("alat belum terdaftar → 404", (await app.inject({ method: "POST", url: "/api/attendance/devices/TIDAK-ADA/commands", headers: hr, payload: { cmd: "RESET_FK" } })).statusCode === 404);
     const gudang = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? LIMIT 1", ["gudang"]))[0];
@@ -127,7 +132,7 @@ async function main(): Promise<void> {
     const act = (payload: Record<string, unknown>) => app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/actions`, headers: hr, payload });
     /** Satu putaran mesin: tanya perintah, lalu kirim jawabannya. */
     const round = async (answer: (code: string, trans: string) => { rc: string; json: Record<string, unknown> | null; tail?: Buffer }) => {
-      const b = fkBody(cmdFrame("20261117090000").json);
+      const b = fkBody(cmdFrame("20261115090000").json);
       const polled = await app.inject({ method: "POST", url: "/fkweb", payload: b, headers: fkHeaders(dev, cmdFrame("x"), b.length) });
       const code = String(polled.headers.cmd_code ?? "");
       const trans = String(polled.headers.trans_id ?? "");
@@ -158,25 +163,27 @@ async function main(): Promise<void> {
     assert("muat user menyelaraskan daftar: ID yang tak ada lagi di mesin dibuang", after.find((u) => u.userId === devPin) === undefined || after.find((u) => u.userId === devPin)?.employee !== null, JSON.stringify(after.map((u) => u.userId)));
     const raw12 = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [dev]);
     assert("tabel user mesin kini hanya ID dari mesin (12, 15)", raw12.map((r) => r.user_id).sort().join() === "12,15", JSON.stringify(raw12));
-    assert("tidak ada perintah tersisa setelah muat user", (await send(cmdFrame("20261117090100"))).rc === "ERROR_NO_CMD");
+    assert("tidak ada perintah tersisa setelah muat user", (await send(cmdFrame("20261115090100"))).rc === "ERROR_NO_CMD");
 
     const emp2 = `EMP-FK2-${stamp}`;
     await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [emp2, "Samarinda", JSON.stringify({ name: "Karyawan Baru Probe Dengan Nama Panjang Sekali", username: `55${Date.now() % 100000}`, status: "Aktif" }), new Date().toISOString()]);
     try {
       const push = await act({ action: "push_employee", employeeId: emp2 });
       assert("daftarkan karyawan → perintah pertama cek ID (GET_USER_INFO)", push.statusCode === 201 && (push.json() as { data: { cmdCode: string } }).data.cmdCode === "GET_USER_INFO", push.body);
-      const chk = await round(() => ({ rc: "ERROR_NO_USER", json: null }));
+      const chk = await round(() => ({ rc: "ERROR_NO_ID", json: null }));
       const set = await round(() => ({ rc: "OK", json: null }));
       const setParam = set.param as { user_id?: string; user_name?: string; enroll_data_array?: unknown[] } | null;
       const emp2Pin = String((JSON.parse((await q<{ data: string }>("SELECT data FROM employees WHERE id = ?", [emp2]))[0]!.data) as { devicePin?: string }).devicePin ?? "");
       assert("ID kosong → SET_USER_INFO (nama ≤ 24 huruf) → karyawan terhubung ke ID itu", chk.code === "GET_USER_INFO" && set.code === "SET_USER_INFO" && (setParam?.user_name ?? "").length <= 24 && emp2Pin !== "" && emp2Pin === setParam?.user_id, JSON.stringify({ set, emp2Pin }));
+      const chkRow = ((await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/commands`, headers: hr })).json() as { data: { commands: Array<{ cmdCode: string; status: string; meta?: { action?: string } }> } }).data.commands.find((c) => c.meta?.action === "push_check");
+      assert("cek ID kosong (mesin: ERROR_NO_ID) tercatat selesai, bukan ditolak", chkRow?.status === "done", JSON.stringify(chkRow));
       assert("daftarkan ulang karyawan yang sudah terhubung → 409", (await act({ action: "push_employee", employeeId: emp2 })).statusCode === 409);
 
       await exec("UPDATE employees SET data = ? WHERE id = ?", [JSON.stringify({ name: "Karyawan Kedua", username: "x", status: "Aktif" }), emp2]);
       await act({ action: "push_employee", employeeId: emp2, userId: "777" });
       const taken = await round(() => ({ rc: "OK", json: { user_id: "777", user_name: "Orang Lain", enroll_data_array: "BIN_1" }, tail: Buffer.alloc(300) }));
       const hist2 = (await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/commands`, headers: hr })).json() as { data: { commands: Array<{ cmdCode: string; status: string; result: unknown }> } };
-      assert("ID sudah dipakai di mesin → dibatalkan (ID_TAKEN), tidak ada SET_USER_INFO", taken.code === "GET_USER_INFO" && hist2.data.commands[0]?.status === "error" && JSON.stringify(hist2.data.commands[0]?.result).includes("ID_TAKEN") && (await send(cmdFrame("20261117090200"))).rc === "ERROR_NO_CMD", JSON.stringify(hist2.data.commands[0]));
+      assert("ID sudah dipakai di mesin → dibatalkan (ID_TAKEN), tidak ada SET_USER_INFO", taken.code === "GET_USER_INFO" && hist2.data.commands[0]?.status === "error" && JSON.stringify(hist2.data.commands[0]?.result).includes("ID_TAKEN") && (await send(cmdFrame("20261115090200"))).rc === "ERROR_NO_CMD", JSON.stringify(hist2.data.commands[0]));
       assert("ID yang tercatat dipakai di daftar mesin → 409 langsung", (await act({ action: "push_employee", employeeId: emp2, userId: "15" })).statusCode === 409);
 
       await linkPin(app, hr, "15", emp2);
@@ -190,8 +197,35 @@ async function main(): Promise<void> {
       await exec("DELETE FROM employees WHERE id = ?", [emp2]);
     }
 
+    /* --- log scan mesin --- */
+    type LogRow = { deviceId: string; userId: string; status: string; scanAt: string | null; employee: { id: string } | null };
+    const logs = async (qs = "") => (await app.inject({ method: "GET", url: `/api/attendance/device-logs?deviceId=${dev}${qs}`, headers: hr })).json() as { data: { total: number; rows: LogRow[]; summary: Record<string, number> } };
+    const lg = (await logs()).data;
+    const earlyLog = lg.rows.find((r) => r.userId === devPin && r.scanAt === "2026-11-15T07:30:00+08:00");
+    assert("log: scan sebelum ID terhubung kini berstatus diproses ulang & menunjuk karyawan", earlyLog?.status === "reprocessed" && earlyLog.employee?.id === empId, JSON.stringify(earlyLog));
+    assert("log: PIN tak dikenal berstatus menunggu dihubungkan", lg.rows.some((r) => r.userId === "99999999" && r.status === "pending"));
+    assert("log: scan langsung diterima tercatat", lg.rows.some((r) => r.status === "accepted" && r.employee?.id === empId));
+    const onlyPending = (await logs("&status=pending")).data;
+    assert("log: filter status & ringkasan", onlyPending.rows.every((r) => r.status === "pending") && onlyPending.summary.pending === onlyPending.total && onlyPending.total >= 1);
+    assert("log: cari ID mesin", (await logs(`&q=${devPin}`)).data.rows.every((r) => r.userId.includes(devPin)));
+    const d16 = (await myRows()).find((d) => d.date === "2026-11-16");
+    assert("hitungan scan harian: 3 tap unik (07:58, 12:01, 17:05), kiriman ulang tidak menambah", d16?.scanCount === 3 && JSON.stringify(d16.taps) === JSON.stringify(["07:58", "12:01", "17:05"]), JSON.stringify(d16));
+    type KRow = { userId: string; scanAt: string | null; kind: string | null; dayScans: number };
+    const kr = ((await app.inject({ method: "GET", url: `/api/attendance/device-logs?deviceId=${dev}&q=${pin}`, headers: hr })).json() as { data: { rows: KRow[] } }).data.rows;
+    const kindAt = (t: string) => kr.find((r) => r.scanAt === `2026-11-16T${t}:00+08:00`)?.kind;
+    assert("log: jenis scan terdeteksi (masuk 07:58, tambahan 12:01, pulang 17:05) + jumlah scan hari itu", kindAt("07:58") === "in" && kindAt("12:01") === "extra" && kindAt("17:05") === "out" && kr.find((r) => r.scanAt?.startsWith("2026-11-16"))?.dayScans === 3, JSON.stringify(kr.slice(0, 6)));
+    assert("log: rentang > 62 hari → 400", (await app.inject({ method: "GET", url: "/api/attendance/device-logs?from=2026-01-01&to=2026-12-31", headers: hr })).statusCode === 400);
+
     const bad = await app.inject({ method: "POST", url: "/fkweb", payload: Buffer.from("rusak"), headers: fkHeaders(dev, glogFrame(pin, "x"), 5) });
     assert("body rusak → tetap OK (tidak diulang mesin), tidak menulis absensi", bad.statusCode === 200 && String(bad.headers.response_code) === "OK" && (await myRows()).length === 2, `${bad.statusCode}`);
+    /* --- aturan penggabungan scan --- */
+    await exec("INSERT INTO attendance (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [`ABS-PROBE-${stamp}`, "Samarinda", JSON.stringify({ employeeId: empId, date: "2026-11-14", shift: "Pagi", status: "Izin", overtime: 0 }), new Date().toISOString()]);
+    await send(glogFrame(pin, "20261114080000"));
+    const izin = (await myRows()).find((d) => d.date === "2026-11-14");
+    assert("status Izin dari HR tidak ditimpa scan, jam scan tetap tercatat", izin?.status === "Izin" && izin.checkIn === "08:00", JSON.stringify(izin));
+    const before = (await myRows()).length;
+    const future = await send(glogFrame(pin, "20300101080000"));
+    assert("scan berjam ngawur → OK ke mesin, tidak jadi absensi", future.rc === "OK" && (await myRows()).length === before);
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));
