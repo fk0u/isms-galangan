@@ -34,6 +34,7 @@ import { registerInventoryIssueRoutes } from "./routes/inventoryIssue.js";
 import { registerInventoryAdditionalRoutes } from "./routes/inventoryAdditional.js";
 import { registerPublicLeaveRoutes } from "./routes/publicLeave.js";
 import { registerAttendanceIngestRoutes } from "./routes/attendanceIngest.js";
+import { registerAdmsRoutes } from "./routes/adms.js";
 import { registerReadModelRoutes } from "./routes/readModels.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerChangeOrderRoutes } from "./routes/changeOrders.js";
@@ -418,6 +419,7 @@ export function buildApp(): FastifyInstance {
   registerEventRoutes(app);
   registerPublicLeaveRoutes(app);
   registerAttendanceIngestRoutes(app);
+  registerAdmsRoutes(app);
   registerReadModelRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {

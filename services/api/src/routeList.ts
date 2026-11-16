@@ -28,5 +28,7 @@ export function routeList(app: FastifyInstance): RouteEntry[] {
 
 /** Rute yang bisa dipanggil tanpa token. */
 export function isPublicRoute(path: string): boolean {
-  return path === "/health" || path === "/api/auth/login" || path === "/api/auth/demo-login" || path.startsWith("/api/public/") || path.startsWith("/api/docs");
+  return path === "/health" || path === "/api/auth/login" || path === "/api/auth/demo-login" || path.startsWith("/api/public/") || path.startsWith("/api/docs")
+    // Mesin absensi ADMS: tanpa token, otorisasi lewat SN terdaftar (routes/adms.ts).
+    || path.startsWith("/iclock/");
 }

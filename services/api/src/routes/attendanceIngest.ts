@@ -36,17 +36,27 @@ export function witaParts(timestamp: string): { date: string; time: string } | n
   return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
 }
 
-/** Gabungkan tap ke baris harian: masuk = tap "in" paling awal, pulang = tap "out" paling akhir. Murni. */
-export function mergePunch(row: { checkIn?: string; checkOut?: string }, type: "in" | "out", time: string): { checkIn: string; checkOut: string } {
+/** Tap dari sumber mana pun. "auto" = mesin tanpa status masuk/pulang (ADMS). */
+export interface PunchInput { employeeNo: string; timestamp: string; type: "in" | "out" | "auto" }
+
+/** Gabungkan tap ke baris harian: masuk = tap "in" paling awal, pulang = tap "out" paling akhir.
+ *  "auto": tap paling awal hari itu = masuk, paling akhir = pulang (satu tap saja = belum pulang). Murni. */
+export function mergePunch(row: { checkIn?: string; checkOut?: string }, type: "in" | "out" | "auto", time: string): { checkIn: string; checkOut: string } {
   const checkIn = String(row.checkIn ?? "");
   const checkOut = String(row.checkOut ?? "");
+  if (type === "auto") {
+    const all = [checkIn, checkOut, time].filter((t) => t !== "").sort();
+    const first = all[0] ?? time;
+    const last = all[all.length - 1] ?? time;
+    return { checkIn: first, checkOut: last === first ? "" : last };
+  }
   if (type === "in") return { checkIn: checkIn === "" || time < checkIn ? time : checkIn, checkOut };
   return { checkIn, checkOut: checkOut === "" || time > checkOut ? time : checkOut };
 }
 
 export interface IngestResult { accepted: number; unknown: string[]; invalid: number }
 
-export async function applyPunches(punches: z.infer<typeof Punch>[], source: string): Promise<IngestResult> {
+export async function applyPunches(punches: PunchInput[], source: string): Promise<IngestResult> {
   return withTx(async () => {
     const emps = await q<{ id: string; branch: string; data: string }>("SELECT id, branch, data FROM employees", []);
     const byNik = new Map<string, { id: string; branch: string }>();
