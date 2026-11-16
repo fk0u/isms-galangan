@@ -3,8 +3,12 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
-import { collectDeviceUsers, nameScore, stripBiometric } from "../src/attendanceDevices.js";
+import { collectDeviceUsers, nameScore, parseBinBlocks, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
+
+async function linkPin(app: Awaited<ReturnType<typeof buildApp>>, headers: Record<string, string>, userId: string, employeeId: string): Promise<void> {
+  await app.inject({ method: "POST", url: "/api/attendance/device-users/link", headers, payload: { userId, employeeId } });
+}
 
 async function main(): Promise<void> {
   console.log("=== ISMS Fingerspot FK (fkweb) Probe ===");
@@ -22,6 +26,11 @@ async function main(): Promise<void> {
   assert("nameScore: singkatan cocok, nama lain tidak", nameScore("Budi S", "Budi Santoso") >= 0.8 && nameScore("John", "Budi Santoso") === 0);
   assert("stripBiometric menyensor template", JSON.stringify(stripBiometric({ enroll_data_array: [{ enroll_data: "BIN_1" }], user_id: "1" })).includes("<disensor>") && !JSON.stringify(stripBiometric({ enroll_data: "BIN_1" })).includes("BIN_1"));
   assert("collectDeviceUsers membaca daftar user bersarang", collectDeviceUsers({ user_list: [{ user_id: "3", user_name: "Ani" }, { user_id: 4 }] }).map((u) => u.userId).join() === "3,4");
+  const entry = (id: string): Buffer => { const b = Buffer.alloc(36); b.write(id, "latin1"); return b; };
+  const listBlock = (ids: string[]): Buffer => { const body = Buffer.concat(ids.map(entry)); const len = Buffer.alloc(4); len.writeUInt32LE(body.length, 0); return Buffer.concat([len, body]); };
+  assert("parseUserIdList: blok biner [len][entri 36 byte] → ID", parseUserIdList(parseBinBlocks(listBlock(["1", "27"]))[0]!, 36, 2).join() === "1,27");
+  assert("stripBiometric tidak menyensor supported_enroll_data", JSON.stringify(stripBiometric({ supported_enroll_data: ["FP", "FACE"] })).includes("FACE"));
+  assert("witaStamp 14 digit WITA", witaStamp(new Date("2026-11-16T05:00:00Z")) === "20261116130000");
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -112,6 +121,70 @@ async function main(): Promise<void> {
     if (gudang) {
       const gh = { authorization: `Bearer ${signToken({ id: gudang.id, username: gudang.username, role: gudang.role, branch: "Samarinda", v: gudang.token_version ?? 0 })}` };
       assert("peran tanpa izin HR → 403 di device-users & perintah", (await app.inject({ method: "GET", url: "/api/attendance/device-users", headers: gh })).statusCode === 403 && (await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: gh, payload: { cmd: "RESET_FK" } })).statusCode === 403);
+    }
+
+    /* --- aksi HR (kode perintah terbukti di mesin asli) --- */
+    const act = (payload: Record<string, unknown>) => app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/actions`, headers: hr, payload });
+    /** Satu putaran mesin: tanya perintah, lalu kirim jawabannya. */
+    const round = async (answer: (code: string, trans: string) => { rc: string; json: Record<string, unknown> | null; tail?: Buffer }) => {
+      const b = fkBody(cmdFrame("20261117090000").json);
+      const polled = await app.inject({ method: "POST", url: "/fkweb", payload: b, headers: fkHeaders(dev, cmdFrame("x"), b.length) });
+      const code = String(polled.headers.cmd_code ?? "");
+      const trans = String(polled.headers.trans_id ?? "");
+      if (!code) return { code: "", param: null as unknown };
+      const pBuf = polled.rawPayload;
+      const param = pBuf.length >= 4 ? parseFkBody(pBuf) : null;
+      const a = answer(code, trans);
+      const body = a.json ? Buffer.concat([fkBody(a.json), a.tail ?? Buffer.alloc(0)]) : Buffer.alloc(0);
+      await app.inject({ method: "POST", url: "/fkweb", payload: body, headers: { ...fkHeaders(dev, { code: "send_cmd_result", trans, json: {} }, body.length), cmd_return_code: a.rc } });
+      return { code, param };
+    };
+    const overview = async () => (await app.inject({ method: "GET", url: "/api/attendance/device-users", headers: hr })).json() as { data: { devices: Array<{ deviceId: string; stats: Record<string, unknown> | null }>; users: Array<{ userId: string; userName: string; employee: { id: string } | null }> } };
+
+    assert("aksi status → 201", (await act({ action: "status" })).statusCode === 201);
+    const st = await round(() => ({ rc: "OK", json: { user_count: 3, fp_count: 2, face_count: 1, all_log_count: 9 } }));
+    const stats = (await overview()).data.devices.find((d) => d.deviceId === dev)?.stats;
+    assert("GET_DEVICE_STATUS dikirim & ringkasannya tersimpan", st.code === "GET_DEVICE_STATUS" && stats?.user_count === 3, JSON.stringify(stats));
+
+    await act({ action: "sync_time" });
+    const tm = await round(() => ({ rc: "OK", json: null }));
+    assert("sinkron jam → SET_TIME {time: 14 digit WITA}", tm.code === "SET_TIME" && /^\d{14}$/.test(String((tm.param as { time?: string } | null)?.time ?? "")), JSON.stringify(tm));
+
+    await act({ action: "pull_users" });
+    const pl = await round(() => ({ rc: "OK", json: { one_user_id_size: 36, user_id_array: "BIN_1", user_id_count: 2 }, tail: listBlock(["12", "15"]) }));
+    const nm = await round((code) => ({ rc: "OK", json: code === "GET_USER_INFO" ? { user_id: "15", user_name: "Rina", enroll_data_array: "BIN_1", user_privilege: "USER" } : null, tail: Buffer.alloc(500) }));
+    const after = (await overview()).data.users;
+    assert("muat user: ID biner diurai, nama diminta otomatis (hanya yang belum bernama)", pl.code === "GET_USER_ID_LIST" && nm.code === "GET_USER_INFO" && (nm.param as { user_id?: string } | null)?.user_id === "15" && after.find((u) => u.userId === "15")?.userName === "Rina", JSON.stringify(nm));
+    assert("tidak ada perintah tersisa setelah muat user", (await send(cmdFrame("20261117090100"))).rc === "ERROR_NO_CMD");
+
+    const emp2 = `EMP-FK2-${stamp}`;
+    await exec("INSERT INTO employees (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [emp2, "Samarinda", JSON.stringify({ name: "Karyawan Baru Probe Dengan Nama Panjang Sekali", username: `55${Date.now() % 100000}`, status: "Aktif" }), new Date().toISOString()]);
+    try {
+      const push = await act({ action: "push_employee", employeeId: emp2 });
+      assert("daftarkan karyawan → perintah pertama cek ID (GET_USER_INFO)", push.statusCode === 201 && (push.json() as { data: { cmdCode: string } }).data.cmdCode === "GET_USER_INFO", push.body);
+      const chk = await round(() => ({ rc: "ERROR_NO_USER", json: null }));
+      const set = await round(() => ({ rc: "OK", json: null }));
+      const setParam = set.param as { user_id?: string; user_name?: string; enroll_data_array?: unknown[] } | null;
+      const emp2Pin = String((JSON.parse((await q<{ data: string }>("SELECT data FROM employees WHERE id = ?", [emp2]))[0]!.data) as { devicePin?: string }).devicePin ?? "");
+      assert("ID kosong → SET_USER_INFO (nama ≤ 24 huruf) → karyawan terhubung ke ID itu", chk.code === "GET_USER_INFO" && set.code === "SET_USER_INFO" && (setParam?.user_name ?? "").length <= 24 && emp2Pin !== "" && emp2Pin === setParam?.user_id, JSON.stringify({ set, emp2Pin }));
+      assert("daftarkan ulang karyawan yang sudah terhubung → 409", (await act({ action: "push_employee", employeeId: emp2 })).statusCode === 409);
+
+      await exec("UPDATE employees SET data = ? WHERE id = ?", [JSON.stringify({ name: "Karyawan Kedua", username: "x", status: "Aktif" }), emp2]);
+      await act({ action: "push_employee", employeeId: emp2, userId: "777" });
+      const taken = await round(() => ({ rc: "OK", json: { user_id: "777", user_name: "Orang Lain", enroll_data_array: "BIN_1" }, tail: Buffer.alloc(300) }));
+      const hist2 = (await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/commands`, headers: hr })).json() as { data: { commands: Array<{ cmdCode: string; status: string; result: unknown }> } };
+      assert("ID sudah dipakai di mesin → dibatalkan (ID_TAKEN), tidak ada SET_USER_INFO", taken.code === "GET_USER_INFO" && hist2.data.commands[0]?.status === "error" && JSON.stringify(hist2.data.commands[0]?.result).includes("ID_TAKEN") && (await send(cmdFrame("20261117090200"))).rc === "ERROR_NO_CMD", JSON.stringify(hist2.data.commands[0]));
+      assert("ID yang tercatat dipakai di daftar mesin → 409 langsung", (await act({ action: "push_employee", employeeId: emp2, userId: "15" })).statusCode === 409);
+
+      await linkPin(app, hr, "15", emp2);
+      await act({ action: "remove_user", userId: "15" });
+      const del = await round(() => ({ rc: "OK", json: null }));
+      const left = (await overview()).data.users.find((u) => u.userId === "15");
+      const pinNow = String((JSON.parse((await q<{ data: string }>("SELECT data FROM employees WHERE id = ?", [emp2]))[0]!.data) as { devicePin?: string }).devicePin ?? "");
+      assert("hapus dari mesin → DELETE_USER, ID dilepas dari karyawan & daftar mesin", del.code === "DELETE_USER" && (del.param as { user_id?: string } | null)?.user_id === "15" && left === undefined && pinNow === "", JSON.stringify({ del, left, pinNow }));
+      assert("aksi tak dikenal → 400", (await act({ action: "format_mesin" })).statusCode === 400);
+    } finally {
+      await exec("DELETE FROM employees WHERE id = ?", [emp2]);
     }
 
     const bad = await app.inject({ method: "POST", url: "/fkweb", payload: Buffer.from("rusak"), headers: fkHeaders(dev, glogFrame(pin, "x"), 5) });

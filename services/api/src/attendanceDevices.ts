@@ -19,7 +19,9 @@ export function stripBiometric(v: unknown): unknown {
   if (v && typeof v === "object") {
     const out: Record<string, unknown> = {};
     for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
-      out[k] = BIO_KEY.test(k) && x !== null && x !== "" && typeof x !== "number" && typeof x !== "boolean" ? "<disensor>" : stripBiometric(x);
+      // "supported_enroll_data" hanya daftar jenis biometrik yang didukung, bukan data biometrik.
+      const bio = BIO_KEY.test(k) && !/^supported_/.test(k);
+      out[k] = bio && x !== null && x !== "" && typeof x !== "number" && typeof x !== "boolean" ? "<disensor>" : stripBiometric(x);
     }
     return out;
   }
@@ -165,24 +167,26 @@ export async function linkDevicePin(userId: string, employeeId: string | null): 
 export interface DeviceCommand {
   id: string; deviceId: string; cmdCode: string; param: unknown; status: string; result: unknown;
   createdBy: string; createdAt: string; sentAt: string | null; doneAt: string | null;
+  /** Konteks sisi server (tidak dikirim ke mesin), mis. {action, employeeId}. */
+  meta?: unknown;
 }
-type CmdRow = { id: string; device_id: string; cmd_code: string; param: string | null; status: string; result: string | null; created_by: string | null; created_at: string; sent_at: string | null; done_at: string | null };
+type CmdRow = { id: string; device_id: string; cmd_code: string; param: string | null; status: string; result: string | null; created_by: string | null; created_at: string; sent_at: string | null; done_at: string | null; meta?: string | null };
 const parse = (s: string | null): unknown => { if (s === null) return null; try { return JSON.parse(s) as unknown; } catch { return s; } };
 const toCmd = (r: CmdRow): DeviceCommand => ({
   id: r.id, deviceId: r.device_id, cmdCode: r.cmd_code, param: parse(r.param), status: r.status, result: parse(r.result),
-  createdBy: r.created_by ?? "", createdAt: r.created_at, sentAt: r.sent_at, doneAt: r.done_at,
+  createdBy: r.created_by ?? "", createdAt: r.created_at, sentAt: r.sent_at, doneAt: r.done_at, meta: parse(r.meta ?? null),
 });
 /** Perintah terkirim tanpa jawaban selama ini dianggap timeout. */
 const SENT_TIMEOUT_MS = 5 * 60_000;
 
-export async function enqueueCommand(deviceId: string, cmdCode: string, param: unknown, by: string): Promise<DeviceCommand> {
+export async function enqueueCommand(deviceId: string, cmdCode: string, param: unknown, by: string, meta: unknown = null): Promise<DeviceCommand> {
   const id = `CMD${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString("hex").toUpperCase()}`;
   const t = now();
   await exec(
-    "INSERT INTO attendance_device_commands (id, device_id, cmd_code, param, status, created_by, created_at) VALUES (?, ?, ?, ?, 'queued', ?, ?)",
-    [id, deviceId, cmdCode, param === undefined || param === null ? null : JSON.stringify(param), by, t],
+    "INSERT INTO attendance_device_commands (id, device_id, cmd_code, param, status, created_by, created_at, meta) VALUES (?, ?, ?, ?, 'queued', ?, ?, ?)",
+    [id, deviceId, cmdCode, param === undefined || param === null ? null : JSON.stringify(param), by, t, meta === null ? null : JSON.stringify(meta)],
   );
-  return { id, deviceId, cmdCode, param: param ?? null, status: "queued", result: null, createdBy: by, createdAt: t, sentAt: null, doneAt: null };
+  return { id, deviceId, cmdCode, param: param ?? null, status: "queued", result: null, createdBy: by, createdAt: t, sentAt: null, doneAt: null, meta };
 }
 
 /** Ambil perintah tertua untuk mesin ini dan tandai terkirim (aman bila dua permintaan bersamaan). */
@@ -198,16 +202,134 @@ export async function takeNextCommand(deviceId: string): Promise<DeviceCommand |
   return null;
 }
 
-/** Simpan jawaban mesin untuk perintah (dicocokkan lewat trans_id = id perintah). */
-export async function recordCommandResult(deviceId: string, cmdId: string, returnCode: string, requestCode: string, json: unknown, binaryBytes: number): Promise<boolean> {
+/** Blok biner setelah JSON: rangkaian [uint32 LE panjang][isi]. Bila tidak
+ *  cocok dengan pola itu, seluruh ekor dianggap satu blok. Murni. */
+export function parseBinBlocks(tail: Buffer): Buffer[] {
+  const out: Buffer[] = [];
+  let i = 0;
+  while (i + 4 <= tail.length) {
+    const n = tail.readUInt32LE(i);
+    if (n === 0 || i + 4 + n > tail.length) break;
+    out.push(tail.subarray(i + 4, i + 4 + n));
+    i += 4 + n;
+  }
+  return i === tail.length && out.length > 0 ? out : tail.length > 0 ? [tail] : [];
+}
+
+/** Daftar ID user dari blok biner GET_USER_ID_LIST: entri berukuran tetap
+ *  (one_user_id_size), ID = teks sampai byte NUL pertama. Murni. */
+export function parseUserIdList(block: Buffer, entrySize: number, count: number): string[] {
+  const ids: string[] = [];
+  if (entrySize <= 0) return ids;
+  for (let k = 0; k < count && (k + 1) * entrySize <= block.length; k += 1) {
+    const raw = block.subarray(k * entrySize, (k + 1) * entrySize).toString("latin1");
+    const id = raw.split("\0")[0]?.trim() ?? "";
+    if (/^[A-Za-z0-9_-]{1,64}$/.test(id)) ids.push(id);
+  }
+  return ids;
+}
+
+/** Waktu WITA "YYYYMMDDHHmmss" untuk SET_TIME. Murni. */
+export const witaStamp = (d = new Date()): string => new Date(d.getTime() + 8 * 3600_000).toISOString().replace(/\D/g, "").slice(0, 14);
+
+/** Simpan jawaban mesin untuk perintah (dicocokkan lewat trans_id = id perintah),
+ *  lalu jalankan tindak lanjutnya (lihat afterResult). */
+export async function recordCommandResult(deviceId: string, cmdId: string, returnCode: string, requestCode: string, json: unknown, tail: Buffer = Buffer.alloc(0)): Promise<boolean> {
   const ok = returnCode === "" || /^OK$/i.test(returnCode);
-  const result = JSON.stringify({ returnCode, requestCode, data: stripBiometric(json), binaryBytes }).slice(0, 200_000);
+  const result = JSON.stringify({ returnCode, requestCode, data: stripBiometric(json), binaryBytes: tail.length }).slice(0, 200_000);
   const res = await exec(
     "UPDATE attendance_device_commands SET status = ?, result = ?, done_at = ? WHERE id = ? AND device_id = ? AND status IN ('sent', 'timeout')",
     [ok ? "done" : "error", result, now(), cmdId, deviceId],
   );
-  if (res.changes === 1) for (const u of collectDeviceUsers(json)) await upsertDeviceUser(deviceId, u.userId, u.userName);
-  return res.changes === 1;
+  if (res.changes !== 1) return false;
+  if (ok) for (const u of collectDeviceUsers(json)) await upsertDeviceUser(deviceId, u.userId, u.userName);
+  const row = (await q<CmdRow>("SELECT * FROM attendance_device_commands WHERE id = ?", [cmdId]))[0];
+  if (row) await afterResult(toCmd(row), ok, json, tail);
+  return true;
+}
+
+/* ---------- aksi HR & tindak lanjut hasil perintah ---------- */
+type Meta = { action?: string; employeeId?: string; userId?: string; userName?: string; by?: string };
+
+/** Tindak lanjut otomatis setelah mesin menjawab:
+ *  - GET_USER_ID_LIST  → catat ID, minta nama tiap ID yang belum bernama;
+ *  - GET_USER_INFO (cek ID kosong untuk pendaftaran) → bila kosong, buat user;
+ *  - SET_USER_INFO (pendaftaran) → hubungkan ID ke karyawan;
+ *  - DELETE_USER → lepas ID dari karyawan & daftar user mesin;
+ *  - GET_DEVICE_STATUS → simpan ringkasan jumlah user/biometrik/log. */
+async function afterResult(cmd: DeviceCommand, ok: boolean, json: unknown, tail: Buffer): Promise<void> {
+  const meta = (cmd.meta ?? {}) as Meta;
+  const by = meta.by ?? cmd.createdBy;
+  const data = (json && typeof json === "object" ? json : {}) as Record<string, unknown>;
+  if (cmd.cmdCode === "GET_USER_ID_LIST" && ok) {
+    const blocks = parseBinBlocks(tail);
+    const ids = parseUserIdList(blocks[0] ?? Buffer.alloc(0), Number(data.one_user_id_size ?? 0), Number(data.user_id_count ?? 0));
+    const known = new Map((await q<{ user_id: string; user_name: string | null }>("SELECT user_id, user_name FROM attendance_device_users WHERE device_id = ?", [cmd.deviceId])).map((r) => [r.user_id, r.user_name ?? ""]));
+    for (const id of ids) {
+      if (!known.has(id)) await upsertDeviceUser(cmd.deviceId, id, "");
+      if (!known.get(id)) await enqueueCommand(cmd.deviceId, "GET_USER_INFO", { user_id: id }, by, { action: "pull_name", userId: id, by });
+    }
+    return;
+  }
+  if (cmd.cmdCode === "GET_USER_INFO" && meta.action === "push_check" && meta.userId && meta.employeeId) {
+    const taken = ok && String(data.user_id ?? "") === meta.userId;
+    if (taken) {
+      await exec("UPDATE attendance_device_commands SET status = 'error', result = ? WHERE id = ?", [JSON.stringify({ returnCode: "ID_TAKEN", message: `ID ${meta.userId} sudah dipakai di mesin; pendaftaran dibatalkan agar biometrik user lain tidak tertimpa`, data: stripBiometric(json) }), cmd.id]);
+      return;
+    }
+    await enqueueCommand(cmd.deviceId, "SET_USER_INFO", { user_id: meta.userId, user_name: meta.userName ?? "", user_privilege: "USER", enroll_data_array: [] }, by, { action: "push", userId: meta.userId, employeeId: meta.employeeId, userName: meta.userName, by });
+    return;
+  }
+  if (cmd.cmdCode === "SET_USER_INFO" && meta.action === "push" && ok && meta.userId && meta.employeeId) {
+    await upsertDeviceUser(cmd.deviceId, meta.userId, meta.userName ?? "");
+    await linkDevicePin(meta.userId, meta.employeeId);
+    return;
+  }
+  if (cmd.cmdCode === "DELETE_USER" && meta.action === "remove" && ok && meta.userId) {
+    await exec("DELETE FROM attendance_device_users WHERE device_id = ? AND user_id = ?", [cmd.deviceId, meta.userId]);
+    await linkDevicePin(meta.userId, null);
+    return;
+  }
+  if (cmd.cmdCode === "GET_DEVICE_STATUS" && ok) {
+    await exec("UPDATE attendance_device_status SET stats = ? WHERE device_id = ?", [JSON.stringify({ ...data, at: now() }).slice(0, 4000), cmd.deviceId]);
+  }
+}
+
+/** ID berikutnya untuk karyawan baru di mesin: angka terbesar yang dikenal + 1. */
+export async function nextDeviceUserId(deviceId: string): Promise<string> {
+  const users = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [deviceId]);
+  const pins = (await loadEmployees()).map((e) => e.devicePin);
+  const nums = [...users.map((u) => u.user_id), ...pins].filter((v) => /^\d{1,9}$/.test(v)).map(Number);
+  return String((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+export type HrAction =
+  | { action: "status" } | { action: "sync_time" } | { action: "restart" } | { action: "pull_users" }
+  | { action: "push_employee"; employeeId: string; userId?: string }
+  | { action: "remove_user"; userId: string };
+
+/** Ubah aksi HR menjadi perintah firmware (kode terbukti di mesin asli, 16 Nov 2026). */
+export async function enqueueHrAction(deviceId: string, a: HrAction, by: string): Promise<{ command: DeviceCommand } | { error: string; status: number }> {
+  switch (a.action) {
+    case "status": return { command: await enqueueCommand(deviceId, "GET_DEVICE_STATUS", null, by, { action: "status", by }) };
+    case "sync_time": return { command: await enqueueCommand(deviceId, "SET_TIME", { time: witaStamp() }, by, { action: "sync_time", by }) };
+    case "restart": return { command: await enqueueCommand(deviceId, "RESET_FK", null, by, { action: "restart", by }) };
+    case "pull_users": return { command: await enqueueCommand(deviceId, "GET_USER_ID_LIST", null, by, { action: "pull_users", by }) };
+    case "remove_user": return { command: await enqueueCommand(deviceId, "DELETE_USER", { user_id: a.userId }, by, { action: "remove", userId: a.userId, by }) };
+    case "push_employee": {
+      const emp = (await loadEmployees()).find((e) => e.id === a.employeeId);
+      if (!emp) return { error: "Karyawan tidak ditemukan", status: 404 };
+      if (emp.devicePin) return { error: `Karyawan sudah terhubung ke ID mesin ${emp.devicePin}`, status: 409 };
+      const userId = a.userId?.trim() || await nextDeviceUserId(deviceId);
+      const known = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ? AND user_id = ?", [deviceId, userId]);
+      if (known.length > 0) return { error: `ID ${userId} sudah dipakai di mesin`, status: 409 };
+      // Nama di layar mesin terbatas; 24 karakter cukup untuk nama + inisial.
+      const userName = emp.name.trim().slice(0, 24);
+      /* Cek dulu ID kosong di mesin (GET_USER_INFO). SET_USER_INFO ke ID yang
+         sudah ada bisa menimpa biometrik orang lain - pendaftaran dibatalkan bila terpakai. */
+      return { command: await enqueueCommand(deviceId, "GET_USER_INFO", { user_id: userId }, by, { action: "push_check", userId, employeeId: emp.id, userName, by }) };
+    }
+  }
 }
 
 export async function listCommands(deviceId: string, limit = 30): Promise<DeviceCommand[]> {

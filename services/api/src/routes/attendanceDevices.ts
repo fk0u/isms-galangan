@@ -4,6 +4,8 @@
  *   GET    /api/attendance/devices/:id/commands      riwayat perintah ke mesin
  *   POST   /api/attendance/devices/:id/commands      antrekan perintah (mentah: developer/direktur)
  *   DELETE /api/attendance/devices/:id/commands/:cmd batalkan perintah yang belum terkirim
+ *   POST   /api/attendance/devices/:id/actions       aksi HR: status, sinkron jam, restart,
+ *                                                    muat user, daftarkan karyawan, hapus user
  * HR = boleh tulis absensi DAN karyawan (sama dengan pendaftaran alat). */
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -13,11 +15,20 @@ import { q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { can, normalizeRole } from "../policy.js";
 import {
-  cancelCommand, enqueueCommand, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
+  cancelCommand, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
+  type HrAction,
 } from "../attendanceDevices.js";
 
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const LinkSchema = z.object({ userId: z.string().trim().regex(ID_RE), employeeId: z.string().trim().min(1).max(128).nullable() });
+const ActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("status") }),
+  z.object({ action: z.literal("sync_time") }),
+  z.object({ action: z.literal("restart") }),
+  z.object({ action: z.literal("pull_users") }),
+  z.object({ action: z.literal("push_employee"), employeeId: z.string().trim().min(1).max(128), userId: z.string().trim().regex(/^\d{1,9}$/).optional() }),
+  z.object({ action: z.literal("remove_user"), userId: z.string().trim().regex(ID_RE) }),
+]);
 const CmdSchema = z.object({
   cmd: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,39}$/),
   param: z.record(z.unknown()).nullable().optional(),
@@ -36,7 +47,7 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengelola mesin absensi", "FORBIDDEN"));
     const [devices, status, users, emps, pending] = await Promise.all([
       registeredDevices(),
-      q<{ device_id: string; last_seen: string; info: string | null; ip: string | null }>("SELECT device_id, last_seen, info, ip FROM attendance_device_status", []),
+      q<{ device_id: string; last_seen: string; info: string | null; ip: string | null; stats: string | null }>("SELECT device_id, last_seen, info, ip, stats FROM attendance_device_status", []),
       q<{ device_id: string; user_id: string; user_name: string | null; last_seen: string }>("SELECT device_id, user_id, user_name, last_seen FROM attendance_device_users", []),
       loadEmployees(),
       pendingPunches(),
@@ -77,8 +88,10 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
       devices: devices.map((id) => {
         const s = statusBy.get(id);
         let info: unknown = null;
+        let stats: unknown = null;
         try { info = s?.info ? JSON.parse(s.info) as unknown : null; } catch { info = null; }
-        return { deviceId: id, lastSeen: s?.last_seen ?? null, ip: s?.ip ?? null, info };
+        try { stats = s?.stats ? JSON.parse(s.stats) as unknown : null; } catch { stats = null; }
+        return { deviceId: id, lastSeen: s?.last_seen ?? null, ip: s?.ip ?? null, info, stats };
       }),
       users: rows,
       employees: emps.filter((e) => e.status !== "Nonaktif" && e.status !== "Keluar")
@@ -126,6 +139,21 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     const cmd = await enqueueCommand(id, parsed.data.cmd, parsed.data.param ?? null, requestActor(req));
     await writeAudit({ actor: requestActor(req), action: "attendance_device_command", table: "attendance", rowId: cmd.id, diff: { deviceId: id, cmd: cmd.cmdCode, param: cmd.param }, ip: requestIp(req) });
     return reply.status(201).send(ok(cmd));
+  });
+
+  /* Aksi HR bertipe: kode perintah firmware sudah terbukti di mesin asli
+     (GET_DEVICE_STATUS, SET_TIME, RESET_FK, GET_USER_ID_LIST, GET/SET_USER_INFO,
+     DELETE_USER). Pendaftaran karyawan selalu mengecek ID kosong dulu. */
+  app.post("/api/attendance/devices/:id/actions", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengelola mesin absensi", "FORBIDDEN"));
+    const { id } = req.params as { id: string };
+    if (!(await registeredDevices()).includes(id)) return reply.status(404).send(fail("Alat belum terdaftar", "NOT_FOUND"));
+    const parsed = ActionSchema.safeParse(req.body);
+    if (!parsed.success) return reply.status(400).send(fail("Aksi tidak dikenal", "VALIDATION_ERROR"));
+    const res = await enqueueHrAction(id, parsed.data as HrAction, requestActor(req));
+    if ("error" in res) return reply.status(res.status).send(fail(res.error, res.status === 404 ? "NOT_FOUND" : "CONFLICT"));
+    await writeAudit({ actor: requestActor(req), action: "attendance_device_action", table: "attendance", rowId: res.command.id, diff: { deviceId: id, ...parsed.data, cmd: res.command.cmdCode }, ip: requestIp(req) });
+    return reply.status(201).send(ok(res.command));
   });
 
   app.delete("/api/attendance/devices/:id/commands/:cmd", { preHandler: [requireAuth] }, async (req, reply) => {

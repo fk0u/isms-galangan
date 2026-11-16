@@ -2,8 +2,8 @@
 // karyawan (ID di mesin tidak bisa diubah, jadi karyawan yang memegang "ID
 // mesin"), dan konsol perintah ke mesin lewat server (developer/direktur).
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Cpu, Link2, Unlink, RefreshCw, Send, X } from "lucide-react";
-import { AsyncButton, Badge, EmptyState, Field, Modal, toast } from "../../components/ui";
+import { Cpu, Link2, Unlink, RefreshCw, Send, X, Clock, Power, Users, UserPlus, Trash2, Activity } from "lucide-react";
+import { AsyncButton, Badge, ConfirmModal, EmptyState, Field, Modal, toast } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
 import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
@@ -11,7 +11,9 @@ import { n_emp } from "../../i18n/n_emp";
 import { apiFetch } from "../../services/http";
 import { fmtTanggalJam } from "../../utils/format";
 
-interface DeviceRow { deviceId: string; lastSeen: string | null; ip: string | null; info: { firmware?: string; fk_name?: string } | null }
+interface DeviceStats { user_count?: number; user_max?: number; fp_count?: number; face_count?: number; pv_count?: number; idcard_count?: number; all_log_count?: number; at?: string }
+interface DeviceRow { deviceId: string; lastSeen: string | null; ip: string | null; info: { firmware?: string; fk_name?: string } | null; stats: DeviceStats | null }
+type HrAction = "status" | "sync_time" | "restart" | "pull_users";
 interface DeviceUser {
   deviceId: string; userId: string; userName: string; lastSeen: string; pending: number;
   employee: { id: string; name: string; via: "devicePin" | "nik" } | null;
@@ -19,7 +21,7 @@ interface DeviceUser {
 }
 interface EmpOpt { id: string; name: string; nik: string; devicePin: string }
 interface Overview { devices: DeviceRow[]; users: DeviceUser[]; employees: EmpOpt[]; canRaw: boolean }
-interface Command { id: string; cmdCode: string; param: unknown; status: string; result: unknown; createdBy: string; createdAt: string; sentAt: string | null; doneAt: string | null }
+interface Command { id: string; cmdCode: string; param: unknown; status: string; result: unknown; createdBy: string; createdAt: string; sentAt: string | null; doneAt: string | null; meta?: { action?: string; userId?: string; userName?: string } | null }
 
 /** Mesin bertanya perintah tiap ±20 detik; lebih dari 2 menit diam = offline. */
 const ONLINE_MS = 2 * 60_000;
@@ -33,15 +35,65 @@ export default function DeviceManager() {
   const [loading, setLoading] = useState(true);
   const [pick, setPick] = useState<Record<string, string>>({});
   const [consoleDev, setConsoleDev] = useState<string | null>(null);
+  const [cmds, setCmds] = useState<Record<string, Command[]>>({});
+  const [restartDev, setRestartDev] = useState<string | null>(null);
+  const [removeUser, setRemoveUser] = useState<DeviceUser | null>(null);
+  const [pushDev, setPushDev] = useState<string | null>(null);
+  const [pushEmp, setPushEmp] = useState("");
+  const [pushId, setPushId] = useState("");
+  const [pushIdErr, setPushIdErr] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
-    try { setData(await apiFetch<Overview>("/api/attendance/device-users")); } catch (e) { toast(e instanceof Error ? e.message : E.ingFail, "info"); } finally { setLoading(false); }
+    try {
+      const ov = await apiFetch<Overview>("/api/attendance/device-users");
+      setData(ov);
+      // Riwayat aksi per mesin (HR boleh membaca) - menampilkan status antre/terkirim/selesai.
+      const entries = await Promise.all(ov.devices.map(async (d) => {
+        try { return [d.deviceId, (await apiFetch<{ commands: Command[] }>(`/api/attendance/devices/${encodeURIComponent(d.deviceId)}/commands`)).commands] as const; } catch { return [d.deviceId, [] as Command[]] as const; }
+      }));
+      setCmds(Object.fromEntries(entries));
+    } catch (e) { toast(e instanceof Error ? e.message : E.ingFail, "info"); } finally { setLoading(false); }
   }, [E.ingFail]);
+  // Antrean aktif → muat ulang lebih sering supaya hasil perintah cepat terlihat.
+  const busy = Object.values(cmds).some((l) => l.some((c) => c.status === "queued" || c.status === "sent"));
   useEffect(() => {
     void load();
-    const t = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, 20_000);
+    const t = window.setInterval(() => { if (document.visibilityState === "visible") void load(); }, busy ? 6_000 : 20_000);
     return () => window.clearInterval(t);
-  }, [load]);
+  }, [load, busy]);
+
+  const runAction = async (deviceId: string, body: Record<string, unknown>, okMsg: string): Promise<boolean> => {
+    try {
+      await apiFetch(`/api/attendance/devices/${encodeURIComponent(deviceId)}/actions`, { method: "POST", body: JSON.stringify(body) });
+      toast(okMsg, "success");
+      await load();
+      return true;
+    } catch (e) { toast(e instanceof Error ? e.message : E.ingFail, "info"); return false; }
+  };
+  const quick = (deviceId: string, action: HrAction): Promise<boolean> => runAction(deviceId, { action }, E.devActQueued);
+  const pushEmployee = async (): Promise<void> => {
+    if (!pushDev || !pushEmp) return;
+    const id = pushId.trim();
+    if (id && !/^\d{1,9}$/.test(id)) { setPushIdErr(E.devPushIdInvalid); return; }
+    const done = await runAction(pushDev, { action: "push_employee", employeeId: pushEmp, ...(id ? { userId: id } : {}) }, E.devPushQueued);
+    if (done) { setPushDev(null); setPushEmp(""); setPushId(""); }
+  };
+  const actionLabel = (c: Command): string => {
+    const a = c.meta?.action ?? "";
+    const map: Record<string, string> = {
+      status: E.devActStatus, sync_time: E.devActTime, restart: E.devActRestart, pull_users: E.devActPull,
+      pull_name: E.devActPullName.replace("{n}", c.meta?.userId ?? ""), push_check: E.devActPushCheck.replace("{n}", c.meta?.userId ?? ""),
+      push: E.devActPush.replace("{a}", c.meta?.userName ?? "").replace("{n}", c.meta?.userId ?? ""), remove: E.devActRemove.replace("{n}", c.meta?.userId ?? ""),
+    };
+    return map[a] ?? c.cmdCode;
+  };
+  const resultNote = (c: Command): string => {
+    const r = c.result as { returnCode?: string } | null;
+    if (c.status === "error" && r?.returnCode === "ID_TAKEN") return E.devIdTaken;
+    if (c.status === "done" && c.meta?.action === "push_check") return E.devIdFree;
+    if (c.status === "sent" && c.meta?.action === "restart") return E.devRestartSent;
+    return "";
+  };
 
   const empName = useMemo(() => new Map((data?.employees ?? []).map((e) => [e.id, e])), [data]);
   const options = useMemo(() => (data?.employees ?? []).map((e) => ({
@@ -84,8 +136,31 @@ export default function DeviceManager() {
                 <span className="shrink-0"><Badge tone={online ? "green" : d.lastSeen ? "amber" : "gray"}>{online ? E.devOnline : d.lastSeen ? E.devOffline : E.devNever}</Badge></span>
               </div>
               <p className="mt-3 text-xs text-steel-500">{d.lastSeen ? E.devLastSeen.replace("{t}", fmtTanggalJam(d.lastSeen)) : E.devNeverHint}</p>
-              {data.canRaw && (
-                <button type="button" className="btn-secondary mt-3 text-xs" onClick={() => setConsoleDev(d.deviceId)}><Send className="h-3.5 w-3.5" /> {E.devConsole}</button>
+              {d.stats && (
+                <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  {([[E.devStatUsers, d.stats.user_count], [E.devStatFp, d.stats.fp_count], [E.devStatFace, d.stats.face_count], [E.devStatPalm, d.stats.pv_count], [E.devStatCard, d.stats.idcard_count], [E.devStatLogs, d.stats.all_log_count]] as const).map(([k, v]) => (
+                    <div key={k} className="rounded-lg bg-surface px-2 py-1.5"><dd className="text-sm font-semibold tabular-nums text-navy-900">{v ?? "-"}</dd><dt className="text-[11px] text-steel-500">{k}</dt></div>
+                  ))}
+                </dl>
+              )}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <AsyncButton className="btn-secondary text-xs" onAction={() => quick(d.deviceId, "status")}><Activity className="h-3.5 w-3.5" /> {E.devBtnStatus}</AsyncButton>
+                <AsyncButton className="btn-secondary text-xs" onAction={() => quick(d.deviceId, "sync_time")}><Clock className="h-3.5 w-3.5" /> {E.devBtnTime}</AsyncButton>
+                <AsyncButton className="btn-secondary text-xs" onAction={() => quick(d.deviceId, "pull_users")}><Users className="h-3.5 w-3.5" /> {E.devBtnPull}</AsyncButton>
+                <button type="button" className="btn-secondary text-xs" onClick={() => setRestartDev(d.deviceId)}><Power className="h-3.5 w-3.5" /> {E.devBtnRestart}</button>
+                {data.canRaw && (
+                  <button type="button" className="btn-secondary text-xs" onClick={() => setConsoleDev(d.deviceId)}><Send className="h-3.5 w-3.5" /> {E.devConsole}</button>
+                )}
+              </div>
+              {(cmds[d.deviceId] ?? []).length > 0 && (
+                <ul className="mt-3 space-y-1 border-t border-steel-100 pt-2">
+                  {(cmds[d.deviceId] ?? []).slice(0, 4).map((c) => (
+                    <li key={c.id} className="flex items-start justify-between gap-2 text-xs">
+                      <span className="min-w-0 text-steel-600"><span className="block truncate">{actionLabel(c)}</span>{resultNote(c) && <span className="block text-[11px] text-steel-400">{resultNote(c)}</span>}</span>
+                      <span className="shrink-0"><Badge tone={STATUS_TONE[c.status] ?? "gray"}>{E.devStatus[c.status as keyof typeof E.devStatus] ?? c.status}</Badge></span>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           );
@@ -98,9 +173,10 @@ export default function DeviceManager() {
             <h3 className="text-[15px] font-semibold text-navy-900">{E.devUsersTitle}</h3>
             <p className="text-xs text-steel-500">{E.devUsersSub}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {unlinked > 0 && <Badge tone="amber">{E.devUnlinkedCount.replace("{n}", String(unlinked))}</Badge>}
             <AsyncButton className="btn-secondary text-xs" onAction={load}><RefreshCw className="h-3.5 w-3.5" /> {E.devRefresh}</AsyncButton>
+            <button type="button" className="btn-primary text-xs" onClick={() => { setPushDev(data.devices[0]?.deviceId ?? null); setPushEmp(""); setPushId(""); setPushIdErr(null); }}><UserPlus className="h-3.5 w-3.5" /> {E.devBtnPush}</button>
           </div>
         </div>
         {data.users.length === 0 ? (
@@ -145,9 +221,12 @@ export default function DeviceManager() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         {u.employee ? (
-                          u.employee.via === "devicePin" && (
-                            <AsyncButton className="btn-secondary text-xs" onAction={() => link(u, null)}><Unlink className="h-3.5 w-3.5" /> {E.devUnlink}</AsyncButton>
-                          )
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            {u.employee.via === "devicePin" && (
+                              <AsyncButton className="btn-secondary text-xs" onAction={() => link(u, null)}><Unlink className="h-3.5 w-3.5" /> {E.devUnlink}</AsyncButton>
+                            )}
+                            <button type="button" className="btn-secondary text-xs text-red-600" onClick={() => setRemoveUser(u)} aria-label={E.devRemoveFor.replace("{n}", u.userId)}><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
                         ) : (
                           <AsyncButton className="btn-primary text-xs" disabled={!chosen} onAction={() => link(u, chosen)}><Link2 className="h-3.5 w-3.5" /> {E.devLink}</AsyncButton>
                         )}
@@ -162,6 +241,43 @@ export default function DeviceManager() {
       </div>
 
       {consoleDev && <CommandConsole deviceId={consoleDev} onClose={() => setConsoleDev(null)} />}
+
+      <ConfirmModal open={restartDev !== null} title={E.devRestartTitle} desc={E.devRestartDesc} confirmLabel={E.devBtnRestart} danger
+        onCancel={() => setRestartDev(null)}
+        onConfirm={async () => { if (restartDev) await quick(restartDev, "restart"); setRestartDev(null); }} />
+      <ConfirmModal open={removeUser !== null} title={E.devRemoveTitle.replace("{n}", removeUser?.userId ?? "")}
+        desc={E.devRemoveDesc.replace("{a}", removeUser?.employee?.name ?? removeUser?.userName ?? "").replace("{n}", removeUser?.userId ?? "")}
+        confirmLabel={E.devRemoveBtn} danger onCancel={() => setRemoveUser(null)}
+        onConfirm={async () => { if (removeUser) await runAction(removeUser.deviceId, { action: "remove_user", userId: removeUser.userId }, E.devActQueued); setRemoveUser(null); }} />
+
+      <Modal open={pushDev !== null} onClose={() => setPushDev(null)} title={E.devPushTitle} subtitle={E.devPushSub}
+        footer={<>
+          <button type="button" className="btn-secondary" onClick={() => setPushDev(null)}>{E.ingCancel}</button>
+          <AsyncButton className="btn-primary" disabled={!pushEmp} onAction={pushEmployee}><UserPlus className="h-4 w-4" /> {E.devPushBtn}</AsyncButton>
+        </>}>
+        <div className="space-y-4">
+          {data.devices.length > 1 && (
+            <Field label={E.devPushDevice}>
+              <select className="input" value={pushDev ?? ""} onChange={(e) => setPushDev(e.target.value)}>
+                {data.devices.map((d) => <option key={d.deviceId} value={d.deviceId}>{d.deviceId}</option>)}
+              </select>
+            </Field>
+          )}
+          <Field label={E.devPushEmp} required>
+            <SearchSelect value={pushEmp} onChange={setPushEmp} options={options.filter((o) => !empName.get(o.value)?.devicePin)}
+              placeholder={E.devPickEmp} ariaLabel={E.devPushEmp} emptyText={E.devNoEmp} />
+          </Field>
+          <Field label={E.devPushId} hint={E.devPushIdHint} error={pushIdErr}>
+            <input className="input font-mono" inputMode="numeric" value={pushId} placeholder={E.devPushIdAuto}
+              onChange={(e) => { setPushId(e.target.value); setPushIdErr(null); }} />
+          </Field>
+          <ol className="space-y-2 rounded-xl bg-surface p-4 text-sm text-steel-700">
+            {[E.devPushStep1, E.devPushStep2, E.devPushStep3].map((t, i) => (
+              <li key={t} className="flex gap-2.5"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-navy-900">{i + 1}</span><span>{t}</span></li>
+            ))}
+          </ol>
+        </div>
+      </Modal>
     </div>
   );
 }

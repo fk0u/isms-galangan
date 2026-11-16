@@ -108,9 +108,10 @@ export function registerFkwebRoutes(app: FastifyInstance): void {
          Dicocokkan lewat trans_id, bukan request_code, karena nama request
          hasil perintah belum dibakukan untuk semua firmware. */
       if (/^CMD[A-Z0-9]{4,40}$/.test(trans) && code !== "receive_cmd") {
-        const bodyLen = Buffer.isBuffer(req.body) ? req.body.length : 0;
-        const jsonLen = Buffer.isBuffer(req.body) && bodyLen >= 4 ? req.body.readUInt32LE(0) : 0;
-        await recordCommandResult(dev, trans, String(h.cmd_return_code ?? ""), code, js, Math.max(0, bodyLen - 4 - jsonLen));
+        const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        const jsonLen = body.length >= 4 ? body.readUInt32LE(0) : 0;
+        const tail = body.length >= 4 + jsonLen ? body.subarray(4 + jsonLen) : Buffer.alloc(0);
+        await recordCommandResult(dev, trans, String(h.cmd_return_code ?? ""), code, js, tail);
         return answer(reply, 200, "OK", trans);
       }
 
