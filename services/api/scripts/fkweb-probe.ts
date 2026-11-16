@@ -3,7 +3,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
-import { addTap, implausibleTime, mergePunch } from "../src/routes/attendanceIngest.js";
+import { addTap, implausibleTime, mergePunch, tapsOf } from "../src/routes/attendanceIngest.js";
 import { analyzeDay } from "../src/attendanceAnalysis.js";
 import { collectDeviceUsers, nameScore, parseBinBlocks, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
@@ -42,6 +42,7 @@ async function main(): Promise<void> {
   const B = analyzeDay(["08:20", "12:01", "16:30"]);
   assert("analisis: tap ganjil → satu sesi + tanda tinjau, telat 20 m, pulang cepat 30 m", B.sessions.length === 1 && B.netMin === 490 && B.lateMin === 20 && B.earlyMin === 30 && B.flags.join() === "late,odd_scans,early_leave", JSON.stringify(B));
   assert("analisis: satu tap → belum pulang / masih di kantor (hari ini)", analyzeDay(["08:00"]).flags.join() === "no_checkout" && analyzeDay(["08:00", "08:10"], { isToday: true }).flags.join() === "in_office" && analyzeDay([]).checkIn === "");
+  assert("tapsOf: baris lama tanpa taps memakai jam masuk/pulang; baris campuran digabung", tapsOf({ checkIn: "12:20", checkOut: "16:27" }).join() === "12:20,16:27" && tapsOf({ taps: ["17:15"], checkIn: "12:20", checkOut: "17:15" }).join() === "12:20,17:15");
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -236,6 +237,11 @@ async function main(): Promise<void> {
     const before = (await myRows()).length;
     const future = await send(glogFrame(pin, "20300101080000"));
     assert("scan berjam ngawur → OK ke mesin, tidak jadi absensi", future.rc === "OK" && (await myRows()).length === before);
+    /* Baris lama (tanpa taps) + scan baru: jam masuk lama tidak boleh hilang dari analisis. */
+    await exec("INSERT INTO attendance (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", [`ABS-OLD-${stamp}`, "Samarinda", JSON.stringify({ employeeId: empId, date: "2026-11-13", shift: "Pagi", status: "Hadir", overtime: 0, source: `device:${dev}`, checkIn: "08:10", checkOut: "16:00" }), new Date().toISOString()]);
+    await send(glogFrame(pin, "20261113170000"));
+    const old13 = (((await app.inject({ method: "GET", url: "/api/attendance/device-daily?from=2026-11-13&to=2026-11-13", headers: hr })).json()) as { data: { rows: Array<{ employee: { id: string }; checkIn: string; checkOut: string; taps: string[] }> } }).data.rows.find((r) => r.employee.id === empId);
+    assert("baris lama + scan baru → masuk 08:10 tetap, pulang 17:00, 3 tap", old13?.checkIn === "08:10" && old13.checkOut === "17:00" && old13.taps.join() === "08:10,16:00,17:00", JSON.stringify(old13));
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));
