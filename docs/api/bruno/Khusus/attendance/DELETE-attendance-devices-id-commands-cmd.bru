@@ -1,0 +1,16 @@
+meta {
+  name: DELETE attendance devices id commands cmd
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/attendance/devices/:id/commands/:cmd
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+  cmd: {{cmd}}
+}

@@ -1,0 +1,19 @@
+meta {
+  name: POST attendance devices id commands
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/attendance/devices/:id/commands
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{id}}
+}
+
+body:json {
+  {}
+}

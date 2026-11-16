@@ -22,6 +22,7 @@ import { requestIp, writeAudit } from "../audit.js";
 import { q } from "../db.js";
 import { createRateLimiter, getClientIp } from "../rateLimit.js";
 import { applyPunches, type PunchInput } from "./attendanceIngest.js";
+import { recordCommandResult, takeNextCommand, touchDevice, upsertDeviceUser } from "../attendanceDevices.js";
 
 const fkLimiter = createRateLimiter(600, 60_000);
 const DEV_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -68,6 +69,22 @@ function answer(reply: FastifyReply, status: number, code: string, trans: string
     .send(Buffer.alloc(0));
 }
 
+/** Body FK dari objek: uint32 LE panjang + JSON + "\n\0" (sama dengan kiriman mesin). Murni. */
+export function buildFkBody(obj: unknown): Buffer {
+  const js = Buffer.from(`${JSON.stringify(obj)}\n\0`, "utf8");
+  const len = Buffer.alloc(4);
+  len.writeUInt32LE(js.length, 0);
+  return Buffer.concat([len, js]);
+}
+
+/** Jawaban receive_cmd yang membawa perintah: trans_id = id perintah, cmd_code = kode. */
+function command(reply: FastifyReply, id: string, code: string, param: unknown): FastifyReply {
+  const body = param === null || param === undefined ? Buffer.alloc(0) : buildFkBody(param);
+  reply.status(200).header("response_code", "OK").header("trans_id", id).header("cmd_code", code);
+  if (body.length > 0) reply.header("blk_no", "0").header("blk_len", String(body.length));
+  return reply.type("application/octet-stream").send(body);
+}
+
 export function registerFkwebRoutes(app: FastifyInstance): void {
   void app.register(async (sub) => {
     const asBuffer = (_req: FastifyRequest, body: Buffer, done: (err: Error | null, body?: unknown) => void): void => done(null, body);
@@ -84,12 +101,35 @@ export function registerFkwebRoutes(app: FastifyInstance): void {
       // Belum terdaftar → tolak; log tetap tersimpan di mesin dan terkirim setelah didaftarkan.
       if (!(await devAllowed(dev))) return answer(reply, 401, "ERROR", trans);
 
-      if (code === "receive_cmd") return answer(reply, 200, "ERROR_NO_CMD", trans);
-      // Template biometrik: diakui supaya mesin tidak mengulang, tetapi tidak disimpan.
+      const js = Buffer.isBuffer(req.body) ? parseFkBody(req.body) : null;
+      const ip = getClientIp(req);
+
+      /* Jawaban mesin atas perintah server: trans_id = id perintah (CMD...).
+         Dicocokkan lewat trans_id, bukan request_code, karena nama request
+         hasil perintah belum dibakukan untuk semua firmware. */
+      if (/^CMD[A-Z0-9]{4,40}$/.test(trans) && code !== "receive_cmd") {
+        const bodyLen = Buffer.isBuffer(req.body) ? req.body.length : 0;
+        const jsonLen = Buffer.isBuffer(req.body) && bodyLen >= 4 ? req.body.readUInt32LE(0) : 0;
+        await recordCommandResult(dev, trans, String(h.cmd_return_code ?? ""), code, js, Math.max(0, bodyLen - 4 - jsonLen));
+        return answer(reply, 200, "OK", trans);
+      }
+
+      if (code === "receive_cmd") {
+        await touchDevice(dev, js?.fk_info ?? js, ip);
+        const next = await takeNextCommand(dev);
+        if (next) return command(reply, next.id, next.cmdCode, next.param);
+        return answer(reply, 200, "ERROR_NO_CMD", trans);
+      }
+      await touchDevice(dev, null, ip);
+      // Template biometrik: diakui supaya mesin tidak mengulang; hanya ID + nama yang dicatat.
+      if (code === "realtime_enroll_data") {
+        if (js) await upsertDeviceUser(dev, String(js.user_id ?? "").trim(), String(js.user_name ?? "").trim());
+        return answer(reply, 200, "OK", trans);
+      }
       if (code !== "realtime_glog") return answer(reply, 200, "OK", trans);
 
-      const js = Buffer.isBuffer(req.body) ? parseFkBody(req.body) : null;
       const punch = js ? fkPunch(js) : null;
+      if (punch) await upsertDeviceUser(dev, punch.employeeNo, "");
       const result = punch ? await applyPunches([punch], `device:${dev}`) : { accepted: 0, unknown: [], invalid: 1 };
       await writeAudit({
         actor: `device:${dev}`, action: "attendance_ingest", table: "attendance", rowId: "-",

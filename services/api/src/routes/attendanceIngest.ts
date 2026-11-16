@@ -59,11 +59,18 @@ export interface IngestResult { accepted: number; unknown: string[]; invalid: nu
 export async function applyPunches(punches: PunchInput[], source: string): Promise<IngestResult> {
   return withTx(async () => {
     const emps = await q<{ id: string; branch: string; data: string }>("SELECT id, branch, data FROM employees", []);
+    /* ID di mesin tidak bisa diubah, jadi karyawan memegang "ID mesin"
+       (data.devicePin, diisi HR lewat pencocokan user mesin). Pencocokan:
+       ID mesin dulu, NIK sebagai cadangan (alat yang memakai NIK sebagai PIN). */
     const byNik = new Map<string, { id: string; branch: string }>();
+    const byPin = new Map<string, { id: string; branch: string }>();
     for (const e of emps) {
       try {
-        const nik = String((JSON.parse(e.data) as Record<string, unknown>).username ?? "").trim();
+        const d = JSON.parse(e.data) as Record<string, unknown>;
+        const nik = String(d.username ?? "").trim();
+        const pin = String(d.devicePin ?? "").trim();
         if (nik) byNik.set(nik, { id: e.id, branch: e.branch });
+        if (pin) byPin.set(pin, { id: e.id, branch: e.branch });
       } catch { /* baris rusak dilewati */ }
     }
     // ponytail: memuat seluruh absensi tiap batch; beri indeks (employeeId, date) bila tabel membesar.
@@ -78,7 +85,7 @@ export async function applyPunches(punches: PunchInput[], source: string): Promi
     const out: IngestResult = { accepted: 0, unknown: [], invalid: 0 };
     const now = new Date().toISOString();
     for (const p of punches) {
-      const emp = byNik.get(p.employeeNo);
+      const emp = byPin.get(p.employeeNo) ?? byNik.get(p.employeeNo);
       if (!emp) { if (!out.unknown.includes(p.employeeNo)) out.unknown.push(p.employeeNo); continue; }
       const at = witaParts(p.timestamp);
       if (!at) { out.invalid += 1; continue; }
