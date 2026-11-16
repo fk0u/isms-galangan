@@ -30,5 +30,7 @@ export function routeList(app: FastifyInstance): RouteEntry[] {
 export function isPublicRoute(path: string): boolean {
   return path === "/health" || path === "/api/auth/login" || path === "/api/auth/demo-login" || path.startsWith("/api/public/") || path.startsWith("/api/docs")
     // Mesin absensi ADMS: tanpa token, otorisasi lewat SN terdaftar (routes/adms.ts).
-    || path.startsWith("/iclock/");
+    || path.startsWith("/iclock/")
+    // Mesin Fingerspot (protokol FK realtime): otorisasi lewat dev_id terdaftar (routes/fkweb.ts).
+    || path === "/fkweb";
 }
