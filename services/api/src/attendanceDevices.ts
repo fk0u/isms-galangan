@@ -236,7 +236,11 @@ export const witaStamp = (d = new Date()): string => new Date(d.getTime() + 8 * 
  *  lalu jalankan tindak lanjutnya (lihat afterResult). */
 export async function recordCommandResult(deviceId: string, cmdId: string, returnCode: string, requestCode: string, json: unknown, tail: Buffer = Buffer.alloc(0)): Promise<boolean> {
   const ok = returnCode === "" || /^OK$/i.test(returnCode);
-  const result = JSON.stringify({ returnCode, requestCode, data: stripBiometric(json), binaryBytes: tail.length }).slice(0, 200_000);
+  /* Biner log scan (GET_LOG_DATA) disimpan (base64) agar bisa diurai & diimpor:
+     isinya ID user + jam scan, bukan data biometrik. Biner lain tidak disimpan. */
+  const cmdRow = (await q<{ cmd_code: string }>("SELECT cmd_code FROM attendance_device_commands WHERE id = ?", [cmdId]))[0];
+  const keepBin = cmdRow?.cmd_code === "GET_LOG_DATA" && tail.length > 0 && tail.length <= 2_000_000;
+  const result = JSON.stringify({ returnCode, requestCode, data: stripBiometric(json), binaryBytes: tail.length, ...(keepBin ? { bin: tail.toString("base64") } : {}) });
   const res = await exec(
     "UPDATE attendance_device_commands SET status = ?, result = ?, done_at = ? WHERE id = ? AND device_id = ? AND status IN ('sent', 'timeout')",
     [ok ? "done" : "error", result, now(), cmdId, deviceId],
