@@ -36,6 +36,7 @@ import { registerPublicLeaveRoutes } from "./routes/publicLeave.js";
 import { registerAttendanceIngestRoutes } from "./routes/attendanceIngest.js";
 import { registerAdmsRoutes } from "./routes/adms.js";
 import { registerFkwebRoutes } from "./routes/fkweb.js";
+import { registerAttendanceDeviceRoutes } from "./routes/attendanceDevices.js";
 import { registerReadModelRoutes } from "./routes/readModels.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerChangeOrderRoutes } from "./routes/changeOrders.js";
@@ -422,6 +423,7 @@ export function buildApp(): FastifyInstance {
   registerAttendanceIngestRoutes(app);
   registerAdmsRoutes(app);
   registerFkwebRoutes(app);
+  registerAttendanceDeviceRoutes(app);
   registerReadModelRoutes(app);
 
   app.setNotFoundHandler((_req, reply) => {

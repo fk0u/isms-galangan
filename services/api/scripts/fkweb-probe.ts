@@ -3,6 +3,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
+import { collectDeviceUsers, nameScore, stripBiometric } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
 
 async function main(): Promise<void> {
@@ -18,6 +19,9 @@ async function main(): Promise<void> {
   assert("parse body FK (uint32 LE + JSON)", parseFkBody(fkBody(g.json))?.user_id === "1001");
   assert("body rusak → null", parseFkBody(Buffer.from([255, 0, 0, 0, 1])) === null && parseFkBody(Buffer.alloc(2)) === null);
   assert("io_time → ISO WITA", fkTime("20261116075800") === "2026-11-16T07:58:00+08:00" && fkTime("2026-11-16") === null);
+  assert("nameScore: singkatan cocok, nama lain tidak", nameScore("Budi S", "Budi Santoso") >= 0.8 && nameScore("John", "Budi Santoso") === 0);
+  assert("stripBiometric menyensor template", JSON.stringify(stripBiometric({ enroll_data_array: [{ enroll_data: "BIN_1" }], user_id: "1" })).includes("<disensor>") && !JSON.stringify(stripBiometric({ enroll_data: "BIN_1" })).includes("BIN_1"));
+  assert("collectDeviceUsers membaca daftar user bersarang", collectDeviceUsers({ user_list: [{ user_id: "3", user_name: "Ani" }, { user_id: 4 }] }).map((u) => u.userId).join() === "3,4");
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -63,14 +67,64 @@ async function main(): Promise<void> {
     const audit = await q<{ diff: string }>("SELECT diff FROM audit_log WHERE actor = ? AND action = 'attendance_ingest' ORDER BY created_at DESC LIMIT 1", [`device:${dev}`]);
     assert("PIN tak dikenal → OK ke mesin, tercatat di audit", unk.rc === "OK" && String(audit[0]?.diff ?? "").includes("99999999"), audit[0]?.diff);
 
+    /* --- ID mesin tetap (tidak bisa diubah di mesin) → pencocokan HR --- */
+    const devPin = `9${Date.now() % 100000}`;
+    const early = await send(glogFrame(devPin, "20261117073000"));
+    assert("scan dari ID mesin yang belum terhubung → OK, tertunda", early.rc === "OK");
+    await send({ ...enrollFrame(devPin), json: { ...enrollFrame(devPin).json, user_name: "Probe F" } });
+    const list1 = await app.inject({ method: "GET", url: "/api/attendance/device-users", headers: hr });
+    const u1 = (list1.json() as { data: { users: Array<{ userId: string; userName: string; pending: number; employee: unknown; suggestion: { id: string } | null }>; devices: Array<{ deviceId: string; lastSeen: string | null }> } }).data;
+    const row = u1.users.find((u) => u.userId === devPin);
+    assert("device-users: ID mesin tampil dengan nama dari mesin, 1 scan tertunda, saran = karyawan bernama mirip", row?.userName === "Probe F" && row.pending === 1 && row.employee === null && row.suggestion?.id === empId, JSON.stringify(row));
+    assert("device-users: status mesin terakhir online tercatat", Boolean(u1.devices.find((d) => d.deviceId === dev)?.lastSeen));
+    const link = await app.inject({ method: "POST", url: "/api/attendance/device-users/link", headers: hr, payload: { userId: devPin, employeeId: empId } });
+    assert("hubungkan ID mesin → 1 scan tertunda diproses ulang", link.statusCode === 200 && (link.json() as { data: { reprocessed: number } }).data.reprocessed === 1, link.body);
+    const day17 = (await myRows()).find((d) => d.date === "2026-11-17");
+    assert("scan tertunda kini jadi absensi 07:30", day17?.checkIn === "07:30", JSON.stringify(day17));
+    await send(glogFrame(devPin, "20261117170000"));
+    assert("scan berikutnya lewat ID mesin langsung masuk (pulang 17:00)", (await myRows()).find((d) => d.date === "2026-11-17")?.checkOut === "17:00");
+    const raw = await q<{ n: number }>("SELECT COUNT(*) AS n FROM attendance_device_users WHERE user_name LIKE ? OR user_name LIKE ?", ["%BIN_%", "%enroll%"]);
+    assert("tabel user mesin tidak berisi data biometrik", Number(raw[0]?.n ?? 0) === 0);
+
+    /* --- antrean perintah server → mesin --- */
+    const q1 = await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "GET_USER_ID_LIST", param: null } });
+    const cmdId = (q1.json() as { data: { id: string } }).data.id;
+    assert("direktur mengantrekan perintah → 201", q1.statusCode === 201 && /^CMD/.test(cmdId), q1.body);
+    const poll = await (async () => { const b = fkBody(cmdFrame("20261117080000").json); return app.inject({ method: "POST", url: "/fkweb", payload: b, headers: fkHeaders(dev, cmdFrame("x"), b.length) }); })();
+    assert("receive_cmd → perintah dikirim (trans_id = id, cmd_code)", poll.headers.response_code === "OK" && poll.headers.trans_id === cmdId && poll.headers.cmd_code === "GET_USER_ID_LIST", JSON.stringify(poll.headers));
+    const again2 = await send(cmdFrame("20261117080020"));
+    assert("perintah tidak dikirim dua kali", again2.rc === "ERROR_NO_CMD");
+    const resBody = fkBody({ user_id_array: [{ user_id: "12", user_name: "Siti" }], enroll_data: "BIN_9" });
+    const resp = await app.inject({ method: "POST", url: "/fkweb", payload: resBody, headers: { ...fkHeaders(dev, { code: "send_cmd_result", trans: cmdId, json: {} }, resBody.length), cmd_return_code: "OK" } });
+    assert("hasil perintah diterima → OK", resp.statusCode === 200 && resp.headers.response_code === "OK");
+    const hist = await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/commands`, headers: hr });
+    const c0 = (hist.json() as { data: { commands: Array<{ id: string; status: string; result: unknown }> } }).data.commands.find((c) => c.id === cmdId);
+    assert("riwayat: status done, hasil tersimpan tanpa biometrik", c0?.status === "done" && JSON.stringify(c0.result).includes("Siti") && !JSON.stringify(c0.result).includes("BIN_9"), JSON.stringify(c0));
+    const siti = await q<{ user_name: string }>("SELECT user_name FROM attendance_device_users WHERE device_id = ? AND user_id = ?", [dev, "12"]);
+    assert("user dari hasil perintah ikut tercatat (ID 12 Siti)", siti[0]?.user_name === "Siti");
+    const q2 = await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "RESET_FK" } });
+    const c2 = (q2.json() as { data: { id: string } }).data.id;
+    const cancel = await app.inject({ method: "DELETE", url: `/api/attendance/devices/${dev}/commands/${c2}`, headers: hr });
+    assert("perintah yang belum terkirim bisa dibatalkan", cancel.statusCode === 200 && (await send(cmdFrame("20261117080040"))).rc === "ERROR_NO_CMD");
+    assert("kode perintah tidak sah → 400", (await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: hr, payload: { cmd: "rm -rf" } })).statusCode === 400);
+    assert("alat belum terdaftar → 404", (await app.inject({ method: "POST", url: "/api/attendance/devices/TIDAK-ADA/commands", headers: hr, payload: { cmd: "RESET_FK" } })).statusCode === 404);
+    const gudang = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? LIMIT 1", ["gudang"]))[0];
+    if (gudang) {
+      const gh = { authorization: `Bearer ${signToken({ id: gudang.id, username: gudang.username, role: gudang.role, branch: "Samarinda", v: gudang.token_version ?? 0 })}` };
+      assert("peran tanpa izin HR → 403 di device-users & perintah", (await app.inject({ method: "GET", url: "/api/attendance/device-users", headers: gh })).statusCode === 403 && (await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/commands`, headers: gh, payload: { cmd: "RESET_FK" } })).statusCode === 403);
+    }
+
     const bad = await app.inject({ method: "POST", url: "/fkweb", payload: Buffer.from("rusak"), headers: fkHeaders(dev, glogFrame(pin, "x"), 5) });
-    assert("body rusak → tetap OK (tidak diulang mesin), tidak menulis absensi", bad.statusCode === 200 && String(bad.headers.response_code) === "OK" && (await myRows()).length === 1, `${bad.statusCode}`);
+    assert("body rusak → tetap OK (tidak diulang mesin), tidak menulis absensi", bad.statusCode === 200 && String(bad.headers.response_code) === "OK" && (await myRows()).length === 2, `${bad.statusCode}`);
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));
     for (const r of mine) await exec("DELETE FROM attendance WHERE id = ?", [r.id]);
     await exec("DELETE FROM employees WHERE id = ?", [empId]);
     await exec("DELETE FROM access_secrets WHERE access_key = ?", [`device:${dev}`]);
+    await exec("DELETE FROM attendance_device_users WHERE device_id = ?", [dev]);
+    await exec("DELETE FROM attendance_device_status WHERE device_id = ?", [dev]);
+    await exec("DELETE FROM attendance_device_commands WHERE device_id = ?", [dev]);
   }
   console.log(`\n${passed}/${total} pemeriksaan Fingerspot FK lolos.`);
   await app.close();
