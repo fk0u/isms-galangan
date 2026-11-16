@@ -100,14 +100,14 @@ export default function DeviceLogs() {
             {(Object.keys(label) as LogStatus[]).map((k) => <option key={k} value={k}>{label[k]}</option>)}
           </select>
         </label>
-        <div className="min-w-[200px] flex-1"><SearchBox value={q} onChange={setQ} placeholder={E.logSearch} /></div>
+        <div className="min-w-[200px] flex-1"><SearchBox value={q} onChange={setQ} placeholder={E.logSearch} ariaLabel={E.logSearch} /></div>
         <AsyncButton className="btn-secondary text-xs" onAction={load}><RefreshCw className="h-3.5 w-3.5" /> {E.devRefresh}</AsyncButton>
       </div>
 
       {page && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label={E.logStatusLabel}>
           {(Object.keys(label) as LogStatus[]).map((k) => (
-            <button key={k} type="button" onClick={() => setStatus(status === k ? "" : k)} title={hint[k]}
+            <button key={k} type="button" aria-pressed={status === k} onClick={() => setStatus(status === k ? "" : k)} title={hint[k]}
               className={`rounded-xl border px-3 py-2 text-left transition-colors ${status === k ? "border-navy-900 bg-surface" : "border-steel-200 bg-white hover:bg-surface"}`}>
               <p className="text-lg font-semibold tabular-nums text-navy-900">{page.summary[k] ?? 0}</p>
               <p className="text-xs text-steel-500">{label[k]}</p>
@@ -117,20 +117,21 @@ export default function DeviceLogs() {
       )}
 
       {loading && !page ? (
-        <p className="py-10 text-center text-sm text-steel-400">{E.devLoading}</p>
+        <p className="py-10 text-center text-sm text-steel-400" role="status">{E.devLoading}</p>
       ) : rows.length === 0 ? (
         <EmptyState icon={<ScrollText className="h-6 w-6" />} title={E.logEmpty} subtitle={E.logEmptyHint} />
       ) : (
         <div className="overflow-x-auto rounded-xl border border-steel-200">
           <table className="w-full min-w-[600px] text-sm">
+            <caption className="sr-only">{E.logCaption}</caption>
             <thead className="bg-surface text-left text-xs uppercase tracking-wide text-steel-500">
               <tr>
-                <th className="px-3 py-2">{E.logColScan}</th>
-                <th className="px-3 py-2">{E.logColKind}</th>
-                <th className="px-3 py-2">{E.devColId}</th>
-                <th className="px-3 py-2">{E.devColEmp}</th>
-                <th className="px-3 py-2">{E.logStatusLabel}</th>
-                <th className="px-3 py-2">{E.logColReceived}</th>
+                <th scope="col" className="px-3 py-2">{E.logColScan}</th>
+                <th scope="col" className="px-3 py-2">{E.logColKind}</th>
+                <th scope="col" className="px-3 py-2">{E.devColId}</th>
+                <th scope="col" className="px-3 py-2">{E.devColEmp}</th>
+                <th scope="col" className="px-3 py-2">{E.logStatusLabel}</th>
+                <th scope="col" className="px-3 py-2">{E.logColReceived}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-steel-100">

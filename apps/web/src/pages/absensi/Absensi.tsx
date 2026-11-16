@@ -85,7 +85,7 @@ function otStatusOf(a: StoreItem): string {
 import MonthlyRecap from "./MonthlyRecap";
 import DeviceImport from "./DeviceImport";
 import DeviceManager from "./DeviceManager";
-import DeviceLogs from "./DeviceLogs";
+import DeviceInsights from "./DeviceDaily";
 import { hasPermission, useAuth } from "../../auth/auth";
 import { isBackendConfigured } from "../../services/http";
 import { n_emp } from "../../i18n/n_emp";
@@ -795,7 +795,7 @@ export default function Absensi() {
             </div>
           )}
           {tab === "Mesin" && canManageDevices && <DeviceManager />}
-          {tab === "LogMesin" && canManageDevices && <DeviceLogs />}
+          {tab === "LogMesin" && canManageDevices && <DeviceInsights />}
         </div>
       </div>
 

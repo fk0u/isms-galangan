@@ -14,6 +14,7 @@ import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { can, normalizeRole } from "../policy.js";
+import { analyzeDay, type DayAnalysis } from "../attendanceAnalysis.js";
 import {
   cancelCommand, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
   type HrAction,
@@ -208,6 +209,53 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     const limit = f.limit ?? 100;
     const offset = f.offset ?? 0;
     return ok({ from, to, total: filtered.length, summary, rows: filtered.slice(offset, offset + limit), devices: await registeredDevices() });
+  });
+
+  /* Ringkasan harian dari scan mesin: per karyawan per hari - masuk, pulang,
+     lama di kantor (bersih, dikurangi keluar di tengah hari), jumlah scan,
+     dan tanda (telat, pulang cepat, lembur, belum pulang). Lihat
+     attendanceAnalysis.ts untuk algoritmanya. Hanya baris bersumber mesin. */
+  app.get("/api/attendance/device-daily", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengelola mesin absensi", "FORBIDDEN"));
+    const parsed = LogQuery.safeParse(req.query);
+    if (!parsed.success) return reply.status(400).send(fail("Filter tidak sah", "VALIDATION_ERROR"));
+    const f = parsed.data;
+    const today = todayWita();
+    const to = f.to ?? today;
+    const from = f.from ?? to;
+    if (from > to) return reply.status(400).send(fail("Tanggal awal setelah tanggal akhir", "VALIDATION_ERROR"));
+    if (Date.parse(to) - Date.parse(from) > 62 * 86_400_000) return reply.status(400).send(fail("Rentang maksimal 62 hari", "VALIDATION_ERROR"));
+    const emps = new Map((await loadEmployees()).map((e) => [e.id, e]));
+    const needle = (f.q ?? "").toLowerCase();
+    type DailyRow = DayAnalysis & { id: string; date: string; employee: { id: string; name: string; devicePin: string }; status: string };
+    const rows: DailyRow[] = [];
+    for (const a of await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])) {
+      let d: Record<string, unknown>;
+      try { d = JSON.parse(a.data) as Record<string, unknown>; } catch { continue; }
+      const date = String(d.date ?? "");
+      if (date < from || date > to || !String(d.source ?? "").startsWith("device:")) continue;
+      const emp = emps.get(String(d.employeeId ?? ""));
+      const name = emp?.name ?? String(d.employeeId ?? "");
+      if (needle && !name.toLowerCase().includes(needle) && !(emp?.devicePin ?? "").toLowerCase().includes(needle)) continue;
+      // Baris sebelum hitungan scan ada: pakai jam masuk/pulang yang tersimpan.
+      const taps = Array.isArray(d.taps) && d.taps.length > 0 ? d.taps.map(String) : [String(d.checkIn ?? ""), String(d.checkOut ?? "")];
+      rows.push({
+        id: a.id, date, employee: { id: String(d.employeeId ?? ""), name, devicePin: emp?.devicePin ?? "" },
+        status: String(d.status ?? ""), ...analyzeDay(taps, { isToday: date === today }),
+      });
+    }
+    rows.sort((x, y) => y.date.localeCompare(x.date) || x.employee.name.localeCompare(y.employee.name));
+    const done = rows.filter((r) => r.netMin > 0);
+    const has = (flag: DayAnalysis["flags"][number]): number => rows.filter((r) => r.flags.includes(flag)).length;
+    return ok({
+      from, to, rows,
+      summary: {
+        present: rows.length, late: has("late"), inOffice: has("in_office"), noCheckout: has("no_checkout"),
+        earlyLeave: has("early_leave"), overtime: has("overtime"), review: has("odd_scans"),
+        avgNetMin: done.length ? Math.round(done.reduce((s, r) => s + r.netMin, 0) / done.length) : 0,
+      },
+      workHours: { start: "08:00", end: "17:00" },
+    });
   });
 
   app.get("/api/attendance/devices/:id/commands", { preHandler: [requireAuth] }, async (req, reply) => {

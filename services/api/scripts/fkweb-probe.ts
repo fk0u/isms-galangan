@@ -4,6 +4,7 @@ import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
 import { addTap, implausibleTime, mergePunch } from "../src/routes/attendanceIngest.js";
+import { analyzeDay } from "../src/attendanceAnalysis.js";
 import { collectDeviceUsers, nameScore, parseBinBlocks, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
 
@@ -36,6 +37,11 @@ async function main(): Promise<void> {
   assert("urutan tap tidak berpengaruh (17:05, 07:59, 07:58)", JSON.stringify(mergePunch(mergePunch(mergePunch({}, "auto", "17:05"), "auto", "07:59"), "auto", "07:58")) === JSON.stringify({ checkIn: "07:58", checkOut: "17:05" }));
   assert("jam mesin ngawur ditolak (masa depan / >400 hari lampau)", implausibleTime("2030-01-01T08:00:00+08:00") && implausibleTime("2020-01-01T08:00:00+08:00") && !implausibleTime(new Date().toISOString()));
   assert("addTap: unik per menit, urut, terhitung", JSON.stringify(addTap(addTap(addTap(undefined, "17:05").taps, "07:58").taps, "07:58")) === JSON.stringify({ taps: ["07:58", "17:05"], scanCount: 2 }));
+  const A = analyzeDay(["07:58", "07:59", "12:00", "13:00", "17:30"]);
+  assert("analisis: debounce scan ganda, 4 tap → 2 sesi + istirahat 60 mnt, bersih 8 j 32 m, lembur 30 m", A.taps.join() === "07:58,12:00,13:00,17:30" && A.sessions.length === 2 && A.breakMin === 60 && A.netMin === 512 && A.overtimeMin === 30 && A.flags.join() === "overtime", JSON.stringify(A));
+  const B = analyzeDay(["08:20", "12:01", "16:30"]);
+  assert("analisis: tap ganjil → satu sesi + tanda tinjau, telat 20 m, pulang cepat 30 m", B.sessions.length === 1 && B.netMin === 490 && B.lateMin === 20 && B.earlyMin === 30 && B.flags.join() === "late,odd_scans,early_leave", JSON.stringify(B));
+  assert("analisis: satu tap → belum pulang / masih di kantor (hari ini)", analyzeDay(["08:00"]).flags.join() === "no_checkout" && analyzeDay(["08:00", "08:10"], { isToday: true }).flags.join() === "in_office" && analyzeDay([]).checkIn === "");
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -214,6 +220,10 @@ async function main(): Promise<void> {
     const kr = ((await app.inject({ method: "GET", url: `/api/attendance/device-logs?deviceId=${dev}&q=${pin}`, headers: hr })).json() as { data: { rows: KRow[] } }).data.rows;
     const kindAt = (t: string) => kr.find((r) => r.scanAt === `2026-11-16T${t}:00+08:00`)?.kind;
     assert("log: jenis scan terdeteksi (masuk 07:58, tambahan 12:01, pulang 17:05) + jumlah scan hari itu", kindAt("07:58") === "in" && kindAt("12:01") === "extra" && kindAt("17:05") === "out" && kr.find((r) => r.scanAt?.startsWith("2026-11-16"))?.dayScans === 3, JSON.stringify(kr.slice(0, 6)));
+    type DRow = { date: string; employee: { id: string }; checkIn: string; checkOut: string; netMin: number; taps: string[]; flags: string[] };
+    const daily = ((await app.inject({ method: "GET", url: "/api/attendance/device-daily?from=2026-11-16&to=2026-11-16", headers: hr })).json() as { data: { rows: DRow[]; summary: { present: number; review: number } } }).data;
+    const mine16 = daily.rows.find((r) => r.employee.id === empId);
+    assert("ringkasan harian: 07:58→17:05, bersih 9 j 7 m, 3 scan → tanda tinjau", mine16?.checkIn === "07:58" && mine16.checkOut === "17:05" && mine16.netMin === 547 && mine16.taps.length === 3 && mine16.flags.includes("odd_scans") && daily.summary.present >= 1 && daily.summary.review >= 1, JSON.stringify(mine16));
     assert("log: rentang > 62 hari → 400", (await app.inject({ method: "GET", url: "/api/attendance/device-logs?from=2026-01-01&to=2026-12-31", headers: hr })).statusCode === 400);
 
     const bad = await app.inject({ method: "POST", url: "/fkweb", payload: Buffer.from("rusak"), headers: fkHeaders(dev, glogFrame(pin, "x"), 5) });

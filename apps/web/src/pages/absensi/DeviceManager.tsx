@@ -170,12 +170,13 @@ export default function DeviceManager() {
         ) : (
           <div className="overflow-x-auto rounded-xl border border-steel-200">
             <table className="w-full min-w-[560px] text-sm">
+              <caption className="sr-only">{E.devUsersTitle}</caption>
               <thead className="bg-surface text-left text-xs uppercase tracking-wide text-steel-500">
                 <tr>
-                  <th className="w-20 px-3 py-2">{E.devColId}</th>
-                  <th className="px-3 py-2">{E.devColName}</th>
-                  <th className="px-3 py-2">{E.devColEmp}</th>
-                  <th className="w-32 px-3 py-2 text-right">{E.devColAction}</th>
+                  <th scope="col" className="w-20 px-3 py-2">{E.devColId}</th>
+                  <th scope="col" className="px-3 py-2">{E.devColName}</th>
+                  <th scope="col" className="px-3 py-2">{E.devColEmp}</th>
+                  <th scope="col" className="w-32 px-3 py-2 text-right">{E.devColAction}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-steel-100">
