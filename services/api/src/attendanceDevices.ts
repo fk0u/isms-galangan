@@ -266,8 +266,19 @@ async function afterResult(cmd: DeviceCommand, ok: boolean, json: unknown, tail:
     const ids = parseUserIdList(blocks[0] ?? Buffer.alloc(0), Number(data.one_user_id_size ?? 0), Number(data.user_id_count ?? 0));
     const known = new Map((await q<{ user_id: string; user_name: string | null }>("SELECT user_id, user_name FROM attendance_device_users WHERE device_id = ?", [cmd.deviceId])).map((r) => [r.user_id, r.user_name ?? ""]));
     for (const id of ids) {
-      if (!known.has(id)) await upsertDeviceUser(cmd.deviceId, id, "");
+      // Selalu disentuh: last_seen = terakhir terlihat di daftar mesin.
+      await upsertDeviceUser(cmd.deviceId, id, "");
       if (!known.get(id)) await enqueueCommand(cmd.deviceId, "GET_USER_INFO", { user_id: id }, by, { action: "pull_name", userId: id, by });
+    }
+    /* Selaraskan: ID yang tidak ada lagi di mesin dibuang dari daftar. Hanya
+       bila hasil urai lengkap (jumlah = user_id_count) - pengurai yang keliru
+       tidak boleh mengosongkan daftar. ID mesin di data karyawan TIDAK diubah. */
+    const expected = Number(data.user_id_count ?? -1);
+    if (ids.length === expected) {
+      const keep = new Set(ids);
+      for (const id of known.keys()) {
+        if (!keep.has(id)) await exec("DELETE FROM attendance_device_users WHERE device_id = ? AND user_id = ?", [cmd.deviceId, id]);
+      }
     }
     return;
   }
