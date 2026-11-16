@@ -155,6 +155,9 @@ async function main(): Promise<void> {
     const nm = await round((code) => ({ rc: "OK", json: code === "GET_USER_INFO" ? { user_id: "15", user_name: "Rina", enroll_data_array: "BIN_1", user_privilege: "USER" } : null, tail: Buffer.alloc(500) }));
     const after = (await overview()).data.users;
     assert("muat user: ID biner diurai, nama diminta otomatis (hanya yang belum bernama)", pl.code === "GET_USER_ID_LIST" && nm.code === "GET_USER_INFO" && (nm.param as { user_id?: string } | null)?.user_id === "15" && after.find((u) => u.userId === "15")?.userName === "Rina", JSON.stringify(nm));
+    assert("muat user menyelaraskan daftar: ID yang tak ada lagi di mesin dibuang", after.find((u) => u.userId === devPin) === undefined || after.find((u) => u.userId === devPin)?.employee !== null, JSON.stringify(after.map((u) => u.userId)));
+    const raw12 = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [dev]);
+    assert("tabel user mesin kini hanya ID dari mesin (12, 15)", raw12.map((r) => r.user_id).sort().join() === "12,15", JSON.stringify(raw12));
     assert("tidak ada perintah tersisa setelah muat user", (await send(cmdFrame("20261117090100"))).rc === "ERROR_NO_CMD");
 
     const emp2 = `EMP-FK2-${stamp}`;
