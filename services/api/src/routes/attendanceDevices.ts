@@ -17,7 +17,7 @@ import { can, normalizeRole } from "../policy.js";
 import { analyzeDay, type DayAnalysis } from "../attendanceAnalysis.js";
 import { tapsOf } from "./attendanceIngest.js";
 import {
-  cancelCommand, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
+  cancelCommand, connectionStats, deviceBeats, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
   type HrAction,
 } from "../attendanceDevices.js";
 
@@ -28,6 +28,8 @@ const ActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("sync_time") }),
   z.object({ action: z.literal("restart") }),
   z.object({ action: z.literal("pull_users") }),
+  z.object({ action: z.literal("settings") }),
+  z.object({ action: z.literal("pull_logs"), from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }),
   z.object({ action: z.literal("push_employee"), employeeId: z.string().trim().min(1).max(128), userId: z.string().trim().regex(/^\d{1,9}$/).optional() }),
   z.object({ action: z.literal("remove_user"), userId: z.string().trim().regex(ID_RE) }),
 ]);
@@ -256,6 +258,42 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
         avgNetMin: done.length ? Math.round(done.reduce((s, r) => s + r.netMin, 0) / done.length) : 0,
       },
       workHours: { start: "08:00", end: "17:00" },
+    });
+  });
+
+  /* Statistik untuk grafik tab Mesin: scan per jam hari ini, scan per hari
+     14 hari, isi vs kapasitas, kualitas koneksi, dan pengaturan terakhir. */
+  app.get("/api/attendance/devices/:id/stats", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengelola mesin absensi", "FORBIDDEN"));
+    const { id } = req.params as { id: string };
+    if (!ID_RE.test(id)) return reply.status(400).send(fail("ID alat tidak sah", "VALIDATION_ERROR"));
+    const today = todayWita();
+    const from14 = addDays(today, -13);
+    const perHour = Array.from({ length: 24 }, () => 0);
+    const perDay = new Map<string, number>();
+    for (let i = 0; i < 14; i += 1) perDay.set(addDays(from14, i), 0);
+    const rows = await q<{ diff: string }>(
+      "SELECT diff FROM audit_log WHERE actor = ? AND action = 'attendance_ingest' AND created_at >= ?",
+      [`device:${id}`, witaDayStartIso(addDays(from14, -1))],
+    );
+    for (const r of rows) {
+      try {
+        const d = JSON.parse(r.diff) as { ioTime?: string };
+        const t = String(d.ioTime ?? "");
+        if (t.length !== 14) continue;
+        const date = `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}`;
+        if (perDay.has(date)) perDay.set(date, (perDay.get(date) ?? 0) + 1);
+        if (date === today) perHour[Number(t.slice(8, 10))] = (perHour[Number(t.slice(8, 10))] ?? 0) + 1;
+      } catch { /* dilewati */ }
+    }
+    const st = (await q<{ stats: string | null; last_seen: string | null }>("SELECT stats, last_seen FROM attendance_device_status WHERE device_id = ?", [id]))[0];
+    const setting = (await q<{ result: string | null; done_at: string | null }>("SELECT result, done_at FROM attendance_device_commands WHERE device_id = ? AND cmd_code = 'GET_DEVICE_SETTING' AND status = 'done' ORDER BY done_at DESC LIMIT 1", [id]))[0];
+    const parseJ = (x: string | null | undefined): unknown => { try { return x ? JSON.parse(x) as unknown : null; } catch { return null; } };
+    return ok({
+      perHour, perDay: [...perDay.entries()].map(([date, count]) => ({ date, count })),
+      capacity: parseJ(st?.stats),
+      connection: { ...connectionStats(deviceBeats(id)), lastSeen: st?.last_seen ?? null },
+      settings: setting ? { at: setting.done_at, values: (parseJ(setting.result) as { data?: unknown } | null)?.data ?? null } : null,
     });
   });
 

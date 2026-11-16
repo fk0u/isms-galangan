@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cpu, Link2, Unlink, RefreshCw, Send, X, Clock, Power, Users, Trash2, Activity } from "lucide-react";
 import { AsyncButton, Badge, ConfirmModal, EmptyState, Field, Modal, toast } from "../../components/ui";
 import { SearchSelect } from "../../components/SearchSelect";
+import DevicePanel from "./DevicePanel";
 import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
@@ -68,6 +69,7 @@ export default function DeviceManager() {
   const actionLabel = (c: Command): string => {
     const a = c.meta?.action ?? "";
     const map: Record<string, string> = {
+      settings: E.pnlSetBtn, pull_logs: E.pnlPull,
       status: E.devActStatus, sync_time: E.devActTime, restart: E.devActRestart, pull_users: E.devActPull,
       pull_name: E.devActPullName.replace("{n}", c.meta?.userId ?? ""), push_check: E.devActPushCheck.replace("{n}", c.meta?.userId ?? ""),
       push: E.devActPush.replace("{a}", c.meta?.userName ?? "").replace("{n}", c.meta?.userId ?? ""), remove: E.devActRemove.replace("{n}", c.meta?.userId ?? ""),
@@ -79,6 +81,8 @@ export default function DeviceManager() {
     if (c.status === "error" && r?.returnCode === "ID_TAKEN") return E.devIdTaken;
     if (c.status === "done" && c.meta?.action === "push_check") return E.devIdFree;
     if (c.status === "sent" && c.meta?.action === "restart") return E.devRestartSent;
+    const imp = (c.result as { imported?: { total: number; added: number } } | null)?.imported;
+    if (imp) return E.pnlPullDone.replace("{a}", String(imp.total)).replace("{b}", String(imp.added));
     return "";
   };
 
@@ -153,6 +157,13 @@ export default function DeviceManager() {
           );
         })}
       </div>
+
+      {data.devices.map((d) => (
+        <section key={`p-${d.deviceId}`} aria-label={E.pnlTitle.replace("{n}", d.deviceId)}>
+          <h3 className="mb-2 text-[15px] font-semibold text-navy-900">{E.pnlTitle.replace("{n}", d.deviceId)}</h3>
+          <DevicePanel deviceId={d.deviceId} onAction={(body, msg) => runAction(d.deviceId, body, msg)} />
+        </section>
+      ))}
 
       <div>
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">

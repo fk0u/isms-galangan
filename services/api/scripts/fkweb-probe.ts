@@ -5,7 +5,7 @@ import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
 import { addTap, implausibleTime, mergePunch, tapsOf } from "../src/routes/attendanceIngest.js";
 import { analyzeDay } from "../src/attendanceAnalysis.js";
-import { collectDeviceUsers, nameScore, parseBinBlocks, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
+import { collectDeviceUsers, connectionStats, nameScore, parseBinBlocks, parseLogBlock, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
 
 async function linkPin(app: Awaited<ReturnType<typeof buildApp>>, headers: Record<string, string>, userId: string, employeeId: string): Promise<void> {
@@ -43,6 +43,13 @@ async function main(): Promise<void> {
   assert("analisis: tap ganjil → satu sesi + tanda tinjau, telat 20 m, pulang cepat 30 m", B.sessions.length === 1 && B.netMin === 490 && B.lateMin === 20 && B.earlyMin === 30 && B.flags.join() === "late,odd_scans,early_leave", JSON.stringify(B));
   assert("analisis: satu tap → belum pulang / masih di kantor (hari ini)", analyzeDay(["08:00"]).flags.join() === "no_checkout" && analyzeDay(["08:00", "08:10"], { isToday: true }).flags.join() === "in_office" && analyzeDay([]).checkIn === "");
   assert("tapsOf: baris lama tanpa taps memakai jam masuk/pulang; baris campuran digabung", tapsOf({ checkIn: "12:20", checkOut: "16:27" }).join() === "12:20,16:27" && tapsOf({ taps: ["17:15"], checkIn: "12:20", checkOut: "17:15" }).join() === "12:20,17:15");
+  /* Entri log asli dari mesin (16 Nov 2026, ID 1, 17:15:09, sidik jari). */
+  const logEntry = (id: string, timeHex: string, sec: number, verify = 0x10): Buffer => { const e = Buffer.alloc(48); e.write(id, "latin1"); e[32] = 1; e[35] = sec; Buffer.from(timeHex, "hex").copy(e, 36); e[43] = 1; e[47] = verify; return e; };
+  const logBlock = (entries: Buffer[]): Buffer => { const body = Buffer.concat(entries); const len = Buffer.alloc(4); len.writeUInt32LE(body.length, 0); return Buffer.concat([len, body]); };
+  const parsedLog = parseLogBlock(logBlock([logEntry("1", "fab1303e", 9), logEntry("2", "fab1d0e5", 0x2b, 0x70)]), Date.parse("2026-11-16T10:00:00Z"));
+  assert("parseLogBlock: entri asli → 20261116171509 & 20261116145743, mode verifikasi", JSON.stringify(parsedLog) === JSON.stringify([{ userId: "1", ioTime: "20261116171509", verifyCode: 16 }, { userId: "2", ioTime: "20261116145743", verifyCode: 112 }]), JSON.stringify(parsedLog));
+  const cs = connectionStats([0, 5000, 10000, 100000, 105000].map((x) => 1_000_000 + x), 1_000_000 + 110000);
+  assert("connectionStats: jeda rata-rata, putus > 60 dtk terhitung", cs.samples === 5 && cs.drops === 1 && cs.maxGapSec === 90, JSON.stringify(cs));
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -242,6 +249,14 @@ async function main(): Promise<void> {
     await send(glogFrame(pin, "20261113170000"));
     const old13 = (((await app.inject({ method: "GET", url: "/api/attendance/device-daily?from=2026-11-13&to=2026-11-13", headers: hr })).json()) as { data: { rows: Array<{ employee: { id: string }; checkIn: string; checkOut: string; taps: string[] }> } }).data.rows.find((r) => r.employee.id === empId);
     assert("baris lama + scan baru → masuk 08:10 tetap, pulang 17:00, 3 tap", old13?.checkIn === "08:10" && old13.checkOut === "17:00" && old13.taps.join() === "08:10,16:00,17:00", JSON.stringify(old13));
+    /* --- ambil log memori mesin: scan terlewat dimasukkan, yang sudah ada dilewati --- */
+    assert("aksi pull_logs → 201", (await act({ action: "pull_logs", from: "2026-11-01", to: "2026-11-30" })).statusCode === 201);
+    const pl2 = await round(() => ({ rc: "OK", json: { log_array: "BIN_1", log_count: 2, one_log_size: 48 }, tail: logBlock([logEntry(pin, "fab1d0b9", 5), logEntry(pin, "fab1d0b9", 5)]) }));
+    const nov12 = (await myRows()).find((d) => d.date === "2026-11-16");
+    const histPl = ((await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/commands`, headers: hr })).json() as { data: { commands: Array<{ cmdCode: string; result: { imported?: { added: number }; bin?: string } | null }> } }).data.commands.find((c) => c.cmdCode === "GET_LOG_DATA");
+    assert("log mesin: 1 scan terlewat (14:46:05) dimasukkan, duplikat dilewati, ringkasan impor tersimpan", pl2.code === "GET_LOG_DATA" && histPl?.result?.imported?.added === 1 && (nov12?.taps as string[] | undefined)?.includes("14:46") === true, JSON.stringify({ imp: histPl?.result?.imported, taps: nov12?.taps }));
+    const devStats = ((await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/stats`, headers: hr })).json() as { data: { perHour: number[]; perDay: unknown[]; connection: { samples: number } } }).data;
+    assert("stats: 24 jam, 14 hari, detak koneksi tercatat", devStats.perHour.length === 24 && devStats.perDay.length === 14 && devStats.connection.samples > 0, JSON.stringify(devStats.connection));
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));
