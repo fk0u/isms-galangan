@@ -1,0 +1,11 @@
+meta {
+  name: GET attendance device-daily
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/attendance/device-daily
+  body: none
+  auth: inherit
+}
