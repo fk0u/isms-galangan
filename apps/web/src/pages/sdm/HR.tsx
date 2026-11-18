@@ -32,6 +32,10 @@ import { AsyncButton, useBusy, SearchBox, rowMatches, RowAction } from "../../co
 import { FilterPopover } from "../../components/FilterPopover";
 import { useStore } from "../../data/store";
 import { SearchSelect } from "../../components/SearchSelect";
+
+/* Jabatan yang boleh menjadi Pimpinan Proyek (sama dengan aturan server
+   isProjectManagerTitle) - selalu ditawarkan walau belum dipakai karyawan. */
+const PIMPRO_TITLES = ["Project Manager", "Pimpinan Proyek", "Engineer Supervisor"];
 import { DocumentPreviewCell, DocumentPreviewPanel } from "../../components/DocumentPreview";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
@@ -2120,7 +2124,7 @@ const finishTraining = async (t: StoreItem) => {
                     Sebelumnya <datalist> bawaan browser (tampil gelap, tanpa
                     pencarian yang konsisten dengan form lain). */}
                 <SearchSelect value={form.role} onChange={(v) => setForm({ ...form, role: v })} allowCustom
-                  options={[...new Set(data.employees.map((x) => String(x.role ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((r) => ({ value: r, label: r }))}
+                  options={[...new Set([...PIMPRO_TITLES, ...data.employees.map((x) => String(x.role ?? "").trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b)).map((r) => ({ value: r, label: r, subLabel: PIMPRO_TITLES.includes(r) ? E.jobPimpro : undefined }))}
                   placeholder={S.phWelder} ariaLabel={S.thJabatan} emptyText={E.jobHint} />
               </Field>
               <Field label={S.fDept}>

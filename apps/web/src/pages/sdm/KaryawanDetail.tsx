@@ -25,6 +25,7 @@ import {
 } from "../../components/ui";
 import { TimeInput24 } from "../../components/TimeInput24";
 import type { SortState } from "../../components/ui";
+import { SearchSelect } from "../../components/SearchSelect";
 import { useStore } from "../../data/store";
 import { n_emp } from "../../i18n/n_emp";
 import type { StoreItem } from "../../data/store";
@@ -597,8 +598,8 @@ export default function KaryawanDetail() {
             {skills.length === 0 && <span className="text-xs text-steel-400">{S.emptySkill}</span>}
           </div>
           <div className="mt-3 space-y-2 border-t border-steel-100 pt-3">
-            <input className="input" list="skill-list" value={skillInput} onChange={(e) => setSkillInput(e.target.value)} placeholder={S.phSkill} />
-            <datalist id="skill-list">{allSkills.map((s) => <option key={s} value={s} />)}</datalist>
+            <SearchSelect allowCustom value={skillInput} onChange={setSkillInput} ariaLabel={S.phSkill} placeholder={S.phSkill}
+              options={allSkills.map((sk) => ({ value: sk, label: sk }))} />
             <label className="flex items-center gap-2 text-xs text-steel-500">
               {E.skillLevel}
               <input type="range" min={0} max={100} step={5} className="flex-1" value={skillForm.pct} onChange={(e) => setSkillForm({ ...skillForm, pct: Number(e.target.value) })} aria-label={E.skillLevel} />
