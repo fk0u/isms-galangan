@@ -1,7 +1,7 @@
 // Modal tambah proyek bersama — dipakai halaman Proyek DAN Dashboard
 // ("Proyek Baru" langsung buka form, tanpa pindah halaman).
 // Logika + validasi pindahan utuh dari Projects.tsx (satu sumber).
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Field, FormGrid, Modal, toast,
   NumInput, MoneyInput, AsyncButton,
 } from "./ui";
@@ -11,6 +11,7 @@ import { useStore } from "../data/store";
 import { useAuth } from "../auth/auth";
 import { fmtRupiah, parseRupiah, todayISO } from "../utils/format";
 import { isProjectManager } from "../utils/employeeOptions";
+import { apiFetch, isBackendConfigured } from "../services/http";
 import ClientModal from "./ClientModal";
 import { TAHAP_V2, tahapLabel } from "../utils/projectStages";
 import { useT } from "../i18n/LanguageContext";
@@ -107,17 +108,28 @@ export default function ProjectAddModal({
     [docks]
   );
 
-  const pmOptions = useMemo(
-    () =>
-      employees
-        .filter(isProjectManager)
-        .map((e) => ({
-          value: String(e.name ?? ""),
-          label: String(e.name ?? ""),
-          subLabel: `${e.role || e.dept || "Karyawan"}`,
-        })),
-    [employees]
-  );
+  /* Peran pembuat proyek (mis. Commercial) belum tentu boleh membaca data SDM
+     (berisi gaji). Server menyediakan daftar PM ringkas (nama & jabatan saja)
+     untuk peran yang boleh membuat proyek; digabung dengan data lokal. */
+  const [serverPms, setServerPms] = useState<{ name: string; role: string; dept: string }[]>([]);
+  useEffect(() => {
+    if (!isBackendConfigured()) return;
+    apiFetch<{ managers: { name: string; role: string; dept: string }[] }>("/api/project-managers")
+      .then((r) => setServerPms(r.managers))
+      .catch(() => setServerPms([]));
+  }, []);
+  const pmOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { value: string; label: string; subLabel: string }[] = [];
+    const add = (name: string, sub: string): void => {
+      if (!name || seen.has(name)) return;
+      seen.add(name);
+      out.push({ value: name, label: name, subLabel: sub || "Karyawan" });
+    };
+    for (const e of employees.filter(isProjectManager)) add(String(e.name ?? ""), String(e.role || e.dept || ""));
+    for (const m of serverPms) add(m.name, m.role || m.dept);
+    return out;
+  }, [employees, serverPms]);
 
   const nextProjectCode = (type: string, start: string): string => {
     const prefix = PREFIX_TIPE[type] ?? "PRJ";

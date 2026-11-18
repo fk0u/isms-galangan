@@ -83,6 +83,18 @@ try {
   const finDocs = await list("finance");
   ok("finance: melihat dokumen Invoice", finDocs.includes(ids.inv));
   ok("direktur: melihat semua", (await list("direktur")).filter((x) => Object.values(ids).includes(x)).length === 3);
+  /* Sinkron tabel RBAC ↔ izin data (laporan 18 Nov: Commercial tidak bisa memilih PM). */
+  const pmRes = await app.inject({ method: "GET", url: "/api/project-managers", headers: await tok("commercial") });
+  const pms = pmRes.statusCode === 200 ? (pmRes.json() as { data: { managers: Array<Record<string, unknown>> } }).data.managers : [];
+  ok("commercial: daftar kandidat PM terbaca (nama & jabatan saja, tanpa gaji)", pmRes.statusCode === 200 && pms.length > 0 && pms.every((m) => Object.keys(m).sort().join() === "dept,id,name,role"), `${pmRes.statusCode} ${JSON.stringify(pms[0])}`);
+  ok("commercial: data SDM lengkap tetap tertutup (403)", (await app.inject({ method: "GET", url: "/api/employees", headers: await tok("commercial") })).statusCode === 403);
+  ok("gudang (tidak boleh buat proyek): kandidat PM → 403", (await app.inject({ method: "GET", url: "/api/project-managers", headers: await tok("gudang") })).statusCode === 403);
+  const effRes = await app.inject({ method: "GET", url: "/api/rbac/effective", headers: await tok("direktur") });
+  const eff = (effRes.json() as { data: { roles: Record<string, { levels: Record<string, string>; modules: Record<string, { r: boolean; w: boolean } | null> }> } }).data.roles;
+  ok("izin efektif: commercial SDM tanpa baca, CRM bisa tulis; level SDM = none", effRes.statusCode === 200 && eff.commercial?.modules.sdm?.r === false && eff.commercial.modules.crm?.w === true && eff.commercial.levels.sdm === "none", JSON.stringify(eff.commercial?.modules.sdm));
+  ok("izin efektif: gudang tidak boleh membuka (403)", (await app.inject({ method: "GET", url: "/api/rbac/effective", headers: await tok("gudang") })).statusCode === 403);
+  const rb = (await app.inject({ method: "GET", url: "/api/rbac", headers: await tok("developer") })).json() as { data: { baseMax: Record<string, Record<string, string>> } };
+  ok("batas tabel modul: commercial SDM maks none, Proyek maks crud, viewer Proyek maks view", rb.data.baseMax.commercial?.sdm === "none" && rb.data.baseMax.commercial?.proyek === "crud" && rb.data.baseMax.viewer?.proyek === "view", JSON.stringify(rb.data.baseMax.commercial));
   for (const id of Object.values(ids)) await exec("DELETE FROM documents WHERE id = ?", [id]);
 } finally {
   for (const id of made) await exec("DELETE FROM users WHERE id = ?", [id]);

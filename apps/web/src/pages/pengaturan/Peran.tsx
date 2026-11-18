@@ -247,8 +247,37 @@ const ROLE_MATRIX: Record<string, Record<string, RoleAction[]>> = {
   },
 };
 
-function granted(role: string, modul: string, aksi: RoleAction): boolean {
-  return ROLE_MATRIX[role]?.[modul]?.includes(aksi) ?? false;
+/** Label modul di halaman ini → kunci modul server (moduleAccess.ts). */
+const MODULE_KEY: Record<string, string> = {
+  Proyek: "proyek", Drydock: "drydock", Inventori: "inventori", Equipment: "equipment", Subkontraktor: "subkontraktor",
+  "QC & Safety": "qc", CRM: "crm", Procurement: "procurement", Keuangan: "keuangan", SDM: "sdm", Kapal: "kapal",
+  Dokumen: "dokumen", Analytics: "analytics", Notifikasi: "notifikasi", Absensi: "absensi", Payroll: "payroll",
+  Laporan: "laporan", Monitoring: "monitoring", Pengaturan: "pengaturan",
+};
+type Effective = Record<string, { levels: Record<string, string>; modules: Record<string, { r: boolean; w: boolean; d: boolean } | null> }>;
+
+/** Izin satu aksi. Dengan data server (eff): Lihat/Buat/Ubah/Hapus = izin data
+ *  efektif modul; Setujui/Bayar/Ekspor = matriks acuan DAN izin dasarnya ada.
+ *  Tanpa server: matriks acuan saja (mode lokal). */
+function granted(role: string, modul: string, aksi: RoleAction, eff?: Effective | null): boolean {
+  const ref = ROLE_MATRIX[role]?.[modul]?.includes(aksi) ?? false;
+  const e = eff?.[role];
+  if (!e) return ref;
+  if (role === "developer") return true;
+  const key = MODULE_KEY[modul] ?? "";
+  const level = e.levels[key] ?? "crud";
+  if (level === "none") return false;
+  const mp = e.modules[key];
+  const canR = mp ? mp.r : true;
+  const canW = mp ? mp.w : level === "crud";
+  const canD = mp ? mp.d : level === "crud";
+  switch (aksi) {
+    case "Lihat": return canR;
+    case "Buat": case "Ubah": return canW;
+    case "Hapus": return canD;
+    case "Setujui": case "Bayar": return ref && canW;
+    case "Ekspor": return ref && canR;
+  }
 }
 
 interface ManagedUser {
@@ -331,6 +360,12 @@ export default function Peran() {
     Ekspor: S.actExport,
   };
   const [role, setRole] = useState<string>("manager");
+  /* Izin efektif dari server - sumber yang sama dengan tabel akses modul. */
+  const [eff, setEff] = useState<Effective | null>(null);
+  useEffect(() => {
+    if (!isBackendConfigured()) return;
+    apiFetch<{ roles: Effective }>("/api/rbac/effective").then((r) => setEff(r.roles)).catch(() => setEff(null));
+  }, []);
   const [sort, setSort] = useState<SortState>({ key: null, dir: "asc" });
 
   /* Live user management (remote only). Matrix below stays as the RBAC reference. */
@@ -544,21 +579,20 @@ export default function Peran() {
     let yes = 0;
     let withAccess = 0;
     for (const m of MODULES) {
-      const row = ROLE_MATRIX[role]?.[m] ?? [];
-      if (row.length > 0) withAccess++;
-      yes += row.length;
+      const n = ACTIONS.filter((a) => granted(role, m, a, eff)).length;
+      if (n > 0) withAccess++;
+      yes += n;
     }
     return { yes, total, withAccess, pct: total > 0 ? Math.round((yes / total) * 100) : 0 };
-  }, [role]);
+  }, [role, eff]);
 
   const userPager = usePager(users.length);
   const sessPager = usePager(users.length);
   const sortedModules = useMemo(() => sortRows(MODULES, sort, (row, k) => {
     const m = String(row);
     if (k === "modul") return m;
-    return granted(role, m, String(k) as RoleAction) ? "Ya" : "";
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [sort, role]);
+    return granted(role, m, String(k) as RoleAction, eff) ? "Ya" : "";
+  }), [sort, role, eff]);
   const matrixPager = usePager(MODULES.length);
   useEffect(() => {
     matrixPager.reset();
@@ -570,7 +604,7 @@ export default function Peran() {
     const body: string[][] = [];
     for (const r of ROLES) {
       for (const m of MODULES) {
-        body.push([r, m, ...ACTIONS.map((a) => (granted(r, m, a) ? "Ya" : "-"))]);
+        body.push([r, m, ...ACTIONS.map((a) => (granted(r, m, a, eff) ? "Ya" : "-"))]);
       }
     }
     void exportExcel([head, ...body], "matriks-peran-akses", "RBAC").then(() =>
@@ -809,7 +843,7 @@ export default function Peran() {
 
       <Card className="mb-4 p-4">
         <div className="max-w-sm">
-          <Field label={S.selectRole} hint={S.selectRoleHint}>
+          <Field label={S.selectRole} hint={eff ? S.selectRoleHint : S.selectRoleHintOffline}>
             <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
@@ -835,7 +869,7 @@ export default function Peran() {
                 <tr key={m} className="hover:bg-surface">
                   <td className="sticky left-0 bg-white px-5 py-2.5 font-semibold text-navy-900">{m}</td>
                   {ACTIONS.map((a) => {
-                    const ok = granted(role, m, a);
+                    const ok = granted(role, m, a, eff);
                     return (
                       <td key={a} className="px-3 py-2.5 text-center">
                         {ok ? <Badge tone="green"><Check className="h-3 w-3 inline mr-1" />Siap</Badge> : <Badge tone="gray">-</Badge>}

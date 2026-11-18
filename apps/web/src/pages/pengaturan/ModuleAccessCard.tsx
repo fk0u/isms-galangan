@@ -12,6 +12,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_roles } from "../../i18n/n_roles";
 
 type AccessLevel = "crud" | "view" | "none";
+const RANK: Record<AccessLevel, number> = { none: 0, view: 1, crud: 2 };
 
 interface Access {
   levels?: Record<string, AccessLevel>;
@@ -25,6 +26,8 @@ interface RbacInfo {
   finTabs: string[];
   defaults: Record<string, Access>;
   effective: Record<string, Access>;
+  /** Tingkat maksimal yang bisa diberikan per peran per modul (izin data dasar server). */
+  baseMax?: Record<string, Record<string, AccessLevel>>;
 }
 
 export default function ModuleAccessCard() {
@@ -96,6 +99,7 @@ export default function ModuleAccessCard() {
         <div>
           <h3 className="text-base font-semibold text-navy-900">{S.rbacTitle}</h3>
           <p className="text-xs text-steel-500">{S.rbacSub}</p>
+          <p className="mt-1 text-xs text-steel-500">{S.rbacCapNote}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
             <span className="inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 border border-emerald-200" title={S.rbacLevelCrudTip}>
               <Check className="h-3.5 w-3.5 text-emerald-700" /> {S.rbacLevelCrud}
@@ -143,7 +147,13 @@ export default function ModuleAccessCard() {
                   {r}
                 </td>
                 {info.modules.map((m) => {
-                  const level = getLevel(r, m);
+                  /* Tabel hanya bisa MEMBATASI izin data dasar peran di server,
+                     tidak menambah. Yang ditampilkan = yang benar-benar berlaku;
+                     pilihan di atas batas dinonaktifkan. */
+                  const max = info.baseMax?.[r]?.[m] ?? "crud";
+                  const set = getLevel(r, m);
+                  const level: AccessLevel = RANK[set] <= RANK[max] ? set : max;
+                  const capped = RANK[max] < 2;
                   return (
                     <td key={m} className="px-1 py-1 text-center">
                       <select
@@ -157,18 +167,18 @@ export default function ModuleAccessCard() {
                             ? "border-sky-300 bg-sky-50 text-sky-800 focus:ring-sky-500"
                             : "border-steel-200 bg-steel-100 text-steel-500 focus:ring-steel-400"
                         }`}
-                        title={
+                        title={`${
                           level === "crud"
                             ? S.rbacLevelCrudTip
                             : level === "view"
                             ? S.rbacLevelViewTip
                             : S.rbacLevelNoneTip
-                        }
+                        }${capped ? ` · ${S.rbacCapped.replace("{n}", max === "view" ? S.rbacLevelView : S.rbacLevelNone)}` : ""}`}
                       >
-                        <option value="crud" className="bg-white text-emerald-800 font-medium">
+                        <option value="crud" disabled={RANK[max] < 2} className="bg-white text-emerald-800 font-medium">
                           {S.rbacLevelCrud}
                         </option>
-                        <option value="view" className="bg-white text-sky-800 font-medium">
+                        <option value="view" disabled={RANK[max] < 1} className="bg-white text-sky-800 font-medium">
                           {S.rbacLevelView}
                         </option>
                         <option value="none" className="bg-white text-steel-500 font-medium">
