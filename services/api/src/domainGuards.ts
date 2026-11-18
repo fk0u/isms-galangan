@@ -93,7 +93,10 @@ export function stampWbsRoles(before: unknown, after: unknown, role: string): un
  *  adalah satu-satunya sumber; aturan yang sama dipakai picker di web. */
 export function isProjectManagerTitle(title: unknown): boolean {
   const t = str(title).toLowerCase();
-  return t.includes("project manager") || t.includes("manajer proyek") || /(^|[^a-z])pm([^a-z]|$)/.test(t);
+  /* 18 Nov 2026: galangan juga menunjuk "Pimpinan Proyek" (pimpro) dan
+     "Engineer Supervisor" sebagai pimpinan proyek. */
+  return t.includes("project manager") || t.includes("manajer proyek") || t.includes("pimpinan proyek")
+    || t.includes("engineer supervisor") || /(^|[^a-z])(pm|pimpro)([^a-z]|$)/.test(t);
 }
 
 /** #82: manager proyek yang baru ditetapkan harus karyawan aktif berjabatan PM.

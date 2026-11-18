@@ -55,12 +55,14 @@ export function employeeOptions(
     .filter((o) => o.value !== "");
 }
 
-/** #82: karyawan aktif berjabatan Project Manager. Aturannya harus sama dengan
+/** #82: karyawan aktif yang boleh memimpin proyek - jabatan Project Manager,
+ *  Pimpinan Proyek (pimpro), atau Engineer Supervisor (18 Nov 2026). Aturannya harus sama dengan
  *  `isProjectManagerTitle` di services/api/src/domainGuards.ts - server menolak
  *  penetapan manager proyek di luar daftar ini. */
 export function isProjectManager(e: StoreItem): boolean {
   const t = String(e.role ?? "").trim().toLowerCase();
-  const pm = t.includes("project manager") || t.includes("manajer proyek") || /(^|[^a-z])pm([^a-z]|$)/.test(t);
+  const pm = t.includes("project manager") || t.includes("manajer proyek") || t.includes("pimpinan proyek")
+    || t.includes("engineer supervisor") || /(^|[^a-z])(pm|pimpro)([^a-z]|$)/.test(t);
   return pm && (String(e.status ?? "").trim() || "Aktif") === "Aktif";
 }
 
