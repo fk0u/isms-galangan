@@ -7,6 +7,7 @@ import { Card, CardHeader, PageHeader, Badge, KpiCard, Tabs, StatusBadge, Donut,
 } from "../../components/ui";
 import type { SortState } from "../../components/ui";
 import { useBusy, SearchBox, rowMatches } from "../../components/ui";
+import { SearchSelect } from "../../components/SearchSelect";
 import { useStore, type StoreItem } from "../../data/store";
 import { findUniqueInventoryByName } from "../../data/inventoryLookup";
 import { useModuleSync } from "../../data/useModuleSync";
@@ -404,6 +405,7 @@ export default function Procurement() {
   const [showBig, setShowBig] = useState(false);
   const [bigForm, setBigForm] = useState({ tujuan: "kapal" as "kapal" | "stok", warehouse: "", prId: "", vendor: "", project: "", vessel: "", eta: "", includePpn: true, override: false, overrideReason: "" });
   const [bigLines, setBigLines] = useDraftState<POLine[]>("isms.draft.procurement.bigLines", [{ name: "", qty: "1", unit: "pcs", price: "", spec: "", need: "", itemId: "" }]);
+  const invOptions = useMemo(() => (data.inventory ?? []).map((inv) => ({ value: String(inv.name ?? ""), label: String(inv.name ?? ""), subLabel: `stok ${fmtJumlah(Number(inv.stock))} ${String(inv.unit ?? "")}` })).filter((o) => o.value !== ""), [data.inventory]);
   const [vCatF, setVCatF] = useState("Semua");
   const [poDetail, setPoDetail] = useState<StoreItem | null>(null);
 
@@ -2761,11 +2763,6 @@ const sparkVendors = useMemo(() => {
           <div className="rounded-xl border border-steel-200 bg-steel-50/50 p-3">
             <p className="label !mb-2">{S.barisMin}<span className="text-rose-600" aria-hidden> *</span></p>
             {bigErr.lines && <p role="alert" className="mb-2 text-[11px] font-medium text-rose-600">{bigErr.lines}</p>}
-            <datalist id="inv-item-catalog-list">
-              {(data.inventory ?? []).map((inv) => (
-                <option key={inv.id} value={inv.name}>{inv.name} · stok {fmtJumlah(Number(inv.stock))} {inv.unit}</option>
-              ))}
-            </datalist>
             <div className="space-y-2">
               {bigLines.map((l, idx) => (
                 <div key={idx} className="rounded-xl border border-steel-200 bg-white p-2.5 shadow-sm">
@@ -2773,13 +2770,15 @@ const sparkVendors = useMemo(() => {
                       kolomnya diberikan ke nama item. Spesifikasi di PO lama tetap tampil di daftar. */}
                   <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-5">
-                      <input
-                        list="inv-item-catalog-list"
-                        className="input w-full"
+                      {/* Komponen pilihan aplikasi (bukan <datalist> bawaan browser):
+                          pilih dari katalog inventori atau ketik nama item baru. */}
+                      <SearchSelect
+                        allowCustom
+                        ariaLabel={S.phNamaBaris}
                         placeholder={S.phNamaBaris}
                         value={l.name}
-                        onChange={(e) => {
-                          const val = e.target.value;
+                        options={invOptions}
+                        onChange={(val) => {
                           const matched = (data.inventory ?? []).find((i) => String(i.name ?? "").toLowerCase() === val.trim().toLowerCase());
                           setBigLines((s) =>
                             s.map((x, i) =>
