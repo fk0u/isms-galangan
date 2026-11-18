@@ -252,7 +252,7 @@ export const n_crm = {
     convertBodyQd: "Quotation dikunci ke Terkonversi dan dibuat satu proyek baru (kode NB/RP/RF otomatis) beserta catatan handover. Konversi ganda ditolak bila kapal sudah ada.",
     pmLabel: "Pimpinan Proyek (wajib)",
     pickPmOpt: "Pilih pimpinan proyek…",
-    noPmCandidates: "Belum ada karyawan berjabatan Project Manager",
+    noPmCandidates: "Belum ada karyawan berjabatan Project Manager, Pimpinan Proyek, atau Engineer Supervisor",
     startPlanLabel: "Mulai (rencana)",
     endPlanLabel: "Selesai (rencana)",
     sendBodyQd: "Yth. {a},\n\nTerlampir penawaran {b} v{c} untuk {d} senilai {e}.\n\nHormat kami,\nTim Commercial",

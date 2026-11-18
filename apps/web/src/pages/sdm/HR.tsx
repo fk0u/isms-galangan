@@ -31,6 +31,7 @@ import type { SortState } from "../../components/ui";
 import { AsyncButton, useBusy, SearchBox, rowMatches, RowAction } from "../../components/ui";
 import { FilterPopover } from "../../components/FilterPopover";
 import { useStore } from "../../data/store";
+import { SearchSelect } from "../../components/SearchSelect";
 import { DocumentPreviewCell, DocumentPreviewPanel } from "../../components/DocumentPreview";
 import { useModuleSync } from "../../data/useModuleSync";
 import { findUsages } from "../../utils/usages";
@@ -2115,8 +2116,12 @@ const finishTraining = async (t: StoreItem) => {
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
               <Field label={S.thJabatan}>
-                <input className="input" list="job-titles" title={E.jobHint} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder={S.phWelder} />
-                <datalist id="job-titles">{[...new Set(data.employees.map((x) => String(x.role ?? "")).filter(Boolean))].sort().map((r) => <option key={r} value={r} />)}</datalist>
+                {/* Pilih dari jabatan yang sudah dipakai, atau ketik jabatan baru.
+                    Sebelumnya <datalist> bawaan browser (tampil gelap, tanpa
+                    pencarian yang konsisten dengan form lain). */}
+                <SearchSelect value={form.role} onChange={(v) => setForm({ ...form, role: v })} allowCustom
+                  options={[...new Set(data.employees.map((x) => String(x.role ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((r) => ({ value: r, label: r }))}
+                  placeholder={S.phWelder} ariaLabel={S.thJabatan} emptyText={E.jobHint} />
               </Field>
               <Field label={S.fDept}>
                 <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>

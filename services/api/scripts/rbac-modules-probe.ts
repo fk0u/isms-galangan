@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
+import { isProjectManagerTitle } from "../src/domainGuards.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { DEFAULT_ACCESS } from "../src/moduleAccess.js";
 
@@ -83,6 +84,8 @@ try {
   const finDocs = await list("finance");
   ok("finance: melihat dokumen Invoice", finDocs.includes(ids.inv));
   ok("direktur: melihat semua", (await list("direktur")).filter((x) => Object.values(ids).includes(x)).length === 3);
+  ok("pimpinan proyek: Project Manager, Pimpinan Proyek, Pimpro, Engineer Supervisor diterima; Welder/Supervisor biasa tidak",
+    ["Project Manager", "Pimpinan Proyek", "Pimpro Docking", "Engineer Supervisor", "PM"].every(isProjectManagerTitle) && !["Welder", "Supervisor", "Engineer", "Helper"].some(isProjectManagerTitle));
   /* Sinkron tabel RBAC ↔ izin data (laporan 18 Nov: Commercial tidak bisa memilih PM). */
   const pmRes = await app.inject({ method: "GET", url: "/api/project-managers", headers: await tok("commercial") });
   const pms = pmRes.statusCode === 200 ? (pmRes.json() as { data: { managers: Array<Record<string, unknown>> } }).data.managers : [];
