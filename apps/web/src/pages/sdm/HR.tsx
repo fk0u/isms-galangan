@@ -76,7 +76,7 @@ const SURAT_JENIS = [
 ];
 const isKontrak = (jenis: string): boolean => jenis === "Kontrak Baru" || jenis === "Perpanjang Kontrak";
 const SURAT_KOSONG = { employeeId: "", jenis: "SP 1", docNo: "", isi: "", tanggal: "", fileUrl: "", approvedBy: "", approvedAt: "", sourceType: "", sourceId: "", contractNo: "", contractStart: "", contractEnd: "" };
-const IMPORT_HEADERS = ["NIK", "Nama", "Jabatan", "Departemen", "Cabang", "Status", "Tanggal Gabung (YYYY-MM-DD)", "Tipe", "Gaji Pokok", "PTKP Status", "Tanggungan", "Kontrak Berakhir (YYYY-MM-DD)"];
+const IMPORT_HEADERS = ["NIK", "Nama", "Jabatan", "Departemen", "Status", "Tanggal Gabung (YYYY-MM-DD)", "Tipe", "Gaji Pokok", "PTKP Status", "Tanggungan", "Kontrak Berakhir (YYYY-MM-DD)"];
 const DEPT_OPTIONS = ["Direksi", "Proyek", "Produksi", "Quality", "Finance", "Procurement", "Support"];
 const LEAVE_TYPES = ["Tahunan", "Sakit", "Izin", "Melahirkan", "Cuti Besar", "Unpaid"];
 
@@ -1309,8 +1309,8 @@ const finishTraining = async (t: StoreItem) => {
       "",
       `Kepada Yth. ${nama}${row.nik ? ` (${String(row.nik)})` : ""}`,
     ];
-    if (jabatan || row.dept || row.branch) {
-      lines.push(`Jabatan: ${jabatan} · Departemen: ${String(row.dept ?? "-")} · Cabang: ${String(row.branch ?? "-")}`);
+    if (jabatan || row.dept) {
+      lines.push(`Jabatan: ${jabatan} · Departemen: ${String(row.dept ?? "-")}`);
     }
     lines.push("", isi || (locale === "en" ? "(Letter body not written yet)" : "(Isi surat belum ditulis)"));
     return lines.join("\n");
@@ -1518,8 +1518,12 @@ const finishTraining = async (t: StoreItem) => {
         const seenNik = new Set(data.employees.map((e) => empNik(e).toLowerCase()));
         const seenName = new Set(data.employees.map((e) => String(e.name).toLowerCase()));
         let ok = 0;
-        for (const [idx, cells] of rows.slice(1).entries()) {
+        /* Cabang disembunyikan (sistem satu galangan): template baru tanpa kolom
+           Cabang; file lama yang masih punya kolom itu tetap terbaca. */
+        const hasBranchCol = (rows[0] ?? []).some((h) => /cabang/i.test(String(h)));
+        for (const [idx, rawCells] of rows.slice(1).entries()) {
         const line = idx + 2;
+        const cells = hasBranchCol ? rawCells : [...rawCells.slice(0, 4), "", ...rawCells.slice(4)];
         const [nikRaw, nama, jabatan, deptRaw, branchRaw, statusRaw, joinRaw, tipeRaw, basicRaw, ptkpRaw, tangRaw, kontrakRaw] = [
           ...cells,
           ...Array(Math.max(0, 12 - cells.length)).fill(""),
