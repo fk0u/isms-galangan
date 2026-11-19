@@ -52,7 +52,7 @@ export default function DeviceInsights() {
   );
 }
 
-function DailySummary() {
+export function DailySummary() {
   const { locale } = useT();
   const E = n_emp[locale];
   const [day, setDay] = useState(todayWita());
