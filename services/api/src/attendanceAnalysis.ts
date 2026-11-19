@@ -13,7 +13,7 @@
  * 4. TANDA - telat, pulang cepat, lembur, belum pulang / masih di kantor. */
 
 export interface Span { from: string; to: string }
-export type DayFlag = "late" | "early_leave" | "overtime" | "no_checkout" | "in_office" | "odd_scans";
+export type DayFlag = "late" | "early_leave" | "overtime" | "no_checkout" | "in_office" | "odd_scans" | "outside_hours" | "overnight";
 export interface DayAnalysis {
   /** Tap setelah debounce (HH:MM, urut). */
   taps: string[];
@@ -44,7 +44,8 @@ export interface AnalyzeOptions {
   isToday?: boolean;
 }
 
-const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+/** HH:MM; jam 24-29 = dini hari hari berikutnya (shift lintas tengah malam). */
+const HHMM = /^([01]\d|2[0-9]):[0-5]\d$/;
 export const toMin = (t: string): number => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
 
 export function analyzeDay(rawTaps: readonly string[], opts: AnalyzeOptions = {}): DayAnalysis {
@@ -65,8 +66,14 @@ export function analyzeDay(rawTaps: readonly string[], opts: AnalyzeOptions = {}
   if (taps.length === 0) return out;
   const first = taps[0] as string;
   const last = taps[taps.length - 1] as string;
-  out.lateMin = Math.max(0, toMin(first) - toMin(start));
-  if (out.lateMin > 0) out.flags.push("late");
+  /* Telat hanya bila masuk DI DALAM jam kerja. Masuk setelah jam pulang
+     (mis. 23:50) atau jauh sebelum jam masuk bukan "telat 15 jam" - itu
+     scan di luar jam kerja (lembur malam / shift lain / uji coba). */
+  const inWindow = toMin(first) >= toMin(start) - 180 && toMin(first) < toMin(end);
+  out.lateMin = inWindow ? Math.max(0, toMin(first) - toMin(start)) : 0;
+  if (!inWindow) out.flags.push("outside_hours");
+  else if (out.lateMin > 0) out.flags.push("late");
+  if (toMin(last) >= 24 * 60) out.flags.push("overnight");
   if (toMin(last) - toMin(first) < minGap) {
     out.flags.push(opts.isToday ? "in_office" : "no_checkout");
     return out;
@@ -82,9 +89,33 @@ export function analyzeDay(rawTaps: readonly string[], opts: AnalyzeOptions = {}
   }
   out.breakMin = out.breaks.reduce((s, b) => s + toMin(b.to) - toMin(b.from), 0);
   out.netMin = out.spanMin - out.breakMin;
-  out.earlyMin = Math.max(0, toMin(end) - toMin(last));
-  out.overtimeMin = Math.max(0, toMin(last) - toMin(end));
+  out.earlyMin = inWindow ? Math.max(0, toMin(end) - toMin(last)) : 0;
+  out.overtimeMin = Math.max(0, toMin(last) - Math.max(toMin(end), toMin(first)));
   if (out.earlyMin > 0) out.flags.push("early_leave");
   if (out.overtimeMin > 0) out.flags.push("overtime");
+  return out;
+}
+
+/** Shift lintas tengah malam: tap dini hari (< nightCutoff) dipindah ke hari
+ *  sebelumnya sebagai jam 24+ bila hari sebelumnya masih "terbuka" - tap
+ *  terakhirnya sore/malam (>= 15:00) dan jaraknya <= maxGapMin. Contoh:
+ *  23:50 (tgl 18) + 00:05 (tgl 19) → tgl 18: 23:50 → 24:05.
+ *  Input: tanggal → daftar tap HH:MM satu karyawan. Murni. */
+export function foldOvernight(days: ReadonlyMap<string, readonly string[]>, nightCutoff = "06:00", maxGapMin = 8 * 60): Map<string, string[]> {
+  const out = new Map<string, string[]>([...days].map(([d, t]) => [d, [...t].sort()]));
+  const dates = [...out.keys()].sort();
+  for (const d of dates) {
+    const prevDate = new Date(Date.parse(`${d}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    const prev = out.get(prevDate);
+    const cur = out.get(d) ?? [];
+    if (!prev || prev.length === 0) continue;
+    const prevLast = prev[prev.length - 1] as string;
+    if (toMin(prevLast) < 15 * 60) continue;
+    const early = cur.filter((t) => t < nightCutoff && toMin(t) + 24 * 60 - toMin(prevLast) <= maxGapMin);
+    if (early.length === 0) continue;
+    out.set(prevDate, [...prev, ...early.map((t) => `${String(Number(t.slice(0, 2)) + 24)}${t.slice(2)}`)].sort());
+    const rest = cur.filter((t) => !early.includes(t));
+    if (rest.length) out.set(d, rest); else out.delete(d);
+  }
   return out;
 }

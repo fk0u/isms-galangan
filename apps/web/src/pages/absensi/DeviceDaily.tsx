@@ -10,7 +10,7 @@ import { n_emp } from "../../i18n/n_emp";
 import { apiFetch } from "../../services/http";
 import DeviceLogs from "./DeviceLogs";
 
-type Flag = "late" | "early_leave" | "overtime" | "no_checkout" | "in_office" | "odd_scans";
+type Flag = "late" | "early_leave" | "overtime" | "no_checkout" | "in_office" | "odd_scans" | "outside_hours" | "overnight";
 interface Span { from: string; to: string }
 interface DayRow {
   id: string; date: string; employee: { id: string; name: string; devicePin: string }; status: string;
@@ -28,7 +28,9 @@ const witaNow = (): Date => new Date(Date.now() + 8 * 3600_000);
 const todayWita = (): string => witaNow().toISOString().slice(0, 10);
 const nowMinWita = (): number => witaNow().getUTCHours() * 60 + witaNow().getUTCMinutes();
 const shiftDay = (d: string, n: number): string => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-const FLAG_TONE: Record<Flag, "red" | "amber" | "blue" | "green" | "gray"> = { late: "red", early_leave: "amber", overtime: "blue", no_checkout: "amber", in_office: "green", odd_scans: "gray" };
+const FLAG_TONE: Record<Flag, "red" | "amber" | "blue" | "green" | "gray" | "violet"> = { late: "red", early_leave: "amber", overtime: "blue", no_checkout: "amber", in_office: "green", odd_scans: "gray", outside_hours: "violet", overnight: "violet" };
+/** "24:05" (dini hari esoknya, shift lintas tengah malam) → "00:05". */
+const wall = (t: string): string => (t && Number(t.slice(0, 2)) >= 24 ? `${String(Number(t.slice(0, 2)) - 24).padStart(2, "0")}${t.slice(2)}` : t);
 
 export default function DeviceInsights() {
   const { locale } = useT();
@@ -85,7 +87,10 @@ function DailySummary() {
     no_checkout: E.dayNoOut,
     in_office: E.dayInOffice,
     odd_scans: E.dayOdd,
+    outside_hours: E.dayOutside2,
+    overnight: E.dayOvernight,
   })[f];
+  const clock = (t: string): string => (t && Number(t.slice(0, 2)) >= 24 ? E.dayNextDay.replace("{t}", wall(t)) : t);
 
   const s = data?.summary;
   const tiles: [string, string][] = s ? [
@@ -150,8 +155,8 @@ function DailySummary() {
 
                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-5">
                   {([
-                    [E.dayIn, r.checkIn || "-"],
-                    [E.dayOut, r.checkOut || (open ? E.dayNotYet : "-")],
+                    [E.dayIn, clock(r.checkIn) || "-"],
+                    [E.dayOut, clock(r.checkOut) || (open ? E.dayNotYet : "-")],
                     [E.dayNet, r.netMin > 0 ? dur(r.netMin) : open ? E.dayRunning.replace("{t}", dur(running)) : "-"],
                     [E.dayBreak, r.breakMin > 0 ? dur(r.breakMin) : "-"],
                     [E.dayScans, r.rawCount > r.taps.length ? E.dayScansDup.replace("{a}", String(r.taps.length)).replace("{b}", String(r.rawCount - r.taps.length)) : String(r.taps.length)],
@@ -162,7 +167,7 @@ function DailySummary() {
 
                 <Timeline row={r} start={data.workHours.start} end={data.workHours.end} runningTo={open ? nowMinWita() : null}
                   label={E.dayTimeline} insideText={E.dayInside} outsideText={E.dayOutside} />
-                <p className="mt-2 text-xs text-steel-500"><span className="font-medium text-steel-600">{E.dayTaps}</span> {r.taps.join(" · ")}</p>
+                <p className="mt-2 text-xs text-steel-500"><span className="font-medium text-steel-600">{E.dayTaps}</span> {r.taps.map(clock).join(" · ")}</p>
               </li>
             );
           })}
@@ -181,12 +186,12 @@ function Timeline({ row, start, end, runningTo, label, insideText, outsideText }
   if (runningTo !== null && row.checkIn) sessions.push({ from: toMin(row.checkIn), to: Math.max(runningTo, toMin(row.checkIn) + 1), open: true });
   const all = [toMin(start), toMin(end), ...row.taps.map(toMin), ...(runningTo !== null ? [runningTo] : [])];
   const lo = Math.max(0, Math.floor((Math.min(...all) - 30) / 60) * 60);
-  const hi = Math.min(24 * 60, Math.ceil((Math.max(...all) + 30) / 60) * 60);
+  const hi = Math.min(30 * 60, Math.ceil((Math.max(...all) + 30) / 60) * 60);
   const pct = (m: number): number => ((m - lo) / (hi - lo)) * 100;
   const text = [
-    ...row.sessions.map((x) => `${insideText} ${x.from}-${x.to}`),
-    ...row.breaks.map((x) => `${outsideText} ${x.from}-${x.to}`),
-  ].join(", ") || row.taps.join(", ");
+    ...row.sessions.map((x) => `${insideText} ${wall(x.from)}-${wall(x.to)}`),
+    ...row.breaks.map((x) => `${outsideText} ${wall(x.from)}-${wall(x.to)}`),
+  ].join(", ") || row.taps.map(wall).join(", ");
   const hours: number[] = [];
   for (let h = lo; h <= hi; h += 120) hours.push(h);
   return (
@@ -205,7 +210,7 @@ function Timeline({ row, start, end, runningTo, label, insideText, outsideText }
         ))}
       </div>
       <div aria-hidden className="relative mt-1 h-3 text-[10px] tabular-nums text-steel-400">
-        {hours.map((h) => <span key={h} className="absolute -translate-x-1/2" style={{ left: `${pct(h)}%` }}>{String(h / 60).padStart(2, "0")}</span>)}
+        {hours.map((h) => <span key={h} className="absolute -translate-x-1/2" style={{ left: `${pct(h)}%` }}>{String((h / 60) % 24).padStart(2, "0")}</span>)}
       </div>
     </div>
   );

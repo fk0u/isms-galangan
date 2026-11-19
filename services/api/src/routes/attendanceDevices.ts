@@ -14,7 +14,7 @@ import { requestActor, requestIp, writeAudit } from "../audit.js";
 import { q } from "../db.js";
 import { fail, ok } from "../envelope.js";
 import { can, normalizeRole } from "../policy.js";
-import { analyzeDay, type DayAnalysis } from "../attendanceAnalysis.js";
+import { analyzeDay, foldOvernight, type DayAnalysis } from "../attendanceAnalysis.js";
 import { tapsOf } from "./attendanceIngest.js";
 import {
   cancelCommand, connectionStats, deviceBeats, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
@@ -232,20 +232,35 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     const needle = (f.q ?? "").toLowerCase();
     type DailyRow = DayAnalysis & { id: string; date: string; employee: { id: string; name: string; devicePin: string }; status: string };
     const rows: DailyRow[] = [];
+    /* Kumpulkan tap per karyawan per tanggal (rentang +-1 hari supaya shift
+       lintas tengah malam di tepi rentang ikut terbaca), lalu foldOvernight
+       memindah tap dini hari ke shift malam sebelumnya. */
+    const perEmp = new Map<string, Map<string, string[]>>();
+    const meta = new Map<string, { id: string; status: string }>();
     for (const a of await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])) {
       let d: Record<string, unknown>;
       try { d = JSON.parse(a.data) as Record<string, unknown>; } catch { continue; }
       const date = String(d.date ?? "");
-      if (date < from || date > to || !String(d.source ?? "").startsWith("device:")) continue;
-      const emp = emps.get(String(d.employeeId ?? ""));
-      const name = emp?.name ?? String(d.employeeId ?? "");
-      if (needle && !name.toLowerCase().includes(needle) && !(emp?.devicePin ?? "").toLowerCase().includes(needle)) continue;
+      if (date < addDays(from, -1) || date > addDays(to, 1) || !String(d.source ?? "").startsWith("device:")) continue;
+      const empId = String(d.employeeId ?? "");
+      const m = perEmp.get(empId) ?? new Map<string, string[]>();
       // Jam masuk/pulang tersimpan selalu ikut (baris lama tanpa daftar tap).
-      const taps = tapsOf(d);
-      rows.push({
-        id: a.id, date, employee: { id: String(d.employeeId ?? ""), name, devicePin: emp?.devicePin ?? "" },
-        status: String(d.status ?? ""), ...analyzeDay(taps, { isToday: date === today }),
-      });
+      m.set(date, tapsOf(d));
+      perEmp.set(empId, m);
+      meta.set(`${empId}|${date}`, { id: a.id, status: String(d.status ?? "") });
+    }
+    for (const [empId, days] of perEmp) {
+      const emp = emps.get(empId);
+      const name = emp?.name ?? empId;
+      if (needle && !name.toLowerCase().includes(needle) && !(emp?.devicePin ?? "").toLowerCase().includes(needle)) continue;
+      for (const [date, taps] of foldOvernight(days)) {
+        if (date < from || date > to) continue;
+        const mt = meta.get(`${empId}|${date}`);
+        rows.push({
+          id: mt?.id ?? `${empId}|${date}`, date, employee: { id: empId, name, devicePin: emp?.devicePin ?? "" },
+          status: mt?.status ?? "", ...analyzeDay(taps, { isToday: date === today }),
+        });
+      }
     }
     rows.sort((x, y) => y.date.localeCompare(x.date) || x.employee.name.localeCompare(y.employee.name));
     const done = rows.filter((r) => r.netMin > 0);
@@ -255,6 +270,7 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
       summary: {
         present: rows.length, late: has("late"), inOffice: has("in_office"), noCheckout: has("no_checkout"),
         earlyLeave: has("early_leave"), overtime: has("overtime"), review: has("odd_scans"),
+        outsideHours: has("outside_hours"), overnight: has("overnight"),
         avgNetMin: done.length ? Math.round(done.reduce((s, r) => s + r.netMin, 0) / done.length) : 0,
       },
       workHours: { start: "08:00", end: "17:00" },
