@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight, X, Loader2, Search, Upload as UploadIcon } from "lucide-react";
 import { toast } from "./Toast";
+import { NOT_LOADED, useFirstLoadPending } from "../data/firstLoad";
 
 import { ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from "recharts";
 
@@ -348,6 +349,9 @@ export function KpiCard({
      grafik di kartu, dan sistem industri memakai angka besar, bukan dekorasi.
      Prop dipertahankan agar pemanggil lama tetap valid. */
   void spark;
+  // Sebelum data server pertama tiba, angka cache/seed bisa menyesatkan → tampil "-".
+  const loading = useFirstLoadPending();
+  if (loading) { value = NOT_LOADED; delta = undefined; hint = undefined; }
   if (tone) {
     return (
       <div className={`card-hover relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 ${kpiTone[tone]}`}>
@@ -670,6 +674,8 @@ export function EmptyState({
   title: string;
   subtitle?: string;
 }) {
+  // "Belum ada data" baru benar setelah fetch pertama selesai; sebelumnya "-".
+  if (useFirstLoadPending()) return <div className="py-16 text-center text-sm text-steel-400" aria-busy="true">{NOT_LOADED}</div>;
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       {icon && <div className="mb-3 text-steel-300">{icon}</div>}
