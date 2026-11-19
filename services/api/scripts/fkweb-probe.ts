@@ -4,7 +4,7 @@ import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
 import { addTap, implausibleTime, mergePunch, tapsOf } from "../src/routes/attendanceIngest.js";
-import { analyzeDay } from "../src/attendanceAnalysis.js";
+import { analyzeDay, foldOvernight } from "../src/attendanceAnalysis.js";
 import { collectDeviceUsers, connectionStats, nameScore, parseBinBlocks, parseLogBlock, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
 
@@ -41,6 +41,13 @@ async function main(): Promise<void> {
   assert("analisis: debounce scan ganda, 4 tap → 2 sesi + istirahat 60 mnt, bersih 8 j 32 m, lembur 30 m", A.taps.join() === "07:58,12:00,13:00,17:30" && A.sessions.length === 2 && A.breakMin === 60 && A.netMin === 512 && A.overtimeMin === 30 && A.flags.join() === "overtime", JSON.stringify(A));
   const B = analyzeDay(["08:20", "12:01", "16:30"]);
   assert("analisis: tap ganjil → satu sesi + tanda tinjau, telat 20 m, pulang cepat 30 m", B.sessions.length === 1 && B.netMin === 490 && B.lateMin === 20 && B.earlyMin === 30 && B.flags.join() === "late,odd_scans,early_leave", JSON.stringify(B));
+  const night = analyzeDay(["23:50", "23:53", "23:57", "23:59"]);
+  assert("analisis: masuk 23:50 = di luar jam kerja, BUKAN telat 15 jam", night.lateMin === 0 && night.flags.includes("outside_hours") && !night.flags.includes("late"), JSON.stringify(night));
+  const folded = foldOvernight(new Map([["2026-11-18", ["23:50", "23:59"]], ["2026-11-19", ["00:05", "08:02"]]]));
+  assert("lintas tengah malam: 00:05 tgl 19 pindah ke shift tgl 18 (24:05), 08:02 tetap di tgl 19", JSON.stringify(folded.get("2026-11-18")) === JSON.stringify(["23:50", "23:59", "24:05"]) && JSON.stringify(folded.get("2026-11-19")) === JSON.stringify(["08:02"]));
+  const ov = analyzeDay(["23:50", "24:30"]);
+  assert("shift malam 23:50→00:30: 40 menit, tanda lintas tengah malam", ov.netMin === 40 && ov.checkOut === "24:30" && ov.flags.includes("overnight"), JSON.stringify(ov));
+  assert("pagi biasa tidak dipindah (tgl sebelumnya pulang 17:00)", foldOvernight(new Map([["2026-11-18", ["08:00", "17:00"]], ["2026-11-19", ["05:30"]]])).get("2026-11-19")?.join() === "05:30");
   assert("analisis: satu tap → belum pulang / masih di kantor (hari ini)", analyzeDay(["08:00"]).flags.join() === "no_checkout" && analyzeDay(["08:00", "08:10"], { isToday: true }).flags.join() === "in_office" && analyzeDay([]).checkIn === "");
   assert("tapsOf: baris lama tanpa taps memakai jam masuk/pulang; baris campuran digabung", tapsOf({ checkIn: "12:20", checkOut: "16:27" }).join() === "12:20,16:27" && tapsOf({ taps: ["17:15"], checkIn: "12:20", checkOut: "17:15" }).join() === "12:20,17:15");
   /* Entri log asli dari mesin (16 Nov 2026, ID 1, 17:15:09, sidik jari). */
