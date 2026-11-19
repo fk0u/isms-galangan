@@ -609,30 +609,7 @@ export default function Absensi() {
 
           {tab === "Rekap" && (
             <div className="space-y-8">
-              <section aria-labelledby="rk-year">
-                <h3 id="rk-year" className="mb-3 text-base font-semibold text-navy-900">1. {n_emp[locale].secYear}</h3>
-                <YearlyRecap />
-              </section>
-              <section aria-labelledby="rk-month" className="border-t border-steel-100 pt-6">
-                <h3 id="rk-month" className="mb-3 text-base font-semibold text-navy-900">2. {n_emp[locale].secMonth}</h3>
-                <MonthlyRecap />
-              </section>
-            <div>
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-[15px] font-semibold text-navy-900">{n_emp[locale].rekapTitle}</h3>
-                  <p className="text-xs text-steel-500">{n_emp[locale].rekapSub.replace("{m}", month)}</p>
-                </div>
-                <button type="button" className="btn-primary text-sm" onClick={() => setManualOpen(true)}><Plus className="h-4 w-4" aria-hidden /> {n_emp[locale].manBtnOpen}</button>
-              </div>
-              <ManualEntryModal open={manualOpen} onClose={() => setManualOpen(false)} employees={activeEmps} />
-              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <KpiCard label={S.kpiAttendanceRate} value={`${kpiPct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} hint={S.monthHint.replace("{n}", month)} chip="teal" />
-                <KpiCard label={S.kpiTotalPresent} value={fmtJumlah(kpiHadir)} hint={S.recordsHint.replace("{n}", fmtJumlah(monthRecords.length))} chip="navy" />
-                <KpiCard label={S.kpiLateCount} value={fmtJumlah(kpiTelat)} hint={S.lateHint} chip="rose" />
-                <KpiCard label={S.kpiTotalOvertime} value={`${fmtJumlah(Math.round(kpiLembur * 10) / 10)} jam`} hint={S.approvedOnlyPayroll} chip="amber" />
-              </div>
-
+              {/* Tren 12 bulan paling atas (permintaan CTO 19 Nov). */}
               {trenValid && (
                 <Card className="mb-4 p-5" data-export-hide>
                   <CardHeader
@@ -680,6 +657,30 @@ export default function Absensi() {
                   </div>
                 </Card>
               )}
+              <section aria-labelledby="rk-year">
+                <h3 id="rk-year" className="mb-3 text-base font-semibold text-navy-900">1. {n_emp[locale].secYear}</h3>
+                <YearlyRecap />
+              </section>
+              <section aria-labelledby="rk-month" className="border-t border-steel-100 pt-6">
+                <h3 id="rk-month" className="mb-3 text-base font-semibold text-navy-900">2. {n_emp[locale].secMonth}</h3>
+                {/* Header + KPI bulanan di deret atas section Rekap Bulanan. */}
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-[15px] font-semibold text-navy-900">{n_emp[locale].rekapTitle}</h3>
+                  <p className="text-xs text-steel-500">{n_emp[locale].rekapSub.replace("{m}", month)}</p>
+                </div>
+                <button type="button" className="btn-primary text-sm" onClick={() => setManualOpen(true)}><Plus className="h-4 w-4" aria-hidden /> {n_emp[locale].manBtnOpen}</button>
+              </div>
+              <ManualEntryModal open={manualOpen} onClose={() => setManualOpen(false)} employees={activeEmps} />
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiCard label={S.kpiAttendanceRate} value={`${kpiPct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} hint={S.monthHint.replace("{n}", month)} chip="teal" />
+                <KpiCard label={S.kpiTotalPresent} value={fmtJumlah(kpiHadir)} hint={S.recordsHint.replace("{n}", fmtJumlah(monthRecords.length))} chip="navy" />
+                <KpiCard label={S.kpiLateCount} value={fmtJumlah(kpiTelat)} hint={S.lateHint} chip="rose" />
+                <KpiCard label={S.kpiTotalOvertime} value={`${fmtJumlah(Math.round(kpiLembur * 10) / 10)} jam`} hint={S.approvedOnlyPayroll} chip="amber" />
+              </div>
+                <MonthlyRecap />
+              </section>
+            <div>
 
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <FilterPopover
