@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ID_MON } from "../../utils/monthAxis";
-import { CalendarCheck, Download, CircleCheck, Trash2 } from "lucide-react";
+import { CalendarCheck, Download, CircleCheck, Plus, Trash2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Badge,
@@ -85,6 +85,7 @@ function otStatusOf(a: StoreItem): string {
 import MonthlyRecap from "./MonthlyRecap";
 import DeviceImport from "./DeviceImport";
 import DeviceManager from "./DeviceManager";
+import ManualEntryModal from "./ManualEntryModal";
 import DeviceInsights from "./DeviceDaily";
 import { hasPermission, useAuth } from "../../auth/auth";
 import { isBackendConfigured } from "../../services/http";
@@ -124,6 +125,7 @@ export default function Absensi() {
      satu baris adalah menggulir. */
   const [catatQ, setCatatQ] = useState("");
   const [rekapQ, setRekapQ] = useState("");
+  const [manualOpen, setManualOpen] = useState(false);
   const [detailQ, setDetailQ] = useState("");
 
   const branchCities = useMemo(() => data.branches.map((b) => String(b.city)), [data.branches]);
@@ -317,9 +319,9 @@ export default function Absensi() {
   );
   const sortedRekap = useMemo(() => sortRows(
     summary.filter((row) => rowMatches(
-      { name: String(row.emp.name ?? ""), id: String(row.emp.id ?? ""), branch: String(row.emp.branch ?? "") } as unknown as Record<string, unknown>,
+      { name: String(row.emp.name ?? ""), id: String(row.emp.id ?? ""), nik: String(row.emp.username ?? ""), role: String(row.emp.role ?? ""), dept: String(row.emp.dept ?? "") } as unknown as Record<string, unknown>,
       rekapQ,
-      ["name", "id", "branch"],
+      ["name", "id", "nik", "role", "dept"],
     )),
     sort2,
     (row, k) => {
@@ -336,12 +338,13 @@ export default function Absensi() {
       case "pct": return Number(r.pct);
       default: return "";
     }
-  }), [summary, sort2]);
-  const rekapPager = usePager(summary.length);
+  }), [summary, sort2, rekapQ]);
+  // Pager mengikuti hasil pencarian (sebelumnya jumlah semua karyawan, dan daftar tidak dihitung ulang saat mengetik).
+  const rekapPager = usePager(sortedRekap.length);
   useEffect(() => {
     rekapPager.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, branch, tab]);
+  }, [month, branch, tab, rekapQ]);
 
   const kpiHadir = monthRecords.filter((a) => a.status === "Hadir").length;
   const kpiTelat = monthRecords.filter((a) => a.status === "Hadir" && isLate(String(a.checkIn), String(a.shift ?? ""))).length;
@@ -479,7 +482,9 @@ export default function Absensi() {
 
       <div className="card">
         <DeviceImport />
-        <Tabs tabs={canManageDevices ? ["Bulanan", "Catat", "Rekap", "Mesin", "LogMesin"] : ["Bulanan", "Catat", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices, LogMesin: n_emp[locale].tabDeviceLogs }} />
+        {/* Tab "Catat" (tabel seluruh karyawan) digantikan tombol + modal per
+            karyawan di tab Rekap (permintaan 19 Nov). */}
+        <Tabs tabs={canManageDevices ? ["Bulanan", "Rekap", "Mesin", "LogMesin"] : ["Bulanan", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices, LogMesin: n_emp[locale].tabDeviceLogs }} />
         <div className="p-4">
           {tab === "Bulanan" && <MonthlyRecap />}
           {tab === "Catat" && (
@@ -601,6 +606,14 @@ export default function Absensi() {
 
           {tab === "Rekap" && (
             <div>
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-[15px] font-semibold text-navy-900">{n_emp[locale].rekapTitle}</h3>
+                  <p className="text-xs text-steel-500">{n_emp[locale].rekapSub.replace("{m}", month)}</p>
+                </div>
+                <button type="button" className="btn-primary text-sm" onClick={() => setManualOpen(true)}><Plus className="h-4 w-4" aria-hidden /> {n_emp[locale].manBtnOpen}</button>
+              </div>
+              <ManualEntryModal open={manualOpen} onClose={() => setManualOpen(false)} employees={activeEmps} />
               <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <KpiCard label={S.kpiAttendanceRate} value={`${kpiPct.toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`} hint={S.monthHint.replace("{n}", month)} chip="teal" />
                 <KpiCard label={S.kpiTotalPresent} value={fmtJumlah(kpiHadir)} hint={S.recordsHint.replace("{n}", fmtJumlah(monthRecords.length))} chip="navy" />

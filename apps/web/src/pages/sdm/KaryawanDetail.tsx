@@ -508,7 +508,7 @@ export default function KaryawanDetail() {
       </Link>
       <PageHeader
         title={String(emp.name)}
-        subtitle={`${emp.id} · NIK ${String(emp.username ?? emp.id)} · ${emp.role} · ${emp.dept} · ${emp.branch}`}
+        subtitle={`${emp.id} · NIK ${String(emp.username ?? emp.id)} · ${emp.role} · ${emp.dept}`}
         icon={<User className="h-5 w-5" />}
         actions={<StatusBadge status={String(emp.status)} />}
       />
