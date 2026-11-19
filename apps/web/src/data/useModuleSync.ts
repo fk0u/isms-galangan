@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useStore, type CollectionKey, type WbsItem } from "./store";
 import { apiFetch, getJwt } from "../services/http";
 import { collectionSyncCache } from "./collectionSyncCache";
+import { beginFirstLoad, endFirstLoad } from "./firstLoad";
 
 let lastBatchSyncAt = 0;
 let batchInFlight = 0;
@@ -146,6 +147,8 @@ const refresh = useCallback((force = true) => {
     batchInFlight += 1;
     setSyncActive(1);
     setSyncing(true);
+    const firstLoad = beginFirstLoad(batch);
+    let okCols: string[] = [];
     void collectionSyncCache.sync(
       `${getJwt() ?? "local"}:${sessionGeneration}`,
       batch,
@@ -158,6 +161,7 @@ const refresh = useCallback((force = true) => {
           setLastSyncAt(Date.now());
         }
         publishFailed(colsKey.split("|"), bad);
+        okCols = batch.filter((c) => !bad.includes(c));
         /* lastBatchSyncAt dicetak SETELAH batch selesai, bukan sebelum.
            Kalau dicetak sebelum dan batch GAGAL, recentModuleSync() tetap
            mengembalikan true dan menahan full resync() yang jadi jaring
@@ -175,6 +179,7 @@ const refresh = useCallback((force = true) => {
         publishFailed(colsKey.split("|"), colsKey.split("|"));
       })
       .finally(() => {
+        endFirstLoad(firstLoad, okCols);
         runningRef.current = false;
         batchInFlight = Math.max(0, batchInFlight - 1);
         setSyncActive(-1);
