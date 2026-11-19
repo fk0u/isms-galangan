@@ -17,7 +17,7 @@ import { can, normalizeRole } from "../policy.js";
 import { analyzeDay, foldOvernight, type DayAnalysis } from "../attendanceAnalysis.js";
 import { tapsOf } from "./attendanceIngest.js";
 import {
-  cancelCommand, connectionStats, deviceBeats, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
+  cancelCommand, connectionStats, hoursFor, loadWorkHours, saveWorkHours, deviceBeats, enqueueCommand, enqueueHrAction, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
   type HrAction,
 } from "../attendanceDevices.js";
 
@@ -230,7 +230,8 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     if (Date.parse(to) - Date.parse(from) > 62 * 86_400_000) return reply.status(400).send(fail("Rentang maksimal 62 hari", "VALIDATION_ERROR"));
     const emps = new Map((await loadEmployees()).map((e) => [e.id, e]));
     const needle = (f.q ?? "").toLowerCase();
-    type DailyRow = DayAnalysis & { id: string; date: string; employee: { id: string; name: string; devicePin: string }; status: string };
+    type DailyRow = DayAnalysis & { id: string; date: string; employee: { id: string; name: string; devicePin: string }; status: string; hours: { start: string; end: string } };
+    const base = await loadWorkHours();
     const rows: DailyRow[] = [];
     /* Kumpulkan tap per karyawan per tanggal (rentang +-1 hari supaya shift
        lintas tengah malam di tepi rentang ikut terbaca), lalu foldOvernight
@@ -258,7 +259,7 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
         const mt = meta.get(`${empId}|${date}`);
         rows.push({
           id: mt?.id ?? `${empId}|${date}`, date, employee: { id: empId, name, devicePin: emp?.devicePin ?? "" },
-          status: mt?.status ?? "", ...analyzeDay(taps, { isToday: date === today }),
+          status: mt?.status ?? "", hours: hoursFor(emp, base), ...analyzeDay(taps, { isToday: date === today, ...hoursFor(emp, base) }),
         });
       }
     }
@@ -273,7 +274,7 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
         outsideHours: has("outside_hours"), overnight: has("overnight"),
         avgNetMin: done.length ? Math.round(done.reduce((s, r) => s + r.netMin, 0) / done.length) : 0,
       },
-      workHours: { start: "08:00", end: "17:00" },
+      workHours: base,
     });
   });
 
@@ -311,6 +312,19 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
       connection: { ...connectionStats(deviceBeats(id)), lastSeen: st?.last_seen ?? null },
       settings: setting ? { at: setting.done_at, values: (parseJ(setting.result) as { data?: unknown } | null)?.data ?? null } : null,
     });
+  });
+
+  /* Jam kerja standar untuk analisis scan mesin (telat / pulang cepat / lewat
+     jam pulang). Pengecualian per karyawan diisi di data karyawan. */
+  app.get("/api/attendance/work-hours", { preHandler: [requireAuth] }, async () => ok(await loadWorkHours()));
+  app.put("/api/attendance/work-hours", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengatur jam kerja", "FORBIDDEN"));
+    const parsed = z.object({ start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/) }).safeParse(req.body);
+    if (!parsed.success || parsed.data.start >= parsed.data.end) return reply.status(400).send(fail("Jam masuk harus sebelum jam pulang (format HH:MM)", "VALIDATION_ERROR"));
+    const before = await loadWorkHours();
+    await saveWorkHours(parsed.data.start, parsed.data.end);
+    await writeAudit({ actor: requestActor(req), action: "update", table: "settings", rowId: "SET-ATT-HOURS", diff: { before, after: parsed.data }, ip: requestIp(req) });
+    return ok(parsed.data);
   });
 
   app.get("/api/attendance/devices/:id/commands", { preHandler: [requireAuth] }, async (req, reply) => {

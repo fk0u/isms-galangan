@@ -32,6 +32,7 @@ import { AsyncButton, useBusy, SearchBox, rowMatches, RowAction } from "../../co
 import { FilterPopover } from "../../components/FilterPopover";
 import { useStore } from "../../data/store";
 import { SearchSelect } from "../../components/SearchSelect";
+import { TimeInput24 } from "../../components/TimeInput24";
 
 /* Jabatan yang boleh menjadi Pimpinan Proyek (sama dengan aturan server
    isProjectManagerTitle) - selalu ditawarkan walau belum dipakai karyawan. */
@@ -233,6 +234,8 @@ const emptyEmpForm = () => ({
   // F3-L-02: data karyawan lengkap.
   gender: "L",
   birthDate: "",
+  workStart: "",
+  workEnd: "",
   marital: "TK",
   education: "SMA/SMK",
   partnerContractNo: "",
@@ -561,6 +564,8 @@ export default function HR() {
       dependents: String(e.dependents ?? parsePtkp(e.ptkpStatus).dependents),
       gender: String(e.gender ?? "L"),
       birthDate: String(e.birthDate ?? ""),
+      workStart: String(e.workStart ?? ""),
+      workEnd: String(e.workEnd ?? ""),
       marital: String(e.marital ?? parsePtkp(e.ptkpStatus).marital),
       education: String(e.education ?? "SMA/SMK"),
       partnerContractNo: String(e.partnerContractNo ?? ""),
@@ -647,6 +652,8 @@ export default function HR() {
     }
     const extraEmp = {
       gender: form.gender, birthDate: form.birthDate, marital: form.marital, education: form.education,
+      // Jam kerja khusus (mis. shift malam); kosong = ikut jam kerja umum absensi.
+      workStart: form.workStart && form.workEnd ? form.workStart : "", workEnd: form.workStart && form.workEnd ? form.workEnd : "",
       partnerContractNo: form.partnerContractNo.trim(), partnerName: form.partnerName.trim(),
       lastContractNo: form.lastContractNo.trim(), lastContractStart: form.lastContractStart,
       photoUrl: form.photoUrl, ktpUrl: form.ktpUrl, ijazahUrl: form.ijazahUrl,
@@ -2126,6 +2133,13 @@ const finishTraining = async (t: StoreItem) => {
                 <SearchSelect value={form.role} onChange={(v) => setForm({ ...form, role: v })} allowCustom
                   options={[...new Set([...PIMPRO_TITLES, ...data.employees.map((x) => String(x.role ?? "").trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b)).map((r) => ({ value: r, label: r, subLabel: PIMPRO_TITLES.includes(r) ? E.jobPimpro : undefined }))}
                   placeholder={S.phWelder} ariaLabel={S.thJabatan} emptyText={E.jobHint} />
+              </Field>
+              <Field label={E.workHoursOwn} hint={E.workHoursOwnHint}>
+                <div className="flex items-center gap-2">
+                  <TimeInput24 value={form.workStart} onChange={(v) => setForm({ ...form, workStart: v })} ariaLabel={E.workStartLbl} placeholder="08:00" />
+                  <span className="text-steel-400" aria-hidden>-</span>
+                  <TimeInput24 value={form.workEnd} onChange={(v) => setForm({ ...form, workEnd: v })} ariaLabel={E.workEndLbl} placeholder="17:00" />
+                </div>
               </Field>
               <Field label={S.fDept}>
                 <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>

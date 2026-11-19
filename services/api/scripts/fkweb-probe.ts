@@ -3,7 +3,7 @@ import { buildApp } from "../src/app.js";
 import { signToken } from "../src/auth.js";
 import { closeDb, exec, q } from "../src/db.js";
 import { fkPunch, fkTime, parseFkBody } from "../src/routes/fkweb.js";
-import { addTap, implausibleTime, mergePunch, tapsOf } from "../src/routes/attendanceIngest.js";
+import { addTap, belongsToPrevShift, implausibleTime, inOutFromTaps, mergePunch, tapsOf } from "../src/routes/attendanceIngest.js";
 import { analyzeDay, foldOvernight } from "../src/attendanceAnalysis.js";
 import { collectDeviceUsers, connectionStats, nameScore, parseBinBlocks, parseLogBlock, parseUserIdList, stripBiometric, witaStamp } from "../src/attendanceDevices.js";
 import { cmdFrame, enrollFrame, fkBody, fkHeaders, glogFrame, type FkFrame } from "./fkweb-emulator.js";
@@ -57,6 +57,9 @@ async function main(): Promise<void> {
   assert("parseLogBlock: entri asli → 20261116171509 & 20261116145743, mode verifikasi", JSON.stringify(parsedLog) === JSON.stringify([{ userId: "1", ioTime: "20261116171509", verifyCode: 16 }, { userId: "2", ioTime: "20261116145743", verifyCode: 112 }]), JSON.stringify(parsedLog));
   const cs = connectionStats([0, 5000, 10000, 100000, 105000].map((x) => 1_000_000 + x), 1_000_000 + 110000);
   assert("connectionStats: jeda rata-rata, putus > 60 dtk terhitung", cs.samples === 5 && cs.drops === 1 && cs.maxGapSec === 90, JSON.stringify(cs));
+  assert("inOutFromTaps: 23:50 + 24:05 → masuk 23:50, pulang (jam dinding) kosong krn < 30 mnt; 24:30 → 00:30", inOutFromTaps(["23:50", "24:05"]).checkOut === "" && inOutFromTaps(["23:50", "24:30"]).checkOut === "00:30");
+  assert("belongsToPrevShift: kemarin terakhir 23:50 → 00:05 ikut; kemarin pulang 17:00 → 05:30 tidak", belongsToPrevShift({ taps: ["23:50"] }, "00:05") && !belongsToPrevShift({ taps: ["08:00", "17:00"] }, "05:30") && !belongsToPrevShift({ taps: ["23:50"] }, "07:00"));
+  assert("tapsOf baris malam: pulang 00:30 + overnight → 24:30", tapsOf({ checkIn: "23:50", checkOut: "00:30", overnight: true }).join() === "23:50,24:30");
   assert("glog → tap auto", JSON.stringify(fkPunch(g.json)) === JSON.stringify({ employeeNo: "1001", timestamp: "2026-11-16T07:58:00+08:00", type: "auto" }));
 
   const u = (await q<{ id: string; username: string; role: string; token_version: number }>("SELECT id, username, role, token_version FROM users WHERE role = ? AND is_active = 1 LIMIT 1", ["direktur"]))[0];
@@ -264,6 +267,26 @@ async function main(): Promise<void> {
     assert("log mesin: 1 scan terlewat (14:46:05) dimasukkan, duplikat dilewati, ringkasan impor tersimpan", pl2.code === "GET_LOG_DATA" && histPl?.result?.imported?.added === 1 && (nov12?.taps as string[] | undefined)?.includes("14:46") === true, JSON.stringify({ imp: histPl?.result?.imported, taps: nov12?.taps }));
     const devStats = ((await app.inject({ method: "GET", url: `/api/attendance/devices/${dev}/stats`, headers: hr })).json() as { data: { perHour: number[]; perDay: unknown[]; connection: { samples: number } } }).data;
     assert("stats: 24 jam, 14 hari, detak koneksi tercatat", devStats.perHour.length === 24 && devStats.perDay.length === 14 && devStats.connection.samples > 0, JSON.stringify(devStats.connection));
+    /* --- shift malam tersimpan di baris kemarin (rekap & payroll ikut benar) --- */
+    await send(glogFrame(pin, "20261110235000"));
+    await send(glogFrame(pin, "20261111003000"));
+    await send(glogFrame(pin, "20261111003000"));
+    const n10 = (await myRows()).find((d) => d.date === "2026-11-10");
+    const n11 = (await myRows()).find((d) => d.date === "2026-11-11");
+    assert("shift malam 23:50→00:30: baris tgl 10 masuk 23:50 pulang 00:30 overnight, tidak ada baris tgl 11", n10?.checkIn === "23:50" && n10.checkOut === "00:30" && n10.overnight === true && n11 === undefined, JSON.stringify({ n10, n11 }));
+
+    /* --- jam kerja bisa diatur: umum + per karyawan --- */
+    const wh = await app.inject({ method: "PUT", url: "/api/attendance/work-hours", headers: hr, payload: { start: "07:30", end: "16:30" } });
+    assert("HR atur jam kerja umum 07:30-16:30", wh.statusCode === 200 && ((await app.inject({ method: "GET", url: "/api/attendance/work-hours", headers: hr })).json() as { data: { start: string } }).data.start === "07:30", wh.body);
+    assert("jam kerja tidak sah → 400", (await app.inject({ method: "PUT", url: "/api/attendance/work-hours", headers: hr, payload: { start: "17:00", end: "08:00" } })).statusCode === 400);
+    const dly = async () => ((await app.inject({ method: "GET", url: "/api/attendance/device-daily?from=2026-11-16&to=2026-11-16", headers: hr })).json() as { data: { rows: Array<{ employee: { id: string }; lateMin: number; hours: { start: string } }> } }).data.rows.find((r) => r.employee.id === empId);
+    assert("telat dihitung dari jam umum baru (masuk 07:58 → telat 28 mnt)", (await dly())?.lateMin === 28, JSON.stringify(await dly()));
+    const ed = JSON.parse((await q<{ data: string }>("SELECT data FROM employees WHERE id = ?", [empId]))[0]!.data) as Record<string, unknown>;
+    await exec("UPDATE employees SET data = ? WHERE id = ?", [JSON.stringify({ ...ed, workStart: "08:00", workEnd: "17:00" }), empId]);
+    const d2 = await dly();
+    assert("jam kerja khusus karyawan menimpa jam umum (masuk 07:58 → tidak telat)", d2?.lateMin === 0 && d2.hours.start === "08:00", JSON.stringify(d2));
+    await app.inject({ method: "PUT", url: "/api/attendance/work-hours", headers: hr, payload: { start: "08:00", end: "17:00" } });
+
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));
