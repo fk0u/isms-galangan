@@ -8,6 +8,7 @@ import { useStore, type StoreItem } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_dlg } from "../../i18n/n_dlg";
 import { fmtRupiah, fmtTanggal, parseRupiah, todayISO } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 const CLOSED = new Set(["Selesai", "Dibatalkan", "Dikembalikan"]);
 
@@ -113,10 +114,10 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
                   : <input className="input" value={loan.borrower} onChange={(e) => setLoan({ ...loan, borrower: e.target.value })} placeholder={T.borrowerPh} />}
               </Field>
               <Field label={T.project}>
-                <select className="input" value={loan.project} onChange={(e) => setLoan({ ...loan, project: e.target.value })}>
+                <Select className="input" value={loan.project} onChange={(e) => setLoan({ ...loan, project: e.target.value })}>
                   <option value="">{T.none}</option>
                   {(data.projects ?? []).map((p) => <option key={String(p.id)} value={String(p.id)}>{String(p.id)} · {String(p.vessel ?? "")}</option>)}
-                </select>
+                </Select>
               </Field>
               <FormGrid>
                 <Field label={T.start} required><input type="date" className="input" value={loan.start} onChange={(e) => setLoan({ ...loan, start: e.target.value })} /></Field>
@@ -129,10 +130,10 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
             <>
               <FormGrid>
                 <Field label={T.kind}>
-                  <select className="input" value={maint.kind} onChange={(e) => setMaint({ ...maint, kind: e.target.value })}>
+                  <Select className="input" value={maint.kind} onChange={(e) => setMaint({ ...maint, kind: e.target.value })}>
                     <option value="Service">{T.kindService}</option>
                     <option value="Kalibrasi">{T.kindCal}</option>
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={T.date} required><input type="date" className="input" value={maint.date} onChange={(e) => setMaint({ ...maint, date: e.target.value })} /></Field>
               </FormGrid>
@@ -140,10 +141,10 @@ export default function DelegationPanel({ equipment, onClose }: { equipment: Sto
               <FormGrid>
                 <Field label={T.cost}><MoneyInput className="input" value={maint.cost} onChange={(v) => setMaint({ ...maint, cost: v })} /></Field>
                 <Field label={T.project}>
-                  <select className="input" value={maint.project} onChange={(e) => setMaint({ ...maint, project: e.target.value })}>
+                  <Select className="input" value={maint.project} onChange={(e) => setMaint({ ...maint, project: e.target.value })}>
                     <option value="">{T.none}</option>
                     {(data.projects ?? []).map((p) => <option key={String(p.id)} value={String(p.id)}>{String(p.id)} · {String(p.vessel ?? "")}</option>)}
-                  </select>
+                  </Select>
                 </Field>
               </FormGrid>
               <Field label={T.note}><input className="input" value={maint.note} onChange={(e) => setMaint({ ...maint, note: e.target.value })} /></Field>

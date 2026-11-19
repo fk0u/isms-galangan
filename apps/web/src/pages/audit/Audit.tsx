@@ -11,6 +11,7 @@ import { n_misc } from "../../i18n/n_misc";
 import { exportExcel } from "../../utils/export";
 import { fmtTanggalJam } from "../../utils/format";
 import { createdAtOf, createdAtRaw, lastTouchedAt } from "../../utils/timestamps";
+import { Select } from "../../components/inputs/Select";
 
 /** Ambil YYYY-MM-DD dari string waktu bila bisa diparse; abaikan "baru saja" dan teks relatif. */
 function toISODateOrNull(v: unknown): string | null {
@@ -244,12 +245,12 @@ export default function Audit() {
           {(draft, setDraft) => (
             <div className="space-y-3">
               <Field label={S.auModuleLabel}>
-                <select className="input w-full" value={draft.modul} onChange={(e) => setDraft({ ...draft, modul: e.target.value })}>
+                <Select className="input w-full" value={draft.modul} onChange={(e) => setDraft({ ...draft, modul: e.target.value })}>
                   <option value="SEMUA">{S.auAllModules}</option>
                   {modules.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label={S.auDateLabel} hint={S.auDateHint}>
                 <input
@@ -261,10 +262,10 @@ export default function Audit() {
               </Field>
               {remote && (
                 <Field label={S.auSourceLabel}>
-                  <select className="input w-full" value={draft.sumber} onChange={(e) => setDraft({ ...draft, sumber: e.target.value })}>
+                  <Select className="input w-full" value={draft.sumber} onChange={(e) => setDraft({ ...draft, sumber: e.target.value })}>
                     <option value="Perangkat">Perangkat</option>
                     <option value="Server">Server</option>
-                  </select>
+                  </Select>
                 </Field>
               )}
             </div>

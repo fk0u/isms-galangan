@@ -41,6 +41,7 @@ import {
   slotDateRange,
   witaTodayISO,
 } from "../../utils/drydockBookingDates";
+import { Select } from "../../components/inputs/Select";
 
 const DAYS = 90;
 const FREE_WINDOW = 7;
@@ -1161,19 +1162,19 @@ export default function Drydock() {
       <Card>
         <CardHeader title={S.cardSlots} subtitle={S.cardSlotsSub} action={
           <div className="flex flex-wrap items-center gap-1.5">
-            <select className="input text-xs" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} aria-label={S.filterAreaAria}>
+            <Select className="input text-xs" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)} aria-label={S.filterAreaAria}>
               <option value="Semua">{S.mapAreaPrefix.replace("{a}", S.mapAll)} ({S.mapActiveCount.replace("{n}", String(dockSlots.filter((s) => isActiveSlot(s)).length))})</option>
               {areaOptions.map((a) => <option key={a} value={a}>{a} ({S.mapActiveCount.replace("{n}", String(activeByArea.get(a) ?? 0))})</option>)}
-            </select>
-            <select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
+            </Select>
+            <Select className="input text-xs" value={posFilter} onChange={(e) => setPosFilter(e.target.value)} aria-label={S.filterPosAria}>
               <option value="Semua">{S.mapPositionPrefix.replace("{a}", S.mapAll)}</option>
               <option value="Masuk">{S.posMasuk} ({S.mapStatusScheduled})</option>
               <option value="Berjalan">{S.mapStatusRunning}</option>
               <option value="Keluar">{S.posKeluar} ({S.mapStatusComplete})</option>
-            </select>
-            <select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
+            </Select>
+            <Select className="input text-xs" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label={S.filterStatusAria}>
               {STATUS_FILTERS.map((s) => <option key={s} value={s}>{mappingStatusLabel(s)}</option>)}
-            </select>
+            </Select>
             <label className="flex items-center gap-1 rounded-lg border border-steel-200 bg-surface px-2 py-1 text-xs text-steel-600">
               <input type="checkbox" checked={showActiveOnly} onChange={(e) => setShowActiveOnly(e.target.checked)} />
               {S.mapActiveOnly}
@@ -1413,9 +1414,9 @@ export default function Drydock() {
         <div className="space-y-3">
           {moveError && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">{moveError}</p>}
           <Field label={S.lblTargetFacility}>
-            <select className="input" value={moveForm.dockId} onChange={(e) => setMoveForm({ ...moveForm, dockId: e.target.value })}>
+            <Select className="input" value={moveForm.dockId} onChange={(e) => setMoveForm({ ...moveForm, dockId: e.target.value })}>
               {drydocks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.areaLabel}>
             <input className="input" value={moveForm.area} onChange={(e) => setMoveForm({ ...moveForm, area: e.target.value })} placeholder={S.areaPh} />
@@ -1434,12 +1435,12 @@ export default function Drydock() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.colFacility}>
-              <select className="input" value={bookForm.dockId} onChange={(e) => setBookForm({ ...bookForm, dockId: e.target.value })}>
+              <Select className="input" value={bookForm.dockId} onChange={(e) => setBookForm({ ...bookForm, dockId: e.target.value })}>
                 {drydocks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.colProject}>
-              <select className="input" value={bookForm.project} onChange={(e) => {
+              <Select className="input" value={bookForm.project} onChange={(e) => {
                 const projectId = e.target.value;
                 const project = projectOptions.find((p) => p.id === projectId);
                 const start = String(project?.start ?? "");
@@ -1458,7 +1459,7 @@ export default function Drydock() {
               }}>
                 <option value="">{S.optPickProject}</option>
                 {projectOptions.filter((p) => p.status !== "Selesai").map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-              </select>
+              </Select>
               {selProj && <p className="mt-1 text-xs text-steel-500">{S.projectSchedule
                 .replace("{a}", isCalendarDate(String(selProj.start ?? "")) ? fmtTanggal(String(selProj.start)) : "-")
                 .replace("{b}", isCalendarDate(String(selProj.end ?? "")) ? fmtTanggal(String(selProj.end)) : "-")}</p>}
@@ -1472,9 +1473,9 @@ export default function Drydock() {
               setBookForm((current) => ({ ...current, endDate }));
             }} /></Field>
             <Field label={S.colPriority}>
-              <select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
+              <Select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
                 {PRIORITIES.map((p) => <option key={p}>{p}</option>)}
-              </select>
+              </Select>
             </Field>
             {showBilling && (
               <Field label={S.lblRateDay} hint={S.hintRate}>
@@ -1522,9 +1523,9 @@ export default function Drydock() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.colFacility}>
-              <select className="input" value={maintForm.dockId} onChange={(e) => setMaintForm({ ...maintForm, dockId: e.target.value })}>
+              <Select className="input" value={maintForm.dockId} onChange={(e) => setMaintForm({ ...maintForm, dockId: e.target.value })}>
                 {drydocks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.lblStartAt}><DateInput locale={locale} ariaLabel={S.lblStartAt} required value={maintForm.startDate} onChange={(startDate) => setMaintForm((f) => ({ ...f, startDate }))} /></Field>
             <Field label={S.lblEndAt}><DateInput locale={locale} ariaLabel={S.lblEndAt} required value={maintForm.endDate} onChange={(endDate) => setMaintForm((f) => ({ ...f, endDate }))} /></Field>
@@ -1605,7 +1606,7 @@ export default function Drydock() {
               />
             </Field>
             <Field label={S.lblDockKind}>
-              <select
+              <Select
                 className="input"
                 value={dockForm.kind}
                 onChange={(e) => setDockForm({ ...dockForm, kind: e.target.value as any })}
@@ -1614,7 +1615,7 @@ export default function Drydock() {
                 <option value="floating">{S.kindFloating}</option>
                 <option value="slipway">{S.kindSlipway}</option>
                 <option value="berth">{S.kindBerth}</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
 
@@ -1681,14 +1682,14 @@ export default function Drydock() {
               />
             </Field>
             <Field label={S.colStatus}>
-              <select
+              <Select
                 className="input"
                 value={dockForm.status}
                 onChange={(e) => setDockForm({ ...dockForm, status: e.target.value })}
               >
                 <option value="Tersedia">Tersedia</option>
                 <option value="Maintenance">Maintenance</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
         </div>

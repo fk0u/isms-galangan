@@ -9,6 +9,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
 import { apiFetch } from "../../services/http";
 import { fmtTanggalJam } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 type LogStatus = "accepted" | "reprocessed" | "pending" | "invalid";
 interface LogRow {
@@ -88,17 +89,17 @@ export default function DeviceLogs() {
         </label>
         {(page?.devices.length ?? 0) > 1 && (
           <label className="flex flex-col text-xs text-steel-500">{E.logDevice}
-            <select className="input mt-1 w-auto" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
+            <Select className="input mt-1 w-auto" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
               <option value="">{E.logAll}</option>
               {page?.devices.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
+            </Select>
           </label>
         )}
         <label className="flex flex-col text-xs text-steel-500">{E.logStatusLabel}
-          <select className="input mt-1 w-auto" value={status} onChange={(e) => setStatus(e.target.value as LogStatus | "")}>
+          <Select className="input mt-1 w-auto" value={status} onChange={(e) => setStatus(e.target.value as LogStatus | "")}>
             <option value="">{E.logAll}</option>
             {(Object.keys(label) as LogStatus[]).map((k) => <option key={k} value={k}>{label[k]}</option>)}
-          </select>
+          </Select>
         </label>
         <div className="min-w-[200px] flex-1"><SearchBox value={q} onChange={setQ} placeholder={E.logSearch} ariaLabel={E.logSearch} /></div>
         <AsyncButton className="btn-secondary text-xs" onAction={load}><RefreshCw className="h-3.5 w-3.5" /> {E.devRefresh}</AsyncButton>

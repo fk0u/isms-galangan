@@ -4,7 +4,8 @@
 // "Semua scan" = DeviceLogs (log mentah).
 import { useCallback, useEffect, useId, useState } from "react";
 import { ChevronLeft, ChevronRight, Clock3, RefreshCw } from "lucide-react";
-import { AsyncButton, Badge, EmptyState, SearchBox, toast } from "../../components/ui";
+import { AsyncButton, Badge, EmptyState, Field, Modal, SearchBox, toast } from "../../components/ui";
+import { TimeInput24 } from "../../components/TimeInput24";
 import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
 import { apiFetch } from "../../services/http";
@@ -59,6 +60,18 @@ function DailySummary() {
   const [data, setData] = useState<Daily | null>(null);
   const [loading, setLoading] = useState(true);
   const dateId = useId();
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [hStart, setHStart] = useState("08:00");
+  const [hEnd, setHEnd] = useState("17:00");
+  const saveHours = async (): Promise<void> => {
+    if (!/^\d{2}:\d{2}$/.test(hStart) || !/^\d{2}:\d{2}$/.test(hEnd) || hStart >= hEnd) { toast(E.workHoursInvalid, "info"); return; }
+    try {
+      await apiFetch("/api/attendance/work-hours", { method: "PUT", body: JSON.stringify({ start: hStart, end: hEnd }) });
+      toast(E.workHoursSaved, "success");
+      setHoursOpen(false);
+      await load();
+    } catch (e) { toast(e instanceof Error ? e.message : E.ingFail, "info"); }
+  };
   const isToday = day === todayWita();
 
   const dur = useCallback((min: number): string => {
@@ -101,7 +114,12 @@ function DailySummary() {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-[15px] font-semibold text-navy-900">{E.dayTitle}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-[15px] font-semibold text-navy-900">{E.dayTitle}</h3>
+          <button type="button" className="btn-secondary text-xs" onClick={() => { setHStart(data?.workHours.start ?? "08:00"); setHEnd(data?.workHours.end ?? "17:00"); setHoursOpen(true); }}>
+            {E.workHoursBtn.replace("{a}", data?.workHours.start ?? "08:00").replace("{b}", data?.workHours.end ?? "17:00")}
+          </button>
+        </div>
         <p className="text-xs text-steel-500">{E.daySub.replace("{a}", data?.workHours.start ?? "08:00").replace("{b}", data?.workHours.end ?? "17:00")}</p>
       </div>
 
@@ -129,6 +147,14 @@ function DailySummary() {
           ))}
         </dl>
       )}
+
+      <Modal open={hoursOpen} onClose={() => setHoursOpen(false)} title={E.workHoursTitle} subtitle={E.workHoursSub}
+        footer={<><button type="button" className="btn-secondary" onClick={() => setHoursOpen(false)}>{E.ingCancel}</button><AsyncButton className="btn-primary" onAction={saveHours}>{E.workHoursSave}</AsyncButton></>}>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={E.workStartLbl}><TimeInput24 value={hStart} onChange={setHStart} ariaLabel={E.workStartLbl} /></Field>
+          <Field label={E.workEndLbl}><TimeInput24 value={hEnd} onChange={setHEnd} ariaLabel={E.workEndLbl} /></Field>
+        </div>
+      </Modal>
 
       {loading && !data ? (
         <p className="py-10 text-center text-sm text-steel-400" role="status">{E.devLoading}</p>

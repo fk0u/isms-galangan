@@ -10,6 +10,7 @@ import { n_roles } from "../../i18n/n_roles";
 import { apiFetch, isBackendConfigured } from "../../services/http";
 import { exportExcel } from "../../utils/export";
 import ModuleAccessCard from "./ModuleAccessCard";
+import { Select } from "../../components/inputs/Select";
 
 const isDeveloper = (r: unknown): boolean => {
   const s = String(r ?? "").toLowerCase();
@@ -844,11 +845,11 @@ export default function Peran() {
       <Card className="mb-4 p-4">
         <div className="max-w-sm">
           <Field label={S.selectRole} hint={eff ? S.selectRoleHint : S.selectRoleHintOffline}>
-            <select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
+            <Select className="input" value={role} onChange={(e) => setRole(e.target.value)}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
       </Card>
@@ -907,11 +908,11 @@ export default function Peran() {
             <input className="input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={S.namePh} />
           </Field>
           <Field label={S.thRole}>
-            <select className="input" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+            <Select className="input" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={S.emailOptional}>
             <input type="email" className="input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder={S.emailPh} />
@@ -938,12 +939,12 @@ export default function Peran() {
             </div>
           </Field>
           <Field label={S.linkedEmployee} hint={S.linkedEmployeeHint}>
-            <select className="input" value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}>
+            <Select className="input" value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}>
               <option value="">{S.noLink}</option>
               {(data.employees ?? []).map((e) => (
                 <option key={String(e.id)} value={String(e.id)}>{String(e.name ?? e.id)} ({String(e.id)})</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -961,12 +962,12 @@ export default function Peran() {
         }
       >
         <Field label={S.thEmployee}>
-          <select className="input" value={linkValue} onChange={(e) => setLinkValue(e.target.value)}>
+          <Select className="input" value={linkValue} onChange={(e) => setLinkValue(e.target.value)}>
             <option value="">{S.unlinkOption}</option>
             {(data.employees ?? []).map((e) => (
               <option key={String(e.id)} value={String(e.id)}>{String(e.name ?? e.id)} ({String(e.id)})</option>
             ))}
-          </select>
+          </Select>
         </Field>
       </Modal>
 
@@ -1031,11 +1032,11 @@ export default function Peran() {
             <input className="input" value={editUserForm.name} onChange={(e) => setEditUserForm((f) => ({ ...f, name: e.target.value }))} placeholder={S.namePh} />
           </Field>
           <Field label={S.thRole}>
-            <select className="input" value={editUserForm.role} onChange={(e) => setEditUserForm((f) => ({ ...f, role: e.target.value }))}>
+            <Select className="input" value={editUserForm.role} onChange={(e) => setEditUserForm((f) => ({ ...f, role: e.target.value }))}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r] ?? r}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={S.emailOptional}>
             <input type="email" className="input" value={editUserForm.email} onChange={(e) => setEditUserForm((f) => ({ ...f, email: e.target.value }))} placeholder={S.emailPh} />

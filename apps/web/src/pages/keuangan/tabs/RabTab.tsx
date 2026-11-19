@@ -12,6 +12,7 @@ import { exportExcel } from "../../../utils/export";
 import { fmtBulan, fmtRupiah, parseRupiah, todayISO } from "../../../utils/format";
 import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
+import { Select } from "../../../components/inputs/Select";
 
 interface RabLine {
   id?: string;
@@ -308,7 +309,7 @@ export default function RabTab() {
                     <tr key={idx} className="hover:bg-surface/30">
                       <td className="py-2 px-3 text-center font-mono text-steel-400">{idx + 1}</td>
                       <td className="py-2 px-3">
-                        <select
+                        <Select
                           className="input py-1.5 text-xs"
                           value={line.akun}
                           onChange={(e) => {
@@ -323,7 +324,7 @@ export default function RabTab() {
                               {String(c.kode)} · {String(c.nama)}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       </td>
                       <td className="py-2 px-3">
                         <input

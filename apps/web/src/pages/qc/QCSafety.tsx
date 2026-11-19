@@ -30,6 +30,7 @@ import { n_qc } from "../../i18n/n_qc";
 import { n_clq } from "../../i18n/n_clq";
 import ChecklistTab from "./ChecklistTab";
 import { QC_SAFETY_TABS } from "./qcTabs";
+import { Select } from "../../components/inputs/Select";
 
 const ncrTone: Record<string, "red" | "amber" | "blue" | "green"> = {
   Terbuka: "amber",
@@ -1043,9 +1044,9 @@ export default function QCSafety() {
                   {(draft, setDraft) => (
                     <div className="space-y-3">
                       <Field label={S.fHasil}>
-                        <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                        <Select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
                           {["Semua", "Terjadwal", "Dalam Proses", "Lulus", "NCR"].map((s) => <option key={s} value={s}>{s === "Semua" ? "Semua hasil" : s}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                     </div>
                   )}
@@ -1302,16 +1303,16 @@ export default function QCSafety() {
                 <h3 className="text-sm font-semibold text-navy-900">{S.ppeTitle}</h3>
                 <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label={S.thProyek} required>
-                    <select className="input" value={ppeForm.project} onChange={(e) => setPpeForm({ ...ppeForm, project: e.target.value })}>
+                    <Select className="input" value={ppeForm.project} onChange={(e) => setPpeForm({ ...ppeForm, project: e.target.value })}>
                       <option value="">{S.optPilihProyek}</option>
                       {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.fPenerima} hint={S.hintPpePer} required>
-                    <select className="input" value={ppeForm.employeeId} onChange={(e) => setPpeForm({ ...ppeForm, employeeId: e.target.value })}>
+                    <Select className="input" value={ppeForm.employeeId} onChange={(e) => setPpeForm({ ...ppeForm, employeeId: e.target.value })}>
                       <option value="">{S.optPilihKaryawan}</option>
                       {data.employees.filter((e) => e.status === "Aktif").map((e) => <option key={e.id} value={e.id}>{e.name} · {e.id}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.thTanggal} required><input type="date" className="input" value={ppeForm.date} onChange={(e) => setPpeForm({ ...ppeForm, date: e.target.value })} /></Field>
                 </div>
@@ -1602,41 +1603,41 @@ export default function QCSafety() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thProyek} required>
-              <select className="input" value={inspForm.project} onChange={(e) => setInspForm({ ...inspForm, project: e.target.value })}>
+              <Select className="input" value={inspForm.project} onChange={(e) => setInspForm({ ...inspForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fNomorItp} hint={S.hintItpNext.replace("{n}", nextItp(inspections))}>
               <input className="input font-mono" value={nextItp(inspections)} disabled readOnly />
             </Field>
             <Field label={S.thTanggal} required><input type="date" className="input" value={inspForm.date} onChange={(e) => setInspForm({ ...inspForm, date: e.target.value })} /></Field>
             <Field label={S.fHasil}>
-              <select className="input" value={inspForm.status} onChange={(e) => setInspForm({ ...inspForm, status: e.target.value })}>
+              <Select className="input" value={inspForm.status} onChange={(e) => setInspForm({ ...inspForm, status: e.target.value })}>
                 {["Terjadwal", "Dalam Proses", "Lulus", "NCR"].map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fHold}>
-              <select className="input" value={inspForm.holdType} onChange={(e) => setInspForm({ ...inspForm, holdType: e.target.value })}>
+              <Select className="input" value={inspForm.holdType} onChange={(e) => setInspForm({ ...inspForm, holdType: e.target.value })}>
                 {HOLD_TYPES.map((h) => <option key={h}>{h}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fInspectorQ} required>
-              <select className="input" value={inspForm.inspector} onChange={(e) => setInspForm({ ...inspForm, inspector: e.target.value })}>
+              <Select className="input" value={inspForm.inspector} onChange={(e) => setInspForm({ ...inspForm, inspector: e.target.value })}>
                 <option value="">{S.optPilihInspector}</option>
                 {qualityStaff.map((e) => <option key={e.id} value={e.name}>{e.name} · {e.role}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fPerluNde}>
-              <select className="input" value={inspForm.nde} onChange={(e) => setInspForm({ ...inspForm, nde: e.target.value })}>
+              <Select className="input" value={inspForm.nde} onChange={(e) => setInspForm({ ...inspForm, nde: e.target.value })}>
                 {["Ya", "Tidak"].map((v) => <option key={v}>{v}</option>)}
-              </select>
+              </Select>
             </Field>
             {inspForm.nde === "Ya" && (
               <Field label={S.fMetodeNde}>
-                <select className="input" value={inspForm.ndeMethod} onChange={(e) => setInspForm({ ...inspForm, ndeMethod: e.target.value })}>
+                <Select className="input" value={inspForm.ndeMethod} onChange={(e) => setInspForm({ ...inspForm, ndeMethod: e.target.value })}>
                   {NDE_METHODS.map((m) => <option key={m}>{m}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
             <Field label={S.fSampel} hint={S.hintSampel}>
@@ -1650,10 +1651,10 @@ export default function QCSafety() {
             </Field>
             {inspForm.nde === "Ya" && (
               <Field label={S.fAlatKal} hint={S.hintAlat} required>
-                <select className="input" value={inspForm.calTool} onChange={(e) => setInspForm({ ...inspForm, calTool: e.target.value })}>
+                <Select className="input" value={inspForm.calTool} onChange={(e) => setInspForm({ ...inspForm, calTool: e.target.value })}>
                   <option value="">{S.optPilihAlat}</option>
                   {validCals.map((c) => <option key={c.id} value={c.id}>{calLabel(c.id)} · due {fmtTanggal(String(c.due))}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
           </FormGrid>
@@ -1667,33 +1668,33 @@ export default function QCSafety() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thProyek} required>
-              <select className="input" value={ncrForm.project} onChange={(e) => setNcrForm({ ...ncrForm, project: e.target.value })}>
+              <Select className="input" value={ncrForm.project} onChange={(e) => setNcrForm({ ...ncrForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fKapalOps}><input className="input" value={ncrForm.vessel} onChange={(e) => setNcrForm({ ...ncrForm, vessel: e.target.value })} placeholder={S.phOtomatis} /></Field>
             <Field label={S.fKategori}>
-              <select className="input" value={ncrForm.type} onChange={(e) => setNcrForm({ ...ncrForm, type: e.target.value })}>
+              <Select className="input" value={ncrForm.type} onChange={(e) => setNcrForm({ ...ncrForm, type: e.target.value })}>
                 {["Pengelasan", "Pengecatan", "Kelistrikan", "Mesin", "Umum"].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fSeverity}>
-              <select className="input" value={ncrForm.severity} onChange={(e) => setNcrForm({ ...ncrForm, severity: e.target.value })}>
+              <Select className="input" value={ncrForm.severity} onChange={(e) => setNcrForm({ ...ncrForm, severity: e.target.value })}>
                 {["Minor", "Major", "Critical"].map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fTenggat} required><input type="date" className="input" value={ncrForm.due} onChange={(e) => setNcrForm({ ...ncrForm, due: e.target.value })} /></Field>
             <Field label="Penerima (owner/client)" hint="Owner yang berhak menekan Terima di detail NCR">
-              <select className="input" value={ncrForm.penerima} onChange={(e) => setNcrForm({ ...ncrForm, penerima: e.target.value })}>
+              <Select className="input" value={ncrForm.penerima} onChange={(e) => setNcrForm({ ...ncrForm, penerima: e.target.value })}>
                 <option value="">Belum ditentukan</option>
                 {data.clients.map((c) => <option key={String(c.id)} value={String(c.name)}>{String(c.name)}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fRootcat}>
-              <select className="input" value={ncrForm.causeCat} onChange={(e) => setNcrForm({ ...ncrForm, causeCat: e.target.value })}>
+              <Select className="input" value={ncrForm.causeCat} onChange={(e) => setNcrForm({ ...ncrForm, causeCat: e.target.value })}>
                 {ROOT_CAUSES.map((r) => <option key={r}>{r}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.fUraian} required><textarea className="input" rows={3} value={ncrForm.issue} onChange={(e) => setNcrForm({ ...ncrForm, issue: e.target.value })} /></Field>
@@ -1899,20 +1900,20 @@ export default function QCSafety() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.fProyekTerkait} hint={S.hintIncProyek} required>
-              <select className="input" value={incForm.project} onChange={(e) => setIncForm({ ...incForm, project: e.target.value })}>
+              <Select className="input" value={incForm.project} onChange={(e) => setIncForm({ ...incForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fJenis}>
-              <select className="input" value={incForm.type} onChange={(e) => setIncForm({ ...incForm, type: e.target.value })}>
+              <Select className="input" value={incForm.type} onChange={(e) => setIncForm({ ...incForm, type: e.target.value })}>
                 {["Near Miss", "First Aid", "Lost Time", "Kebakaran", "Lainnya"].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fSeverity}>
-              <select className="input" value={incForm.severity} onChange={(e) => setIncForm({ ...incForm, severity: e.target.value })}>
+              <Select className="input" value={incForm.severity} onChange={(e) => setIncForm({ ...incForm, severity: e.target.value })}>
                 {["Rendah", "Sedang", "Tinggi", "Kritis"].map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.fLokasi} required><input className="input" value={incForm.location} onChange={(e) => setIncForm({ ...incForm, location: e.target.value })} placeholder={S.phLokasi} /></Field>
@@ -1929,10 +1930,10 @@ export default function QCSafety() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thProyek}>
-              <select className="input" value={jsaForm.project} onChange={(e) => setJsaForm({ ...jsaForm, project: e.target.value })}>
+              <Select className="input" value={jsaForm.project} onChange={(e) => setJsaForm({ ...jsaForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.thTanggal}><input type="date" className="input" value={jsaForm.date} onChange={(e) => setJsaForm({ ...jsaForm, date: e.target.value })} /></Field>
             <Field label={S.fPic}><EntityPicker value={jsaForm.pic} onChange={(v) => setJsaForm({ ...jsaForm, pic: v })} options={picOptions} placeholder={S.phPic} ariaLabel={S.fPic} emptyText={locale === "en" ? "No matching employee." : "Tidak ada karyawan yang cocok."} allowCustom invalid={picInvalid(jsaForm.pic)} /></Field>
@@ -1950,10 +1951,10 @@ export default function QCSafety() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thProyek} required>
-              <select className="input" value={tbmForm.project} onChange={(e) => setTbmForm({ ...tbmForm, project: e.target.value })}>
+              <Select className="input" value={tbmForm.project} onChange={(e) => setTbmForm({ ...tbmForm, project: e.target.value })}>
                 <option value="">{S.optPilihProyek}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.thTanggal} required><input type="date" className="input" value={tbmForm.date} onChange={(e) => setTbmForm({ ...tbmForm, date: e.target.value })} /></Field>
             <Field label={S.fJmlPeserta}><NumInput min={0} className="input" value={tbmForm.attendees} onChange={(e) => setTbmForm({ ...tbmForm, attendees: e.target.value })} /></Field>
@@ -1988,10 +1989,10 @@ export default function QCSafety() {
             <Field label={S.fJmlTemuan}><NumInput min={0} className="input" value={auditForm.findings} onChange={(e) => setAuditForm({ ...auditForm, findings: e.target.value })} /></Field>
           </FormGrid>
           <Field label={S.fLinkNcr}>
-            <select className="input" value={auditForm.ncrId} onChange={(e) => setAuditForm({ ...auditForm, ncrId: e.target.value })}>
+            <Select className="input" value={auditForm.ncrId} onChange={(e) => setAuditForm({ ...auditForm, ncrId: e.target.value })}>
               <option value="">{S.optTanpaNcr}</option>
               {ncrList.map((n) => <option key={n.id} value={n.id}>{n.id} · {n.status}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>

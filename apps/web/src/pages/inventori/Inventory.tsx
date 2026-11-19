@@ -90,6 +90,7 @@ import ReceiveIssueTab from "./tabs/ReceiveIssueTab";
 import { n_recv } from "../../i18n/n_recv";
 import { buildUnitConversion, conversionRuleForCategory, defaultPurchaseUnitForCategory, formatUnitConversion, unitConversionOf, unitConversionRequiredForEdit } from "../../utils/unitConversion";
 import { useAuth, hasPermission } from "../../auth/auth";
+import { Select } from "../../components/inputs/Select";
 
 const emptyForm: MaterialFormValues = {
   name: "", category: "Baja", sku: "", warehouse: "Gudang Baja A", rack: "", bin: "",
@@ -2448,7 +2449,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <label className="font-medium text-navy-900" htmlFor="inv-cat-warn">
                     {locale === "en" ? "Category" : "Kategori"}
                   </label>
-                  <select
+                  <Select
                     id="inv-cat-warn"
                     className="input w-auto py-1 text-xs"
                     value={cat}
@@ -2471,7 +2472,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                         </option>
                       );
                     })}
-                  </select>
+                  </Select>
                   {/* Filter TINGKAT warning, berdampingan dengan filter
                       kategori di atasnya. Dua hal berbeda: kategori menjawab
                       "barang apa", tingkat menjawab "yang bermasalah mana".
@@ -2482,7 +2483,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <label className="font-medium text-navy-900" htmlFor="inv-warn-level">
                     {locale === "en" ? "Status" : "Status"}
                   </label>
-                  <select
+                  <Select
                     id="inv-warn-level"
                     className="input w-auto py-1 text-xs"
                     value={warnF}
@@ -2496,7 +2497,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                         {o.label} ({warnByLevel[o.id]})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {warnF !== "Semua" && (
                     <button
                       type="button"
@@ -2539,20 +2540,20 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   {(draft, setDraft) => (
                     <div className="space-y-3">
                       <Field label={locale === "en" ? "Warehouse (Semua gudang)" : "Gudang (Semua gudang)"}>
-                        <select className="input w-full" value={draft.wh} onChange={(e) => setDraft({ ...draft, wh: e.target.value })} aria-label={S.whAria}>
+                        <Select className="input w-full" value={draft.wh} onChange={(e) => setDraft({ ...draft, wh: e.target.value })} aria-label={S.whAria}>
                           {["Semua", ...warehouses].map((w) => <option key={w} value={w}>{w === "Semua" ? "Semua gudang" : w}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                       <Field label={locale === "en" ? "ABC class (All classes)" : "Kelas ABC (Semua kelas: A 70% nilai, B 20%, C 10%)"}>
-                        <select className="input w-full" value={draft.abc} onChange={(e) => setDraft({ ...draft, abc: e.target.value })} aria-label={S.abcAria}>
+                        <Select className="input w-full" value={draft.abc} onChange={(e) => setDraft({ ...draft, abc: e.target.value })} aria-label={S.abcAria}>
                           {["Semua", "A", "B", "C"].map((a) => <option key={a} value={a}>{a === "Semua" ? "Semua kelas" : `Kelas ${a}`}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                       <Field label={locale === "en" ? "Material type (All types)" : "Jenis material (Semua jenis)"}>
-                        <select className="input w-full" value={draft.mat ?? "Semua"} onChange={(e) => setDraft({ ...draft, mat: e.target.value })}>
+                        <Select className="input w-full" value={draft.mat ?? "Semua"} onChange={(e) => setDraft({ ...draft, mat: e.target.value })}>
                           <option value="Semua">Semua jenis</option>
                           {[...MAT_TYPES].map((m) => <option key={m} value={m}>{matLabel(m)}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                       <div>
                         <p className="mb-1.5 block text-xs font-medium text-steel-600">{S.catLbl}</p>
@@ -2572,11 +2573,11 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <Camera className="h-4 w-4" /> {S.scanBtn}
                 </button>
                 {/* INV-02: pilihan impor, template, dan impor CSV sebaris dengan Scan. */}
-                <select className="input w-auto py-1.5 text-xs" value={importMode} onChange={(e) => { setImportMode(e.target.value as "Katalog" | "IN" | "OUT"); setImportReport([]); }} aria-label={S.impModeAria}>
+                <Select className="input w-auto py-1.5 text-xs" value={importMode} onChange={(e) => { setImportMode(e.target.value as "Katalog" | "IN" | "OUT"); setImportReport([]); }} aria-label={S.impModeAria}>
                   <option value="Katalog">{S.impKatalog}</option>
                   <option value="IN">{S.impIn}</option>
                   <option value="OUT">{S.impOut}</option>
-                </select>
+                </Select>
                 {importMode === "Katalog" && (
                   <button className="btn-secondary text-xs" onClick={downloadTemplate}><Download className="h-3.5 w-3.5" /> {S.btnTpl}</button>
                 )}
@@ -2717,7 +2718,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 <span className="text-xs text-steel-500">
                   {locale === "en" ? "Sort" : "Urutkan"}:
                 </span>
-                <select
+                <Select
                   className="input w-auto py-1.5 text-xs"
                   value={`${sort2.key}:${sort2.dir}`}
                   onChange={(e) => {
@@ -2733,7 +2734,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                   <option value="item:asc">{locale === "en" ? "Fewest items" : "Paling sedikit item"}</option>
                   <option value="terisi:desc">{locale === "en" ? "Most filled" : "Paling terisi"}</option>
                   <option value="kapasitas:desc">{locale === "en" ? "Largest capacity" : "Kapasitas terbesar"}</option>
-                </select>
+                </Select>
                 <span className="text-xs text-steel-400">{whSorted.length} gudang</span>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -2857,10 +2858,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-xs font-medium text-steel-600" htmlFor="bom-project">Proyek</label>
-                <select id="bom-project" className="input w-auto py-1.5 text-xs" value={bomProject} onChange={(e) => setBomProject(e.target.value)} aria-label="Filter BOM per proyek">
+                <Select id="bom-project" className="input w-auto py-1.5 text-xs" value={bomProject} onChange={(e) => setBomProject(e.target.value)} aria-label="Filter BOM per proyek">
                   <option value="Semua proyek">Semua proyek</option>
                   {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                </select>
+                </Select>
 
               </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -2985,16 +2986,16 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 {bomForm && (
                   <FormGrid>
                     <Field label={S.thProyek} required>
-                      <select className="input" value={bomForm.projectId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, projectId: e.target.value })}>
+                      <Select className="input" value={bomForm.projectId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, projectId: e.target.value })}>
                         <option value="">{S.bomPickProject}</option>
                         {activeProjects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                      </select>
+                      </Select>
                     </Field>
                     <Field label={S.bomThMat} hint={S.bomItemHint} required>
-                      <select className="input" value={bomForm.itemId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, itemId: e.target.value })}>
+                      <Select className="input" value={bomForm.itemId} disabled={bomForm.id !== null} onChange={(e) => setBomForm({ ...bomForm, itemId: e.target.value })}>
                         <option value="">{S.bomPickItem}</option>
                         {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
-                      </select>
+                      </Select>
                     </Field>
                     <Field label={`${S.bomThNeed}${bomForm.itemId ? ` (${inventory.find((i) => i.id === bomForm.itemId)?.unit ?? ""})` : ""}`}>
                       <NumInput min={0} className="input" value={bomForm.need} onChange={(e) => setBomForm({ ...bomForm, need: e.target.value })} />
@@ -3161,7 +3162,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                 </td>
                                 <td className="td">
                                   {isPending ? (
-                                    <select
+                                    <Select
                                       className="input py-1 px-2 text-xs w-36"
                                       value={inWhInputs[item.id] ?? item.targetWh}
                                       onChange={(e) =>
@@ -3173,7 +3174,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                           {w.name}
                                         </option>
                                       ))}
-                                    </select>
+                                    </Select>
                                   ) : (
                                     <span className="text-xs text-steel-500">{item.targetWh}</span>
                                   )}
@@ -3249,7 +3250,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                         </div>
                         <div>
                           <label className="text-xs font-medium text-steel-700">{S.bomLblTargetWh}</label>
-                          <select
+                          <Select
                             className="input text-xs w-full mt-1"
                             value={addInWh}
                             onChange={(e) => setAddInWh(e.target.value)}
@@ -3259,7 +3260,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                 {w.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-steel-700">{S.bomLblSource}</label>
@@ -3501,7 +3502,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                       <div className="space-y-3">
                         <div>
                           <label className="text-xs font-medium text-steel-700">{S.bomLblMaterialSelect}</label>
-                          <select
+                          <Select
                             className="input text-xs w-full mt-1"
                             value={addOutItem}
                             onChange={(e) => {
@@ -3519,7 +3520,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                 {i.name} (Stok: {fmtJumlah(Number(i.stock))} {i.unit})
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
@@ -3546,7 +3547,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                         </div>
                         <div>
                           <label className="text-xs font-medium text-steel-700">{S.bomLblSourceWh}</label>
-                          <select
+                          <Select
                             className="input text-xs w-full mt-1"
                             value={addOutWh}
                             onChange={(e) => setAddOutWh(e.target.value)}
@@ -3556,7 +3557,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                 {w.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                         <div>
                           <label className="text-xs font-medium text-steel-700">{S.bomLblPurpose}</label>
@@ -3647,10 +3648,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-xs font-medium text-steel-600" htmlFor="mov-wh">{locale === "en" ? "Warehouse" : "Gudang"}</label>
-                <select id="mov-wh" className="input w-auto py-1.5 text-xs" value={movWh} onChange={(e) => setMovWh(e.target.value)}>
+                <Select id="mov-wh" className="input w-auto py-1.5 text-xs" value={movWh} onChange={(e) => setMovWh(e.target.value)}>
                   <option value="Semua">{locale === "en" ? "All warehouses" : "Semua gudang"}</option>
                   {warehouses.map((w) => <option key={w} value={w}>{w}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -3845,10 +3846,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                 <div className="mt-3 space-y-3">
                   <FormGrid>
                     <Field label={S.dateLbl}><input type="date" className="input" value={ttDate} onChange={(e) => setTtDate(e.target.value)} /></Field>
-                    <Field label={S.linkedSjLbl}><select className="input" value={ttSjId} onChange={(e) => setTtSjId(e.target.value)}>
+                    <Field label={S.linkedSjLbl}><Select className="input" value={ttSjId} onChange={(e) => setTtSjId(e.target.value)}>
                       <option value="">{S.noSj}</option>
                       {sjDocs.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.sbRef || d.id)} · {String(d.title)}</option>)}
-                    </select></Field>
+                    </Select></Field>
                     <Field label={S.refNoLbl}><input className="input font-mono" value={sbTtNumber(nextTtSeq(), sjYearOf(ttDate))} readOnly /></Field>
                   </FormGrid>
                   {ttItems.map((it, idx) => (
@@ -3912,10 +3913,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                     <Field label={S.dateLbl}><input type="date" className="input" value={doDate} onChange={(e) => setDoDate(e.target.value)} /></Field>
                     <Field label={S.fDest}><input className="input" value={doTo} onChange={(e) => setDoTo(e.target.value)} placeholder={S.phDest} /></Field>
                     <Field label={S.driverLbl}><input className="input" value={doDriver} onChange={(e) => setDoDriver(e.target.value)} /></Field>
-                    <Field label={S.linkedSjLbl}><select className="input" value={doSjId} onChange={(e) => setDoSjId(e.target.value)}>
+                    <Field label={S.linkedSjLbl}><Select className="input" value={doSjId} onChange={(e) => setDoSjId(e.target.value)}>
                       <option value="">{S.noSj}</option>
                       {sjDocs.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.sbRef || d.id)} · {String(d.title)}</option>)}
-                    </select></Field>
+                    </Select></Field>
                     <Field label={S.refNoLbl}><input className="input font-mono" value={doNumber(nextDoSeq(), new Date(`${doDate}T00:00:00`))} readOnly /></Field>
                   </FormGrid>
                   {doItems.map((it, idx) => (
@@ -4155,7 +4156,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                 {locale === "en" ? "auto" : "otomatis"}
                               </Badge>
                             )}
-                            <select
+                            <Select
                               className="input !w-auto !py-1 text-[11px]"
                               value={row.reason.code}
                               onChange={(e) => {
@@ -4169,7 +4170,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
                                   {locale === "en" ? r.labelEn : r.label}
                                 </option>
                               ))}
-                            </select>
+                            </Select>
                           </div>
                         </div>
                       );
@@ -4253,10 +4254,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             <Field label={S.jumlahLbl}><NumInput min={1} className="input" value={moveQty} onChange={(e) => setMoveQty(e.target.value)} /></Field>
             {moveFresh && hasUom2(moveFresh) ? (
               <Field label={S.inputUnitLbl} hint={S.inputUnitHint.replace("{a}", moveFresh.unit).replace("{b}", `${fmtJumlah(convOf(moveFresh))} ${uom2Of(moveFresh)}`)}>
-                <select className="input" value={moveUom} onChange={(e) => setMoveUom(e.target.value)} aria-label={S.inputUnitAria}>
+                <Select className="input" value={moveUom} onChange={(e) => setMoveUom(e.target.value)} aria-label={S.inputUnitAria}>
                   <option value="base">{S.optBase.replace("{n}", moveFresh.unit)}</option>
                   <option value="uom2">{S.optUom2.replace("{n}", uom2Of(moveFresh))}</option>
-                </select>
+                </Select>
               </Field>
             ) : (
               <Field label={S.refLbl} hint={S.hintRef}>
@@ -4291,12 +4292,12 @@ penuh per kategori - dengan 10 kategori berproblem, strip
           )}
           {moveKind === "in" && (
             <Field label="PO terkait (opsional)" hint="Pilih PO terbuka agar penerimaan terhubung ke PO. Kosong = dicatat tanpa PO.">
-              <select className="input" value={movePo} onChange={(e) => setMovePo(e.target.value)}>
+              <Select className="input" value={movePo} onChange={(e) => setMovePo(e.target.value)}>
                 <option value="">Tanpa PO</option>
                 {(data.purchaseOrders ?? [])
                   .filter((p) => ["Diajukan", "Disetujui", "Dikirim"].includes(String(p.status)))
                   .map((p) => <option key={String(p.id)} value={String(p.id)}>{String(p.id)} · {String(p.item ?? "-")} · {String(p.vendor ?? "-")}</option>)}
-              </select>
+              </Select>
             </Field>
           )}
           <FormGrid>
@@ -4318,10 +4319,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         footer={<><button className="btn-secondary" onClick={() => setShowOpname(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveOpname}>{S.btnSaveOp}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.itemLbl}>
-            <select className="input" value={opItem} onChange={(e) => setOpItem(e.target.value)}>
+            <Select className="input" value={opItem} onChange={(e) => setOpItem(e.target.value)}>
               <option value="">{S.pickItem}</option>
               {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.countedLbl} hint={opTarget ? S.recordedHint.replace("{a}", fmtJumlah(Number(opTarget.stock))).replace("{b}", opTarget.unit) : undefined}>
             <NumInput min={0} className="input" value={opCount} onChange={(e) => setOpCount(e.target.value)} />
@@ -4339,21 +4340,21 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         footer={<><button className="btn-secondary" onClick={() => setShowTransfer(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveTransfer}>{S.btnSaveTr}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.itemLbl}>
-            <select className="input" value={trItem} onChange={(e) => setTrItem(e.target.value)}>
+            <Select className="input" value={trItem} onChange={(e) => setTrItem(e.target.value)}>
               <option value="">{S.pickItem}</option>
               {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} · {i.warehouse}</option>)}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.qtyTrLbl} hint={trTarget ? S.availHint.replace("{a}", fmtJumlah(Number(trTarget.stock))).replace("{b}", trTarget.unit) : undefined}>
               <NumInput min={1} className="input" value={trQty} onChange={(e) => setTrQty(e.target.value)} />
             </Field>
             <Field label={S.destLbl}>
-              <select className="input" value={trDest} onChange={(e) => setTrDest(e.target.value)}>
+              <Select className="input" value={trDest} onChange={(e) => setTrDest(e.target.value)}>
                 <option value="">{S.pickWh}</option>
                 {/* #93: gudang asal item tidak ditawarkan sebagai tujuan. */}
                 {warehouses.filter((w) => w !== String(trTarget?.warehouse ?? "")).map((w) => <option key={w}>{w}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
         </div>
@@ -4364,10 +4365,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         footer={<><button className="btn-secondary" onClick={() => setShowRetur(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveRetur}>Simpan Retur</button></>}>
         <div className="space-y-3">
           <Field label={S.itemLbl}>
-            <select className="input" value={retItem} onChange={(e) => setRetItem(e.target.value)}>
+            <Select className="input" value={retItem} onChange={(e) => setRetItem(e.target.value)}>
               <option value="">{S.pickItem}</option>
               {inventory.map((i) => <option key={i.id} value={i.id}>{i.name} · stok {fmtJumlah(Number(i.stock))} {i.unit}</option>)}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.qtyTrLbl}>
@@ -4380,10 +4381,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             if (!sel || !hasUom2(sel)) return null;
             return (
               <Field label={S.inputUnitLbl} hint={S.inputUnitHint.replace("{a}", sel.unit).replace("{b}", `${fmtJumlah(convOf(sel))} ${uom2Of(sel)}`)}>
-                <select className="input" value={retUom} onChange={(e) => setRetUom(e.target.value)} aria-label={S.inputUnitAria}>
+                <Select className="input" value={retUom} onChange={(e) => setRetUom(e.target.value)} aria-label={S.inputUnitAria}>
                   <option value="base">{S.optBase.replace("{n}", sel.unit)}</option>
                   <option value="uom2">{S.optUom2.replace("{n}", uom2Of(sel))}</option>
-                </select>
+                </Select>
               </Field>
             );
           })()}
@@ -4399,10 +4400,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         footer={<><button className="btn-secondary" onClick={() => setReservTarget(null)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveReservasi}>{S.btnSaveReserv}</button></>}>
         <div className="space-y-3">
           <Field label={S.proyekLbl}>
-            <select className="input" value={reservProject} onChange={(e) => setReservProject(e.target.value)}>
+            <Select className="input" value={reservProject} onChange={(e) => setReservProject(e.target.value)}>
               <option value="">{S.pickProject}</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.reservQtyLbl}><NumInput min={1} className="input" value={reservQtyInput} onChange={(e) => setReservQtyInput(e.target.value)} /></Field>
         </div>
@@ -4413,7 +4414,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
         wide footer={<><button className="btn-secondary" onClick={() => setShowPick(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={savePick}>{S.btnPickGo}</button></>}>
         <div className="space-y-3">
           <Field label={S.proyekLbl}>
-            <select className="input" value={pickProject} onChange={(e) => {
+            <Select className="input" value={pickProject} onChange={(e) => {
               setPickProject(e.target.value);
               const rows = inventory.filter((i) => reservedOf(i).some((r) => r.project === e.target.value));
               setPickSel(rows.map((i) => i.id));
@@ -4427,7 +4428,7 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             }}>
               <option value="">{S.pickProject}</option>
               {projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-            </select>
+            </Select>
           </Field>
           {pickProject && pickItems.length === 0 && <EmptyState title={S.pickEmptyT} subtitle={S.pickEmptyS.replace("{n}", pickProject)} />}
           {pickItems.map((i) => {
@@ -4552,14 +4553,14 @@ penuh per kategori - dengan 10 kategori berproblem, strip
               />
             </Field>
             <Field label={locale === "en" ? "Type" : "Jenis Barang"}>
-              <select
+              <Select
                 className="input"
                 value={whForm.type}
                 onChange={(e) => setWhForm({ ...whForm, type: e.target.value })}
               >
                 <option value="">{locale === "en" ? "-- pick --" : "-- pilih --"}</option>
                 {WAREHOUSE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field
               label={locale === "en" ? "Capacity (mixed units)" : "Kapasitas (satuan tercampur)"}
@@ -4736,10 +4737,10 @@ penuh per kategori - dengan 10 kategori berproblem, strip
             <Field label={S.dateLbl}><input type="date" className="input" value={doEditForm.date} onChange={(e) => setDoEditForm((f) => ({ ...f, date: e.target.value }))} /></Field>
             <Field label={S.fDest} required><input className="input" value={doEditForm.to} onChange={(e) => setDoEditForm((f) => ({ ...f, to: e.target.value }))} /></Field>
             <Field label={S.driverLbl}><input className="input" value={doEditForm.driver} onChange={(e) => setDoEditForm((f) => ({ ...f, driver: e.target.value }))} /></Field>
-            <Field label={S.linkedSjLbl}><select className="input" value={doEditForm.sjId} onChange={(e) => setDoEditForm((f) => ({ ...f, sjId: e.target.value }))}>
+            <Field label={S.linkedSjLbl}><Select className="input" value={doEditForm.sjId} onChange={(e) => setDoEditForm((f) => ({ ...f, sjId: e.target.value }))}>
               <option value="">{S.noSj}</option>
               {sjDocs.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.sbRef || d.id)} · {String(d.title)}</option>)}
-            </select></Field>
+            </Select></Field>
           </FormGrid>
           {doEditForm.items.map((it, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-2">

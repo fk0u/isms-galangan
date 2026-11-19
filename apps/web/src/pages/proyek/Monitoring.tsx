@@ -45,6 +45,7 @@ function endInDays(end: string): number | null {
 }
 
 import { delayDaysOf as delayDaysShared, endInDays as endInDaysShared } from "../../utils/projectDelay";
+import { Select } from "../../components/inputs/Select";
 
 export default function Monitoring() {
   const { locale } = useT();
@@ -206,10 +207,10 @@ export default function Monitoring() {
           ariaLabel={S.searchProjectAria}
           className="w-full sm:w-64"
         />
-        <select className="hidden" aria-label={S.prjFilterCabangAria} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
+        <Select className="hidden" aria-label={S.prjFilterCabangAria} value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
           <option value="Semua">{S.prjAllCabang}</option>
           {branchCities.map((b) => <option key={b} value={b}>{b}</option>)}
-        </select>
+        </Select>
         <div className="flex gap-1" role="group" aria-label={S.monModeAria}>
           {(["Semua", "Perhatian"] as const).map((m) => (
             <button

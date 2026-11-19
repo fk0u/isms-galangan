@@ -18,6 +18,7 @@ import { usePdfDoc } from "../../components/usePdfDoc";
 import { useDraftState } from "../../utils/draft";
 import { useT } from "../../i18n/LanguageContext";
 import { n_crm } from "../../i18n/n_crm";
+import { Select } from "../../components/inputs/Select";
 
 const FLOW = ["Lead", "Penawaran", "Negosiasi", "Menang"];
 const num = (v: unknown): number => (typeof v === "number" ? (Number.isFinite(v) ? v : 0) : parseRupiah(String(v ?? "")));
@@ -378,9 +379,9 @@ export default function QuotationDetail() {
             <div className="space-y-3 px-5 pb-5">
               <FormGrid>
                 <Field label={S.channelLabel}>
-                  <select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
+                  <Select className="input" value={commForm.channel} onChange={(e) => setCommForm({ ...commForm, channel: e.target.value })}>
                     {["Email", "Telepon", "Meeting", "WhatsApp", "Kunjungan"].map((c) => <option key={c}>{c}</option>)}
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={S.dateLabel} required><input type="date" className="input" value={commForm.date} onChange={(e) => setCommForm({ ...commForm, date: e.target.value })} /></Field>
               </FormGrid>
@@ -440,10 +441,10 @@ export default function QuotationDetail() {
           </div>
           <FormGrid>
             <Field label={S.pmLabel}>
-              <select className="input" value={convManager} onChange={(e) => setConvManager(e.target.value)}>
+              <Select className="input" value={convManager} onChange={(e) => setConvManager(e.target.value)}>
                 <option value="">{pmCandidates.length > 0 ? S.pickPmOpt : S.noPmCandidates}</option>
                 {pmCandidates.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.startPlanLabel}><input type="date" className="input" value={convStart} onChange={(e) => setConvStart(e.target.value)} /></Field>
           </FormGrid>

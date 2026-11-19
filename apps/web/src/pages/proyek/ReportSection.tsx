@@ -9,6 +9,7 @@ import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
 import { STATUS_BOQ_ID, fmtTanggal, todayISO } from "../../utils/format";
 import { fmtMiliar } from "../../data";
+import { Select } from "../../components/inputs/Select";
 
 interface Props {
   projectId: string;
@@ -297,10 +298,10 @@ export default function ReportSection({ projectId }: Props) {
         footer={<><button className="btn-secondary" onClick={() => setShowShare(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={submitShare}>{S.detSendBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.detDocField} required>
-            <select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
+            <Select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
               <option value="">{S.detPickDocFull}</option>
               {docs.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.detShareTo} required><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.repShareToPh} /></Field>
         </div>

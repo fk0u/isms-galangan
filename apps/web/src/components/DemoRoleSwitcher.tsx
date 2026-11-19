@@ -8,6 +8,7 @@ import { getJwt, isBackendConfigured } from "../services/http";
 import { useT } from "../i18n/LanguageContext";
 import { n_demo } from "../i18n/n_demo";
 import { toast } from "./ui";
+import { Select } from "./inputs/Select";
 
 export default function DemoRoleSwitcher() {
   const { locale } = useT();
@@ -44,12 +45,12 @@ export default function DemoRoleSwitcher() {
         {T.roleNow.replace("{name}", user?.name ?? "-").replace("{role}", user?.role ?? "-")}
       </p>
       <div className="mt-2 flex gap-1.5">
-        <select className="input h-8 flex-1 py-0 text-xs" value={pick} onChange={(e) => setPick(e.target.value)} aria-label={T.roleTitle}>
+        <Select className="input h-8 flex-1 py-0 text-xs" value={pick} onChange={(e) => setPick(e.target.value)} aria-label={T.roleTitle}>
           <option value="">{T.rolePick}</option>
           {roles.filter((r) => r.role !== user?.role).map((r) => (
             <option key={r.role} value={r.role}>{r.name} ({r.role})</option>
           ))}
-        </select>
+        </Select>
         <button type="button" className="btn-primary h-8 px-3 text-xs" disabled={!pick || busy} onClick={() => run(() => switchToRole(pick))}>
           {T.roleSwitch}
         </button>

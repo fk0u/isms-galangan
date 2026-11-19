@@ -12,6 +12,7 @@ import { n_misc } from "../../i18n/n_misc";
 import { computeAlerts } from "../../utils/alerts";
 import { dayGroup, loadNotifRead, relMinutes, saveNotifRead, type DayGroup } from "../../utils/notifRead";
 import { exportExcel } from "../../utils/export";
+import { Select } from "../../components/inputs/Select";
 
 type Tone = "red" | "amber" | "blue" | "navy" | "teal" | "violet" | "gray";
 
@@ -299,23 +300,23 @@ export default function Notifikasi() {
               {(draft, setDraft) => (
                 <div className="space-y-3">
                   <Field label={S.ntSeverityLabel}>
-                    <select className="input w-full" aria-label={S.ntSeverityFilterAria} value={draft.severity} onChange={(e) => setDraft({ ...draft, severity: e.target.value })}>
+                    <Select className="input w-full" aria-label={S.ntSeverityFilterAria} value={draft.severity} onChange={(e) => setDraft({ ...draft, severity: e.target.value })}>
                       <option value="Semua">{S.ntAllSeverities}</option>
                       <option value="Merah">{S.ntRedCritical}</option>
                       <option value="Kuning">{S.ntYellowWarn}</option>
                       <option value="Biru">{S.ntBlueInfo}</option>
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.ntModuleLabel}>
-                    <select className="input w-full" aria-label={S.ntModuleFilterAria} value={draft.modul} onChange={(e) => setDraft({ ...draft, modul: e.target.value })}>
+                    <Select className="input w-full" aria-label={S.ntModuleFilterAria} value={draft.modul} onChange={(e) => setDraft({ ...draft, modul: e.target.value })}>
                       {modules.map((m) => <option key={m} value={m}>{m === "Semua" ? S.ntAllModules : m}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.ntOrderLabel}>
-                    <select className="input w-full" aria-label={S.ntOrderAria} value={draft.urutan} onChange={(e) => setDraft({ ...draft, urutan: e.target.value })}>
+                    <Select className="input w-full" aria-label={S.ntOrderAria} value={draft.urutan} onChange={(e) => setDraft({ ...draft, urutan: e.target.value })}>
                       <option value="Terbaru">{S.ntNewestFirst}</option>
                       <option value="Terlama">{S.ntOldestFirst}</option>
-                    </select>
+                    </Select>
                   </Field>
                 </div>
               )}

@@ -17,6 +17,7 @@ import { exportExcelSheets } from "../../utils/export";
 import EksekutifPanel, { exportEksekutif, useEksekutif } from "./Eksekutif";
 import { pdfServerReady } from "../../services/pdfClient";
 import { usePdfDoc } from "../../components/usePdfDoc";
+import { Select } from "../../components/inputs/Select";
 
 type Mode = "Mingguan" | "Bulanan" | "Per Proyek" | "Eksekutif";
 
@@ -453,10 +454,10 @@ export default function Laporan() {
         )}
         <label className="flex items-center gap-2 text-sm text-steel-600">
           {S.branchLabel}
-          <select className="input w-auto" value={brF} onChange={(e) => setBrF(e.target.value)} aria-label={S.branchFilterAria}>
+          <Select className="input w-auto" value={brF} onChange={(e) => setBrF(e.target.value)} aria-label={S.branchFilterAria}>
             <option value="SEMUA">{S.allLabel}</option>
             {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          </Select>
         </label>
         {(mode === "Bulanan" || mode === "Eksekutif") && (
           <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
@@ -467,9 +468,9 @@ export default function Laporan() {
         {mode === "Per Proyek" && (
           <label className="ml-auto flex items-center gap-2 text-sm text-steel-600">
             {S.projectLabel}
-            <select className="input w-auto" value={activeProjectId} onChange={(e) => setProjectId(e.target.value)}>
+            <Select className="input w-auto" value={activeProjectId} onChange={(e) => setProjectId(e.target.value)}>
               {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {String(p.vessel ?? "")}</option>)}
-            </select>
+            </Select>
           </label>
         )}
       </div>

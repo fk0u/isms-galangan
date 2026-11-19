@@ -109,7 +109,28 @@ export function nameScore(a: string, b: string): number {
   return hit / Math.max(x.length, y.length);
 }
 
-export interface EmpLite { id: string; name: string; nik: string; devicePin: string; status: string; branch: string }
+export interface EmpLite { id: string; name: string; nik: string; devicePin: string; status: string; branch: string; workStart: string; workEnd: string }
+
+/* Jam kerja: setting umum (settings SET-ATT-HOURS) dengan pengecualian per
+   karyawan (employees.data.workStart/workEnd, mis. shift malam satpam). */
+export const DEFAULT_WORK_HOURS = { start: "08:00", end: "17:00" };
+const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
+export async function loadWorkHours(): Promise<{ start: string; end: string }> {
+  try {
+    const row = (await q<{ data: string }>("SELECT data FROM settings WHERE id = ?", ["SET-ATT-HOURS"]))[0];
+    const v = row ? JSON.parse(String((JSON.parse(row.data) as { value?: unknown }).value ?? "{}")) as { start?: string; end?: string } : {};
+    return HM.test(v.start ?? "") && HM.test(v.end ?? "") ? { start: v.start as string, end: v.end as string } : DEFAULT_WORK_HOURS;
+  } catch { return DEFAULT_WORK_HOURS; }
+}
+export async function saveWorkHours(start: string, end: string): Promise<void> {
+  const data = { key: "ATT_WORK_HOURS", value: JSON.stringify({ start, end }), label: "Jam kerja standar (absensi mesin)", group: "Absensi" };
+  const t = now();
+  const res = await exec("UPDATE settings SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), t, "SET-ATT-HOURS"]);
+  if (res.changes === 0) await exec("INSERT INTO settings (id, branch, data, updated_at) VALUES (?, ?, ?, ?)", ["SET-ATT-HOURS", "Samarinda", JSON.stringify(data), t]);
+}
+/** Jam kerja yang berlaku untuk satu karyawan. Murni. */
+export const hoursFor = (emp: Pick<EmpLite, "workStart" | "workEnd"> | undefined, base: { start: string; end: string }): { start: string; end: string } =>
+  emp && HM.test(emp.workStart) && HM.test(emp.workEnd) ? { start: emp.workStart, end: emp.workEnd } : base;
 
 export async function loadEmployees(): Promise<EmpLite[]> {
   const rows = await q<{ id: string; branch: string; data: string }>("SELECT id, branch, data FROM employees", []);
@@ -117,7 +138,7 @@ export async function loadEmployees(): Promise<EmpLite[]> {
   for (const r of rows) {
     try {
       const d = JSON.parse(r.data) as Record<string, unknown>;
-      out.push({ id: r.id, branch: r.branch, name: String(d.name ?? ""), nik: String(d.username ?? "").trim(), devicePin: String(d.devicePin ?? "").trim(), status: String(d.status ?? "") });
+      out.push({ id: r.id, branch: r.branch, name: String(d.name ?? ""), nik: String(d.username ?? "").trim(), devicePin: String(d.devicePin ?? "").trim(), status: String(d.status ?? ""), workStart: String(d.workStart ?? ""), workEnd: String(d.workEnd ?? "") });
     } catch { /* baris rusak dilewati */ }
   }
   return out;

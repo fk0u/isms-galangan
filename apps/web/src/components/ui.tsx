@@ -1067,9 +1067,9 @@ export function Pager({ page, pages, size, total, loading = false, onGo, onSize 
         <span className="px-1 font-semibold tabular-nums text-navy-900 sm:hidden">{page} / {pages}</span>
         <button type="button" className={nav} disabled={loading || page >= pages} onClick={() => onGo(page + 1)} aria-label={P.pagerNext}><ChevronRight className="h-3.5 w-3.5" /></button>
         <button type="button" className={`${nav} hidden sm:inline-flex`} disabled={loading || page >= pages} onClick={() => onGo(pages)} aria-label={P.pagerLast}><ChevronsRight className="h-3.5 w-3.5" /></button>
-        <select className="input ml-1 !w-auto px-1.5 py-1 text-xs" value={size} aria-label={P.pagerSize} disabled={loading} onChange={(e) => onSize(Number(e.target.value))}>
+        <Select className="input ml-1 !w-auto px-1.5 py-1 text-xs" value={size} aria-label={P.pagerSize} disabled={loading} onChange={(e) => onSize(Number(e.target.value))}>
           {[...new Set([10, 25, 50, 100, size])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{P.pagerPer.replace("{n}", String(n))}</option>)}
-        </select>
+        </Select>
       </nav>
     </div>
   );
@@ -1251,6 +1251,7 @@ export function RowAction({
 import { uploadFile } from "../services/upload";
 import { getJwt } from "../services/http";
 import { isBackendUrl, toAbsoluteUrl } from "../services/files";
+import { Select } from "./inputs/Select";
 
 /** Normalisasi URL lama relatif (/files/...) → absolut terhadap BASE backend.
  *  URL absolut / blob: / object-URL dikembalikan apa adanya. */

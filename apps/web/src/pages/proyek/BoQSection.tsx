@@ -20,6 +20,7 @@ import ImportPreviewModal, { type ImportPreviewRow } from "../../components/Impo
 import { fmtTanggal } from "../../utils/format";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import type { BoQItem } from "../../data";
+import { Select } from "../../components/inputs/Select";
 
 /* Dokumen pendukung satu item BoQ, atau null bila tidak ada lampiran.
    URL-nya dibaca lewat docAttachment supaya item yang lampirannya disimpan di
@@ -394,25 +395,25 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
             ariaLabel={S.boqSearchAria}
     className="w-full sm:w-52"
   />
-          <select className="input w-auto py-1.5 text-sm" aria-label={S.boqCatAria} value={catF} onChange={(e) => setCatF(e.target.value)}>
+          <Select className="input w-auto py-1.5 text-sm" aria-label={S.boqCatAria} value={catF} onChange={(e) => setCatF(e.target.value)}>
             <option value="Semua">{S.boqAllCat}</option>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select className="input w-auto py-1.5 text-sm" aria-label={S.boqStatusAria} value={stF} onChange={(e) => setStF(e.target.value)}>
+          </Select>
+          <Select className="input w-auto py-1.5 text-sm" aria-label={S.boqStatusAria} value={stF} onChange={(e) => setStF(e.target.value)}>
             <option value="Semua">{S.prjAllStatus}</option>
             {["Draft", "Pending", "Approved", "Completed", "Rejected"].map((s) => <option key={s} value={s}>{STATUS_BOQ_ID[s] ?? s}</option>)}
-          </select>
+          </Select>
           <span className="ml-auto text-xs text-steel-500">{S.boqCount.replace("{a}", String(filtered.length)).replace("{b}", String(items.length))}</span>
         </div>
 
         {!locked && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-surface p-2.5">
           <span className="text-xs font-semibold text-navy-900">{S.boqPresetLead}</span>
-          <select className="input w-auto py-1.5 text-sm" aria-label={S.boqPresetCatAria} value={presetCat} onChange={(e) => { setPresetCat(e.target.value); setPresetIdx("0"); }}>
+          <Select className="input w-auto py-1.5 text-sm" aria-label={S.boqPresetCatAria} value={presetCat} onChange={(e) => { setPresetCat(e.target.value); setPresetIdx("0"); }}>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select className="input w-auto max-w-64 py-1.5 text-sm" aria-label={S.boqPresetItemAria} value={presetIdx} onChange={(e) => setPresetIdx(e.target.value)}>
+          </Select>
+          <Select className="input w-auto max-w-64 py-1.5 text-sm" aria-label={S.boqPresetItemAria} value={presetIdx} onChange={(e) => setPresetIdx(e.target.value)}>
             {(PRESET[presetCat] ?? []).map((p, i) => <option key={p.name} value={String(i)}>{p.name} · {p.unit} · {fmtRupiah(p.price)}</option>)}
-          </select>
+          </Select>
           <AsyncButton className="btn-secondary text-xs" onAction={importPreset}><Plus className="h-3.5 w-3.5" /> {S.boqPresetAdd}</AsyncButton>
         </div>}
 
@@ -575,9 +576,9 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
           <Field label={S.prjScopeDesc}><input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
           <FormGrid>
             <Field label={S.boqQty} required><NumInput className="input" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field>
-            <Field label={S.colUnit}><select className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+            <Field label={S.colUnit}><Select className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
               {SATUAN.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select></Field>
+            </Select></Field>
           </FormGrid>
           <FormGrid>
             <Field label={S.colUnitPrice} required hint={
@@ -589,9 +590,9 @@ export default function BoQSection({ projectId, docId, locked = false }: Props) 
                 .replace("{p}", fmtRupiah(parseRupiah(form.unitPrice)))
                 .replace("{t}", fmtRupiah((Number(form.quantity) || 0) * parseRupiah(form.unitPrice)))
             }><MoneyInput className="input" value={form.unitPrice} onChange={(v) => setForm({ ...form, unitPrice: v })} /></Field>
-            <Field label={S.boqCategory}><select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+            <Field label={S.boqCategory}><Select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select></Field>
+            </Select></Field>
           </FormGrid>
           <Field label={locale === "en" ? "Supporting document URL" : "URL dokumen pendukung"} hint={locale === "en" ? "Optional: RAB / drawing / quotation" : "Opsional: RAB / gambar / penawaran"}>
             <div className="flex flex-wrap items-center gap-2">

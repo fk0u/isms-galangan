@@ -8,6 +8,7 @@ import { useStore } from "../../data/store";
 import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
 import { apiFetch, isBackendConfigured } from "../../services/http";
+import { Select } from "../../components/inputs/Select";
 
 interface Punch { employeeNo: string; timestamp: string; type: "in" | "out" }
 
@@ -101,11 +102,11 @@ export default function DeviceImport() {
         </>}>
         <div className="space-y-4">
           <Field label={E.ingType}>
-            <select className="input" value={kind} onChange={(e) => { setKind(e.target.value as DeviceKind); setIdError(null); }}>
+            <Select className="input" value={kind} onChange={(e) => { setKind(e.target.value as DeviceKind); setIdError(null); }}>
               <option value="fk">{E.ingTypeFk}</option>
               <option value="adms">{E.ingTypeAdms}</option>
               <option value="api">{E.ingTypeApi}</option>
-            </select>
+            </Select>
           </Field>
           <Field label={E.ingId} hint={idHint} error={idError} required>
             <input className="input font-mono" value={deviceId} autoFocus spellCheck={false} autoComplete="off"

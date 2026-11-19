@@ -9,6 +9,7 @@ import { parseRupiah } from "../utils/format";
 import { useStore } from "../data/store";
 import { useT } from "../i18n/LanguageContext";
 import { n_crm } from "../i18n/n_crm";
+import { Select } from "./inputs/Select";
 
 export default function ClientModal({
   open,
@@ -92,21 +93,21 @@ export default function ClientModal({
           <NumInput max={100} className="input" value={form.rating} onChange={(e) => setF("rating", e.target.value)} />
         </Field>
         <Field label="Klasifikasi">
-          <select className="input" value={form.klasifikasi} onChange={(e) => setF("klasifikasi", e.target.value)}>
+          <Select className="input" value={form.klasifikasi} onChange={(e) => setF("klasifikasi", e.target.value)}>
             {["VIP", "Regular", "New", "Inactive"].map((k) => (
               <option key={k}>{k}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={`${S.creditLimitLabel} (Rp)`}>
           <MoneyInput className="input" value={form.creditLimit} onChange={(v) => setF("creditLimit", v)} />
         </Field>
         <Field label={S.paymentTermsLabel}>
-          <select className="input" value={form.paymentTerms} onChange={(e) => setF("paymentTerms", e.target.value)}>
+          <Select className="input" value={form.paymentTerms} onChange={(e) => setF("paymentTerms", e.target.value)}>
             {["NET 14", "NET 30", "NET 45", "NET 60", "Termin"].map((t) => (
               <option key={t}>{t}</option>
             ))}
-          </select>
+          </Select>
         </Field>
       </div>
     </Modal>

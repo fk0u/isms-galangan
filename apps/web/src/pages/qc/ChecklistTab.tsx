@@ -13,6 +13,7 @@ import { scoreChecklist, type ScItem, type ScTemplate } from "../../utils/scorin
 import { getSetting } from "../../utils/settings";
 import { fmtTanggal, todayISO } from "../../utils/format";
 import { sameName } from "../../utils/names";
+import { Select } from "../../components/inputs/Select";
 
 type ItemType = "ya_tidak" | "skala_1_5" | "pilihan" | "teks";
 interface EditItem { id: string; text: string; type: ItemType; weight: string; options: string }
@@ -381,7 +382,7 @@ export default function ChecklistTab() {
               </div>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <Field label={T.executorType}>
-                  <select
+                  <Select
                     className="input text-xs"
                     value={execType}
                     onChange={(e) => {
@@ -392,10 +393,10 @@ export default function ChecklistTab() {
                   >
                     <option value="subkon">{T.executorSubkon}</option>
                     <option value="pekerja">{T.executorWorker}</option>
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={execType === "subkon" ? T.executorSubkon : T.executorWorker}>
-                  <select
+                  <Select
                     className="input text-xs"
                     value={execName}
                     onChange={(e) => setExecName(e.target.value)}
@@ -414,7 +415,7 @@ export default function ChecklistTab() {
                               {String(e.name)} ({String(e.role ?? e.dept ?? "")})
                             </option>
                           ))}
-                  </select>
+                  </Select>
                 </Field>
               </div>
             </div>
@@ -422,7 +423,7 @@ export default function ChecklistTab() {
 
           {/* Pemilihan Template */}
           <Field label={T.template}>
-            <select
+            <Select
               className="input text-xs"
               value={tplId}
               onChange={(e) => {
@@ -436,7 +437,7 @@ export default function ChecklistTab() {
                   {String(t.name)} · {itemsOf(t).length} {T.item}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
 
           {/* Indikator Skor & Progres Pengisian Real-Time */}
@@ -559,8 +560,8 @@ export default function ChecklistTab() {
           <div className="space-y-3">
             <Field label={T.tplName} required><input className="input" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
             <FormGrid>
-              <Field label={T.tplScope}><select className="input" value={edit.scope} onChange={(e) => setEdit({ ...edit, scope: e.target.value as "QC" | "HSE" })}><option>QC</option><option>HSE</option></select></Field>
-              <Field label={T.tplTarget}><select className="input" value={edit.target} onChange={(e) => setEdit({ ...edit, target: e.target.value as "pekerjaan" | "pekerja" })}><option value="pekerjaan">{T.tgtWork}</option><option value="pekerja">{T.tgtWorker}</option></select></Field>
+              <Field label={T.tplScope}><Select className="input" value={edit.scope} onChange={(e) => setEdit({ ...edit, scope: e.target.value as "QC" | "HSE" })}><option>QC</option><option>HSE</option></Select></Field>
+              <Field label={T.tplTarget}><Select className="input" value={edit.target} onChange={(e) => setEdit({ ...edit, target: e.target.value as "pekerjaan" | "pekerja" })}><option value="pekerjaan">{T.tgtWork}</option><option value="pekerja">{T.tgtWorker}</option></Select></Field>
             </FormGrid>
             {edit.sections.map((s, si) => (
               <fieldset key={si} className="rounded-xl border border-steel-200 p-3">
@@ -571,9 +572,9 @@ export default function ChecklistTab() {
                     <div key={it.id} className="grid grid-cols-12 items-end gap-2">
                       <div className="col-span-12 sm:col-span-6"><Field label={T.itemText}><input className="input" value={it.text} onChange={(e) => patchItem(si, ii, { text: e.target.value })} /></Field></div>
                       <div className="col-span-6 sm:col-span-3"><Field label={T.itemType}>
-                        <select className="input" value={it.type} onChange={(e) => patchItem(si, ii, { type: e.target.value as ItemType })}>
+                        <Select className="input" value={it.type} onChange={(e) => patchItem(si, ii, { type: e.target.value as ItemType })}>
                           <option value="ya_tidak">{T.tYesNo}</option><option value="skala_1_5">{T.tScale}</option><option value="pilihan">{T.tChoice}</option><option value="teks">{T.tText}</option>
-                        </select></Field></div>
+                        </Select></Field></div>
                       <div className="col-span-3 sm:col-span-2"><Field label={T.itemWeight}><NumInput min={0} className="input" value={it.weight} onChange={(e) => patchItem(si, ii, { weight: e.target.value })} /></Field></div>
                       <button type="button" className="btn-secondary col-span-3 mb-0.5 h-9 px-2 text-xs sm:col-span-1" aria-label={T.remove} onClick={() => setEdit({ ...edit, sections: edit.sections.map((x, a) => (a === si ? { ...x, items: x.items.filter((_, b) => b !== ii) } : x)) })}>×</button>
                       {it.type === "pilihan" && <div className="col-span-12"><Field label={T.itemOptions}><input className="input" value={it.options} onChange={(e) => patchItem(si, ii, { options: e.target.value })} /></Field></div>}

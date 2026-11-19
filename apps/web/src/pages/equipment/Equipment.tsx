@@ -62,6 +62,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_eqp } from "../../i18n/n_eqp";
 import { n_dlg } from "../../i18n/n_dlg";
 import DelegationPanel, { activeLoanOf, activeMaintOf, delegationStatus } from "./DelegationPanel";
+import { Select } from "../../components/inputs/Select";
 
 const BOOK_PRIORITIES = ["Normal", "Tinggi", "Kritis"];
 const TARGET_HOURS = 176;
@@ -1668,14 +1669,14 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                   {(draft, setDraft) => (
                     <div className="space-y-3">
                       <Field label={S.thStatus}>
-                        <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                        <Select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
                           {["Semua", "Tersedia", "Terpakai", "Maintenance"].map((s) => <option key={s} value={s}>{s === "Semua" ? S.eqAllStatus : s}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                       <Field label={S.thCategory}>
-                        <select className="input w-full" value={draft.kategori} onChange={(e) => setDraft({ ...draft, kategori: e.target.value })}>
+                        <Select className="input w-full" value={draft.kategori} onChange={(e) => setDraft({ ...draft, kategori: e.target.value })}>
                           {["Semua", ...allCats].map((c) => <option key={c} value={c}>{c === "Semua" ? S.eqAllCat : c}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                     </div>
                   )}
@@ -2035,7 +2036,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                   <SearchBox value={maintQ} onChange={setMaintQ} className="max-w-xs" placeholder={locale === "en" ? "Search maintenance..." : "Cari maintenance..."} ariaLabel={locale === "en" ? "Search maintenance" : "Cari maintenance"} />
                   {canWriteEquipment && (
                     <>
-                      <select
+                      <Select
                         className="input w-auto py-1.5 text-xs"
                         aria-label={locale === "en" ? "Pick equipment to schedule" : "Pilih equipment untuk dijadwalkan"}
                         value={maintForm.equipmentId}
@@ -2043,7 +2044,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                       >
                         <option value="">{locale === "en" ? "-- equipment --" : "-- pilih equipment --"}</option>
                         {equipment.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                      </select>
+                      </Select>
                       <button className="btn-primary-gradient text-xs" onClick={() => openMaintNew(maintForm.equipmentId || equipment[0]?.id)}>
                         <Wrench className="h-3.5 w-3.5" /> {locale === "en" ? "Schedule maintenance" : "Jadwalkan Maintenance"}
                       </button>
@@ -2592,10 +2593,10 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                       <ProgressBar value={disp} tone={g.tone} />
                       <p className="mt-1 text-xs text-steel-500"><Badge tone={g.tone}>{g.label}</Badge> <span className="ml-1">Auto bulan ini: {auto}% ({autoHoursOf(e)} jam ÷ 176)</span></p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <select className="input w-auto py-1 text-xs" value={manual ? "Manual" : "Auto"} onChange={(ev) => { if (ev.target.value === "Auto") void saveUtilOverride(e, false); else setUtilDraft((m) => ({ ...m, [e.id]: String(e.util ?? 0) })); }} aria-label={`Mode utilisasi ${e.name}`}>
+                        <Select className="input w-auto py-1 text-xs" value={manual ? "Manual" : "Auto"} onChange={(ev) => { if (ev.target.value === "Auto") void saveUtilOverride(e, false); else setUtilDraft((m) => ({ ...m, [e.id]: String(e.util ?? 0) })); }} aria-label={`Mode utilisasi ${e.name}`}>
                           <option value="Auto">Auto</option>
                           <option value="Manual">Manual</option>
-                        </select>
+                        </Select>
                         {manual && (
                           <>
                             <NumInput min={0} className="input w-20 !py-1 text-xs" value={utilDraft[e.id] ?? String(e.util ?? 0)} onChange={(ev) => setUtilDraft((m) => ({ ...m, [e.id]: ev.target.value }))} aria-label={`Util manual ${e.name}`} />
@@ -2630,9 +2631,9 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
             <Field label={S.eqNameField} required><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={S.eqNamePh} /></Field>
             <Field label={S.eqCodeField} required><input className="input font-mono" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder={S.eqCodePh} /></Field>
             <Field label={S.thCategory}>
-              <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <Select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 {EQ_CATS.map((c) => <option key={c}>{c}</option>)}
-              </select>
+              </Select>
             </Field>
             {form.category === "Lainnya" && (
               <Field label={locale === "en" ? "Custom category" : "Kategori kustom"} hint={locale === "en" ? "Saved as the equipment category and included in filters" : "Disimpan sebagai kategori + ikut filter"}>
@@ -2680,15 +2681,15 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thEquipment}>
-              <select className="input" value={maintForm.equipmentId} onChange={(e) => setMaintForm({ ...maintForm, equipmentId: e.target.value })}>
+              <Select className="input" value={maintForm.equipmentId} onChange={(e) => setMaintForm({ ...maintForm, equipmentId: e.target.value })}>
                 <option value="">{S.eqChoose}</option>
                 {equipment.map((e) => <option key={e.id} value={e.id}>{e.name} ({e.code})</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={locale === "en" ? "Work type" : "Jenis Pekerjaan"}>
-              <select className="input" value={maintForm.jenis} onChange={(e) => setMaintForm({ ...maintForm, jenis: e.target.value })}>
+              <Select className="input" value={maintForm.jenis} onChange={(e) => setMaintForm({ ...maintForm, jenis: e.target.value })}>
                 {MAINT_JENIS.map((j) => <option key={j} value={j}>{j}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={locale === "en" ? "Scheduled date" : "Tanggal Jadwal"}>
               <input type="date" className="input" value={maintForm.tanggal} onChange={(e) => setMaintForm({ ...maintForm, tanggal: e.target.value })} />
@@ -2697,10 +2698,10 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
               <input type="date" className="input" value={maintForm.eta} onChange={(e) => setMaintForm({ ...maintForm, eta: e.target.value })} />
             </Field>
             <Field label={S.eqTechField} hint={locale === "en" ? "Linked employee, for costing" : "Terhubung ke karyawan, untuk hitung biaya"}>
-              <select className="input" value={maintForm.teknisiId} onChange={(e) => setMaintForm({ ...maintForm, teknisiId: e.target.value })}>
+              <Select className="input" value={maintForm.teknisiId} onChange={(e) => setMaintForm({ ...maintForm, teknisiId: e.target.value })}>
                 <option value="">{S.eqChoose}</option>
                 {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field
               label={locale === "en" ? "Charged to project (HPP)" : "Dibebankan ke Proyek (HPP)"}
@@ -2708,10 +2709,10 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                 ? "Material + labour land in this project's cost. Leave empty for overhead."
                 : "Material + tenaga masuk biaya proyek ini. Kosongkan bila overhead."}
             >
-              <select className="input" value={maintForm.projectId} onChange={(e) => setMaintForm({ ...maintForm, projectId: e.target.value })}>
+              <Select className="input" value={maintForm.projectId} onChange={(e) => setMaintForm({ ...maintForm, projectId: e.target.value })}>
                 <option value="">{locale === "en" ? "-- overhead --" : "-- overhead --"}</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={locale === "en" ? "Hour meter before" : "Hour Meter Awal"}>
               <NumInput min={0} className="input" value={maintForm.hours} onChange={(e) => setMaintForm({ ...maintForm, hours: e.target.value })} />
@@ -2753,7 +2754,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                 <div key={idx} className="mb-2 grid grid-cols-12 items-end gap-2">
                   <div className="col-span-7">
                     <p className="label">{locale === "en" ? "Item · warehouse" : "Item · Gudang"}</p>
-                    <select
+                    <Select
                       className="input"
                       value={m.itemId}
                       onChange={(e) => setMaintForm((f) => ({ ...f, mats: f.mats.map((x, i) => (i === idx ? { ...x, itemId: e.target.value } : x)) }))}
@@ -2762,7 +2763,7 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
                       {data.inventory.map((x) => (
                         <option key={x.id} value={x.id}>{x.name} · {x.warehouse} · stok {fmtJumlah(Number(x.stock || 0))} {x.unit}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="col-span-3">
                     <p className="label">{locale === "en" ? "Qty" : "Jumlah"}{it ? ` (${it.unit})` : ""}</p>
@@ -2879,32 +2880,32 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.thEquipment}>
-              <select className="input" value={bookForm.equip} onChange={(e) => setBookForm({ ...bookForm, equip: e.target.value })}>
+              <Select className="input" value={bookForm.equip} onChange={(e) => setBookForm({ ...bookForm, equip: e.target.value })}>
                 <option value="">{S.eqChoose}</option>
                 {equipment.filter((e) => e.status !== "Maintenance").map((e) => <option key={e.id} value={e.id}>{e.name} ({e.code})</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.thProject}>
-              <select className="input" value={bookForm.proyek} onChange={(e) => setBookForm({ ...bookForm, proyek: e.target.value, wbsTask: "" })}>
+              <Select className="input" value={bookForm.proyek} onChange={(e) => setBookForm({ ...bookForm, proyek: e.target.value, wbsTask: "" })}>
                 <option value="">{S.eqChoose}</option>
                 {data.projects.filter((p) => p.status !== "Selesai").map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             {bookForm.proyek && wbsFor(bookForm.proyek).length > 0 && (
               <Field label={P.eqWbsStageField}>
-                <select className="input" value={bookForm.wbsTask} onChange={(e) => setBookForm({ ...bookForm, wbsTask: e.target.value })}>
+                <Select className="input" value={bookForm.wbsTask} onChange={(e) => setBookForm({ ...bookForm, wbsTask: e.target.value })}>
                   <option value="">{P.eqNoStage}</option>
                   {wbsFor(bookForm.proyek).map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
             <Field label={S.dateLabel}><input type="date" className="input" value={bookForm.date} onChange={(e) => setBookForm({ ...bookForm, date: e.target.value })} /></Field>
             <Field label={S.eqStartField} hint="24 jam · 00:00–23:59 tanpa AM/PM (cth 14:00)"><TimeInput value={norm24(bookForm.mulai)} ariaLabel={S.eqStartField} onChange={(v) => setBookForm({ ...bookForm, mulai: v })} /></Field>
             <Field label={S.eqEndField} hint="24 jam · 00:00–23:59 tanpa AM/PM (cth 17:30)"><TimeInput value={norm24(bookForm.selesai)} ariaLabel={S.eqEndField} onChange={(v) => setBookForm({ ...bookForm, selesai: v })} /></Field>
             <Field label={S.eqPriorityField}>
-              <select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
+              <Select className="input" value={bookForm.priority} onChange={(e) => setBookForm({ ...bookForm, priority: e.target.value })}>
                 {BOOK_PRIORITIES.map((p) => <option key={p}>{p}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           {bookError && (
@@ -2995,10 +2996,10 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
       >
         <div className="space-y-3">
           <Field label={S.thEquipment} required>
-            <select className="input" value={calForm.equipmentId} onChange={(e) => setCalForm({ ...calForm, equipmentId: e.target.value })}>
+            <Select className="input" value={calForm.equipmentId} onChange={(e) => setCalForm({ ...calForm, equipmentId: e.target.value })}>
               <option value="">{S.eqChoose}</option>
               {equipment.map((e) => <option key={e.id} value={e.id}>{e.name} ({e.code}){isMeasuring(e) ? " · alat ukur" : ""}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.eqMeasureField} required><input className="input" value={calForm.item} onChange={(e) => setCalForm({ ...calForm, item: e.target.value })} placeholder={S.eqMeasurePh} /></Field>
           <Field label={S.eqDueField} required><input type="date" className="input" value={calForm.due} onChange={(e) => setCalForm({ ...calForm, due: e.target.value })} /></Field>
@@ -3141,10 +3142,10 @@ const projectCostRows = useMemo(() => Array.from(projectCostSummaries.entries())
               <input type="date" className="input" value={calDoneDate} onChange={(e) => setCalDoneDate(e.target.value)} />
             </Field>
             <Field label="Hasil kalibrasi">
-              <select className="input" value={calResult} onChange={(e) => setCalResult(e.target.value)}>
+              <Select className="input" value={calResult} onChange={(e) => setCalResult(e.target.value)}>
                 <option value="Lulus">Lulus</option>
                 <option value="Gagal">Gagal</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.eqCertNoField} hint={S.eqCertNoHint}>

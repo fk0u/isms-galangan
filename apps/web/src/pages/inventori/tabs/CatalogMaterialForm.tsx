@@ -14,6 +14,7 @@ import {
   suggestedBaseUnit,
   type UnitConversionDraft,
 } from "../../../utils/unitConversion";
+import { Select } from "../../../components/inputs/Select";
 
 export interface MaterialFormValues extends UnitConversionDraft {
   name: string;
@@ -147,16 +148,16 @@ export default function CatalogMaterialForm({
                 <input className="input font-mono" value={form.sku} onChange={(event) => onFieldChange("sku", event.target.value)} placeholder={S.phSku} />
               </Field>
               <Field label={S.catLbl}>
-                <select className="input" value={form.category} onChange={(event) => onFieldChange("category", event.target.value)}>
+                <Select className="input" value={form.category} onChange={(event) => onFieldChange("category", event.target.value)}>
                   {CATEGORY_OPTIONS.map(({ value, labelKey }) => (
                     <option key={value} value={value}>{S[labelKey]}</option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label={S.materialTypeLbl}>
-                <select className="input" value={form.matType} onChange={(event) => onFieldChange("matType", event.target.value)}>
+                <Select className="input" value={form.matType} onChange={(event) => onFieldChange("matType", event.target.value)}>
                   {MAT_TYPES.map((value) => <option key={value} value={value}>{materialTypeLabel(value, S)}</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label={S.costLbl}>
                 <MoneyInput className="input" value={form.cost} onChange={(value) => onFieldChange("cost", value)} />
@@ -204,9 +205,9 @@ export default function CatalogMaterialForm({
           <div className="space-y-3">
             <FormGrid>
               <Field label={S.purchaseUnitLbl}>
-                <select className="input" value={form.unit} onChange={(event) => onFieldChange("unit", event.target.value)}>
+                <Select className="input" value={form.unit} onChange={(event) => onFieldChange("unit", event.target.value)}>
                   {purchaseUnitsForCategory(form.category, form.unit).map((unit) => <option key={unit} value={unit}>{unit}</option>)}
-                </select>
+                </Select>
               </Field>
 <Field label={S.eceranLbl} hint={S.eceranHint}>
                 <div role="radiogroup" aria-label={S.eceranLbl} className="grid grid-cols-2 gap-2">

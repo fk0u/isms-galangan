@@ -5,6 +5,7 @@ import { SearchBox, RowAction, CardHeader, EmptyState } from "../../../component
 import { n_fin } from "../../../i18n/n_fin";
 import { useT } from "../../../i18n/LanguageContext";
 import { Pencil, Trash2 } from "lucide-react";
+import { Select } from "../../../components/inputs/Select";
 
 export interface CoaTreeNode {
   id: string;
@@ -280,7 +281,7 @@ export function CoaTab({ coaRows, onAdd, onEdit, onDelete, onExport }: CoaTabPro
             ariaLabel={S.searchAkunAria}
             className="w-64"
           />
-          <select
+          <Select
             className="input w-auto py-1.5 text-sm"
             value={tipeFilter}
             onChange={(e) => setTipeFilter(e.target.value)}
@@ -291,7 +292,7 @@ export function CoaTab({ coaRows, onAdd, onEdit, onDelete, onExport }: CoaTabPro
                 {t === "Semua" ? S.allTypes : t}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">

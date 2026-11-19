@@ -28,6 +28,7 @@ import { monthAxis, monthKeyOf } from "../../utils/monthAxis";
 import { DOC_TYPES, NEEDS_QC_LINK, qcCertCandidates, subTypesOf } from "../../utils/docTypes";
 import { BoqDetailModal } from "./BoqDetailModal";
 import { usePdfDoc } from "../../components/usePdfDoc";
+import { Select } from "../../components/inputs/Select";
 
 const TYPES: readonly string[] = DOC_TYPES;
 const FILTERS = ["Semua", ...TYPES, "Arsip"];
@@ -915,10 +916,10 @@ const doExport = () => {
           {viewMode === "tree" && (
             <label className="flex items-center gap-1.5 text-xs text-steel-600">
               {TR.groupBy}
-              <select className="input w-auto py-1.5 text-xs" value={groupBy} onChange={(e) => setGroupBy(e.target.value === "project" ? "project" : "type")}>
+              <Select className="input w-auto py-1.5 text-xs" value={groupBy} onChange={(e) => setGroupBy(e.target.value === "project" ? "project" : "type")}>
                 <option value="type">{TR.byType}</option>
                 <option value="project">{TR.byProject}</option>
-              </select>
+              </Select>
             </label>
           )}
           <div role="group" aria-label={TR.viewAria} className="inline-flex overflow-hidden rounded-lg border border-steel-200">
@@ -1127,31 +1128,31 @@ const doExport = () => {
           </Field>
           <FormGrid>
             <Field label={S.colType} required>
-              <select className="input" value={form.type} onChange={(e) => { setF("type", e.target.value); setForm({ ...form, type: e.target.value, subType: "" }); }}>
+              <Select className="input" value={form.type} onChange={(e) => { setF("type", e.target.value); setForm({ ...form, type: e.target.value, subType: "" }); }}>
                 {TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             {subTypesOf(form.type).length > 0 && (
               <Field label={S.subTypeLbl}>
-                <select className="input" value={form.subType} onChange={(e) => setF("subType", e.target.value)}>
+                <Select className="input" value={form.subType} onChange={(e) => setF("subType", e.target.value)}>
                   <option value="">-</option>
                   {subTypesOf(form.type).map((s) => <option key={s}>{s}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
             <Field label={S.lblRelProject} required>
-              <select className="input" value={form.project} onChange={(e) => setF("project", e.target.value)}>
+              <Select className="input" value={form.project} onChange={(e) => setF("project", e.target.value)}>
                 <option value="">{S.optPickProject}</option>
                 <option value="-">{S.optGeneral}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.lblRelVessel}>
-              <select className="input" value={form.vessel} onChange={(e) => setF("vessel", e.target.value)}>
+              <Select className="input" value={form.vessel} onChange={(e) => setF("vessel", e.target.value)}>
                 <option value="">-</option>
                 <option value="-">{S.optGeneralShort}</option>
                 {data.vessels.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
-              </select>
+              </Select>
             </Field>
 <Field label={S.lblOwner} hint={S.hintOwnerPick} required>
 {/* Item 15 revisi 2 Oktober. Sebelumnya ini input teks bebas dengan
@@ -1177,14 +1178,14 @@ const doExport = () => {
             </Field>
             {NEEDS_QC_LINK.has(form.subType) && (
               <Field label={S.qcCertLinkLbl} hint={qcCertOptions.length === 0 ? S.qcCertNone : undefined}>
-                <select className="input" value={form.qcCertId} onChange={(e) => setF("qcCertId", e.target.value)}>
+                <Select className="input" value={form.qcCertId} onChange={(e) => setF("qcCertId", e.target.value)}>
                   <option value="">{S.optPickProject}</option>
                   {qcCertOptions.map((o) => (
                     <option key={String(o.id)} value={String(o.id)}>
                       {String(o.id)} · {String(o.title)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             )}
             {editing && (
@@ -1228,16 +1229,19 @@ const doExport = () => {
             ) : null}
           </Field>
           <Field label={S.lblRelated} hint={S.hintRelated}>
-            <select
-              multiple
-              className="input min-h-[96px]"
-              value={relSel}
-              onChange={(e) => setRelSel([...e.target.selectedOptions].map((o) => o.value))}
-            >
-              {data.documents.filter((d) => !editing || d.id !== editing.id).map((d) => (
-                <option key={d.id} value={d.id}>{d.id} · {String(d.title)}</option>
-              ))}
-            </select>
+            {/* Pilihan ganda: daftar centang (bukan <select multiple> bawaan
+                browser yang butuh Ctrl/Cmd+klik). */}
+            <div role="group" aria-label={S.lblRelated} className="max-h-40 overflow-y-auto rounded-lg border border-steel-200 bg-white p-1">
+              {data.documents.filter((d) => !editing || d.id !== editing.id).map((d) => {
+                const on = relSel.includes(String(d.id));
+                return (
+                  <label key={d.id} className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm ${on ? "bg-ocean-50 text-navy-900" : "text-steel-700 hover:bg-surface"}`}>
+                    <input type="checkbox" checked={on} onChange={() => setRelSel((cur) => (on ? cur.filter((x) => x !== String(d.id)) : [...cur, String(d.id)]))} />
+                    <span className="min-w-0 truncate">{d.id} · {String(d.title)}</span>
+                  </label>
+                );
+              })}
+            </div>
           </Field>
         </div>
       </Modal>

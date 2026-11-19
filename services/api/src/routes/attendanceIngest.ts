@@ -61,9 +61,40 @@ export function addTap(taps: unknown, time: string): { taps: string[]; scanCount
 /** Daftar tap sebuah baris absensi. Jam masuk/pulang yang tersimpan selalu
  *  ikut dihitung: baris lama (sebelum hitungan scan ada) atau yang diisi HR
  *  tidak punya `taps`, dan tanpa ini scan baru menghapus jam masuk dari analisis. Murni. */
-export function tapsOf(row: { taps?: unknown; checkIn?: unknown; checkOut?: unknown }): string[] {
+export function tapsOf(row: { taps?: unknown; checkIn?: unknown; checkOut?: unknown; overnight?: unknown }): string[] {
   const list = Array.isArray(row.taps) ? row.taps.map(String) : [];
-  return [...new Set([...list, String(row.checkIn ?? ""), String(row.checkOut ?? "")])].filter((t) => /^\d{2}:\d{2}$/.test(t)).sort();
+  const cin = String(row.checkIn ?? "");
+  let cout = String(row.checkOut ?? "");
+  // Baris shift malam: jam pulang dini hari disimpan jam dinding ("00:05"); untuk analisis = "24:05".
+  if (row.overnight === true && /^\d{2}:\d{2}$/.test(cout) && cout < cin) cout = plus24(cout);
+  return [...new Set([...list, cin, cout])].filter((t) => /^\d{2}:\d{2}$/.test(t)).sort();
+}
+
+/** Masuk = tap pertama; pulang = tap terakhir bila >= MIN_OUT_GAP_MIN dari
+ *  masuk. Jam 24+ dikembalikan ke jam dinding (pulang dini hari). Murni. */
+export function inOutFromTaps(taps: readonly string[]): { checkIn: string; checkOut: string } {
+  const first = taps[0] ?? "";
+  const last = taps[taps.length - 1] ?? "";
+  if (!first) return { checkIn: "", checkOut: "" };
+  const wall = (t: string): string => (Number(t.slice(0, 2)) >= 24 ? `${String(Number(t.slice(0, 2)) - 24).padStart(2, "0")}${t.slice(2)}` : t);
+  return { checkIn: wall(first), checkOut: minOf(last) - minOf(first) >= MIN_OUT_GAP_MIN ? wall(last) : "" };
+}
+
+/** "00:05" → "24:05" (dini hari esoknya). Murni. */
+export const plus24 = (t: string): string => `${String(Number(t.slice(0, 2)) + 24)}${t.slice(2)}`;
+const minOf = (t: string): number => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+/** Batas shift lintas tengah malam (sama dengan foldOvernight di attendanceAnalysis.ts). */
+export const NIGHT_CUTOFF = "06:00";
+const NIGHT_MAX_GAP_MIN = 8 * 60;
+
+/** Scan dini hari menutup shift malam hari sebelumnya bila baris kemarin
+ *  masih "terbuka": tap terakhirnya >= 15:00 dan jaraknya <= 8 jam. Murni. */
+export function belongsToPrevShift(prev: { taps?: unknown; checkIn?: unknown; checkOut?: unknown; overnight?: unknown } | undefined, time: string): boolean {
+  if (!prev || time >= NIGHT_CUTOFF) return false;
+  const taps = tapsOf(prev);
+  const last = taps[taps.length - 1];
+  if (!last || minOf(last) < 15 * 60) return false;
+  return minOf(time) + 24 * 60 - minOf(last) <= NIGHT_MAX_GAP_MIN;
 }
 
 /** Status yang dicatat HR dan tidak boleh ditimpa "Hadir" oleh scan. */
@@ -124,11 +155,29 @@ export async function applyPunches(punches: PunchInput[], source: string): Promi
       if (!at || implausibleTime(p.timestamp)) { out.invalid += 1; continue; }
       const key = `${emp.id}|${at.date}`;
       const existing = byDay.get(key);
+      /* Shift lintas tengah malam (laporan uji 19 Nov): scan dini hari yang
+         menutup shift malam kemarin disimpan ke baris KEMARIN - jam pulang
+         jam dinding ("00:05") + overnight: true. Rekap/payroll (workedHours)
+         sudah menghitung pulang < masuk sebagai lewat tengah malam. */
+      const prevDate = new Date(Date.parse(`${at.date}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+      const prev = byDay.get(`${emp.id}|${prevDate}`);
+      if (p.type === "auto" && !existing && prev && belongsToPrevShift(prev.data, at.time)) {
+        const taps = addTap(tapsOf(prev.data), plus24(at.time));
+        const data = { ...prev.data, ...taps, ...inOutFromTaps(taps.taps), overnight: true, source };
+        await exec("UPDATE attendance SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), now, prev.id]);
+        prev.data = data;
+        out.accepted += 1;
+        continue;
+      }
       if (existing) {
         /* Izin/Sakit/Cuti yang dicatat HR dipertahankan; jam scan tetap
            disimpan sebagai bukti supaya HR bisa meninjau. */
         const status = KEEP_STATUS.has(String(existing.data.status ?? "")) ? String(existing.data.status) : "Hadir";
-        const data = { ...existing.data, ...mergePunch(existing.data, p.type, at.time), status, source, ...addTap(tapsOf(existing.data), at.time) };
+        const tapped = addTap(tapsOf(existing.data), at.time);
+        /* "auto": masuk/pulang dihitung dari SEMUA tap tersimpan (termasuk jam
+           24+ shift malam), bukan banding string jam dinding. */
+        const inOut = p.type === "auto" ? inOutFromTaps(tapsOf({ taps: tapped.taps })) : mergePunch(existing.data, p.type, at.time);
+        const data = { ...existing.data, ...inOut, status, source, ...tapped };
         await exec("UPDATE attendance SET data = ?, updated_at = ? WHERE id = ?", [JSON.stringify(data), now, existing.id]);
         existing.data = data;
       } else {

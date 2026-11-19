@@ -33,6 +33,7 @@ import { PhotoUploader, type PhotoUploadItem } from "../../components/PhotoUploa
 import { ChangeHistory } from "../../components/ChangeHistory";
 import { useAuth, hasPermission } from "../../auth/auth";
 import { buildTermins, DEFAULT_TAX_RATES, type TerminSchemeType } from "../../utils/termin";
+import { Select } from "../../components/inputs/Select";
 
 /* F3-I-04: field SPK hanya diubah procurement (server juga menolak, lihat workOrderGuard.ts). */
 const SPK_EDITORS = new Set(["procurement", "direktur", "developer"]);
@@ -1573,10 +1574,10 @@ const printSpk = async (w: StoreItem): Promise<void> => {
                 </div>
                 <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-steel-100 pt-3">
                   <Field label={S.woRateLabel} required>
-                    <select className="input" value={rateForm.wo} onChange={(e) => setRateForm({ ...rateForm, wo: e.target.value })}>
+                    <Select className="input" value={rateForm.wo} onChange={(e) => setRateForm({ ...rateForm, wo: e.target.value })}>
                       <option value="">{S.pickWoOpt}</option>
                       {workOrders.map((w) => <option key={w.id} value={w.id}>{w.id} ({w.sub})</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.rateLabel}>
                     <MoneyInput className="input" value={rateForm.rate} onChange={(v) => setRateForm({ ...rateForm, rate: v })} placeholder={S.ratePh} />
@@ -1689,19 +1690,19 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           <FormGrid>
             <Field label={S.contractAmountLabel}><MoneyInput className="input" value={subForm.contract} onChange={(v) => setSubForm({ ...subForm, contract: v })} /></Field>
             <Field label={S.k3RatingLabel}>
-              <select className="input" value={subForm.k3} onChange={(e) => setSubForm({ ...subForm, k3: e.target.value })}>
+              <Select className="input" value={subForm.k3} onChange={(e) => setSubForm({ ...subForm, k3: e.target.value })}>
                 {["A+", "A", "B+", "B", "C"].map((k) => <option key={k}>{k}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.contractTypeLabel}>
-              <select className="input" value={subForm.contractType} onChange={(e) => setSubForm({ ...subForm, contractType: e.target.value })}>
+              <Select className="input" value={subForm.contractType} onChange={(e) => setSubForm({ ...subForm, contractType: e.target.value })}>
                 {CONTRACT_TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.paySchemeLabel}>
-              <select className="input" value={subForm.payScheme} onChange={(e) => setSubForm({ ...subForm, payScheme: e.target.value })}>
+              <Select className="input" value={subForm.payScheme} onChange={(e) => setSubForm({ ...subForm, payScheme: e.target.value })}>
                 {PAY_SCHEMES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.bgNoLabel}><input className="input font-mono" value={subForm.noBG} onChange={(e) => setSubForm({ ...subForm, noBG: e.target.value })} placeholder={S.bgNoPh} /></Field>
             <Field label={S.bgExpiryLabel}><input type="date" className="input" value={subForm.bgExpiry} onChange={(e) => setSubForm({ ...subForm, bgExpiry: e.target.value })} /></Field>
@@ -1759,26 +1760,26 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.tabSub} required>
-              <select className="input" value={woForm.sub} onChange={(e) => setWoForm({ ...woForm, sub: e.target.value })}>
+              <Select className="input" value={woForm.sub} onChange={(e) => setWoForm({ ...woForm, sub: e.target.value })}>
                 <option value="">{S.pickOpt}</option>
                 {subcontractors.filter((s) => s.status === "Aktif").map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.projectLabel} required>
-              <select className="input" value={woForm.project} onChange={(e) => setWoForm({ ...woForm, project: e.target.value })}>
+              <Select className="input" value={woForm.project} onChange={(e) => setWoForm({ ...woForm, project: e.target.value })}>
                 <option value="">{S.pickOpt}</option>
                 {projectOptions.filter((p) => p.status !== "Selesai").map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.scopeJobLabel} required><input className="input" value={woForm.scope} onChange={(e) => setWoForm({ ...woForm, scope: e.target.value })} placeholder={S.scopeJobPh} /></Field>
           <FormGrid>
             <Field label={T.valueLabel}><MoneyInput className="input" value={woForm.value} onChange={(v) => setWoForm({ ...woForm, value: v })} /></Field>
             <Field label={T.wbsLabel}>
-              <select className="input" value={woForm.wbsTask} onChange={(e) => setWoForm({ ...woForm, wbsTask: e.target.value })} disabled={!woForm.project}>
+              <Select className="input" value={woForm.wbsTask} onChange={(e) => setWoForm({ ...woForm, wbsTask: e.target.value })} disabled={!woForm.project}>
                 <option value="">{T.wbsNone}</option>
                 {(woForm.project ? (data.wbsByProject?.[woForm.project] ?? []) : []).map((w) => <option key={String(w.task)} value={String(w.task)}>{String(w.task)}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <FormGrid>
@@ -1787,7 +1788,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           </FormGrid>
           {/* F3-I-05: skema pembayaran -> termin otomatis (Persentase, DP 1/2, Kontan) */}
           <Field label={T.schemeLabel}>
-            <select
+            <Select
               className="input"
               value={woForm.schemeType}
               onChange={(e) => {
@@ -1806,7 +1807,7 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               <option value="Kontan">{T.schemeKontan}</option>
               <option value="Persentase">{T.schemePct}</option>
               <option value="DP">{T.schemeDp}</option>
-            </select>
+            </Select>
           </Field>
           {woForm.schemeType === "DP" && (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -1914,10 +1915,10 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           )}
           <FormGrid>
             <Field label={T.taxLabel}>
-              <select className="input" value={woForm.taxPct} onChange={(e) => setWoForm({ ...woForm, taxPct: e.target.value })}>
+              <Select className="input" value={woForm.taxPct} onChange={(e) => setWoForm({ ...woForm, taxPct: e.target.value })}>
                 {taxRates.map((r) => <option key={r} value={String(r)}>{r}%</option>)}
                 <option value="other">{T.taxOther}</option>
-              </select>
+              </Select>
             </Field>
             <Field label={T.retLabel}><NumInput min={0} max={100} className="input" value={woForm.retPct} onChange={(e) => setWoForm({ ...woForm, retPct: e.target.value })} /></Field>
           </FormGrid>
@@ -2070,16 +2071,16 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <div className="space-y-3.5">
           <FormGrid>
             <Field label={S.tabSub} required>
-              <select className="input" value={termForm.sub} onChange={(e) => setTermForm({ ...termForm, sub: e.target.value, wo: "", milestone: "", amount: "" })}>
+              <Select className="input" value={termForm.sub} onChange={(e) => setTermForm({ ...termForm, sub: e.target.value, wo: "", milestone: "", amount: "" })}>
                 <option value="">{S.pickOpt}</option>
                 {subcontractors.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.woLabel}>
-              <select className="input" value={termForm.wo} onChange={(e) => handleSelectTermWo(e.target.value)} disabled={!termForm.sub}>
+              <Select className="input" value={termForm.wo} onChange={(e) => handleSelectTermWo(e.target.value)} disabled={!termForm.sub}>
                 <option value="">{termForm.sub ? S.pickWoOpt : S.pickSubFirst}</option>
                 {termWoOptions.map((w) => <option key={w.id} value={w.id}>{w.id} ({effProgress(w)}%)</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
 
@@ -2270,12 +2271,12 @@ const printSpk = async (w: StoreItem): Promise<void> => {
 
           <FormGrid>
             <Field label={S.pphLabel}>
-              <select className="input" value={termForm.pphPct} onChange={(e) => setTermForm({ ...termForm, pphPct: e.target.value })}>
+              <Select className="input" value={termForm.pphPct} onChange={(e) => setTermForm({ ...termForm, pphPct: e.target.value })}>
                 {taxRates.map((rate) => (
                   <option key={rate} value={String(rate)}>{rate}%{rate === 0.5 ? " (PPh final)" : ""}</option>
                 ))}
                 <option value="manual">{T.taxManualOpt}</option>
-              </select>
+              </Select>
             </Field>
             {termPphManual && (
               <Field label={T.taxManualAmt}>
@@ -2319,9 +2320,9 @@ const printSpk = async (w: StoreItem): Promise<void> => {
           <FormGrid>
             <Field label={S.payDateLabel} required><input type="date" required className="input" value={proof.date} onChange={(e) => setProof({ ...proof, date: e.target.value })} /></Field>
             <Field label={S.methodLabel}>
-              <select className="input" value={proof.method} onChange={(e) => setProof({ ...proof, method: e.target.value })}>
+              <Select className="input" value={proof.method} onChange={(e) => setProof({ ...proof, method: e.target.value })}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.refNoLabel} hint={S.refNoHint} required>
@@ -2396,10 +2397,10 @@ const printSpk = async (w: StoreItem): Promise<void> => {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.woLabel} required>
-              <select className="input" value={tsForm.wo} onChange={(e) => setTsForm({ ...tsForm, wo: e.target.value })}>
+              <Select className="input" value={tsForm.wo} onChange={(e) => setTsForm({ ...tsForm, wo: e.target.value })}>
                 <option value="">{S.pickWoOpt}</option>
                 {workOrders.filter((w) => w.status !== "Selesai").map((w) => <option key={w.id} value={w.id}>{w.id} - {w.sub}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.projectFromWo} hint={(() => { const w = workOrders.find((x) => x.id === tsForm.wo); return w && Number(w.rate || 0) > 0 ? S.rateAutoHint.replace("{n}", fmtRupiah(Number(w.rate))) : S.rateMissingHint; })()}>
               <p className="input bg-surface text-steel-600" aria-label={S.projectFromWoAria}>
@@ -2407,10 +2408,10 @@ const printSpk = async (w: StoreItem): Promise<void> => {
               </p>
             </Field>
             <Field label={S.employeeLabel} required>
-              <select className="input" value={tsForm.employee} onChange={(e) => setTsForm({ ...tsForm, employee: e.target.value })}>
+              <Select className="input" value={tsForm.employee} onChange={(e) => setTsForm({ ...tsForm, employee: e.target.value })}>
                 <option value="">{S.pickOpt}</option>
                 {employeeOptions.map((e) => <option key={e.id} value={e.id}>{e.name} - {e.role}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.dateLabel} required><input type="date" className="input" value={tsForm.date} onChange={(e) => setTsForm({ ...tsForm, date: e.target.value })} /></Field>
             <Field label={S.hoursLabel}><NumInput min={0} step={0.5} className="input" value={tsForm.hours} onChange={(e) => setTsForm({ ...tsForm, hours: e.target.value })} /></Field>

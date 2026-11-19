@@ -11,6 +11,7 @@ import { n_prj } from "../../i18n/n_prj";
 import type { StoreItem } from "../../data/store";
 import { fmtRupiah, parseRupiah } from "../../utils/format";
 import { feeAmount, normFees, type ProjectFee } from "../../utils/projectFee";
+import { Select } from "../../components/inputs/Select";
 
 interface Props {
   project: StoreItem;
@@ -95,10 +96,10 @@ export default function FeeProjectCard({ project, canEdit, onSaveFees, onTagih }
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <Field label={S.feeColPenerima}><input className="input w-56" value={f.penerima} onChange={(e) => setF({ ...f, penerima: e.target.value })} placeholder={S.feePhPenerima} /></Field>
           <Field label={S.feeColBasis}>
-            <select className="input w-auto" value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value === "nominal" ? "nominal" : "persen", nilai: "" })}>
+            <Select className="input w-auto" value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value === "nominal" ? "nominal" : "persen", nilai: "" })}>
               <option value="persen">{S.feeBasisPersen}</option>
               <option value="nominal">{S.feeBasisNominal}</option>
-            </select>
+            </Select>
           </Field>
           <Field label={f.basis === "persen" ? S.feeNilaiPersen : S.feeNilaiNominal}>
             {f.basis === "persen"
