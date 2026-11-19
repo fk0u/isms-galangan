@@ -33,6 +33,7 @@ import { n_eqp } from "../../i18n/n_eqp";
 import { SearchSelect } from "../../components/SearchSelect";
 import { DocumentPreviewCell } from "../../components/DocumentPreview";
 import { docFileNameOf, docUrlOf } from "../../utils/docAttachment";
+import { Select } from "../../components/inputs/Select";
 
 function monthDiff(expires: string, base: string): number | null {
   /* Terima YYYY-MM maupun YYYY-MM-DD (sertifikat kini diisi type="date"). */
@@ -392,10 +393,10 @@ export default function VesselDetail() {
             <Badge tone={comp.state === "ok" ? "green" : comp.state === "issue" ? "red" : "gray"}>
               {comp.state === "ok" ? S.vdComplyOk : comp.state === "issue" ? S.vdComplyIssue.replace("{a}", String(comp.valid)).replace("{b}", String(comp.total)) : S.vdComplyEmpty}
             </Badge>
-            <select className="input w-auto py-1.5 text-sm" value={v.status}
+            <Select className="input w-auto py-1.5 text-sm" value={v.status}
               onChange={async (e) => { try { await update("vessels", v.id, { status: e.target.value }); toast(S.vdStatusSet.replace("{a}", e.target.value)); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
               {["Dalam Operasi", "Dalam Docking", "Dalam Pembangunan", "Menganggur"].map((s) => <option key={s}>{s}</option>)}
-            </select>
+            </Select>
             <Badge tone="blue">{v.status}</Badge>
           </div>
         }
@@ -579,7 +580,7 @@ export default function VesselDetail() {
                     <div key={r.name} className="rounded-lg border border-steel-100 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium text-navy-900">{r.name}</p>
-                        <select
+                        <Select
                           className="input w-auto py-1 text-xs"
                           value={r.status || ""}
                           onChange={(e) => { setCompliance(r.name, { status: e.target.value }); toast(S.vdComplySet.replace("{a}", r.name).replace("{b}", e.target.value || S.vdComplyUnset)); }}
@@ -587,7 +588,7 @@ export default function VesselDetail() {
                           <option value="">{S.vdComplyEmpty}</option>
                           <option value="Berlaku">Berlaku</option>
                           <option value="Kedaluwarsa">Kedaluwarsa</option>
-                        </select>
+                        </Select>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <input
@@ -713,14 +714,14 @@ export default function VesselDetail() {
                 </div>
                 <div className="mt-3 grid grid-cols-1 gap-2 border-t border-steel-100 pt-3 sm:grid-cols-4">
                   <Field label={S.thYear}>
-                    <select className="input" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: e.target.value })}>
+                    <Select className="input" value={planForm.year} onChange={(e) => setPlanForm({ ...planForm, year: e.target.value })}>
                       {planYears.map((y) => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.typeLabel}>
-                    <select className="input" value={planForm.type} onChange={(e) => setPlanForm({ ...planForm, type: e.target.value })}>
+                    <Select className="input" value={planForm.type} onChange={(e) => setPlanForm({ ...planForm, type: e.target.value })}>
                       {PLAN_TYPES.map((t) => <option key={t}>{t}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.vdNoteField}><input className="input" value={planForm.note} onChange={(e) => setPlanForm({ ...planForm, note: e.target.value })} placeholder={S.vdNotePh} /></Field>
                   <div className="flex items-end"><AsyncButton className="btn-secondary text-xs" onAction={savePlan}><Plus className="h-3.5 w-3.5" /> {S.vdAddPlan}</AsyncButton></div>
@@ -747,9 +748,9 @@ export default function VesselDetail() {
                   <div className="mt-3 grid grid-cols-2 gap-2 border-t border-steel-100 pt-3">
                     <Field label={S.dateLabel} required><input type="date" className="input" value={bunkerForm.date} onChange={(e) => setBunkerForm({ ...bunkerForm, date: e.target.value })} /></Field>
                     <Field label={S.vdJenisField}>
-                      <select className="input" value={bunkerForm.jenis} onChange={(e) => setBunkerForm({ ...bunkerForm, jenis: e.target.value })}>
+                      <Select className="input" value={bunkerForm.jenis} onChange={(e) => setBunkerForm({ ...bunkerForm, jenis: e.target.value })}>
                         {BUNKER_JENIS.map((j) => <option key={j}>{j}</option>)}
-                      </select>
+                      </Select>
                     </Field>
                     <Field label={S.vdQtyField}><NumInput min={0} className="input" value={bunkerForm.qty} onChange={(e) => setBunkerForm({ ...bunkerForm, qty: e.target.value })} placeholder={S.vdQtyPh} /></Field>
                     <Field label={S.vdUnitField} required><input className="input" value={bunkerForm.satuan} onChange={(e) => setBunkerForm({ ...bunkerForm, satuan: e.target.value })} placeholder={S.vdUnitPh} /></Field>
@@ -821,22 +822,22 @@ export default function VesselDetail() {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.vdSurveyTypeField}>
-              <select className="input" value={surveyForm.type} onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}>
+              <Select className="input" value={surveyForm.type} onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })}>
                 {["Annual Survey", "Special Survey", "Docking Survey", "Intermediate Survey"].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.thStatus}>
-              <select className="input" value={surveyForm.status} onChange={(e) => setSurveyForm({ ...surveyForm, status: e.target.value })}>
+              <Select className="input" value={surveyForm.status} onChange={(e) => setSurveyForm({ ...surveyForm, status: e.target.value })}>
                 {["Terjadwal", "Dalam Proses", "Selesai"].map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.dateLabel} required><input type="date" className="input" value={surveyForm.date} onChange={(e) => setSurveyForm({ ...surveyForm, date: e.target.value })} /></Field>
           <Field label={S.vdTrialLink} hint={S.vdTrialHint}>
-            <select className="input" value={surveyForm.linkedTrial} onChange={(e) => setSurveyForm({ ...surveyForm, linkedTrial: e.target.value })}>
+            <Select className="input" value={surveyForm.linkedTrial} onChange={(e) => setSurveyForm({ ...surveyForm, linkedTrial: e.target.value })}>
               <option value="">{S.vdNoTrial}</option>
               {vesselTrials.map((t) => <option key={String(t.id)} value={String(t.id)}>{String(t.id)} · {fmtTanggal(String(t.tanggal))}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -849,9 +850,9 @@ export default function VesselDetail() {
           </Field>
           <Field label={S.typeLabel} required><input className="input" value={specForm.type} onChange={(e) => setSpecForm({ ...specForm, type: e.target.value })} /></Field>
           <Field label={S.vsClassField}>
-            <select className="input" value={specForm.class} onChange={(e) => setSpecForm({ ...specForm, class: e.target.value })}>
+            <Select className="input" value={specForm.class} onChange={(e) => setSpecForm({ ...specForm, class: e.target.value })}>
               {(specForm.class && !["BKI", "RINA"].includes(specForm.class) ? ["BKI", "RINA", specForm.class] : ["BKI", "RINA"]).map((c) => <option key={c}>{c}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={specForm.loa} onChange={(e) => setSpecForm({ ...specForm, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
           <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={specForm.lbp} onChange={(e) => setSpecForm({ ...specForm, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
@@ -868,9 +869,9 @@ export default function VesselDetail() {
             <Field label={S.vdPortField} required><input className="input" value={pscForm.port} onChange={(e) => setPscForm({ ...pscForm, port: e.target.value })} placeholder={S.vdPortPh} /></Field>
             <Field label={S.vdDefField}><NumInput min={0} className="input" value={pscForm.deficiencies} onChange={(e) => setPscForm({ ...pscForm, deficiencies: e.target.value })} /></Field>
             <Field label={S.thStatus}>
-              <select className="input" value={pscForm.status} onChange={(e) => setPscForm({ ...pscForm, status: e.target.value })}>
+              <Select className="input" value={pscForm.status} onChange={(e) => setPscForm({ ...pscForm, status: e.target.value })}>
                 {PSC_STATUS.map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
         </div>

@@ -15,6 +15,7 @@ import { apiFetch, isBackendConfigured } from "../services/http";
 import ClientModal from "./ClientModal";
 import { TAHAP_V2, tahapLabel } from "../utils/projectStages";
 import { useT } from "../i18n/LanguageContext";
+import { Select } from "./inputs/Select";
 
 const PREFIX_TIPE: Record<string, string> = { "New Build": "NB", Repair: "RP", Retrofit: "RF" };
 
@@ -287,16 +288,16 @@ export default function ProjectAddModal({
               </div>
             </Field>
             <Field label={S.prjType}>
-              <select className="input" value={form.type} onChange={(e) => setF("type", e.target.value)}>
+              <Select className="input" value={form.type} onChange={(e) => setF("type", e.target.value)}>
                 <option>New Build</option>
                 <option>Repair</option>
                 <option>Retrofit</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.prjInitStage}>
-              <select className="input" value={form.tahap} onChange={(e) => setF("tahap", e.target.value)}>
+              <Select className="input" value={form.tahap} onChange={(e) => setF("tahap", e.target.value)}>
                 {TAHAP_V2.map((t) => <option key={t} value={t}>{tahapLabel(t, locale)}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.prjPlannedDock}>
               <SearchSelect

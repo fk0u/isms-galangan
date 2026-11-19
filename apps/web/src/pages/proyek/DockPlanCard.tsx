@@ -8,6 +8,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import type { StoreItem } from "../../data/store";
 import { fmtTanggal } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 interface Props {
   project: StoreItem;
@@ -56,10 +57,10 @@ export default function DockPlanCard({ project, drydocks, canEdit, onSave }: Pro
       {canEdit ? (
         <FormGrid>
           <Field label={S.dockPlanDock}>
-            <select className="input" value={f.plannedDockId} onChange={(e) => setF({ ...f, plannedDockId: e.target.value })}>
+            <Select className="input" value={f.plannedDockId} onChange={(e) => setF({ ...f, plannedDockId: e.target.value })}>
               <option value="">{S.dockPlanNoDock}</option>
               {drydocks.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.name ?? d.id)}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.dockPlanStart}>
             <input type="date" className="input" value={f.start} onChange={(e) => setF({ ...f, start: e.target.value })} />

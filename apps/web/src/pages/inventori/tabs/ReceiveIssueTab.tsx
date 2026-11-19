@@ -18,6 +18,7 @@ import { fmtJumlah, todayISO } from "../../../utils/format";
 import { allWarehouseNames } from "../../../utils/warehouse";
 import { useT } from "../../../i18n/LanguageContext";
 import { n_recv } from "../../../i18n/n_recv";
+import { Select } from "../../../components/inputs/Select";
 
 const RECEIVABLE = new Set(["Dikirim", "Dalam Pengiriman", "Diterima Sebagian"]);
 
@@ -357,7 +358,7 @@ export default function ReceiveIssueTab() {
                           </td>
                           <td className="td text-sm">
                             {p.itemId ? String(p.item ?? p.itemId) : (
-                              <select
+                              <Select
                                 className="input h-8 py-0 text-xs"
                                 value={pk.itemId}
                                 onChange={(e) => setPick(p, { itemId: e.target.value })}
@@ -366,12 +367,12 @@ export default function ReceiveIssueTab() {
                                 {inventory.map((i) => (
                                   <option key={String(i.id)} value={String(i.id)}>{String(i.name)}</option>
                                 ))}
-                              </select>
+                              </Select>
                             )}
                           </td>
                           <td className="td w-44">
                             <div className="flex flex-col gap-1">
-                              <select
+                              <Select
                                 className="input h-7 py-0 text-xs"
                                 value={pk.warehouse}
                                 onChange={(e) => setPick(p, { warehouse: e.target.value })}
@@ -381,7 +382,7 @@ export default function ReceiveIssueTab() {
                                 {warehouses.map((w) => (
                                   <option key={w} value={w}>{w}</option>
                                 ))}
-                              </select>
+                              </Select>
                               <div className="flex gap-1">
                                 <input
                                   className="input h-7 py-0 text-xs w-1/2"
@@ -441,7 +442,7 @@ export default function ReceiveIssueTab() {
             </div>
             <FormGrid>
               <Field label={T.item}>
-                <select
+                <Select
                   className="input"
                   value={addIn.itemId}
                   onChange={(e) => onSelectAddInItem(e.target.value)}
@@ -452,7 +453,7 @@ export default function ReceiveIssueTab() {
                       {String(i.name)} · {stockLabel(i)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label={T.qty}>
                 <NumInput
@@ -465,7 +466,7 @@ export default function ReceiveIssueTab() {
             </FormGrid>
             <FormGrid>
               <Field label={T.colWarehouse}>
-                <select
+                <Select
                   className="input"
                   value={addIn.warehouse}
                   onChange={(e) => setAddIn({ ...addIn, warehouse: e.target.value })}
@@ -474,7 +475,7 @@ export default function ReceiveIssueTab() {
                   {warehouses.map((w) => (
                     <option key={w} value={w}>{w}</option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={T.colRack}>
@@ -641,7 +642,7 @@ export default function ReceiveIssueTab() {
             <p className="mb-3 text-xs text-steel-500">{T.outProcSub}</p>
             <FormGrid>
               <Field label={T.colProject} required>
-                <select
+                <Select
                   className="input"
                   value={procOut.projectId}
                   onChange={(e) => onSelectProcProject(e.target.value)}
@@ -652,10 +653,10 @@ export default function ReceiveIssueTab() {
                       {String(p.id)} · {String(p.vessel ?? p.name ?? "")}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label={T.colPo}>
-                <select
+                <Select
                   className="input"
                   value={procOut.poId}
                   onChange={(e) => onSelectProcPo(e.target.value)}
@@ -669,12 +670,12 @@ export default function ReceiveIssueTab() {
                       {String(po.id)} · {String(po.item ?? po.itemId ?? "")}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
             </FormGrid>
             <FormGrid>
               <Field label={T.item}>
-                <select
+                <Select
                   className="input"
                   value={procOut.itemId}
                   onChange={(e) => setProcOut({ ...procOut, itemId: e.target.value })}
@@ -685,7 +686,7 @@ export default function ReceiveIssueTab() {
                       {String(i.name)} · {stockLabel(i)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Field>
               <Field label={T.qty}>
                 <NumInput
@@ -721,7 +722,7 @@ export default function ReceiveIssueTab() {
               </span>
             </div>
             <Field label={T.item}>
-              <select
+              <Select
                 className="input"
                 value={addOut.itemId}
                 onChange={(e) => setAddOut({ ...addOut, itemId: e.target.value })}
@@ -732,7 +733,7 @@ export default function ReceiveIssueTab() {
                     {String(i.name)} · {stockLabel(i)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             {outItem && outConv && isPlate ? (
               <>

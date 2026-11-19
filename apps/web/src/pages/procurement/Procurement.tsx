@@ -40,6 +40,7 @@ import { useAuth, hasPermission } from "../../auth/auth";
 import ServiceApprovalsTab from "./ServiceApprovalsTab";
 
 import { warehouseNames } from "../../utils/warehouse";
+import { Select } from "../../components/inputs/Select";
 
 /* Tab baru F3-J-01/F3-J-04 punya pencarian sendiri: filter bersama disembunyikan. */
 const OWN_FILTER_TABS = new Set(["Permintaan", "Persetujuan Service"]);
@@ -1883,15 +1884,15 @@ const sparkVendors = useMemo(() => {
               {(draft, setDraft) => (
                 <div className="space-y-3">
                   <Field label={S.status}>
-                    <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                    <Select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
                       {(STATUS_OPSI[tab] ?? ["Semua"]).map((s) => <option key={s} value={s}>{s === "Semua" ? S.allStatus : s}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label="Kategori vendor">
-                    <select className="input w-full" value={draft.kategori ?? "Semua"} onChange={(e) => setDraft({ ...draft, kategori: e.target.value })}>
+                    <Select className="input w-full" value={draft.kategori ?? "Semua"} onChange={(e) => setDraft({ ...draft, kategori: e.target.value })}>
                       <option value="Semua">Semua kategori</option>
                       {VENDOR_CATS.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                 </div>
               )}
@@ -2261,16 +2262,16 @@ const sparkVendors = useMemo(() => {
                       ))}
                       <FormGrid>
                         <Field label={S.fVendorGab}>
-                          <select className="input" value={konsVendor} onChange={(e) => setKonsVendor(e.target.value)}>
+                          <Select className="input" value={konsVendor} onChange={(e) => setKonsVendor(e.target.value)}>
                             <option value="">{S.optPilihVendor}</option>
                             {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}</option>)}
-                          </select>
+                          </Select>
                         </Field>
                         <Field label={S.proyek}>
-                          <select className="input" value={konsProject} onChange={(e) => setKonsProject(e.target.value)}>
+                          <Select className="input" value={konsProject} onChange={(e) => setKonsProject(e.target.value)}>
                             <option value="">{S.optTanpaProyek}</option>
                             {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                          </select>
+                          </Select>
                         </Field>
                       </FormGrid>
                       <Field label={S.eta}><input type="date" className="input" value={konsEta} onChange={(e) => setKonsEta(e.target.value)} /></Field>
@@ -2466,10 +2467,10 @@ const sparkVendors = useMemo(() => {
               </Field>
             ) : (
             <Field label={S.proyek}>
-              <select className="input" value={poEditForm.project} onChange={(e) => setPoEditForm({ ...poEditForm, project: e.target.value })}>
+              <Select className="input" value={poEditForm.project} onChange={(e) => setPoEditForm({ ...poEditForm, project: e.target.value })}>
                 <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
                 {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} · {String(p.vessel ?? "")}</option>)}
-              </select>
+              </Select>
             </Field>
             )}
           </div>
@@ -2732,10 +2733,10 @@ const sparkVendors = useMemo(() => {
             {bigForm.tujuan === "kapal" ? (
               <>
                 <Field label={S.proyekBudget} required error={bigErr.project}>
-                  <select className="input" value={bigForm.project} onChange={(e) => { setBigErr((x) => ({ ...x, project: "" })); setBigForm({ ...bigForm, project: e.target.value }); }}>
+                  <Select className="input" value={bigForm.project} onChange={(e) => { setBigErr((x) => ({ ...x, project: "" })); setBigForm({ ...bigForm, project: e.target.value }); }}>
                     <option value="">{S.optPilihProyek}</option>
                     {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={S.fUtk} hint={S.hintUtkContoh} required error={bigErr.vessel}>
                   <input className="input" value={bigForm.vessel} onChange={(e) => { setBigErr((x) => ({ ...x, vessel: "" })); setBigForm({ ...bigForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
@@ -2743,19 +2744,19 @@ const sparkVendors = useMemo(() => {
               </>
             ) : (
               <Field label={S.fGudangTujuan} required error={bigErr.warehouse}>
-                <select className="input" value={bigForm.warehouse} onChange={(e) => { setBigErr((x) => ({ ...x, warehouse: "" })); setBigForm({ ...bigForm, warehouse: e.target.value }); }}>
+                <Select className="input" value={bigForm.warehouse} onChange={(e) => { setBigErr((x) => ({ ...x, warehouse: "" })); setBigForm({ ...bigForm, warehouse: e.target.value }); }}>
                   <option value="">{S.optPilihGudang}</option>
                   {warehouseNames(data.warehouses ?? []).map((w) => (
                     <option key={w} value={w}>{w}</option>
                   ))}
-                </select>
+                </Select>
               </Field>
             )}
             <Field label={S.fPrDisetujui} hint={S.hintPrWajib} required error={bigErr.prId}>
-              <select className="input" value={bigForm.prId} onChange={(e) => { setBigErr((x) => ({ ...x, prId: "" })); setBigForm({ ...bigForm, prId: e.target.value }); }}>
+              <Select className="input" value={bigForm.prId} onChange={(e) => { setBigErr((x) => ({ ...x, prId: "" })); setBigForm({ ...bigForm, prId: e.target.value }); }}>
                 <option value="">{S.optPilihPr}</option>
                 {approvedPRs.map((r) => <option key={r.id} value={r.id}>{r.id} - {r.item} · {fmtRupiah(r.amount)}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
 
@@ -2801,9 +2802,9 @@ const sparkVendors = useMemo(() => {
                       />
                     </div>
                     <NumInput min={0} className="input col-span-2" placeholder={S.qty} value={l.qty} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))} />
-                    <select className="input col-span-2" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
+                    <Select className="input col-span-2" value={l.unit} onChange={(e) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, unit: e.target.value } : x)))}>
                       {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
-                    </select>
+                    </Select>
                     <MoneyInput className="input col-span-2" placeholder={S.harga} value={l.price} onChange={(v) => setBigLines((s) => s.map((x, i) => (i === idx ? { ...x, price: v } : x)))} />
                     <button className="btn-secondary col-span-1 text-xs" aria-label={S.ariaHapusBaris.replace("{n}", String(idx + 1))} onClick={() => setBigLines((s) => s.filter((_, i) => i !== idx))}><X className="h-3.5 w-3.5" /></button>
                   </div>
@@ -2822,20 +2823,20 @@ const sparkVendors = useMemo(() => {
 
           <FormGrid>
             <Field label={S.vendor} required error={bigErr.vendor}>
-              <select className="input" value={bigForm.vendor} onChange={(e) => { setBigErr((x) => ({ ...x, vendor: "" })); setBigForm({ ...bigForm, vendor: e.target.value }); }}>
+              <Select className="input" value={bigForm.vendor} onChange={(e) => { setBigErr((x) => ({ ...x, vendor: "" })); setBigForm({ ...bigForm, vendor: e.target.value }); }}>
                 <option value="">{S.optPilihVendor}</option>
                 {vendors.map((v) => <option key={v.id} value={v.name}>{v.name} · {v.cat}{payungOf(v) ? ` (Payung: ${fmtRupiah(payungOf(v)!.plafon)})` : ""}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.eta} required error={bigErr.eta}><input type="date" className="input" value={bigForm.eta} onChange={(e) => { setBigErr((x) => ({ ...x, eta: "" })); setBigForm({ ...bigForm, eta: e.target.value }); }} /></Field>
           </FormGrid>
 
           <FormGrid>
             <Field label={S.harga} hint={S.hintHarga.replace("{n}", String(ppnRate))}>
-              <select className="input" value={bigForm.includePpn ? "include" : "exclude"} onChange={(e) => setBigForm({ ...bigForm, includePpn: e.target.value === "include" })}>
+              <Select className="input" value={bigForm.includePpn ? "include" : "exclude"} onChange={(e) => setBigForm({ ...bigForm, includePpn: e.target.value === "include" })}>
                 <option value="include">{S.optIncludePpn.replace("{n}", String(ppnRate))}</option>
                 <option value="exclude">{S.optExcludePpn}</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <p className="text-xs text-steel-500">{S.docSb} <span className="font-mono">{sbPoNumber(nextPoSeq())}</span> {S.docSbFmt}</p>
@@ -2890,10 +2891,10 @@ const sparkVendors = useMemo(() => {
             {smallForm.tujuan === "kapal" ? (
               <>
                 <Field label={S.proyekBudget} required error={smallErr.project}>
-                  <select className="input" value={smallForm.project} onChange={(e) => { setSmallErr((x) => ({ ...x, project: "", vessel: "" })); setSmallForm({ ...smallForm, project: e.target.value, vessel: smallForm.vessel || String(data.projects.find((p) => p.id === e.target.value)?.vessel ?? "") }); }}>
+                  <Select className="input" value={smallForm.project} onChange={(e) => { setSmallErr((x) => ({ ...x, project: "", vessel: "" })); setSmallForm({ ...smallForm, project: e.target.value, vessel: smallForm.vessel || String(data.projects.find((p) => p.id === e.target.value)?.vessel ?? "") }); }}>
                     <option value="">{S.optPilihProyek}</option>
                     {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={S.fUtk} hint={S.hintUtkContoh} required error={smallErr.vessel}>
                   <input className="input" value={smallForm.vessel} onChange={(e) => { setSmallErr((e) => ({ ...e, vessel: "" })); setSmallForm({ ...smallForm, vessel: e.target.value }); }} placeholder={S.phUtk} />
@@ -2901,10 +2902,10 @@ const sparkVendors = useMemo(() => {
               </>
             ) : (
               <Field label={S.fGudangTujuan} required error={smallErr.warehouse}>
-                <select className="input" value={smallForm.warehouse} onChange={(e) => { setSmallErr((e) => ({ ...e, warehouse: "" })); setSmallForm({ ...smallForm, warehouse: e.target.value }); }}>
+                <Select className="input" value={smallForm.warehouse} onChange={(e) => { setSmallErr((e) => ({ ...e, warehouse: "" })); setSmallForm({ ...smallForm, warehouse: e.target.value }); }}>
                   <option value="">{S.optPilihGudang}</option>
                   {warehouseNames(data.warehouses ?? []).map((w) => <option key={w} value={w}>{w}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
             <Field label={S.peminta} required error={smallErr.requester}><input className="input" value={smallForm.requester} onChange={(e) => { setSmallErr((e) => ({ ...e, requester: "" })); setSmallForm({ ...smallForm, requester: e.target.value }); }} placeholder={S.phPeminta} /></Field>
@@ -2926,9 +2927,9 @@ const sparkVendors = useMemo(() => {
           <FormGrid>
             <Field label={S.qty} required error={smallErr.qty}><NumInput min={1} className="input" value={smallForm.qty} onChange={(e) => { setSmallErr((e) => ({ ...e, qty: "" })); setSmallForm({ ...smallForm, qty: e.target.value }); }} /></Field>
             <Field label={S.satuan} required error={smallErr.unit}>
-              <select className="input" value={smallForm.unit} onChange={(e) => setSmallForm({ ...smallForm, unit: e.target.value })}>
+              <Select className="input" value={smallForm.unit} onChange={(e) => setSmallForm({ ...smallForm, unit: e.target.value })}>
                 {[...new Set([smallForm.unit, "pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"])].map((u) => <option key={u}>{u}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <p className="rounded-lg bg-steel-50 px-3 py-2 text-xs text-steel-600">{S.smallValueHint.replace("{b}", fmtRupiah(PO_KECIL_LIMIT))}</p>
@@ -2955,10 +2956,10 @@ const sparkVendors = useMemo(() => {
         footer={<><button className="btn-secondary" onClick={() => setQuoteRfq(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={saveQuote}>{S.btnSimpanQuote}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.vendor} required>
-            <select className="input" value={quoteForm.vendor} onChange={(e) => setQuoteForm({ ...quoteForm, vendor: e.target.value })}>
+            <Select className="input" value={quoteForm.vendor} onChange={(e) => setQuoteForm({ ...quoteForm, vendor: e.target.value })}>
               <option value="">{S.optPilihVendor}</option>
               {((quoteRfq?.vendors as string[]) ?? []).map((v) => <option key={v} value={v}>{v}{venCatOf(v) ? ` · ${venCatOf(v)}` : ""}</option>)}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.hargaRp}><MoneyInput className="input" value={quoteForm.price} onChange={(v) => setQuoteForm({ ...quoteForm, price: v })} /></Field>
@@ -3059,11 +3060,11 @@ const sparkVendors = useMemo(() => {
                   {recvPo.warehouse ? (
                     <div className="input bg-steel-100 text-navy-900 flex items-center">{String(recvPo.warehouse)}</div>
                   ) : (
-                  <select className="input bg-white" value={recvWarehouse} onChange={(e) => setRecvWarehouse(e.target.value)}>
+                  <Select className="input bg-white" value={recvWarehouse} onChange={(e) => setRecvWarehouse(e.target.value)}>
                     {warehouseNames(data.warehouses ?? []).map((w) => (
                       <option key={w} value={w}>{w}</option>
                     ))}
-                  </select>
+                  </Select>
                   )}
                 </Field>
               ) : (
@@ -3145,7 +3146,7 @@ const sparkVendors = useMemo(() => {
         footer={<><button className="btn-secondary" onClick={() => setReassignFor(null)}>{S.btnBatal}</button><AsyncButton className="btn-primary" onAction={confirmReassign}>{n_mr[locale].poReassignConfirm}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={n_mr[locale].poVendorNew}>
-            <select className="input" value={reassignVendor} onChange={(e) => {
+            <Select className="input" value={reassignVendor} onChange={(e) => {
               setReassignVendor(e.target.value);
               const h = reassignFor ? vendorPriceHistory(purchaseOrders, reassignFor).find((x) => x.vendor === e.target.value) : undefined;
               // Tanpa riwayat: kosongkan supaya harga vendor sebelumnya tidak ikut terkirim.
@@ -3153,7 +3154,7 @@ const sparkVendors = useMemo(() => {
             }}>
               <option value="">{n_mr[locale].poVendorPick}</option>
               {vendors.filter((v) => String(v.name ?? "") !== String(reassignFor?.vendor ?? "")).map((v) => <option key={String(v.id)} value={String(v.name)}>{String(v.name)}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={n_mr[locale].poUnitPrice} hint={n_mr[locale].poUnitPriceHint}>
             <MoneyInput className="input" value={reassignPrice} onChange={setReassignPrice} />
@@ -3192,9 +3193,9 @@ const sparkVendors = useMemo(() => {
           <FormGrid>
             <Field label={S.barisTambahan} required><input className="input" value={amendForm.name} onChange={(e) => setAmendForm({ ...amendForm, name: e.target.value })} /></Field>
             <Field label={S.satuan}>
-              <select className="input" value={amendForm.unit} onChange={(e) => setAmendForm({ ...amendForm, unit: e.target.value })}>
+              <Select className="input" value={amendForm.unit} onChange={(e) => setAmendForm({ ...amendForm, unit: e.target.value })}>
                 {["pcs", "kg", "liter", "meter", "batang", "unit", "roll"].map((u) => <option key={u}>{u}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <FormGrid>
@@ -3223,10 +3224,10 @@ const sparkVendors = useMemo(() => {
               const set = lbl === "Kualitas" ? setEvalQ : lbl === "Delivery" ? setEvalD : setEvalP;
               return (
                 <Field key={lbl} label={`${lbl === "Kualitas" ? S.skKualitas : lbl === "Delivery" ? S.skDelivery : S.skHarga} (1-5)`}>
-                  <select className="input" value={val} onChange={(e) => set(e.target.value)} aria-label={S.ariaNilaiLbl.replace("{n}", lbl === "Kualitas" ? S.skKualitas : lbl === "Delivery" ? S.skDelivery : S.skHarga)}>
+                  <Select className="input" value={val} onChange={(e) => set(e.target.value)} aria-label={S.ariaNilaiLbl.replace("{n}", lbl === "Kualitas" ? S.skKualitas : lbl === "Delivery" ? S.skDelivery : S.skHarga)}>
                     <option value="">{S.optPilih}</option>
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                  </Select>
                 </Field>
               );
             })}
@@ -3381,16 +3382,16 @@ const sparkVendors = useMemo(() => {
           <FormGrid>
             <Field label={S.qty}><NumInput min={1} className="input" value={prForm.qty} onChange={(e) => setPrForm({ ...prForm, qty: e.target.value })} /></Field>
             <Field label={S.satuan} required>
-              <select className="input" value={prForm.unit} onChange={(e) => setPrForm({ ...prForm, unit: e.target.value })}>
+              <Select className="input" value={prForm.unit} onChange={(e) => setPrForm({ ...prForm, unit: e.target.value })}>
                 {["pcs", "kg", "liter", "meter", "batang", "unit", "roll", "set", "pak"].map((u) => <option key={u}>{u}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.proyek}>
-            <select className="input" value={prForm.project} onChange={(e) => setPrForm({ ...prForm, project: e.target.value })}>
+            <Select className="input" value={prForm.project} onChange={(e) => setPrForm({ ...prForm, project: e.target.value })}>
               <option value="">{S.optTanpaProyek}</option>
               {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -3408,9 +3409,9 @@ const sparkVendors = useMemo(() => {
         <div className="space-y-3">
           <Field label={S.namaVendor} required><input className="input" value={vForm.name} onChange={(e) => setVForm({ ...vForm, name: e.target.value })} /></Field>
           <Field label={S.kategori}>
-            <select className="input" value={vForm.cat} onChange={(e) => setVForm({ ...vForm, cat: e.target.value })}>
+            <Select className="input" value={vForm.cat} onChange={(e) => setVForm({ ...vForm, cat: e.target.value })}>
               {["Baja & Struktur", "Mesin & Engine", "Cat & Coating", "Rigging & Wire", "Listrik", "Jasa"].map((c) => <option key={c}>{c}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -3419,12 +3420,12 @@ const sparkVendors = useMemo(() => {
       <Modal open={winRfq !== null} onClose={() => { setWinRfq(null); setWinVendor(""); }} title={S.mWinT.replace("{n}", winRfq?.id ?? "")} subtitle={S.mWinS}
         footer={<><button className="btn-secondary" onClick={() => { setWinRfq(null); setWinVendor(""); }}>{S.btnBatal}</button><button className="btn-primary" onClick={confirmWin}>{S.btnWinBuat}</button></>}>
         <Field label={S.vendorMenang}>
-          <select className="input" value={winVendor} onChange={(e) => setWinVendor(e.target.value)}>
+          <Select className="input" value={winVendor} onChange={(e) => setWinVendor(e.target.value)}>
             <option value="">{S.optPilihMenang}</option>
             {((winRfq?.quotes as Quote[] | undefined) ?? []).map((x) => (
               <option key={x.vendor} value={x.vendor}>{x.vendor} · {fmtRupiah(Number(x.price))} · ETA {fmtTanggal(x.eta)}</option>
             ))}
-          </select>
+          </Select>
         </Field>
       </Modal>
     </div>

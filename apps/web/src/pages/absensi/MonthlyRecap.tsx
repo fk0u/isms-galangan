@@ -11,6 +11,7 @@ import { getSetting } from "../../utils/settings";
 import { applyWeeklyCap, workedHours } from "../../utils/overtime";
 import { exportExcel } from "../../utils/export";
 import { todayISO } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 const LETTER: Record<string, string> = { Hadir: "H", Izin: "I", Sakit: "S", Cuti: "C", Alpa: "A" };
 const TONE: Record<string, string> = { H: "bg-emerald-50 text-emerald-700", I: "bg-amber-50 text-amber-700", S: "bg-amber-50 text-amber-700", C: "bg-steel-100 text-navy-800", A: "bg-red-50 text-red-700" };
@@ -70,14 +71,14 @@ export default function MonthlyRecap() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-xs text-steel-600">{T.month}
-          <select className="input ml-2 h-8 w-auto py-0 text-xs" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+          <Select className="input ml-2 h-8 w-auto py-0 text-xs" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
             {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{new Date(2000, m - 1, 1).toLocaleString(locale === "en" ? "en-US" : "id-ID", { month: "long" })}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="text-xs text-steel-600">{T.year}
-          <select className="input ml-2 h-8 w-auto py-0 text-xs" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+          <Select className="input ml-2 h-8 w-auto py-0 text-xs" value={year} onChange={(e) => setYear(Number(e.target.value))}>
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+          </Select>
         </label>
         <button type="button" className="btn-secondary ml-auto text-xs" onClick={exportRecap}><FileDown className="h-3.5 w-3.5" /> {T.export}</button>
       </div>

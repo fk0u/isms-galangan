@@ -7,6 +7,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_emp } from "../../i18n/n_emp";
 import { BASE } from "../../services/http";
 import { todayISO } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 const TYPES = ["Izin", "Sakit", "Tahunan"] as const;
 const MAX_DOC = 3 * 1024 * 1024;
@@ -111,9 +112,9 @@ export default function CutiQr() {
           )}
           {preview === null && <p className="text-xs text-amber-700" role="status">{E.qrNikUnknown}</p>}
           <label className="block text-sm font-medium text-steel-600">{E.qrType}
-            <select className={field} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
+            <Select className={field} value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
               {TYPES.map((t) => <option key={t} value={t}>{E.qrTypes[t]}</option>)}
-            </select>
+            </Select>
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-sm font-medium text-steel-600">{E.qrFrom}

@@ -77,6 +77,7 @@ import DockPlanCard from "./DockPlanCard";
 import FeeProjectCard from "./FeeProjectCard";
 import ImportPreviewModal, { type ImportPreviewRow } from "../../components/ImportPreviewModal";
 import WbsMaterialModal, { stageMaterialCount } from "./WbsMaterialModal";
+import { Select } from "../../components/inputs/Select";
 
 /* "Dalam Proses" = status default proyek baru (ProjectAddModal). Tanpa baris
    ini, <select> status tidak punya <option> yang cocok untuk proyek-proyek itu
@@ -1376,7 +1377,7 @@ const createWarranty = async (wbsTask?: string) => {
               <>
                 <label className="flex items-center gap-1.5">
                   <span className="text-xs text-steel-500">{S.prjFieldPrioritas}</span>
-                  <select
+                  <Select
                     className="input w-auto py-1.5 text-sm"
                     value={canonPrioritas(project.prioritas)}
                     onChange={(e) => {
@@ -1387,16 +1388,16 @@ const createWarranty = async (wbsTask?: string) => {
                     aria-label={S.prjFieldPrioritas}
                   >
                     {PRIORITAS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  </Select>
                 </label>
-                <select
+                <Select
                   className="input w-auto py-1.5 text-sm"
                   value={project.status}
                   onChange={(e) => askStatus(e.target.value)}
                   title={S.detStatusLateTitle}
                 >
                   {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                </Select>
               </>
             ) : (
               <span className="text-xs text-steel-600 font-medium">
@@ -2678,11 +2679,11 @@ const createWarranty = async (wbsTask?: string) => {
                                 <tr key={String(b.id)} className="hover:bg-surface">
                                   <td className="td text-xs">
                                     {canWriteBookings ? (
-                                      <select className="input py-1 text-xs" value={String(b.wbsTask ?? "")} aria-label={S.eqStageCol}
+                                      <Select className="input py-1 text-xs" value={String(b.wbsTask ?? "")} aria-label={S.eqStageCol}
                                         onChange={async (e) => { try { await update("bookings", String(b.id), { wbsTask: e.target.value }); log("mengaitkan booking ke tahap WBS", `${String(b.id)} → ${e.target.value || "-"}`, "Proyek"); } catch (err) { toast(err instanceof Error ? err.message : S.saveFail, "info"); } }}>
                                         <option value="">{S.eqNoStage}</option>
                                         {wbs.map((w) => <option key={w.task} value={w.task}>{w.task}</option>)}
-                                      </select>
+                                      </Select>
                                     ) : (
                                       <span className={b.wbsTask ? "font-medium text-navy-900" : "text-steel-400"}>{String(b.wbsTask || S.eqNoStage)}</span>
                                     )}
@@ -3031,9 +3032,9 @@ const createWarranty = async (wbsTask?: string) => {
           <Field label={S.detPunchField}><input className="input" value={trialForm.punchList} onChange={(e) => setTrialForm({ ...trialForm, punchList: e.target.value })} placeholder={S.detPunchPh} /></Field>
           <Field label={S.detBaField}><input className="input" value={trialForm.baRef} onChange={(e) => setTrialForm({ ...trialForm, baRef: e.target.value })} placeholder={S.detBaPh} /></Field>
           <Field label={S.detTrialKondisi}>
-<select className="input" value={trialForm.kondisi} onChange={(e) => setTrialForm({ ...trialForm, kondisi: e.target.value as TrialKondisi })}>
+<Select className="input" value={trialForm.kondisi} onChange={(e) => setTrialForm({ ...trialForm, kondisi: e.target.value as TrialKondisi })}>
               {TRIAL_KONDISI.map((k) => <option key={k} value={k}>{k === "Sudah Sesuai" ? S.detTrialKSesuai : k === "Tidak Sesuai" ? S.detTrialKTidak : S.detTrialKPerbaiki}</option>)}
-            </select>
+            </Select>
           </Field>
           {/* D10: checklist dari WBS task yang sudah selesai. */}
           {trialForm.checklist.length > 0 && (
@@ -3140,10 +3141,10 @@ const createWarranty = async (wbsTask?: string) => {
         footer={<><button className="btn-secondary" onClick={() => setShowBast(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveBast}>{S.detSaveDraft}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.detMileField} hint={S.detMileHint} required>
-            <select className="input" value={bastForm.milestone} onChange={(e) => setBastForm({ ...bastForm, milestone: e.target.value })}>
+            <Select className="input" value={bastForm.milestone} onChange={(e) => setBastForm({ ...bastForm, milestone: e.target.value })}>
               <option value="">{S.detPickMile}</option>
               {wbs.map((t) => <option key={t.task} value={t.task}>{t.task} · {t.progress}%</option>)}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.dateField} required><input type="date" className="input" value={bastForm.tanggal} onChange={(e) => setBastForm({ ...bastForm, tanggal: e.target.value })} /></Field>
@@ -3170,10 +3171,10 @@ const createWarranty = async (wbsTask?: string) => {
           {/* F3-C-05: perubahan item pada surat BoQ aktif */}
           {coDocs.length > 0 && (
             <Field label={S.detCoDoc} hint={S.detCoDocHint}>
-              <select className="input" value={coDocId} onChange={(e) => { setCoDocId(e.target.value); setCoChanges([]); }}>
+              <Select className="input" value={coDocId} onChange={(e) => { setCoDocId(e.target.value); setCoChanges([]); }}>
                 <option value="">{S.detCoDocNone}</option>
                 {coDocs.map((d) => <option key={String(d.id)} value={String(d.id)}>{String(d.number)} · Rev {String(d.revision ?? 0)}</option>)}
-              </select>
+              </Select>
             </Field>
           )}
           {coDocId && (
@@ -3183,17 +3184,17 @@ const createWarranty = async (wbsTask?: string) => {
                 return (
                   <div key={i} className="grid grid-cols-12 items-end gap-2">
                     <div className="col-span-4 sm:col-span-2">
-                      <select className="input" aria-label={S.detCoOp} value={ch.op} onChange={(e) => patch({ op: e.target.value as CoChangeForm["op"] })}>
+                      <Select className="input" aria-label={S.detCoOp} value={ch.op} onChange={(e) => patch({ op: e.target.value as CoChangeForm["op"] })}>
                         <option value="update">{S.detCoOpUpdate}</option><option value="add">{S.detCoOpAdd}</option><option value="remove">{S.detCoOpRemove}</option>
-                      </select>
+                      </Select>
                     </div>
                     <div className="col-span-8 sm:col-span-4">
                       {ch.op === "add"
                         ? <input className="input" placeholder={S.detCoItemName} value={ch.name} onChange={(e) => patch({ name: e.target.value })} />
-                        : <select className="input" aria-label={S.detCoItem} value={ch.itemId} onChange={(e) => patch({ itemId: e.target.value })}>
+                        : <Select className="input" aria-label={S.detCoItem} value={ch.itemId} onChange={(e) => patch({ itemId: e.target.value })}>
                             <option value="">{S.detCoItem}</option>
                             {coDocItems.map((b) => <option key={String(b.id)} value={String(b.id)}>{String(b.name)} · {fmtRupiah(Number(b.totalPrice ?? 0))}</option>)}
-                          </select>}
+                          </Select>}
                     </div>
                     {ch.op !== "remove" && (
                       <>
@@ -3419,10 +3420,10 @@ const createWarranty = async (wbsTask?: string) => {
         }}>{S.detSendBtn}</button></>}>
         <FormGrid>
           <Field label={S.detDocField} required>
-            <select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
+            <Select className="input" value={shareForm.docId} onChange={(e) => setShareForm({ ...shareForm, docId: e.target.value })}>
               <option value="">{S.detPickDoc}</option>
               {docs.map((d: any) => <option key={d.id} value={d.id}>{d.title}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.detShareTo} required><input className="input" value={shareForm.to} onChange={(e) => setShareForm({ ...shareForm, to: e.target.value })} placeholder={S.detShareToPh} /></Field>
         </FormGrid>
@@ -3457,10 +3458,10 @@ const createWarranty = async (wbsTask?: string) => {
             </Field>
           )}
           <Field label={S.detStation} hint={wbsTaskUpdate && /hull/i.test(wbsTaskUpdate) ? S.detStationReq : S.detStationOpt}>
-            <select className="input" value={wbsUpdateForm.station} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, station: e.target.value })}>
+            <Select className="input" value={wbsUpdateForm.station} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, station: e.target.value })}>
               <option value="">{S.detPickStation}</option>
               {STATIONS.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.detPhotoNote} hint={S.detPhotoHint}><input className="input" value={wbsUpdateForm.photoNote} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, photoNote: e.target.value })} placeholder={S.detPhotoPh} /></Field>
           {wbsUpdateForm.photoUrl && (
@@ -3498,10 +3499,10 @@ const createWarranty = async (wbsTask?: string) => {
             );
           })()}
           <Field label={S.statusLabel}>
-            <select className="input" value={wbsUpdateForm.status} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, status: e.target.value as "Sedang" | "Selesai" })}>
+            <Select className="input" value={wbsUpdateForm.status} onChange={(e) => setWbsUpdateForm({ ...wbsUpdateForm, status: e.target.value as "Sedang" | "Selesai" })}>
               <option value="Sedang">Sedang Dikerjakan</option>
               <option value="Selesai">Selesai</option>
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -3638,7 +3639,7 @@ const createWarranty = async (wbsTask?: string) => {
         footer={<><button className="btn-secondary" onClick={() => setShowWbs(false)}>{S.cancelBtn}</button><button className="btn-primary" onClick={saveWbs}>{S.addBtn}</button></>}>
         <div className="space-y-3">
           <Field label={S.prjScopeCat || (locale === "en" ? "Scope Category" : "Ruang Lingkup (Kategori)")} required>
-            <select
+            <Select
               className="input"
               value={wbsForm.category}
               onChange={(e) => setWbsForm({ ...wbsForm, category: e.target.value })}
@@ -3649,7 +3650,7 @@ const createWarranty = async (wbsTask?: string) => {
                   {s.service} {s.harga ? `(${fmtRupiah(s.harga)})` : ""}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={S.detStageName} required>
             <input className="input" placeholder={S.prjScopeSubTask || (locale === "en" ? "Stage / sub-task name" : "Nama tahapan / sub-pekerjaan")} value={wbsForm.task} onChange={(e) => setWbsForm({ ...wbsForm, task: e.target.value })} />
@@ -3779,20 +3780,20 @@ const createWarranty = async (wbsTask?: string) => {
               dibuat dari tab proyek sebelumnya. "Kontrak Kerja" kini sub-tipe
               dari Kontrak, bukan tipe sendiri. */}
           <Field label={S.detDocType}>
-            <select
+            <Select
               className="input"
               value={docType}
               onChange={(e) => { setDocType(e.target.value); setDocSubType(""); setDocQcCertId(""); }}
             >
               {DOC_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           {subTypesOf(docType).length > 0 && (
             <Field label={locale === "en" ? "Sub-type" : "Sub-tipe"}>
-              <select className="input" value={docSubType} onChange={(e) => { setDocSubType(e.target.value); setDocQcCertId(""); }}>
+              <Select className="input" value={docSubType} onChange={(e) => { setDocSubType(e.target.value); setDocQcCertId(""); }}>
                 <option value="">-</option>
                 {subTypesOf(docType).map((s) => <option key={s}>{s}</option>)}
-              </select>
+              </Select>
             </Field>
           )}
           {docNeedsQc && (
@@ -3802,12 +3803,12 @@ const createWarranty = async (wbsTask?: string) => {
                 ? "Required so the archive can prove QC inspected this."
                 : "Wajib diisi agar arsip bisa membuktikan tim QC sudah memeriksanya."}
             >
-              <select className="input" value={docQcCertId} onChange={(e) => setDocQcCertId(e.target.value)}>
+              <Select className="input" value={docQcCertId} onChange={(e) => setDocQcCertId(e.target.value)}>
                 <option value="">-</option>
                 {docQcOptions.map((d) => (
                   <option key={String(d.id)} value={String(d.id)}>{String(d.id)} · {String(d.title ?? "")}</option>
                 ))}
-              </select>
+              </Select>
               {docQcOptions.length === 0 && (
                 <p className="mt-1 text-[11px] text-amber-700">
                   {locale === "en"
@@ -3941,13 +3942,13 @@ const createWarranty = async (wbsTask?: string) => {
             />
           </Field>
           <Field label={S.detReqDocType}>
-            <select
+            <Select
               className="input"
               value={reqForm.type}
               onChange={(e) => setReqForm({ ...reqForm, type: e.target.value })}
             >
               {DOC_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.detReqDocNotes}>
             <input

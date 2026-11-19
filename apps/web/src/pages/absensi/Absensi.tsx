@@ -89,6 +89,7 @@ import DeviceInsights from "./DeviceDaily";
 import { hasPermission, useAuth } from "../../auth/auth";
 import { isBackendConfigured } from "../../services/http";
 import { n_emp } from "../../i18n/n_emp";
+import { Select } from "../../components/inputs/Select";
 
 export default function Absensi() {
   const { data, add, update, remove, log, branch, setBranch, inBranch } = useStore();
@@ -489,10 +490,10 @@ export default function Absensi() {
                   <input type="date" className="input w-auto" value={date} onChange={(e) => setDate(e.target.value)} />
                 </label>
                 {/* F3-L-07: tanpa shift — jam kerja standar dari pengaturan; nilai shift lama tetap "Pagi". */}
-                <select className="input w-auto" value={branch} onChange={(e) => setBranch(e.target.value)} aria-label={S.branchFilterShortAria}>
+                <Select className="input w-auto" value={branch} onChange={(e) => setBranch(e.target.value)} aria-label={S.branchFilterShortAria}>
                   <option value="SEMUA">{S.allBranches}</option>
                   {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                </Select>
               </div>
               {/* Search per tabel (A2). Ketiganya bisa panjang sebanyak jumlah
                   karyawan atau jumlah hari absensi, dan tanpa pencarian
@@ -545,9 +546,9 @@ export default function Absensi() {
                               <p className="text-xs text-steel-500 font-mono">{e.id} · {e.branch}</p>
                             </td>
                             <td className="td">
-                              <select className="input w-auto py-1.5 text-sm" value={r.status} onChange={(ev) => setRow(e.id, { status: ev.target.value })}>
+                              <Select className="input w-auto py-1.5 text-sm" value={r.status} onChange={(ev) => setRow(e.id, { status: ev.target.value })}>
                                 {STATUS.map((s) => <option key={s}>{s}</option>)}
-                              </select>
+                              </Select>
                             </td>
                             <td className="td">
                               <TimeInput className="w-auto py-1.5 text-sm" value={norm24(r.checkIn)} disabled={!hadir} ariaLabel={`${S.sortIn} ${e.name}`} onChange={(v) => setRow(e.id, { checkIn: v })} />
@@ -668,10 +669,10 @@ export default function Absensi() {
                         <input type="month" className="input w-full" value={draft.month} onChange={(e) => setDraft({ ...draft, month: e.target.value })} />
                       </Field>
                       <Field label={S.branchLabel}>
-                        <select className="input w-full" value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })} aria-label={S.branchFilterShortAria}>
+                        <Select className="input w-full" value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })} aria-label={S.branchFilterShortAria}>
                           <option value="SEMUA">{S.allBranches}</option>
                           {branchCities.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                     </div>
                   )}

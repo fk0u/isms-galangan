@@ -216,6 +216,7 @@ import { n_emp } from "../../i18n/n_emp";
 import { n_prj } from "../../i18n/n_prj";
 import { PhotoUploader } from "../../components/PhotoUploader";
 import { parsePtkp, ptkpCode } from "../../utils/ptkp";
+import { Select } from "../../components/inputs/Select";
 
 const emptyEmpForm = () => ({
   nik: "",
@@ -1701,20 +1702,20 @@ const finishTraining = async (t: StoreItem) => {
                   {(draft, setDraft) => (
                     <div className="space-y-3">
                       <Field label={S.fDept}>
-                        <select className="input w-full" value={draft.dept} onChange={(e) => setDraft({ ...draft, dept: e.target.value })} aria-label={S.ariaFilterDept}>
+                        <Select className="input w-full" value={draft.dept} onChange={(e) => setDraft({ ...draft, dept: e.target.value })} aria-label={S.ariaFilterDept}>
                           {deptOptions.map((d) => (
                             <option key={d} value={d}>{d === "Semua" ? "Semua Dept" : d}</option>
                           ))}
-                        </select>
+                        </Select>
                       </Field>
                       {/* Cabang disembunyikan: sistem terpusat satu galangan. */}
                       <div className="hidden"><Field label={S.fCabang}>
-                        <select className="input w-full" value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })} aria-label={S.ariaFilterCabang}>
+                        <Select className="input w-full" value={draft.branch} onChange={(e) => setDraft({ ...draft, branch: e.target.value })} aria-label={S.ariaFilterCabang}>
                           <option value="SEMUA">Semua Cabang</option>
                           {branchCities.map((c) => (
                             <option key={c} value={c}>{c}</option>
                           ))}
-                        </select>
+                        </Select>
                       </Field></div>
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-steel-600">
                         <input type="checkbox" checked={draft.kontrak === "1"} onChange={(e) => setDraft({ ...draft, kontrak: e.target.checked ? "1" : "0" })} />
@@ -2095,24 +2096,24 @@ const finishTraining = async (t: StoreItem) => {
                 <input type="date" className="input" max={todayISO()} value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} />
               </Field>
               <Field label={E.gender}>
-                <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                <Select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
                   <option value="L">{E.male}</option><option value="P">{E.female}</option>
-                </select>
+                </Select>
               </Field>
               <Field label={E.education}>
-                <select className="input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
+                <Select className="input" value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })}>
                   {EDUCATION.map((d) => <option key={d}>{d}</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label={E.marital}>
-                <select className="input" value={form.marital} onChange={(e) => setForm({ ...form, marital: e.target.value })}>
+                <Select className="input" value={form.marital} onChange={(e) => setForm({ ...form, marital: e.target.value })}>
                   <option value="TK">{E.single}</option><option value="K">{E.married}</option>
-                </select>
+                </Select>
               </Field>
               <Field label={S.fTanggungan}>
-                <select className="input" value={form.dependents} onChange={(e) => setForm({ ...form, dependents: e.target.value })}>
+                <Select className="input" value={form.dependents} onChange={(e) => setForm({ ...form, dependents: e.target.value })}>
                   {["0", "1", "2", "3"].map((d) => <option key={d}>{d}</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label={E.ptkpAuto} hint={E.ptkpHint}>
                 <input className="input bg-steel-50 font-mono text-xs" readOnly value={ptkpCode(form.marital, form.dependents)} />
@@ -2142,25 +2143,25 @@ const finishTraining = async (t: StoreItem) => {
                 </div>
               </Field>
               <Field label={S.fDept}>
-                <select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
+                <Select className="input" value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })}>
                   {DEPT_OPTIONS.map((d) => <option key={d}>{d}</option>)}
-                </select>
+                </Select>
               </Field>
               {/* #97: prototype satu cabang - cabang terkunci ke Samarinda, tanpa pilihan. */}
               {/* Karyawan baru selalu Aktif; perubahan status hanya saat mengubah data yang sudah ada. */}
               {editingId !== null && (
                 <Field label={S.dlStatus}>
-                  <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <Select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                     <option>Aktif</option>
                     <option>Nonaktif</option>
                     <option>Cuti</option>
-                  </select>
+                  </Select>
                 </Field>
               )}
               <Field label={S.fTipeKaryawan}>
-                <select className="input" value={form.tipe} onChange={(e) => setForm({ ...form, tipe: e.target.value })}>
+                <Select className="input" value={form.tipe} onChange={(e) => setForm({ ...form, tipe: e.target.value })}>
                   {[...TIPE_KARYAWAN, ...(TIPE_KARYAWAN.includes(form.tipe) ? [] : [form.tipe])].map((t) => <option key={t}>{t}</option>)}
-                </select>
+                </Select>
               </Field>
               <Field label={S.fJoin}>
                 <input type="date" className="input" value={form.join} onChange={(e) => setForm({ ...form, join: e.target.value })} />
@@ -2245,7 +2246,7 @@ const finishTraining = async (t: StoreItem) => {
       >
         <div className="space-y-3">
           <Field label={S.fKaryawan} required>
-            <select
+            <Select
               className="input"
               value={leaveForm.employeeId}
               disabled={leaveFinalEdit}
@@ -2255,18 +2256,18 @@ const finishTraining = async (t: StoreItem) => {
               {scopedEmployees.map((e) => (
                 <option key={e.id} value={e.id}>{S.optSisa.replace("{a}", String(e.name)).replace("{n}", String(saldoCuti(e.id)))}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.thTipe} hint={reducesLeaveBalance(leaveForm.type) ? S.hintCutiPotong : S.hintCutiTidakPotong}>
-              <select
+              <Select
                 className="input"
                 value={leaveForm.type}
                 disabled={leaveFinalEdit}
                 onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}
               >
                 {LEAVE_TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fDurasi}><input className="input" value={S.daysN.replace("{n}", String(leaveDays))} disabled /></Field>
             <Field label={S.fDari}>
@@ -2487,17 +2488,17 @@ const finishTraining = async (t: StoreItem) => {
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.fKaryawan}>
-              <select className="input" value={suratForm.employeeId} onChange={(e) => pickJenis(suratForm.jenis, e.target.value)}>
+              <Select className="input" value={suratForm.employeeId} onChange={(e) => pickJenis(suratForm.jenis, e.target.value)}>
                 <option value="">{S.optPilih}</option>
                 {data.employees.map((e) => (
                   <option key={e.id} value={e.id}>{e.name} · {e.role}</option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fJenisSurat}>
-              <select className="input" value={suratForm.jenis} onChange={(e) => pickJenis(e.target.value)}>
+              <Select className="input" value={suratForm.jenis} onChange={(e) => pickJenis(e.target.value)}>
                 {SURAT_JENIS.map((s) => <option key={s} value={s}>{E.jenis[s as keyof typeof E.jenis] ?? s}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.thTanggal}><input type="date" className="input font-mono" value={suratForm.tanggal} onChange={(e) => setSuratForm({ ...suratForm, tanggal: e.target.value })} /></Field>
             <Field label={E.docNo}><input className="input font-mono" value={suratForm.docNo} onChange={(e) => setSuratForm({ ...suratForm, docNo: e.target.value })} placeholder="001/HRD-SP/SB-SMD/X/2026" /></Field>

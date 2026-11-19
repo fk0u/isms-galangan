@@ -10,6 +10,7 @@ import { AsyncButton, Card, toast } from "../../components/ui";
 import { apiFetch } from "../../services/http";
 import { useT } from "../../i18n/LanguageContext";
 import { n_roles } from "../../i18n/n_roles";
+import { Select } from "../../components/inputs/Select";
 
 type AccessLevel = "crud" | "view" | "none";
 const RANK: Record<AccessLevel, number> = { none: 0, view: 1, crud: 2 };
@@ -156,7 +157,7 @@ export default function ModuleAccessCard() {
                   const capped = RANK[max] < 2;
                   return (
                     <td key={m} className="px-1 py-1 text-center">
-                      <select
+                      <Select
                         aria-label={`${r} ${m}`}
                         value={level}
                         onChange={(e) => setLevel(r, m, e.target.value as AccessLevel)}
@@ -184,7 +185,7 @@ export default function ModuleAccessCard() {
                         <option value="none" className="bg-white text-steel-500 font-medium">
                           {S.rbacLevelNone}
                         </option>
-                      </select>
+                      </Select>
                     </td>
                   );
                 })}

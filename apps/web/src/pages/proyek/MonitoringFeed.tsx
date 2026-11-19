@@ -11,6 +11,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_prj } from "../../i18n/n_prj";
 import { fmtTanggal } from "../../utils/format";
 import { ROLE_LABELS } from "../pengaturan/Peran";
+import { Select } from "../../components/inputs/Select";
 
 interface FeedEntry {
   key: string;
@@ -85,10 +86,10 @@ export default function MonitoringFeed({ projects, canUpdate }: Props) {
         <h3 className="mr-auto flex items-center gap-2 text-sm font-semibold text-navy-900">
           <Camera className="h-4 w-4 text-steel-500" /> {S.monFeedTitle}
         </h3>
-        <select className="input h-8 w-auto py-0 text-xs" aria-label={S.monFeedProject} value={pid} onChange={(e) => setPid(e.target.value)}>
+        <Select className="input h-8 w-auto py-0 text-xs" aria-label={S.monFeedProject} value={pid} onChange={(e) => setPid(e.target.value)}>
           <option value="Semua">{S.monFeedAllProj}</option>
           {projects.map((p) => <option key={String(p.id)} value={String(p.id)}>{String(p.id)} · {String(p.vessel ?? "")}</option>)}
-        </select>
+        </Select>
         <input type="date" className="input h-8 w-auto py-0 text-xs" aria-label={S.monFeedFrom} value={from} onChange={(e) => setFrom(e.target.value)} />
         <span className="text-xs text-steel-400">–</span>
         <input type="date" className="input h-8 w-auto py-0 text-xs" aria-label={S.monFeedTo} value={to} onChange={(e) => setTo(e.target.value)} />

@@ -13,6 +13,7 @@ import { useT } from "../../i18n/LanguageContext";
 import { n_inv } from "../../i18n/n_inv";
 import { useStore, type StoreItem } from "../../data/store";
 import { fmtJumlah, fmtRupiah, fmtTanggal, todayISO } from "../../utils/format";
+import { Select } from "../../components/inputs/Select";
 
 function barcodeBits(sku: string): boolean[] {
   const s = sku || "X";
@@ -305,10 +306,10 @@ export default function BomDetail() {
         footer={<><button className="btn-secondary" onClick={() => setShowReserv(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveReserv}>{S.btnSaveReserv}</AsyncButton></>}>
         <div className="space-y-3">
           <Field label={S.proyekLbl}>
-            <select className="input" value={reservProject} onChange={(e) => setReservProject(e.target.value)}>
+            <Select className="input" value={reservProject} onChange={(e) => setReservProject(e.target.value)}>
               <option value="">{S.pickProject}</option>
               {data.projects.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.vessel}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.reservQtyLbl}><NumInput min={1} className="input" value={reservQtyInput} onChange={(e) => setReservQtyInput(e.target.value)} /></Field>
         </div>

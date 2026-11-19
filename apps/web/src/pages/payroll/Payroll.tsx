@@ -42,6 +42,7 @@ import { grossUp } from "../../utils/grossUp";
 import { n_dry } from "../../i18n/n_dry";
 import { useT } from "../../i18n/LanguageContext";
 import { KASBON_CICILAN_OPTIONS, normKasbonList, type KasbonEntry } from "../../utils/kasbon";
+import { Select } from "../../components/inputs/Select";
 
 const NEXT_STATUS: Record<string, string> = {
   Draft: "Dihitung",
@@ -1094,10 +1095,10 @@ export default function Payroll() {
                 <h3 className="text-sm font-semibold text-navy-900">{S.bonusManual}</h3>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <Field label={S.colEmployee}>
-                    <select className="input w-auto" value={bonusForm.employeeId} onChange={(e) => setBonusForm({ ...bonusForm, employeeId: e.target.value })}>
+                    <Select className="input w-auto" value={bonusForm.employeeId} onChange={(e) => setBonusForm({ ...bonusForm, employeeId: e.target.value })}>
                       <option value="">{S.optPick}</option>
                       {activeEmps.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.lblNominal}>
                     <MoneyInput className="input w-44" value={bonusForm.nominal} onChange={(v) => setBonusForm({ ...bonusForm, nominal: v })} placeholder={S.phBonusNominal} />
@@ -1201,10 +1202,10 @@ export default function Payroll() {
                 <p className="mt-1 text-xs text-steel-500">{S.kasbonInfo}</p>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <Field label={S.colEmployee}>
-                    <select className="input w-auto" value={kasbonForm.employeeId} onChange={(e) => setKasbonForm({ ...kasbonForm, employeeId: e.target.value })}>
+                    <Select className="input w-auto" value={kasbonForm.employeeId} onChange={(e) => setKasbonForm({ ...kasbonForm, employeeId: e.target.value })}>
                       <option value="">{S.optPick}</option>
                       {activeEmps.map((e) => <option key={e.id} value={e.id}>{e.name} · sisa {fmtRupiah(kasbonSisa(e))}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <Field label={S.lblDate}>
                     <input type="date" className="input w-auto" value={kasbonForm.tanggal} onChange={(e) => setKasbonForm({ ...kasbonForm, tanggal: e.target.value })} />
@@ -1213,9 +1214,9 @@ export default function Payroll() {
                     <MoneyInput className="input w-44" value={kasbonForm.jumlah} onChange={(v) => setKasbonForm({ ...kasbonForm, jumlah: v })} placeholder={S.phKasbonAmount} />
                   </Field>
                   <Field label={S.lblInstall}>
-                    <select className="input w-44" value={kasbonForm.cicilan} onChange={(e) => setKasbonForm({ ...kasbonForm, cicilan: e.target.value })}>
+                    <Select className="input w-44" value={kasbonForm.cicilan} onChange={(e) => setKasbonForm({ ...kasbonForm, cicilan: e.target.value })}>
                       {KASBON_CICILAN_OPTIONS.map((n) => <option key={n} value={String(n)}>{fmtRupiah(n)} / {S.perMonth}</option>)}
-                    </select>
+                    </Select>
                   </Field>
                   <button className="btn-primary" onClick={saveKasbon}>{S.btnAddKasbon}</button>
                 </div>

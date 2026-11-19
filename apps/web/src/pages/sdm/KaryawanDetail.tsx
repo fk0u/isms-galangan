@@ -37,6 +37,7 @@ import { cmpJam, fmtJam24, norm24 } from "../../utils/time24";
 import { createdAtOf, lastTouchedAt } from "../../utils/timestamps";
 import { useT } from "../../i18n/LanguageContext";
 import { n_qc } from "../../i18n/n_qc";
+import { Select } from "../../components/inputs/Select";
 
 /* Akun login yang tertaut ke karyawan ini (baca /api/users, best-effort:
    non-direktur dapat 403 → tampil "-"). */
@@ -937,19 +938,19 @@ export default function KaryawanDetail() {
           <Field label={S.fJudulDok} required><input className="input" value={docForm.title} onChange={(e) => setDocForm({ ...docForm, title: e.target.value })} placeholder={S.phDok} /></Field>
           <FormGrid>
             <Field label={S.thTipe}>
-              <select className="input" value={docForm.type} onChange={(e) => setDocForm({ ...docForm, type: e.target.value })}>
+              <Select className="input" value={docForm.type} onChange={(e) => setDocForm({ ...docForm, type: e.target.value })}>
                 <option>Kontrak</option>
                 <option>Sertifikat</option>
                 <option>Identitas</option>
                 <option>Lainnya</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.dlStatus}>
-              <select className="input" value={docForm.status} onChange={(e) => setDocForm({ ...docForm, status: e.target.value })}>
+              <Select className="input" value={docForm.status} onChange={(e) => setDocForm({ ...docForm, status: e.target.value })}>
                 <option>Berlaku</option>
                 <option>Draft</option>
                 <option>Kedaluwarsa</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={locale === "en" ? "File URL" : "URL berkas"}>
@@ -982,20 +983,20 @@ export default function KaryawanDetail() {
           <FormGrid>
             <Field label={S.thTanggal} required><input type="date" className="input" value={attForm.date} onChange={(e) => setAttForm({ ...attForm, date: e.target.value })} /></Field>
             <Field label={S.thShift}>
-              <select className="input" value={attForm.shift} onChange={(e) => setAttForm({ ...attForm, shift: e.target.value })}>
+              <Select className="input" value={attForm.shift} onChange={(e) => setAttForm({ ...attForm, shift: e.target.value })}>
                 <option>Pagi</option>
                 <option>Siang</option>
                 <option>Malam</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.dlStatus}>
-              <select className="input" value={attForm.status} onChange={(e) => setAttForm({ ...attForm, status: e.target.value })}>
+              <Select className="input" value={attForm.status} onChange={(e) => setAttForm({ ...attForm, status: e.target.value })}>
                 <option>Hadir</option>
                 <option>Izin</option>
                 <option>Sakit</option>
                 <option>Alpha</option>
                 <option>Cuti</option>
-              </select>
+              </Select>
             </Field>
             <Field label={locale === "en" ? "Overtime (hours)" : "Lembur (jam)"}>
               <input type="number" min={0} max={8} step={0.5} className="input" value={attForm.overtime} onChange={(e) => setAttForm({ ...attForm, overtime: e.target.value })} />
@@ -1034,13 +1035,13 @@ export default function KaryawanDetail() {
               )}
               <FormGrid>
                 <Field label={S.thTipe} hint={approved ? (locale === "en" ? "Locked" : "Terkunci") : undefined}>
-                  <select className="input" value={leaveForm.type} disabled={approved} onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}>
+                  <Select className="input" value={leaveForm.type} disabled={approved} onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}>
                     <option>Tahunan</option>
                     <option>Sakit</option>
                     <option>Izin</option>
                     <option>Cuti Mellon</option>
                     <option>Pengantin</option>
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={locale === "en" ? "Days" : "Jumlah hari"} hint={approved ? (locale === "en" ? "Locked" : "Terkunci") : undefined}>
                   <input type="number" min={0} className="input" value={leaveForm.days} disabled={approved} onChange={(e) => setLeaveForm({ ...leaveForm, days: e.target.value })} />

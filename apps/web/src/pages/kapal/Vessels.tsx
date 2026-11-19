@@ -23,6 +23,7 @@ import { rowHighlightClass } from "../../components/rowHighlight";
 import { useT } from "../../i18n/LanguageContext";
 import { n_eqp } from "../../i18n/n_eqp";
 import { SearchSelect } from "../../components/SearchSelect";
+import { Select } from "../../components/inputs/Select";
 
 const statusTone: Record<string, "green" | "blue" | "amber" | "gray"> = {
   "Dalam Docking": "blue",
@@ -345,9 +346,9 @@ export default function Vessels() {
           />
         </Field>
         <Field label={S.vsClassField}>
-          <select className="input" value={f.class} onChange={(e) => setF({ ...f, class: e.target.value })}>
+          <Select className="input" value={f.class} onChange={(e) => setF({ ...f, class: e.target.value })}>
             {classOptionsFor(f.class).map((c) => <option key={c}>{c}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label={S.vsLoaField}><NumInput min={0} step={0.1} className="input" value={f.loa} onChange={(e) => setF({ ...f, loa: e.target.value })} placeholder={S.vsLoaPh} /></Field>
         <Field label={S.vsLbpField}><NumInput min={0} step={0.1} className="input" value={f.lbp} onChange={(e) => setF({ ...f, lbp: e.target.value })} placeholder={S.vsLbpPh} /></Field>
@@ -393,9 +394,9 @@ export default function Vessels() {
             {(draft, setDraft) => (
               <div className="space-y-3">
                 <Field label={S.vsCertStatusField}>
-                  <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                  <Select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
                     {["Semua", "Perlu Perhatian", "Aman"].map((s) => <option key={s} value={s}>{s === "Semua" ? S.vsAllStatus : s}</option>)}
-                  </select>
+                  </Select>
                 </Field>
               </div>
             )}
@@ -560,10 +561,10 @@ export default function Vessels() {
       >
         <FormGrid>
           <Field label={S.thVessel}>
-            <select className="input" value={surveyForm.vessel} onChange={(e) => setSurveyForm({ ...surveyForm, vessel: e.target.value })}>
+            <Select className="input" value={surveyForm.vessel} onChange={(e) => setSurveyForm({ ...surveyForm, vessel: e.target.value })}>
               <option value="">{locale === 'en' ? '-- pick --' : '-- pilih --'}</option>
               {data.vessels.map((v) => <option key={v.id} value={String(v.name)}>{String(v.name)}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label={S.thSurveyType}>
             <input className="input" value={surveyForm.type} onChange={(e) => setSurveyForm({ ...surveyForm, type: e.target.value })} />
@@ -575,11 +576,11 @@ export default function Vessels() {
             <input type="date" className="input" value={surveyForm.date} onChange={(e) => setSurveyForm({ ...surveyForm, date: e.target.value })} />
           </Field>
           <Field label={S.thStatus}>
-            <select className="input" value={surveyForm.status} onChange={(e) => setSurveyForm({ ...surveyForm, status: e.target.value })}>
+            <Select className="input" value={surveyForm.status} onChange={(e) => setSurveyForm({ ...surveyForm, status: e.target.value })}>
               <option>Terjadwal</option>
               <option>Dalam Proses</option>
               <option>Selesai</option>
-            </select>
+            </Select>
           </Field>
         </FormGrid>
       </Modal>

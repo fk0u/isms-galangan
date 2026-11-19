@@ -13,6 +13,7 @@ import { SearchSelect } from "../../components/SearchSelect";
 import { useMaterialRequest } from "../../data/useMaterialRequest";
 import { useAuth } from "../../auth/auth";
 import { approvalOf, useServiceApproval } from "../../data/useServiceApproval";
+import { Select } from "../../components/inputs/Select";
 
 export type SparepartServiceView = "3d" | "service" | "sparepart" | "all";
 
@@ -447,10 +448,10 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-navy-900 flex items-center gap-2"><Box className="h-4 w-4" /> {S.spsModelTitle}</h3>
         <div className="flex items-center gap-2">
-          <select className="input w-auto py-1.5 text-xs" aria-label={S.spsModelAria} value={modelPick} onChange={(e) => setModelPick(e.target.value)}>
+          <Select className="input w-auto py-1.5 text-xs" aria-label={S.spsModelAria} value={modelPick} onChange={(e) => setModelPick(e.target.value)}>
             <option value="Tugboat">Tugboat</option>
             <option value="Kapal Kecil">Kapal Kecil</option>
-          </select>
+          </Select>
           {modelError && (
             <button className="btn-secondary text-xs" onClick={() => setModelKey((k) => k + 1)}><RotateCcw className="h-3.5 w-3.5" /> {S.spsReload}</button>
           )}
@@ -654,17 +655,17 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
           )}
           <FormGrid>
             <Field label={S.boqCategory}>
-              <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <Select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 {["Mechanical", "Hydraulic", "Electrical", "Insulation", "Paint", "Rigging", "Piping"].map((c) => <option key={c} value={c}>{spCatLabel(c)}</option>)}
-              </select>
+              </Select>
             </Field>
             {/* Mode inventori: status, biaya, dan tanggal pakai dihitung dari
                 hasil pemenuhan stok, jadi tidak ditawarkan sebagai input. */}
             {!fromInventory && (
               <Field label={S.statusLabel}>
-                <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as "Akan" | "Sedang" | "Selesai" })}>
+                <Select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as "Akan" | "Sedang" | "Selesai" })}>
                   {["Akan", "Sedang", "Selesai"].map((s) => <option key={s}>{s}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
             {/* #89: mode inventori - catatan duduk di kanan kategori, bukan baris sendiri. */}
@@ -687,10 +688,10 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
             if (pos.length === 0) return null;
             return (
               <Field label={S.spsPoRef}>
-                <select className="input" value={form.poRef} onChange={(e) => setForm({ ...form, poRef: e.target.value })}>
+                <Select className="input" value={form.poRef} onChange={(e) => setForm({ ...form, poRef: e.target.value })}>
                   <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
                   {pos.map((po) => <option key={po.id} value={po.id}>{String(po.id)} - {String(po.item ?? "")}</option>)}
-                </select>
+                </Select>
               </Field>
             );
           })()}
@@ -703,16 +704,16 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.detDocType}>
-              <select className="input" value={svcForm.type} onChange={(e) => setSvcForm({ ...svcForm, type: e.target.value as ServiceRecord["type"] })}>
+              <Select className="input" value={svcForm.type} onChange={(e) => setSvcForm({ ...svcForm, type: e.target.value as ServiceRecord["type"] })}>
                 {["Overhaul", "Inspection", "Repair", "Drydock", "Survey"].map((t) => <option key={t} value={t}>{svcTypeLabel(t)}</option>)}
-              </select>
+              </Select>
             </Field>
             {svcProjectId && (
               <Field label={S.spsSvcWbs}>
-                <select className="input" value={svcForm.wbsTask} onChange={(e) => setSvcForm({ ...svcForm, wbsTask: e.target.value })}>
+                <Select className="input" value={svcForm.wbsTask} onChange={(e) => setSvcForm({ ...svcForm, wbsTask: e.target.value })}>
                   <option value="">{S.spsSvcWbsPh}</option>
                   {svcWbsOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
+                </Select>
               </Field>
             )}
           </FormGrid>
@@ -736,7 +737,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
           {/* Biaya mengikuti item BoQ terkait; berbeda harga wajib alasan (F3-D-02). */}
           {svcBoqItems.length > 0 && (
             <Field label={S.spsSvcBoqRef}>
-              <select
+              <Select
                 className="input"
                 value={svcForm.boqRef}
                 onChange={(e) => {
@@ -746,7 +747,7 @@ export default function SparepartServiceSection({ projectId, vesselId, view = "a
               >
                 <option value="">{locale === "en" ? "-- none --" : "-- tidak ada --"}</option>
                 {svcBoqItems.map((b) => <option key={b.id} value={b.id}>{String(b.name ?? b.id)} · {fmtRupiah(Number(b.totalPrice ?? 0))}</option>)}
-              </select>
+              </Select>
             </Field>
           )}
           <Field label={S.spsSvcCost} hint={svcBoqPrice !== null ? S.spsSvcBoqPrice.replace("{v}", fmtRupiah(svcBoqPrice)) : undefined}>

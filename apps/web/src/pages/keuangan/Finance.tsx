@@ -86,6 +86,7 @@ import {
   LATEST_SNAPSHOT,
 } from "../../data/financeExcel";
 import { CoaTab } from "./tabs/CoaTab";
+import { Select } from "../../components/inputs/Select";
 
 /* Filter historikal Hari/Bulan/Tahun untuk Kas & Bank, Buku Besar, Neraca, Laba Rugi.
    Satu struktur state per tab: { mode, hari (YYYY-MM-DD), bulan (YYYY-MM), tahun (YYYY) }.
@@ -3873,14 +3874,14 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   {(draft, setDraft) => (
                     <div className="space-y-3">
                       <Field label={S.colStatus}>
-                        <select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
+                        <Select className="input w-full" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })}>
                           {["Semua", "Draft", "Diajukan", "Disetujui", "Belum Dibayar", "Terlambat", "Lunas", "Ditolak", "Dihapusbukukan"].map((s) => <option key={s} value={s}>{s === "Semua" ? S.allStatus : s}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                       <Field label={S.billingTypeLabel}>
-                        <select className="input w-full" value={draft.billing} onChange={(e) => setDraft({ ...draft, billing: e.target.value })}>
+                        <Select className="input w-full" value={draft.billing} onChange={(e) => setDraft({ ...draft, billing: e.target.value })}>
                           {["Semua", ...BILLING_TYPES, ...LEGACY_BILLING_TYPES].map((s) => <option key={s} value={s}>{s === "Semua" ? S.allTypes : s}</option>)}
-                        </select>
+                        </Select>
                       </Field>
                     </div>
                   )}
@@ -4020,12 +4021,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 );
               })()}
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <select className="input w-full sm:max-w-xs" value={bbAkun} onChange={(e) => setBbAkun(e.target.value)} aria-label={S.bbAkunPick}>
+                <Select className="input w-full sm:max-w-xs" value={bbAkun} onChange={(e) => setBbAkun(e.target.value)} aria-label={S.bbAkunPick}>
                   <option value="">{S.bbAkunAll}</option>
                   {coaRows.filter((c) => String(c.dk) !== "-").map((c) => (
                     <option key={String(c.kode)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>
                   ))}
-                </select>
+                </Select>
                 <SearchBox value={bbQ} onChange={setBbQ} className="w-full sm:max-w-xs" placeholder={S.bbSearchPh} ariaLabel={S.bbSearchPh} />
               </div>
               {bbAkun && (
@@ -4325,9 +4326,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               />
               <div className="flex flex-wrap items-end gap-2">
                 <Field label={S.profitProject}>
-                  <select className="input" value={profitPid} onChange={(e) => { setProfitProjectId(e.target.value); const p = projectById[e.target.value]; setOverheadPct(String(p?.overheadPct ?? 5)); }}>
+                  <Select className="input" value={profitPid} onChange={(e) => { setProfitProjectId(e.target.value); const p = projectById[e.target.value]; setOverheadPct(String(p?.overheadPct ?? 5)); }}>
                     {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={S.cardSearchPh}>
                   <input className="input" value={plQ} onChange={(e) => setPlQ(e.target.value)} placeholder={S.cardSearchPh} aria-label={S.cardSearchPh} />
@@ -4749,9 +4750,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               />
               <div className="flex flex-wrap items-end gap-2">
                 <Field label={S.colPeriode}>
-                  <select className="input" value={activeTaxId} onChange={(e) => setTaxId(e.target.value)}>
+                  <Select className="input" value={activeTaxId} onChange={(e) => setTaxId(e.target.value)}>
                     {taxPeriods.map((t) => <option key={t.id} value={t.id}>{t.period} · {t.status}</option>)}
-                  </select>
+                  </Select>
                 </Field>
                 <Field label={S.newPeriodLabel} hint={S.taxDateHint}>
                   <input type="date" className="input font-mono" value={newPeriod} onChange={(e) => setNewPeriod(e.target.value)} aria-label={S.newPeriodLabel} />
@@ -5153,15 +5154,15 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <p className="rounded-lg bg-surface px-3 py-2 text-xs text-steel-600">{S.previewNo} <strong className="font-mono text-navy-900">{invPreview}</strong> {S.previewType.replace("{a}", invForm.billingType)}{invTotal > approveThreshold ? <span className="ml-2"><Badge tone="amber">{S.needDirectorApprove}</Badge></span> : ""}</p>
           <FormGrid>
             <Field label={S.colProyek} required>
-              <select className="input" value={invForm.project} onChange={(e) => setInv("project", e.target.value)}>
+              <Select className="input" value={invForm.project} onChange={(e) => setInv("project", e.target.value)}>
                 <option value="">{S.selectProject}</option>
                 {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel} · {p.client}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.billingTypeLabel}>
-              <select className="input" value={invForm.billingType} onChange={(e) => setInv("billingType", e.target.value)}>
+              <Select className="input" value={invForm.billingType} onChange={(e) => setInv("billingType", e.target.value)}>
                 {BILLING_TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           {/* #277: field Milestone ref dihapus dari form buat invoice (notulen 23 Okt). */}
@@ -5171,12 +5172,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             </Field>
           </FormGrid>
           <Field label={S.fClientPO} hint={S.clientPOHint}>
-            <select className="input font-mono" value={invForm.clientPO} onChange={(e) => setInv("clientPO", e.target.value)}>
+            <Select className="input font-mono" value={invForm.clientPO} onChange={(e) => setInv("clientPO", e.target.value)}>
               <option value="">{S.noClientPO}</option>
               {(data.clientPos ?? []).filter((p) => !invForm.project || !p.projectId || String(p.projectId) === invForm.project).map((p) => (
                 <option key={String(p.id)} value={String(p.no ?? p.id)}>{String(p.no ?? p.id)}{p.projectId ? ` · ${String(p.projectId)}` : ""}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <FormGrid>
             <Field label={S.fKodePembantu} hint={S.kodePembantuHint}>
@@ -5197,9 +5198,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           </label>
           {!isTMForm && !isAdvanceBilling(invForm.billingType) && (
             <Field label={S.fTermLabel} required>
-              <select className="input" value={invForm.paymentTerm} onChange={(e) => setInv("paymentTerm", e.target.value)}>
+              <Select className="input" value={invForm.paymentTerm} onChange={(e) => setInv("paymentTerm", e.target.value)}>
                 {["Termin 1", "Termin 2", "Termin 3", "Milestone 1", "Milestone 2", "Milestone 3", "Progress", "Final"].map((t) => <option key={t}>{t}</option>)}
-              </select>
+              </Select>
             </Field>
           )}
           <div>
@@ -5228,10 +5229,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   {!isTMForm && (
                     <div className="col-span-6 sm:col-span-2">
                       <Field label={S.fKategori}>
-                        <select className="input" value={l.kategori || "Jasa"} onChange={(e) => setLine(idx, "kategori", e.target.value)}>
+                        <Select className="input" value={l.kategori || "Jasa"} onChange={(e) => setLine(idx, "kategori", e.target.value)}>
                           <option>Jasa</option>
                           <option>Material</option>
-                        </select>
+                        </Select>
                       </Field>
                     </div>
                   )}
@@ -5267,9 +5268,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <FormGrid>
             <Field label={S.fPayDate} required><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
             <Field label={S.colMetode}>
-              <select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
+              <Select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.fRefNo} hint={S.refProofHint} required>
@@ -5408,9 +5409,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <FormGrid>
             <Field label={S.fPayDate} required><input type="date" required className="input" value={proof.date} onChange={(e) => setProofField("date", e.target.value)} /></Field>
             <Field label={S.colMetode}>
-              <select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
+              <Select className="input" value={proof.method} onChange={(e) => setProofField("method", e.target.value)}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.fRefNo} hint={S.refGiroHint} required>
@@ -5710,12 +5711,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fBaNo} required><input className="input font-mono" value={releaseForm.ba} onChange={(e) => setReleaseForm({ ...releaseForm, ba: e.target.value })} placeholder={S.baPh} /></Field>
           </FormGrid>
           <Field label={S.fWarranty} hint={S.warrantyHint}>
-            <select className="input" value={releaseForm.warrantyId} onChange={(e) => setReleaseForm({ ...releaseForm, warrantyId: e.target.value })}>
+            <Select className="input" value={releaseForm.warrantyId} onChange={(e) => setReleaseForm({ ...releaseForm, warrantyId: e.target.value })}>
               <option value="">{S.noWarranty}</option>
               {(data.warranties ?? []).filter((w) => String(w.projectId ?? "") === String(releaseTarget?.project ?? "")).map((w) => (
                 <option key={w.id} value={w.id}>{w.id} · {w.status} · {fmtTanggal(String(w.start ?? ""))}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
       </Modal>
@@ -5726,9 +5727,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <FormGrid>
             <Field label={S.fPayDate} required><input type="date" required className="input" value={batchProof.date} onChange={(e) => setBatchProof({ ...batchProof, date: e.target.value })} /></Field>
             <Field label={S.colMetode}>
-              <select className="input" value={batchProof.method} onChange={(e) => setBatchProof({ ...batchProof, method: e.target.value })}>
+              <Select className="input" value={batchProof.method} onChange={(e) => setBatchProof({ ...batchProof, method: e.target.value })}>
                 {["Transfer", "Tunai", "Giro"].map((m) => <option key={m}>{m}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.fRefNo} hint={S.batchRefHint} required>
@@ -5769,10 +5770,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           })()}
           <FormGrid>
             <Field label={S.colProyek} required>
-              <select className="input" value={allocForm.project} onChange={(e) => setAllocForm({ ...allocForm, project: e.target.value })}>
+              <Select className="input" value={allocForm.project} onChange={(e) => setAllocForm({ ...allocForm, project: e.target.value })}>
                 <option value="">{S.selectProject}</option>
                 {projectsVisible.map((p) => <option key={p.id} value={p.id}>{p.id} · {p.vessel}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fAllocPct}><NumInput min={1} max={100} className="input" value={allocForm.pct} onChange={(e) => setAllocForm({ ...allocForm, pct: e.target.value })} /></Field>
           </FormGrid>
@@ -5801,16 +5802,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             </Field>
             <Field label={S.fCoaName} required><input className="input" value={coaForm.nama} onChange={(e) => setCoaForm({ ...coaForm, nama: e.target.value })} placeholder={S.coaNamePh} /></Field>
             <Field label={S.fCoaDK} hint={coaTarget && String(coaTarget.dk) === "-" ? S.lockedHeader : undefined}>
-              <select className="input" value={coaForm.dk} disabled={coaTarget !== null && String(coaTarget.dk) === "-"} onChange={(e) => setCoaForm({ ...coaForm, dk: e.target.value })}>
+              <Select className="input" value={coaForm.dk} disabled={coaTarget !== null && String(coaTarget.dk) === "-"} onChange={(e) => setCoaForm({ ...coaForm, dk: e.target.value })}>
                 <option value="D">D - Debit</option>
                 <option value="K">K - Kredit</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.fCoaNRLR} hint={coaTarget && String(coaTarget.dk) === "-" ? S.lockedHeader : undefined}>
-              <select className="input" value={coaForm.nrlr} disabled={coaTarget !== null && String(coaTarget.dk) === "-"} onChange={(e) => setCoaForm({ ...coaForm, nrlr: e.target.value })}>
+              <Select className="input" value={coaForm.nrlr} disabled={coaTarget !== null && String(coaTarget.dk) === "-"} onChange={(e) => setCoaForm({ ...coaForm, nrlr: e.target.value })}>
                 <option value="NR">NR - Neraca</option>
                 <option value="LR">LR - Laba-Rugi</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
         </div>
@@ -5824,9 +5825,9 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             <Field label={S.fKodePembantu}><input className="input font-mono" value={juForm.kodePembantu} onChange={(e) => setJuForm({ ...juForm, kodePembantu: e.target.value })} placeholder="vendor / customer" /></Field>
             <Field label={S.fVoucher} hint={S.voucherHint}><input className="input font-mono" value={juForm.dokumen} onChange={(e) => setJuForm({ ...juForm, dokumen: e.target.value })} /></Field>
             <Field label={S.colSumber}>
-              <select className="input" value={juForm.sumber} onChange={(e) => setJuForm({ ...juForm, sumber: e.target.value })}>
+              <Select className="input" value={juForm.sumber} onChange={(e) => setJuForm({ ...juForm, sumber: e.target.value })}>
                 {["JU", "Kas", "Bank", "JPb", "JPn", "JM"].map((x) => <option key={x}>{x}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <Field label={S.colUraian} required><input className="input" value={juForm.uraian} onChange={(e) => setJuForm({ ...juForm, uraian: e.target.value })} placeholder={S.juDescPh} /></Field>
@@ -5853,18 +5854,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <div key={idx} className="grid grid-cols-12 items-end gap-2 rounded-xl bg-surface p-2">
                   <div className="col-span-12 sm:col-span-4">
                     <Field label={S.dbLine.replace("{n}", String(idx + 1))} required>
-                      <select className="input font-mono" value={l.db} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, db: e.target.value } : x)))}>
+                      <Select className="input font-mono" value={l.db} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, db: e.target.value } : x)))}>
                         <option value="">{S.selectAccount}</option>
                         {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-                      </select>
+                      </Select>
                     </Field>
                   </div>
                   <div className="col-span-12 sm:col-span-4">
                     <Field label={S.krLine.replace("{n}", String(idx + 1))} required>
-                      <select className="input font-mono" value={l.kr} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, kr: e.target.value } : x)))}>
+                      <Select className="input font-mono" value={l.kr} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, kr: e.target.value } : x)))}>
                         <option value="">{S.selectAccount}</option>
                         {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-                      </select>
+                      </Select>
                     </Field>
                   </div>
                   <div className="col-span-10 sm:col-span-3">
@@ -5886,21 +5887,21 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <FormGrid>
             <Field label={S.colTanggal} required><input type="date" required className="input" value={mutForm.date} onChange={(e) => setMutForm({ ...mutForm, date: e.target.value })} /></Field>
             <Field label={S.colRekening} required>
-              <select className="input font-mono" value={mutForm.rekening} onChange={(e) => setMutForm({ ...mutForm, rekening: e.target.value })}>
+              <Select className="input font-mono" value={mutForm.rekening} onChange={(e) => setMutForm({ ...mutForm, rekening: e.target.value })}>
                 {KAS_REKENING.map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-              </select>
+              </Select>
             </Field>
             <Field label={S.fArah}>
-              <select className="input" value={mutForm.arah} onChange={(e) => setMutForm({ ...mutForm, arah: e.target.value })}>
+              <Select className="input" value={mutForm.arah} onChange={(e) => setMutForm({ ...mutForm, arah: e.target.value })}>
                 <option>Masuk</option>
                 <option>Keluar</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.fLawan} required>
-              <select className="input font-mono" value={mutForm.lawan} onChange={(e) => setMutForm({ ...mutForm, lawan: e.target.value })}>
+              <Select className="input font-mono" value={mutForm.lawan} onChange={(e) => setMutForm({ ...mutForm, lawan: e.target.value })}>
                 <option value="">{S.selectAccount}</option>
                 {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-              </select>
+              </Select>
             </Field>
           </FormGrid>
           <FormGrid>
@@ -5931,20 +5932,20 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           <FormGrid>
             <Field label={S.fAssetName} required><input className="input" value={astForm.nama} onChange={(e) => setAstForm({ ...astForm, nama: e.target.value })} placeholder={S.assetNamePh} /></Field>
             <Field label={S.fAssetGroup}>
-              <select className="input" value={astForm.kelompok} onChange={(e) => setAstForm({ ...astForm, kelompok: e.target.value })}>
+              <Select className="input" value={astForm.kelompok} onChange={(e) => setAstForm({ ...astForm, kelompok: e.target.value })}>
                 <option value="BP">BP - Bangunan Permanen (5%)</option>
                 <option value="1">1 - Kelompok 1 (25%)</option>
                 <option value="2">2 - Kelompok 2 (12,5%)</option>
                 <option value="3">3 - Kelompok 3 (6,25%)</option>
-              </select>
+              </Select>
             </Field>
             <Field label={S.fAssetMonth} hint={S.assetMonthHint}><input className="input" value={astForm.bulan} onChange={(e) => setAstForm({ ...astForm, bulan: e.target.value })} /></Field>
             <Field label={S.fAssetYear}><input className="input font-mono" value={astForm.tahun} onChange={(e) => setAstForm({ ...astForm, tahun: e.target.value })} placeholder="2026" /></Field>
             <Field label={S.fAssetValue}><MoneyInput className="input" value={astForm.nilai} onChange={(v) => setAstForm({ ...astForm, nilai: v })} /></Field>
             <Field label={S.colMetode}>
-              <select className="input" value={astForm.metode} onChange={(e) => setAstForm({ ...astForm, metode: e.target.value })}>
+              <Select className="input" value={astForm.metode} onChange={(e) => setAstForm({ ...astForm, metode: e.target.value })}>
                 <option>GL</option>
-              </select>
+              </Select>
             </Field>
           </FormGrid>
         </div>

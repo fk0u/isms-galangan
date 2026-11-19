@@ -7,6 +7,7 @@ import { kasKodeOf, postCashJournal } from "../services/autoJournal";
 import { applyKasbonPotongan, normKasbonList } from "../utils/kasbon";
 import { n_dry } from "../i18n/n_dry";
 import { useT } from "../i18n/LanguageContext";
+import { Select } from "./inputs/Select";
 
 /* #281: pembayaran gaji hanya oleh Keuangan. Peran yang boleh membayar
    harus sama dengan guard server (crud.ts, PATCH payroll status Dibayar). */
@@ -91,11 +92,11 @@ export function PayrollPayModal({ target, onClose }: { target: StoreItem | null;
         <FormGrid>
           <Field label={S.lblPayDate} required><input type="date" className="input" value={proof.date} onChange={(e) => setProof({ ...proof, date: e.target.value })} /></Field>
           <Field label={S.lblMethod}>
-            <select className="input" value={proof.method} onChange={(e) => setProof({ ...proof, method: e.target.value })}>
+            <Select className="input" value={proof.method} onChange={(e) => setProof({ ...proof, method: e.target.value })}>
               <option>Transfer</option>
               <option>Tunai</option>
               <option>Giro</option>
-            </select>
+            </Select>
           </Field>
         </FormGrid>
         <Field label={S.lblRefNo} required><input className="input" value={proof.ref} onChange={(e) => setProof({ ...proof, ref: e.target.value })} placeholder={S.phRefNo} /></Field>
