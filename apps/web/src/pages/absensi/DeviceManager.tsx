@@ -28,7 +28,8 @@ interface Command { id: string; cmdCode: string; param: unknown; status: string;
 const ONLINE_MS = 2 * 60_000;
 const STATUS_TONE: Record<string, "gray" | "blue" | "green" | "red" | "amber"> = { queued: "gray", sent: "blue", done: "green", error: "red", timeout: "amber", cancelled: "gray" };
 
-export default function DeviceManager() {
+/** mode "devices" = tab Detail Mesin, "users" = tab User Settings (pencocokan karyawan ↔ ID mesin). */
+export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
   const { locale } = useT();
   const E = n_emp[locale];
   const { resyncCollections } = useStore();
@@ -122,6 +123,7 @@ export default function DeviceManager() {
 
   return (
     <div className="space-y-5">
+      {mode === "devices" && <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {data.devices.map((d) => {
           const online = d.lastSeen !== null && Date.now() - Date.parse(d.lastSeen) < ONLINE_MS;
@@ -172,8 +174,9 @@ export default function DeviceManager() {
           <DevicePanel deviceId={d.deviceId} onAction={(body, msg) => runAction(d.deviceId, body, msg)} />
         </section>
       ))}
+      </>}
 
-      <div>
+      {mode === "users" && <div>
         <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
           <div>
             <h3 className="text-[15px] font-semibold text-navy-900">{E.devUsersTitle}</h3>
@@ -251,7 +254,7 @@ export default function DeviceManager() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
 
       {consoleDev && <CommandConsole deviceId={consoleDev} onClose={() => setConsoleDev(null)} />}
 

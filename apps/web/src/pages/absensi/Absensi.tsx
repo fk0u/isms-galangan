@@ -86,7 +86,9 @@ import MonthlyRecap from "./MonthlyRecap";
 import DeviceImport from "./DeviceImport";
 import DeviceManager from "./DeviceManager";
 import ManualEntryModal from "./ManualEntryModal";
-import DeviceInsights from "./DeviceDaily";
+import { DailySummary } from "./DeviceDaily";
+import DeviceLogs from "./DeviceLogs";
+import YearlyRecap from "./YearlyRecap";
 import { hasPermission, useAuth } from "../../auth/auth";
 import { isBackendConfigured } from "../../services/http";
 import { n_emp } from "../../i18n/n_emp";
@@ -97,7 +99,7 @@ export default function Absensi() {
   const { locale } = useT();
   const S = n_misc[locale];
   // F3-L-07: halaman langsung membuka rekap bulanan.
-  const [tab, setTab] = useState("Bulanan");
+  const [tab, setTab] = useState("Rekap");
   /* Tab "Mesin" (ADR-0025): sama dengan izin pendaftaran alat - tulis absensi
      dan karyawan, dan hanya bila tersambung server (data mesin ada di server). */
   const { user } = useAuth();
@@ -484,9 +486,10 @@ export default function Absensi() {
         <DeviceImport />
         {/* Tab "Catat" (tabel seluruh karyawan) digantikan tombol + modal per
             karyawan di tab Rekap (permintaan 19 Nov). */}
-        <Tabs tabs={canManageDevices ? ["Bulanan", "Rekap", "Mesin", "LogMesin"] : ["Bulanan", "Rekap"]} active={tab} onChange={setTab} labels={{ Bulanan: n_emp[locale].tabRecap, Catat: S.tabRecord, Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices, LogMesin: n_emp[locale].tabDeviceLogs }} />
+        {/* Struktur tab (permintaan 19 Nov): Rekap (tahunan/bulanan/harian dalam
+            satu tab), Log Absen Mesin, Detail Mesin, User Settings. */}
+        <Tabs tabs={canManageDevices ? ["Rekap", "LogMesin", "Mesin", "Users"] : ["Rekap"]} active={tab} onChange={setTab} labels={{ Rekap: S.tabRecap, Mesin: n_emp[locale].tabDevices, LogMesin: n_emp[locale].tabDeviceLogs, Users: n_emp[locale].tabUserSettings }} />
         <div className="p-4">
-          {tab === "Bulanan" && <MonthlyRecap />}
           {tab === "Catat" && (
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -605,6 +608,15 @@ export default function Absensi() {
           )}
 
           {tab === "Rekap" && (
+            <div className="space-y-8">
+              <section aria-labelledby="rk-year">
+                <h3 id="rk-year" className="mb-3 text-base font-semibold text-navy-900">1. {n_emp[locale].secYear}</h3>
+                <YearlyRecap />
+              </section>
+              <section aria-labelledby="rk-month" className="border-t border-steel-100 pt-6">
+                <h3 id="rk-month" className="mb-3 text-base font-semibold text-navy-900">2. {n_emp[locale].secMonth}</h3>
+                <MonthlyRecap />
+              </section>
             <div>
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -807,9 +819,17 @@ export default function Absensi() {
                 </div>
               </Card>
             </div>
+              {canManageDevices && (
+                <section aria-labelledby="rk-day" className="border-t border-steel-100 pt-6">
+                  <h3 id="rk-day" className="mb-3 text-base font-semibold text-navy-900">3. {n_emp[locale].secDay}</h3>
+                  <DailySummary />
+                </section>
+              )}
+            </div>
           )}
-          {tab === "Mesin" && canManageDevices && <DeviceManager />}
-          {tab === "LogMesin" && canManageDevices && <DeviceInsights />}
+          {tab === "Mesin" && canManageDevices && <DeviceManager mode="devices" />}
+          {tab === "Users" && canManageDevices && <DeviceManager mode="users" />}
+          {tab === "LogMesin" && canManageDevices && <DeviceLogs />}
         </div>
       </div>
 
