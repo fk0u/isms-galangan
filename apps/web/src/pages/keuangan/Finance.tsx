@@ -87,6 +87,7 @@ import {
 } from "../../data/financeExcel";
 import { CoaTab } from "./tabs/CoaTab";
 import { Select } from "../../components/inputs/Select";
+import { SearchSelect } from "../../components/SearchSelect";
 
 /* Filter historikal Hari/Bulan/Tahun untuk Kas & Bank, Buku Besar, Neraca, Laba Rugi.
    Satu struktur state per tab: { mode, hari (YYYY-MM-DD), bulan (YYYY-MM), tahun (YYYY) }.
@@ -948,6 +949,8 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     [data.coa]
   );
   const coaList = useMemo(() => COA(coaRows), [coaRows]);
+  /* Pilihan akun untuk jurnal & mutasi: bisa diketik (kode/nama), bukan scroll saja (permintaan CEO 20 Nov). */
+  const coaPickOpts = useMemo(() => coaRows.filter((c) => String(c.dk) !== "-").map((c) => ({ value: String(c.kode), label: `${String(c.kode)} · ${String(c.nama)}` })), [coaRows]);
   const coaKode = useMemo(() => new Set(coaRows.map((c) => String(c.kode))), [coaRows]);
   const manJournals = useMemo(() => data.journals ?? [], [data.journals]);
   const assetRows = useMemo(() => data.assets ?? [], [data.assets]);
@@ -5817,7 +5820,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         </div>
       </Modal>
 
-      <Modal open={showJu} onClose={() => setShowJu(false)} title={S.juNewTitle} subtitle={S.juNewSub}
+      <Modal open={showJu} onClose={() => setShowJu(false)} title={S.juNewTitle} subtitle={S.juNewSub} extraWide
         footer={<><button className="btn-secondary" onClick={() => setShowJu(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveJu}>{S.juSave}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
@@ -5854,18 +5857,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 <div key={idx} className="grid grid-cols-12 items-end gap-2 rounded-xl bg-surface p-2">
                   <div className="col-span-12 sm:col-span-4">
                     <Field label={S.dbLine.replace("{n}", String(idx + 1))} required>
-                      <Select className="input font-mono" value={l.db} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, db: e.target.value } : x)))}>
-                        <option value="">{S.selectAccount}</option>
-                        {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-                      </Select>
+                      <SearchSelect value={l.db} onChange={(v) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, db: v } : x)))} options={coaPickOpts} placeholder={S.selectAccount} ariaLabel={S.dbLine.replace("{n}", String(idx + 1))} />
                     </Field>
                   </div>
                   <div className="col-span-12 sm:col-span-4">
                     <Field label={S.krLine.replace("{n}", String(idx + 1))} required>
-                      <Select className="input font-mono" value={l.kr} onChange={(e) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, kr: e.target.value } : x)))}>
-                        <option value="">{S.selectAccount}</option>
-                        {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-                      </Select>
+                      <SearchSelect value={l.kr} onChange={(v) => setJuLines((ls) => ls.map((x, i) => (i === idx ? { ...x, kr: v } : x)))} options={coaPickOpts} placeholder={S.selectAccount} ariaLabel={S.krLine.replace("{n}", String(idx + 1))} />
                     </Field>
                   </div>
                   <div className="col-span-10 sm:col-span-3">
@@ -5881,15 +5878,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         </div>
       </Modal>
 
-      <Modal open={showMut} onClose={() => setShowMut(false)} title={S.mutTitle} subtitle={S.mutSub}
+      <Modal open={showMut} onClose={() => setShowMut(false)} title={S.mutTitle} subtitle={S.mutSub} wide
         footer={<><button className="btn-secondary" onClick={() => setShowMut(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveMut}>{S.saveBtn}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
             <Field label={S.colTanggal} required><input type="date" required className="input" value={mutForm.date} onChange={(e) => setMutForm({ ...mutForm, date: e.target.value })} /></Field>
             <Field label={S.colRekening} required>
-              <Select className="input font-mono" value={mutForm.rekening} onChange={(e) => setMutForm({ ...mutForm, rekening: e.target.value })}>
-                {KAS_REKENING.map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-              </Select>
+              <SearchSelect value={mutForm.rekening} onChange={(v) => setMutForm({ ...mutForm, rekening: v })} options={KAS_REKENING.map((c) => ({ value: String(c.kode), label: `${String(c.kode)} · ${String(c.nama)}` }))} placeholder={S.selectAccount} ariaLabel={S.colRekening} />
             </Field>
             <Field label={S.fArah}>
               <Select className="input" value={mutForm.arah} onChange={(e) => setMutForm({ ...mutForm, arah: e.target.value })}>
@@ -5898,10 +5893,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               </Select>
             </Field>
             <Field label={S.fLawan} required>
-              <Select className="input font-mono" value={mutForm.lawan} onChange={(e) => setMutForm({ ...mutForm, lawan: e.target.value })}>
-                <option value="">{S.selectAccount}</option>
-                {coaRows.filter((c) => String(c.dk) !== "-").map((c) => <option key={String(c.id)} value={String(c.kode)}>{String(c.kode)} · {String(c.nama)}</option>)}
-              </Select>
+              <SearchSelect value={mutForm.lawan} onChange={(v) => setMutForm({ ...mutForm, lawan: v })} options={coaPickOpts} placeholder={S.selectAccount} ariaLabel={S.fLawan} />
             </Field>
           </FormGrid>
           <FormGrid>
