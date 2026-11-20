@@ -287,6 +287,16 @@ async function main(): Promise<void> {
     assert("jam kerja khusus karyawan menimpa jam umum (masuk 07:58 → tidak telat)", d2?.lateMin === 0 && d2.hours.start === "08:00", JSON.stringify(d2));
     await app.inject({ method: "PUT", url: "/api/attendance/work-hours", headers: hr, payload: { start: "08:00", end: "17:00" } });
 
+    /* --- daftarkan semua: ID tidak boleh bentrok --- */
+    const pa = await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/push-all`, headers: hr });
+    const paRes = (pa.json() as { data: { queued: number } }).data;
+    const chk = (await q<{ meta: string }>("SELECT meta FROM attendance_device_commands WHERE device_id = ? AND status = 'queued'", [dev]))
+      .map((r) => JSON.parse(r.meta) as { action?: string; userId?: string }).filter((m) => m.action === "push_check").map((m) => m.userId);
+    assert("daftarkan semua → tiap karyawan dapat ID mesin berbeda", pa.statusCode === 201 && paRes.queued > 0 && new Set(chk).size === chk.length, JSON.stringify({ paRes, chk }));
+    const pa2 = (((await app.inject({ method: "POST", url: `/api/attendance/devices/${dev}/push-all`, headers: hr })).json()) as { data: { queued: number } }).data;
+    assert("daftarkan semua diulang saat masih antre → tidak dobel", pa2.queued === 0, JSON.stringify(pa2));
+    await exec("DELETE FROM attendance_device_commands WHERE device_id = ? AND status = 'queued'", [dev]);
+
     assert("rute JSON lain tidak terpengaruh parser biner", (await app.inject({ method: "GET", url: "/api/version" })).statusCode === 200);
   } finally {
     const mine = (await q<{ id: string; data: string }>("SELECT id, data FROM attendance", [])).filter((r) => r.data.includes(empId));

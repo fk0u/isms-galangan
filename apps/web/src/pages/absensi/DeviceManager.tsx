@@ -48,6 +48,7 @@ export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
   const [pushEmp, setPushEmp] = useState("");
   const [pushId, setPushId] = useState("");
   const [pushIdErr, setPushIdErr] = useState<string | null>(null);
+  const [pushAllOpen, setPushAllOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     try {
@@ -121,6 +122,16 @@ export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
     if (done) { setPushDev(null); setPushEmp(""); setPushId(""); }
   };
 
+  const pushAll = async (): Promise<void> => {
+    const dev = data?.devices[0]?.deviceId;
+    if (!dev) return;
+    try {
+      const r = await apiFetch<{ queued: number; skipped: number }>(`/api/attendance/devices/${encodeURIComponent(dev)}/push-all`, { method: "POST" });
+      toast(E.devPushAllDone.replace("{n}", String(r.queued)), "success");
+      await load();
+    } catch (e) { toast(e instanceof Error ? e.message : E.ingFail, "info"); }
+  };
+
   if (loading && !data) return <p className="py-10 text-center text-sm text-steel-400">{E.devLoading}</p>;
   if (!data || data.devices.length === 0) {
     return <EmptyState icon={<Cpu className="h-6 w-6" />} title={E.devNone} subtitle={E.devNoneHint} />;
@@ -129,6 +140,7 @@ export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
   // ID mesin yang belum dipegang karyawan mana pun = pilihan di kolom kanan.
   const freeIds = data.users.filter((u) => !u.employee);
   const idOptions = freeIds.map((u) => ({ value: u.userId, label: `ID ${u.userId}${u.userName ? ` · ${u.userName}` : ""}`, subLabel: u.pending > 0 ? E.devPending.replace("{n}", String(u.pending)) : undefined }));
+  const unregistered = data.employees.filter((e) => !e.devicePin && !data.users.some((u) => u.employee?.id === e.id)).length;
   const needle = empQ.trim().toLowerCase();
   const empRows = data.employees
     .map((emp) => ({ emp, user: data.users.find((u) => u.employee?.id === emp.id) }))
@@ -200,6 +212,7 @@ export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
           <div className="flex flex-wrap items-center gap-2">
             {unlinked > 0 && <Badge tone="amber">{E.devUnlinkedCount.replace("{n}", String(unlinked))}</Badge>}
             <AsyncButton className="btn-secondary text-xs" onAction={load}><RefreshCw className="h-3.5 w-3.5" /> {E.devRefresh}</AsyncButton>
+            <button type="button" className="btn-secondary text-xs" disabled={unregistered === 0} onClick={() => setPushAllOpen(true)}><Users className="h-3.5 w-3.5" /> {E.devPushAllBtn.replace("{n}", String(unregistered))}</button>
             <button type="button" className="btn-primary text-xs" onClick={() => openPush()}><UserPlus className="h-3.5 w-3.5" /> {E.devBtnPush}</button>
           </div>
         </div>
@@ -285,6 +298,8 @@ export default function DeviceManager({ mode }: { mode: "devices" | "users" }) {
         confirmLabel={E.devRemoveBtn} danger onCancel={() => setRemoveUser(null)}
         onConfirm={async () => { if (removeUser) await runAction(removeUser.deviceId, { action: "remove_user", userId: removeUser.userId }, E.devActQueued); setRemoveUser(null); }} />
 
+      <ConfirmModal open={pushAllOpen} title={E.devPushAllTitle} desc={E.devPushAllDesc.replace("{n}", String(unregistered))} confirmLabel={E.devPushAllConfirm}
+        onCancel={() => setPushAllOpen(false)} onConfirm={async () => { await pushAll(); setPushAllOpen(false); }} />
       <Modal open={pushDev !== null} onClose={() => setPushDev(null)} title={E.devPushTitle} subtitle={E.devPushSub}
         footer={<>
           <button type="button" className="btn-secondary" onClick={() => setPushDev(null)}>{E.ingCancel}</button>

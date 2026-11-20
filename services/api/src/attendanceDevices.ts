@@ -427,11 +427,26 @@ export async function importDeviceLogs(deviceId: string, entries: DeviceLogEntry
   return { total: entries.length, added, accepted, unknown };
 }
 
-/** ID berikutnya untuk karyawan baru di mesin: angka terbesar yang dikenal + 1. */
+/** ID yang sedang dipesan pendaftaran yang belum selesai (cek ID / SET_USER_INFO
+ *  masih antre atau terkirim). Tanpa ini, pendaftaran massal memberi ID yang
+ *  sama ke banyak karyawan dan SET_USER_INFO saling menimpa. */
+async function reservedDeviceUserIds(deviceId: string): Promise<string[]> {
+  const rows = await q<{ meta: string | null }>("SELECT meta FROM attendance_device_commands WHERE device_id = ? AND status IN ('queued', 'sent')", [deviceId]);
+  const out: string[] = [];
+  for (const r of rows) {
+    try {
+      const m = JSON.parse(r.meta ?? "null") as { action?: string; userId?: string } | null;
+      if (m && (m.action === "push_check" || m.action === "push") && m.userId) out.push(m.userId);
+    } catch { /* meta rusak diabaikan */ }
+  }
+  return out;
+}
+
+/** ID berikutnya untuk karyawan baru di mesin: angka terbesar yang dikenal/dipesan + 1. */
 export async function nextDeviceUserId(deviceId: string): Promise<string> {
   const users = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [deviceId]);
   const pins = (await loadEmployees()).map((e) => e.devicePin);
-  const nums = [...users.map((u) => u.user_id), ...pins].filter((v) => /^\d{1,9}$/.test(v)).map(Number);
+  const nums = [...users.map((u) => u.user_id), ...pins, ...await reservedDeviceUserIds(deviceId)].filter((v) => /^\d{1,9}$/.test(v)).map(Number);
   return String((nums.length ? Math.max(...nums) : 0) + 1);
 }
 
@@ -461,7 +476,7 @@ export async function enqueueHrAction(deviceId: string, a: HrAction, by: string)
       if (emp.devicePin) return { error: `Karyawan sudah terhubung ke ID mesin ${emp.devicePin}`, status: 409 };
       const userId = a.userId?.trim() || await nextDeviceUserId(deviceId);
       const known = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ? AND user_id = ?", [deviceId, userId]);
-      if (known.length > 0) return { error: `ID ${userId} sudah dipakai di mesin`, status: 409 };
+      if (known.length > 0 || (await reservedDeviceUserIds(deviceId)).includes(userId)) return { error: `ID ${userId} sudah dipakai di mesin`, status: 409 };
       // Nama di layar mesin terbatas; 24 karakter cukup untuk nama + inisial.
       const userName = emp.name.trim().slice(0, 24);
       /* Cek dulu ID kosong di mesin (GET_USER_INFO). SET_USER_INFO ke ID yang
@@ -469,6 +484,23 @@ export async function enqueueHrAction(deviceId: string, a: HrAction, by: string)
       return { command: await enqueueCommand(deviceId, "GET_USER_INFO", { user_id: userId }, by, { action: "push_check", userId, employeeId: emp.id, userName, by }) };
     }
   }
+}
+
+/** Daftarkan semua karyawan aktif yang belum punya ID mesin dan belum sedang
+ *  didaftarkan. ID dibagi berurutan (nextDeviceUserId melihat pesanan antre). */
+export async function enqueuePushAll(deviceId: string, by: string): Promise<{ queued: number; skipped: number }> {
+  // Lewati juga karyawan yang sudah terhubung lewat NIK = ID mesin.
+  const ids = new Set((await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [deviceId])).map((u) => u.user_id));
+  const emps = (await loadEmployees()).filter((e) => !e.devicePin && (e.status || "Aktif") === "Aktif" && !(e.nik && ids.has(e.nik)));
+  const pending = await q<{ meta: string | null }>("SELECT meta FROM attendance_device_commands WHERE device_id = ? AND status IN ('queued', 'sent')", [deviceId]);
+  const busy = new Set(pending.map((r) => { try { return (JSON.parse(r.meta ?? "null") as { employeeId?: string } | null)?.employeeId ?? ""; } catch { return ""; } }));
+  let queued = 0; let skipped = 0;
+  for (const e of emps) {
+    if (busy.has(e.id)) { skipped += 1; continue; }
+    const r = await enqueueHrAction(deviceId, { action: "push_employee", employeeId: e.id }, by);
+    if ("command" in r) queued += 1; else skipped += 1;
+  }
+  return { queued, skipped };
 }
 
 export async function listCommands(deviceId: string, limit = 30): Promise<DeviceCommand[]> {
