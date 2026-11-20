@@ -503,6 +503,24 @@ export async function enqueuePushAll(deviceId: string, by: string): Promise<{ qu
   return { queued, skipped };
 }
 
+/** Kosongkan semua user di mesin (permintaan CTO 20 Nov: hapus lalu daftar ulang).
+ *  DELETE_USER per ID; saat selesai, hook "remove" melepas devicePin karyawan.
+ *  ID mesin karyawan yang tidak lagi ada di mesin dilepas langsung. */
+export async function enqueueResetUsers(deviceId: string, by: string): Promise<{ queued: number; unlinked: number }> {
+  const users = await q<{ user_id: string }>("SELECT user_id FROM attendance_device_users WHERE device_id = ?", [deviceId]);
+  const onMachine = new Set(users.map((u) => u.user_id));
+  let queued = 0;
+  for (const u of users) {
+    await enqueueCommand(deviceId, "DELETE_USER", { user_id: u.user_id }, by, { action: "remove", userId: u.user_id, by });
+    queued += 1;
+  }
+  let unlinked = 0;
+  for (const e of await loadEmployees()) {
+    if (e.devicePin && !onMachine.has(e.devicePin)) { await linkDevicePin(e.devicePin, null); unlinked += 1; }
+  }
+  return { queued, unlinked };
+}
+
 export async function listCommands(deviceId: string, limit = 30): Promise<DeviceCommand[]> {
   const cutoff = new Date(Date.now() - SENT_TIMEOUT_MS).toISOString();
   await exec("UPDATE attendance_device_commands SET status = 'timeout' WHERE device_id = ? AND status = 'sent' AND sent_at < ?", [deviceId, cutoff]);

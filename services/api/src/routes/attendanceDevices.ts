@@ -17,7 +17,7 @@ import { can, normalizeRole } from "../policy.js";
 import { analyzeDay, foldOvernight, type DayAnalysis } from "../attendanceAnalysis.js";
 import { tapsOf } from "./attendanceIngest.js";
 import {
-  cancelCommand, connectionStats, hoursFor, loadWorkHours, saveWorkHours, deviceBeats, enqueueCommand, enqueueHrAction, enqueuePushAll, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
+  cancelCommand, connectionStats, hoursFor, loadWorkHours, saveWorkHours, deviceBeats, enqueueCommand, enqueueHrAction, enqueuePushAll, enqueueResetUsers, linkDevicePin, listCommands, loadEmployees, nameScore, pendingPunches, reprocessPending,
   type HrAction,
 } from "../attendanceDevices.js";
 
@@ -371,6 +371,15 @@ export function registerAttendanceDeviceRoutes(app: FastifyInstance): void {
     if (!(await registeredDevices()).includes(id)) return reply.status(404).send(fail("Alat belum terdaftar", "NOT_FOUND"));
     const res = await enqueuePushAll(id, requestActor(req));
     await writeAudit({ actor: requestActor(req), action: "attendance_device_push_all", table: "attendance", rowId: "-", diff: { deviceId: id, ...res }, ip: requestIp(req) });
+    return reply.status(201).send(ok(res));
+  });
+
+  app.post("/api/attendance/devices/:id/reset-users", { preHandler: [requireAuth] }, async (req, reply) => {
+    if (!isHr(req.user?.role)) return reply.status(403).send(fail("Hanya HR yang boleh mengelola mesin absensi", "FORBIDDEN"));
+    const { id } = req.params as { id: string };
+    if (!(await registeredDevices()).includes(id)) return reply.status(404).send(fail("Alat belum terdaftar", "NOT_FOUND"));
+    const res = await enqueueResetUsers(id, requestActor(req));
+    await writeAudit({ actor: requestActor(req), action: "attendance_device_reset_users", table: "attendance", rowId: "-", diff: { deviceId: id, ...res }, ip: requestIp(req) });
     return reply.status(201).send(ok(res));
   });
 
