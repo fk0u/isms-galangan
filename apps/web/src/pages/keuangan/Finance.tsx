@@ -1446,6 +1446,25 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
       } else if (which === "bb") {
         const sheets = makeSheets(bbAsOf, fmtPeriodeLaporan(bbHist, bbAsOf));
         const target = sheets.filter((s) => s.name === "Buku Besar");
+        if (!bbAkun && bbMutasiShown.length > 0) {
+          // Semua akun: satu sheet, rincian dikelompokkan per akun dengan saldo awal & total.
+          target.push({
+            name: "Mutasi Semua Akun",
+            header: { company: "PT Syukur Bersaudara", title: "Buku Besar Pembantu - Semua Akun", period: `Per ${bbAsOf}` },
+            rows: bbMutasiShown.flatMap(({ kode, nama, mut }) => {
+              const td = mut.rows.reduce((a, r) => a + r.d, 0);
+              const tk = mut.rows.reduce((a, r) => a + r.k, 0);
+              return [
+                styledRow("section", [`${kode} · ${nama}`, "", "", "", "", ""]),
+                styledRow("head", ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"]),
+                ["", "", "Saldo Awal", "", "", mut.awal],
+                ...mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
+                styledRow("section", ["", "", "Total", td, tk, mut.awal + td - tk]),
+                ["", "", "", "", "", ""],
+              ];
+            }),
+          });
+        }
         if (bbAkun) {
           target.push({
             name: `Mutasi ${bbAkun}`,
@@ -2544,23 +2563,36 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
      angka yang tampil bukan saldo. */
   /* Mutasi satu akun dalam rentang filter + saldo berjalan (saldo awal =
      mutasi sebelum rentang). Saldo dihitung D - K. */
-  const bbMutasi = useMemo(() => {
-    if (!bbAkun) return { awal: 0, rows: [] as Array<{ j: StoreItem; d: number; k: number; saldo: number }> };
-    const touch = manJournals
-      .filter((j) => j.status !== "Void" && (String(j.db ?? "") === bbAkun || String(j.kr ?? "") === bbAkun))
-      .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
-    let saldo = 0;
-    let awal = 0;
-    const rows: Array<{ j: StoreItem; d: number; k: number; saldo: number }> = [];
-    for (const j of touch) {
+  /* Mutasi SEMUA akun sekaligus (permintaan 21 Nov: "pilih semua akun" juga
+     menampilkan rincian per akun, bukan hanya akumulasi). Satu lintasan jurnal,
+     dikelompokkan per kode akun. */
+  type BbMut = { awal: number; rows: Array<{ j: StoreItem; d: number; k: number; saldo: number }> };
+  const bbMutasiAll = useMemo(() => {
+    const m = new Map<string, BbMut & { saldo: number }>();
+    const sorted = manJournals.filter((j) => j.status !== "Void").sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
+    for (const j of sorted) {
       const tgl = String(j.date ?? "").slice(0, 10);
-      const d = String(j.db ?? "") === bbAkun ? num(j.amount) : 0;
-      const k = String(j.kr ?? "") === bbAkun ? num(j.amount) : 0;
-      if (matchHist(tgl, bbHist)) { saldo += d - k; rows.push({ j, d, k, saldo }); }
-      else if (rows.length === 0 && tgl <= bbAsOf) { awal += d - k; saldo = awal; }
+      const amt = num(j.amount);
+      for (const [kode, d, k] of [[String(j.db ?? ""), amt, 0], [String(j.kr ?? ""), 0, amt]] as const) {
+        if (!kode) continue;
+        const cur = m.get(kode) ?? { awal: 0, rows: [], saldo: 0 };
+        if (matchHist(tgl, bbHist)) { cur.saldo += d - k; cur.rows.push({ j, d, k, saldo: cur.saldo }); }
+        else if (cur.rows.length === 0 && tgl <= bbAsOf) { cur.awal += d - k; cur.saldo = cur.awal; }
+        m.set(kode, cur);
+      }
     }
-    return { awal, rows };
-  }, [bbAkun, manJournals, bbHist, bbAsOf]);
+    return m;
+  }, [manJournals, bbHist, bbAsOf]);
+  const bbMutasi: BbMut = (bbAkun ? bbMutasiAll.get(bbAkun) : undefined) ?? { awal: 0, rows: [] };
+  /** Akun yang ditampilkan rinciannya: satu akun terpilih, atau semua akun yang punya mutasi/saldo awal. */
+  const bbMutasiShown = useMemo(() => {
+    const accts = coaRows.filter((c) => String(c.dk) !== "-")
+      .filter((c) => (bbAkun ? String(c.kode) === bbAkun : true))
+      .filter((c) => bbAkun || rowMatches(c as unknown as Record<string, unknown>, bbQ, ["kode", "nama"]));
+    return accts.map((c) => ({ kode: String(c.kode), nama: String(c.nama), mut: bbMutasiAll.get(String(c.kode)) ?? { awal: 0, rows: [] } }))
+      .filter((a) => bbAkun || a.mut.rows.length > 0 || Math.abs(a.mut.awal) >= 1)
+      .sort((a, b) => a.kode.localeCompare(b.kode));
+  }, [coaRows, bbAkun, bbQ, bbMutasiAll]);
   const bbDAll = bbLive.reduce((s, r) => s + r.dAll, 0);
   const bbKAll = bbLive.reduce((s, r) => s + r.kAll, 0);
 
@@ -4032,33 +4064,48 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 </Select>
                 <SearchBox value={bbQ} onChange={setBbQ} className="w-full sm:max-w-xs" placeholder={S.bbSearchPh} ariaLabel={S.bbSearchPh} />
               </div>
-              {bbAkun && (
-                <Card className="p-4">
-                  <CardHeader title={S.bbMutasiTitle.replace("{a}", bbAkun)} subtitle={S.bbMutasiSub.replace("{a}", fmtRupiah(bbMutasi.awal))} />
+              {bbMutasiShown.map(({ kode, nama, mut }) => {
+                const td = mut.rows.reduce((a, r) => a + r.d, 0);
+                const tk = mut.rows.reduce((a, r) => a + r.k, 0);
+                return (
+                <Card key={kode} className="p-4">
+                  <CardHeader title={`${S.bbMutasiTitle.replace("{a}", kode)} · ${nama}`} subtitle={S.bbMutasiSub.replace("{a}", fmtRupiah(mut.awal))} />
                   <div className="overflow-x-auto px-1 pb-3">
                     <table className="w-full">
-                      <thead className="bg-surface sticky top-0 z-10">
+                      <thead className="bg-surface">
                         <tr><th className="th">{S.colTanggal}</th><th className="th">{S.colDokumen}</th><th className="th">{S.colUraian}</th><th className="th">{S.colDebit}</th><th className="th">{S.colKredit}</th><th className="th">{S.bbSaldoCol}</th></tr>
                       </thead>
                       <tbody className="divide-y divide-steel-100">
-                        {bbMutasi.rows.map((r) => (
+                        {mut.rows.map((r) => (
                           <tr key={String(r.j.id)} className="hover:bg-surface">
                             <td className="td font-mono text-xs text-steel-600">{fmtTanggal(String(r.j.date ?? ""))}</td>
                             <td className="td font-mono text-xs">{String(r.j.dokumen ?? "-")}</td>
-                            <td className="td max-w-56 truncate text-xs text-steel-600" title={String(r.j.uraian ?? "")}>{String(r.j.uraian ?? "")}</td>
+                            <td className="td max-w-72 truncate text-xs text-steel-600" title={String(r.j.uraian ?? "")}>{String(r.j.uraian ?? "")}</td>
                             <td className="td text-xs">{r.d ? fmtRupiah(r.d) : "-"}</td>
                             <td className="td text-xs">{r.k ? fmtRupiah(r.k) : "-"}</td>
                             <td className="td text-xs font-semibold">{fmtRupiah(r.saldo)}</td>
                           </tr>
                         ))}
-                        {bbMutasi.rows.length === 0 && (
+                        {mut.rows.length === 0 && (
                           <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.bbEmptyLive}</td></tr>
                         )}
                       </tbody>
+                      {mut.rows.length > 0 && (
+                        <tfoot className="bg-surface">
+                          <tr>
+                            <td className="td text-xs font-semibold text-navy-900" colSpan={3}>{S.bbAcctTotal}</td>
+                            <td className="td text-xs font-semibold">{fmtRupiah(td)}</td>
+                            <td className="td text-xs font-semibold">{fmtRupiah(tk)}</td>
+                            <td className="td text-xs font-bold text-navy-900">{fmtRupiah(mut.awal + td - tk)}</td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </div>
                 </Card>
-              )}
+                );
+              })}
+              {!bbAkun && bbMutasiShown.length === 0 && <EmptyState title={S.bbEmptyLive} />}
               <p className="rounded-lg bg-ocean-50 px-3 py-2 text-xs text-ocean-700">
                 {S.bbLiveBadge.replace("{n}", String(bbLive.reduce((s, r) => s + r.n, 0))).replace("{d}", bbAsOf).replace("{s}", bbSnap ? S.bbSnapSuffix : S.bbLiveSuffix)}
               </p>
