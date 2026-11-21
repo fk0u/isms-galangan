@@ -1451,16 +1451,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           target.push({
             name: "Mutasi Semua Akun",
             header: { company: "PT Syukur Bersaudara", title: "Buku Besar Pembantu - Semua Akun", period: `Per ${bbAsOf}` },
-            rows: bbMutasiShown.flatMap(({ kode, nama, mut }) => {
+            rows: bbMutasiShown.flatMap(({ kode, nama, sg, mut }) => {
               const td = mut.rows.reduce((a, r) => a + r.d, 0);
               const tk = mut.rows.reduce((a, r) => a + r.k, 0);
               return [
-                styledRow("section", [`${kode} · ${nama}`, "", "", "", "", ""]),
-                styledRow("head", ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"]),
-                ["", "", "Saldo Awal", "", "", mut.awal],
-                ...mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
-                styledRow("section", ["", "", "Total", td, tk, mut.awal + td - tk]),
-                ["", "", "", "", "", ""],
+                styledRow("section", [`${kode} · ${nama}`, "", "", "", "", "", ""]),
+                ["", "", "", "Saldo Awal", "", "", mut.awal],
+                styledRow("head", ["Tanggal", "Tp", "No. Ref", "Keterangan", "Debet", "Kredit", "Saldo"]),
+                ...mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.sumber ?? "JU"), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
+                styledRow("section", ["", "", "", "Total", td, tk, ""]),
+                ["", "", "", "Mutasi", "", "", sg * (td - tk)],
+                styledRow("section", ["", "", "", "Saldo Akhir", "", "", mut.awal + sg * (td - tk)]),
+                ["", "", "", "", "", "", ""],
               ];
             }),
           });
@@ -1474,9 +1476,20 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
               period: `Per ${bbAsOf}`,
             },
             rows: [
-              styledRow("section", ["Saldo Awal", bbMutasi.awal, "", "", "", ""]),
-              styledRow("head", ["Tanggal", "Dokumen", "Uraian", "Debit", "Kredit", "Saldo"]),
-              ...bbMutasi.rows.map((r) => [String(r.j.date ?? ""), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
+              ...(() => {
+                // Sama dengan layar: saldo mengikuti saldo normal akun (D/K).
+                const one = bbMutasiShown[0] ?? { sg: 1, mut: bbMutasi };
+                const td = one.mut.rows.reduce((a, r) => a + r.d, 0);
+                const tk = one.mut.rows.reduce((a, r) => a + r.k, 0);
+                return [
+                  styledRow("section", ["", "", "", "Saldo Awal", "", "", one.mut.awal]),
+                  styledRow("head", ["Tanggal", "Tp", "No. Ref", "Keterangan", "Debet", "Kredit", "Saldo"]),
+                  ...one.mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.sumber ?? "JU"), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
+                  styledRow("section", ["", "", "", "Total", td, tk, ""]),
+                  ["", "", "", "Mutasi", "", "", one.sg * (td - tk)],
+                  styledRow("section", ["", "", "", "Saldo Akhir", "", "", one.mut.awal + one.sg * (td - tk)]),
+                ];
+              })(),
             ],
           });
         }
@@ -2589,7 +2602,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
     const accts = coaRows.filter((c) => String(c.dk) !== "-")
       .filter((c) => (bbAkun ? String(c.kode) === bbAkun : true))
       .filter((c) => bbAkun || rowMatches(c as unknown as Record<string, unknown>, bbQ, ["kode", "nama"]));
-    return accts.map((c) => ({ kode: String(c.kode), nama: String(c.nama), mut: bbMutasiAll.get(String(c.kode)) ?? { awal: 0, rows: [] } }))
+    return accts.map((c) => {
+      const raw = bbMutasiAll.get(String(c.kode)) ?? { awal: 0, rows: [] };
+      // Saldo mengikuti saldo normal akun seperti sheet BB klien: akun Kredit = awal + K - D.
+      const sg = String(c.dk).toUpperCase().startsWith("K") ? -1 : 1;
+      const mut: BbMut = sg === 1 ? raw : { awal: -raw.awal, rows: raw.rows.map((r) => ({ ...r, saldo: -r.saldo })) };
+      return { kode: String(c.kode), nama: String(c.nama), sg, mut };
+    })
       .filter((a) => bbAkun || a.mut.rows.length > 0 || Math.abs(a.mut.awal) >= 1)
       .sort((a, b) => a.kode.localeCompare(b.kode));
   }, [coaRows, bbAkun, bbQ, bbMutasiAll]);
@@ -4064,7 +4083,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 </Select>
                 <SearchBox value={bbQ} onChange={setBbQ} className="w-full sm:max-w-xs" placeholder={S.bbSearchPh} ariaLabel={S.bbSearchPh} />
               </div>
-              {bbMutasiShown.map(({ kode, nama, mut }) => {
+              {bbMutasiShown.map(({ kode, nama, sg, mut }) => {
                 const td = mut.rows.reduce((a, r) => a + r.d, 0);
                 const tk = mut.rows.reduce((a, r) => a + r.k, 0);
                 return (
@@ -4073,12 +4092,13 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                   <div className="overflow-x-auto px-1 pb-3">
                     <table className="w-full">
                       <thead className="bg-surface">
-                        <tr><th className="th">{S.colTanggal}</th><th className="th">{S.colDokumen}</th><th className="th">{S.colUraian}</th><th className="th">{S.colDebit}</th><th className="th">{S.colKredit}</th><th className="th">{S.bbSaldoCol}</th></tr>
+                        <tr><th className="th">{S.colTanggal}</th><th className="th">{S.bbTpCol}</th><th className="th">{S.colDokumen}</th><th className="th">{S.colUraian}</th><th className="th">{S.colDebit}</th><th className="th">{S.colKredit}</th><th className="th">{S.bbSaldoCol}</th></tr>
                       </thead>
                       <tbody className="divide-y divide-steel-100">
                         {mut.rows.map((r) => (
                           <tr key={String(r.j.id)} className="hover:bg-surface">
                             <td className="td font-mono text-xs text-steel-600">{fmtTanggal(String(r.j.date ?? ""))}</td>
+                            <td className="td text-xs text-steel-500">{String(r.j.sumber ?? "JU")}</td>
                             <td className="td font-mono text-xs">{String(r.j.dokumen ?? "-")}</td>
                             <td className="td max-w-72 truncate text-xs text-steel-600" title={String(r.j.uraian ?? "")}>{String(r.j.uraian ?? "")}</td>
                             <td className="td text-xs">{r.d ? fmtRupiah(r.d) : "-"}</td>
@@ -4087,19 +4107,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           </tr>
                         ))}
                         {mut.rows.length === 0 && (
-                          <tr><td className="td text-xs italic text-steel-400" colSpan={6}>{S.bbEmptyLive}</td></tr>
+                          <tr><td className="td text-xs italic text-steel-400" colSpan={7}>{S.bbEmptyLive}</td></tr>
                         )}
                       </tbody>
-                      {mut.rows.length > 0 && (
-                        <tfoot className="bg-surface">
-                          <tr>
-                            <td className="td text-xs font-semibold text-navy-900" colSpan={3}>{S.bbAcctTotal}</td>
-                            <td className="td text-xs font-semibold">{fmtRupiah(td)}</td>
-                            <td className="td text-xs font-semibold">{fmtRupiah(tk)}</td>
-                            <td className="td text-xs font-bold text-navy-900">{fmtRupiah(mut.awal + td - tk)}</td>
-                          </tr>
-                        </tfoot>
-                      )}
+                      {/* Penutup seperti "Buku Besar - Mutasi" klien: saldo awal, total, mutasi, saldo akhir. */}
+                      <tfoot className="bg-surface text-xs">
+                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootAwal}</td><td className="td" colSpan={2} /><td className="td font-semibold">{fmtRupiah(mut.awal)}</td></tr>
+                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootTotal}</td><td className="td font-semibold">{fmtRupiah(td)}</td><td className="td font-semibold">{fmtRupiah(tk)}</td><td className="td" /></tr>
+                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootMutasi}</td><td className="td" colSpan={2} /><td className="td font-semibold">{fmtRupiah(sg * (td - tk))}</td></tr>
+                        <tr><td className="td font-semibold text-navy-900" colSpan={4}>{S.bbFootAkhir}</td><td className="td" colSpan={2} /><td className="td font-bold text-navy-900">{fmtRupiah(mut.awal + sg * (td - tk))}</td></tr>
+                      </tfoot>
                     </table>
                   </div>
                 </Card>
