@@ -1450,18 +1450,18 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           // Semua akun: satu sheet, rincian dikelompokkan per akun dengan saldo awal & total.
           target.push({
             name: "Mutasi Semua Akun",
-            header: { company: "PT Syukur Bersaudara", title: "Buku Besar Pembantu - Semua Akun", period: `Per ${bbAsOf}` },
+            header: { company: "PT Syukur Bersaudara", title: "Buku Besar - Mutasi - Semua Akun", period: `Per ${bbAsOf}` },
             rows: bbMutasiShown.flatMap(({ kode, nama, sg, mut }) => {
               const td = mut.rows.reduce((a, r) => a + r.d, 0);
               const tk = mut.rows.reduce((a, r) => a + r.k, 0);
               return [
-                styledRow("section", [`${kode} · ${nama}`, "", "", "", "", "", ""]),
-                ["", "", "", "Saldo Awal", "", "", mut.awal],
+                // Susunan mengikuti "Buku Besar - Mutasi" (permintaan CTO 23 Nov): judul akun besar,
+                // rincian, lalu penutup Saldo Awal | Total dan Saldo Akhir | Mutasi.
+                styledRow("account", [`Buku Besar - Mutasi - ${kode} ${nama}`, "", "", "", "", "", ""]),
                 styledRow("head", ["Tanggal", "Tp", "No. Ref", "Keterangan", "Debet", "Kredit", "Saldo"]),
                 ...mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.sumber ?? "JU"), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
-                styledRow("section", ["", "", "", "Total", td, tk, ""]),
-                ["", "", "", "Mutasi", "", "", sg * (td - tk)],
-                styledRow("section", ["", "", "", "Saldo Akhir", "", "", mut.awal + sg * (td - tk)]),
+                styledRow("total", ["Saldo Awal :", "", mut.awal, "Total :", td, tk, ""]),
+                styledRow("total", ["Saldo Akhir :", "", mut.awal + sg * (td - tk), "Mutasi :", sg * (td - tk), "", ""]),
                 ["", "", "", "", "", "", ""],
               ];
             }),
@@ -1472,7 +1472,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
             name: `Mutasi ${bbAkun}`,
             header: {
               company: "PT Syukur Bersaudara",
-              title: `Buku Besar Pembantu - ${bbAkun} ${String(coaRows.find((c) => String(c.kode) === bbAkun)?.nama ?? "")}`,
+              title: `Buku Besar - Mutasi - ${bbAkun} ${String(coaRows.find((c) => String(c.kode) === bbAkun)?.nama ?? "")}`,
               period: `Per ${bbAsOf}`,
             },
             rows: [
@@ -1482,12 +1482,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 const td = one.mut.rows.reduce((a, r) => a + r.d, 0);
                 const tk = one.mut.rows.reduce((a, r) => a + r.k, 0);
                 return [
-                  styledRow("section", ["", "", "", "Saldo Awal", "", "", one.mut.awal]),
                   styledRow("head", ["Tanggal", "Tp", "No. Ref", "Keterangan", "Debet", "Kredit", "Saldo"]),
                   ...one.mut.rows.map((r) => [String(r.j.date ?? ""), String(r.j.sumber ?? "JU"), String(r.j.dokumen ?? "-"), String(r.j.uraian ?? ""), r.d, r.k, r.saldo]),
-                  styledRow("section", ["", "", "", "Total", td, tk, ""]),
-                  ["", "", "", "Mutasi", "", "", one.sg * (td - tk)],
-                  styledRow("section", ["", "", "", "Saldo Akhir", "", "", one.mut.awal + one.sg * (td - tk)]),
+                  styledRow("total", ["Saldo Awal :", "", one.mut.awal, "Total :", td, tk, ""]),
+                  styledRow("total", ["Saldo Akhir :", "", one.mut.awal + one.sg * (td - tk), "Mutasi :", one.sg * (td - tk), "", ""]),
                 ];
               })(),
             ],
@@ -4088,7 +4086,7 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                 const tk = mut.rows.reduce((a, r) => a + r.k, 0);
                 return (
                 <Card key={kode} className="p-4">
-                  <CardHeader title={`${S.bbMutasiTitle.replace("{a}", kode)} · ${nama}`} subtitle={S.bbMutasiSub.replace("{a}", fmtRupiah(mut.awal))} />
+                  <h3 className="mb-2 rounded-lg bg-navy-900 px-3 py-2 text-base font-bold text-white">{S.bbMutasiHead.replace("{a}", `${kode} ${nama}`)}</h3>
                   <div className="overflow-x-auto px-1 pb-3">
                     <table className="w-full">
                       <thead className="bg-surface">
@@ -4110,12 +4108,10 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           <tr><td className="td text-xs italic text-steel-400" colSpan={7}>{S.bbEmptyLive}</td></tr>
                         )}
                       </tbody>
-                      {/* Penutup seperti "Buku Besar - Mutasi" klien: saldo awal, total, mutasi, saldo akhir. */}
+                      {/* Penutup seperti "Buku Besar - Mutasi" klien: Saldo Awal | Total, Saldo Akhir | Mutasi. */}
                       <tfoot className="bg-surface text-xs">
-                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootAwal}</td><td className="td" colSpan={2} /><td className="td font-semibold">{fmtRupiah(mut.awal)}</td></tr>
-                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootTotal}</td><td className="td font-semibold">{fmtRupiah(td)}</td><td className="td font-semibold">{fmtRupiah(tk)}</td><td className="td" /></tr>
-                        <tr><td className="td text-steel-600" colSpan={4}>{S.bbFootMutasi}</td><td className="td" colSpan={2} /><td className="td font-semibold">{fmtRupiah(sg * (td - tk))}</td></tr>
-                        <tr><td className="td font-semibold text-navy-900" colSpan={4}>{S.bbFootAkhir}</td><td className="td" colSpan={2} /><td className="td font-bold text-navy-900">{fmtRupiah(mut.awal + sg * (td - tk))}</td></tr>
+                        <tr><td className="td font-semibold text-steel-600">{S.bbFootAwal} :</td><td className="td" /><td className="td font-semibold">{fmtRupiah(mut.awal)}</td><td className="td text-right font-semibold text-steel-600">{S.bbFootTotal} :</td><td className="td font-semibold">{fmtRupiah(td)}</td><td className="td font-semibold">{fmtRupiah(tk)}</td><td className="td" /></tr>
+                        <tr><td className="td font-semibold text-navy-900">{S.bbFootAkhir} :</td><td className="td" /><td className="td font-bold text-navy-900">{fmtRupiah(mut.awal + sg * (td - tk))}</td><td className="td text-right font-semibold text-steel-600">{S.bbFootMutasi} :</td><td className="td font-semibold">{fmtRupiah(sg * (td - tk))}</td><td className="td" colSpan={2} /></tr>
                       </tfoot>
                     </table>
                   </div>

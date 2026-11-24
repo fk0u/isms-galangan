@@ -101,7 +101,7 @@ export interface ExcelSheet {
 const TEMA = { brand: "#B91C1C", brandDark: "#7F1D1D", tint: "#FEF2F2", ink: "#09090B", line: "#E4E4E7", zebra: "#FAFAFA", muted: "#71717A", total: "#F4F4F5", white: "#FFFFFF" };
 
 /** Jenis baris untuk pewarnaan tema; dipasang builder lewat styledRow(). */
-export type RowKind = "head" | "section" | "total" | "grand" | "note" | "blank";
+export type RowKind = "head" | "section" | "account" | "total" | "grand" | "note" | "blank";
 type RowKinds = RowKind | Array<RowKind | undefined>;
 const ROW_KIND = new WeakMap<unknown[], RowKinds>();
 
@@ -135,6 +135,8 @@ function themedCell(raw: CellRaw, kind: RowKind | undefined, money: boolean | nu
   switch (kind) {
     /* Header tabel & judul bagian diperbesar (klien 6 Nov: header kecil sulit dibaca). */
     case "head": return { ...cell, fontWeight: "bold" as const, fontSize: HEAD_FONT, textColor: TEMA.white, backgroundColor: TEMA.brand, align: "center" as const, alignVertical: "center" as const, height: 30, ...border, topBorderColor: TEMA.brandDark, bottomBorderColor: TEMA.brandDark, leftBorderColor: TEMA.brandDark, rightBorderColor: TEMA.brandDark };
+    // Judul blok per akun (Buku Besar - Mutasi): lebih besar dari section agar batas akun jelas.
+    case "account": return { ...cell, fontWeight: "bold" as const, fontSize: 16, textColor: TEMA.white, backgroundColor: TEMA.brandDark, height: 28, alignVertical: "center" as const, ...border };
     case "section": return { ...cell, fontWeight: "bold" as const, fontSize: SECTION_FONT, textColor: TEMA.brandDark, backgroundColor: TEMA.tint, ...border };
     case "total": return { ...cell, fontWeight: "bold" as const, backgroundColor: TEMA.total, ...border, topBorderStyle: THIN, topBorderColor: TEMA.muted, bottomBorderStyle: "double" as const, bottomBorderColor: TEMA.ink };
     /* #327: total akhir abu-abu seperti baris total lain (klien 6 Nov: latar hitam
