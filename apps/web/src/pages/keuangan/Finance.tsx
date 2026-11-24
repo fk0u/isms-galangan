@@ -1297,6 +1297,12 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
 
   // Jurnal (sheet JU): tambah jurnal manual berimbang, multi-baris per voucher.
   const [showJu, setShowJu] = useState(false);
+  /* Koreksi jurnal (permintaan 24 Nov): jurnal Posted tidak diedit langsung.
+     Form terisi data lama; saat disimpan, jurnal baru dicatat lalu yang lama di-Void
+     dengan rujukan dua arah (koreksiDari / koreksiOleh) agar jejak audit utuh. */
+  const [korFrom, setKorFrom] = useState<StoreItem | null>(null);
+  const [voidTarget, setVoidTarget] = useState<StoreItem | null>(null);
+  const [voidReason, setVoidReason] = useState("");
   const [juForm, setJuForm] = useState({ date: todayISO(), kodePembantu: "", dokumen: "", uraian: "", sumber: "JU" });
   const [juLines, setJuLines] = useState([{ db: "", kr: "", amount: "" }]);
 
@@ -2320,11 +2326,22 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
           sumber: juForm.sumber, status: "Posted",
           branch: branch !== "SEMUA" ? branch : "",
           ...(juImg ? { lampiranUrl: juImg, buktiUrl: juImg } : {}),
+          ...(korFrom ? { koreksiDari: String(korFrom.id) } : {}),
         }, { action: "mencatat jurnal", module: "Keuangan" });
       } catch (err) {
         toast(S.juRowFail.replace("{n}", String(i + 1)).replace("{a}", err instanceof Error ? err.message : S.backendUnreachable), "info");
         return;
       }
+    }
+    if (korFrom) {
+      // Jurnal pengganti sudah tercatat → Void yang lama. Bila gagal, beri tahu agar di-Void manual.
+      try {
+        await update("journals", String(korFrom.id), { status: "Void", voidReason: S.korVoidReason.replace("{a}", voucher), koreksiOleh: voucher });
+        log("mengoreksi jurnal", `${String(korFrom.dokumen ?? korFrom.id)} → ${voucher}`, "Keuangan");
+      } catch (e) {
+        toast(S.korVoidFail.replace("{a}", String(korFrom.id)).replace("{b}", e instanceof Error ? e.message : S.saveFail), "info");
+      }
+      setKorFrom(null);
     }
     const total = lines.reduce((s, l) => s + num(l.amount), 0);
     toast(S.juSaved.replace("{a}", voucher).replace("{n}", String(lines.length)).replace("{b}", fmtRupiah(total)));
@@ -5065,7 +5082,16 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
                           {/* K17-FIN-08: voucher jurnal per transaksi (PDF dirakit server). */}
                           <RowAction icon={FileText} label={S.printVoucher} ariaLabel={`${S.printVoucher} ${String(j.voucherNo || j.id)}`} disabled={pdfDoc.state.busy} onClick={() => void pdfDoc.request({ kind: "voucher", id: String(j.id), locale }, `Voucher-${String(j.voucherNo || j.id).replaceAll("/", "-")}`, false)} />
                           {canWriteJournals && String(j.status) !== "Void" && (
-                            <RowAction icon={Ban} tone="danger" label={S.voidBtn} ariaLabel={`${S.voidBtn} ${String(j.id)}`} disabled={busy.isBusy(`voidJu-${j.id}`)} onClick={() => void busy.run(`voidJu-${j.id}`, async () => { try { await update("journals", String(j.id), { status: "Void" }); log("mem-void jurnal", String(j.id), "Keuangan"); toast(S.voided.replace("{a}", String(j.id))); } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); } })} />
+                            <>
+                              <RowAction icon={Pencil} tone="neutral" label={S.korBtn} ariaLabel={`${S.korBtn} ${String(j.dokumen ?? j.id)}`} onClick={() => {
+                                setKorFrom(j);
+                                setJuForm({ date: String(j.date ?? todayISO()).slice(0, 10), kodePembantu: String(j.kodePembantu ?? ""), dokumen: String(j.dokumen ?? ""), uraian: String(j.uraian ?? ""), sumber: String(j.sumber ?? "JU") });
+                                setJuLines([{ db: String(j.db ?? ""), kr: String(j.kr ?? ""), amount: String(num(j.amount)) }]);
+                                setJuImg(String(j.lampiranUrl ?? j.buktiUrl ?? ""));
+                                setShowJu(true);
+                              }} />
+                              <RowAction icon={Ban} tone="danger" label={S.voidBtn} ariaLabel={`${S.voidBtn} ${String(j.id)}`} onClick={() => { setVoidTarget(j); setVoidReason(""); }} />
+                            </>
                           )}
                           {/*
                             Tombol hapus jurnal sengaja DIHAPUS: hanya muncul untuk
@@ -5880,7 +5906,24 @@ const { data, add, update, remove, log, branch, inBranch, sessionGeneration, isS
         </div>
       </Modal>
 
-      <Modal open={showJu} onClose={() => setShowJu(false)} title={S.juNewTitle} subtitle={S.juNewSub} extraWide
+      <Modal open={voidTarget !== null} onClose={() => setVoidTarget(null)} title={S.voidTitle.replace("{a}", String(voidTarget?.dokumen ?? voidTarget?.id ?? ""))} subtitle={S.voidSub}
+        footer={<><button className="btn-secondary" onClick={() => setVoidTarget(null)}>{S.cancelBtn}</button><AsyncButton className="btn-danger" disabled={!voidReason.trim()} onAction={async () => {
+          if (!voidTarget) return;
+          try {
+            await update("journals", String(voidTarget.id), { status: "Void", voidReason: voidReason.trim() });
+            log("mem-void jurnal", `${String(voidTarget.id)} · ${voidReason.trim()}`, "Keuangan");
+            toast(S.voided.replace("{a}", String(voidTarget.id)));
+            setVoidTarget(null);
+          } catch (e) { toast(e instanceof Error ? e.message : S.saveFail, "info"); }
+        }}>{S.voidBtn}</AsyncButton></>}>
+        <div className="space-y-3">
+          {String(voidTarget?.dokumen ?? "").startsWith("CASH-INV") && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{S.voidInvWarn}</p>}
+          <Field label={S.voidReasonLbl} required>
+            <textarea className="input min-h-[80px]" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder={S.voidReasonPh} />
+          </Field>
+        </div>
+      </Modal>
+      <Modal open={showJu} onClose={() => { setShowJu(false); setKorFrom(null); }} title={korFrom ? S.korTitle.replace("{a}", String(korFrom.dokumen ?? korFrom.id)) : S.juNewTitle} subtitle={korFrom ? S.korSub : S.juNewSub} extraWide
         footer={<><button className="btn-secondary" onClick={() => setShowJu(false)}>{S.cancelBtn}</button><AsyncButton className="btn-primary" onAction={saveJu}>{S.juSave}</AsyncButton></>}>
         <div className="space-y-3">
           <FormGrid>
